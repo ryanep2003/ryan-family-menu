@@ -1,0 +1,16 @@
+{
+  "name": "Ryan Family Menu",
+  "short_name": "Ryan Menu",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fbf7ef",
+  "theme_color": "#fbf7ef",
+  "icons": [
+    {
+      "src": "assets/meatballs-2.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

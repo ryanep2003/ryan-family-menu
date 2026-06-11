@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fbf7ef" />
+    <title>Ryan Family Menu</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow" data-i18n="eyebrow">Ryan Family Menu</p>
+        <h1 data-i18n="title">Tonight, made simple.</h1>
+      </div>
+      <div class="header-actions">
+        <button class="icon-button" id="installButton" type="button" title="Install">
+          <span aria-hidden="true">+</span>
+        </button>
+        <div class="segmented" aria-label="Language">
+          <button type="button" class="active" data-lang="en">EN</button>
+          <button type="button" data-lang="es">ES</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="today-band">
+        <div>
+          <p class="section-label" data-i18n="tonight">Tonight</p>
+          <h2 id="todayRecipeName">A 100% Chance of Meatballs</h2>
+          <p id="todayMeta">1 hour · Serves 4 · Babysitter friendly</p>
+        </div>
+        <button class="primary-action" type="button" data-scroll-to="recipeDetail" data-i18n="cookButton">Cook this</button>
+      </section>
+
+      <nav class="tabs" aria-label="Views">
+        <button type="button" class="active" data-view="schedule" data-i18n="scheduleTab">Schedule</button>
+        <button type="button" data-view="calendar" data-i18n="calendarTab">Calendar</button>
+        <button type="button" data-view="recipes" data-i18n="recipesTab">Recipes</button>
+        <button type="button" data-view="add" data-i18n="addTab">Add</button>
+      </nav>
+
+      <section class="view active" id="scheduleView">
+        <div class="section-heading">
+          <h2 data-i18n="weekHeading">This week</h2>
+          <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Reset</button>
+        </div>
+        <div class="schedule-grid" id="scheduleGrid"></div>
+      </section>
+
+      <section class="view" id="calendarView">
+        <div class="section-heading calendar-heading">
+          <div>
+            <p class="section-label" data-i18n="monthLabel">Recipe calendar</p>
+            <h2 id="monthTitle">June 2026</h2>
+          </div>
+          <div class="calendar-actions">
+            <button class="ghost-button" id="previousMonth" type="button" data-i18n="previousMonth">Previous</button>
+            <button class="ghost-button" id="todayMonth" type="button" data-i18n="thisMonth">This month</button>
+            <button class="ghost-button" id="nextMonth" type="button" data-i18n="nextMonth">Next</button>
+          </div>
+        </div>
+        <div class="calendar-scroll">
+          <div class="calendar-weekdays" id="calendarWeekdays"></div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+      </section>
+
+      <section class="view" id="recipesView">
+        <div class="section-heading">
+          <h2 data-i18n="libraryHeading">Recipe library</h2>
+          <span id="recipeCount"></span>
+        </div>
+        <div class="recipe-list" id="recipeList"></div>
+      </section>
+
+      <section class="view" id="addView">
+        <div class="section-heading">
+          <h2 data-i18n="addHeading">Add a recipe photo</h2>
+        </div>
+        <form class="upload-panel" id="uploadForm">
+          <label>
+            <span data-i18n="photoLabel">Recipe photos</span>
+            <input type="file" id="photoInput" accept="image/*" multiple />
+          </label>
+          <label>
+            <span data-i18n="nameLabel">Recipe name</span>
+            <input type="text" id="nameInput" placeholder="Grandma's chicken tacos" />
+          </label>
+          <label>
+            <span data-i18n="noteLabel">Family notes</span>
+            <textarea id="noteInput" rows="4" placeholder="Kid notes, where ingredients are, serving ideas"></textarea>
+          </label>
+          <button class="primary-action" type="submit" data-i18n="saveDraft">Save draft</button>
+        </form>
+      </section>
+
+      <section class="recipe-detail" id="recipeDetail">
+        <div class="detail-top">
+          <div>
+            <p class="section-label" data-i18n="selectedRecipe">Selected recipe</p>
+            <h2 id="detailName">A 100% Chance of Meatballs</h2>
+            <p id="detailMeta">Makes 18 meatballs · 1 hour · Mess 2/4</p>
+          </div>
+          <button class="ghost-button" id="markCooked" type="button" data-i18n="markCooked">Mark cooked</button>
+        </div>
+
+        <div class="detail-layout">
+          <article>
+            <div class="allergy-warning" id="allergyWarning" hidden></div>
+
+            <h3 data-i18n="ingredients">Ingredients</h3>
+            <ul id="ingredientList"></ul>
+
+            <h3 data-i18n="steps">Steps</h3>
+            <ol id="stepList"></ol>
+
+            <h3 data-i18n="notes">Family notes</h3>
+            <p id="familyNotes"></p>
+          </article>
+
+          <aside>
+            <h3 data-i18n="sourcePhotos">Source photos</h3>
+            <div class="photo-strip" id="photoStrip"></div>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
