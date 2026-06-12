@@ -911,6 +911,7 @@ const translations = {
     cookButton: "Cook this",
     scheduleTab: "Schedule",
     calendarTab: "Calendar",
+    groceryTab: "Groceries",
     recipesTab: "Recipes",
     addTab: "Add",
     weekHeading: "This week",
@@ -958,6 +959,21 @@ const translations = {
     noMealSet: "No meal set yet.",
     openDinner: "Open dinner",
     allergyBadge: "Allergy note",
+    groceryLabel: "Shared grocery list",
+    groceryHeading: "Groceries for this week",
+    generateGroceries: "Generate from week",
+    clearChecked: "Clear checked",
+    addGroceryItem: "Add item",
+    groceryPlaceholder: "Add milk, lemons, pasta...",
+    storeAny: "Either store",
+    storePublix: "Publix",
+    storeWholeFoods: "Whole Foods",
+    storeCostco: "Costco",
+    grocerySaved: "Grocery list saved.",
+    groceryError: "Could not save the grocery list. Try again when the site is online.",
+    groceryEmpty: "No grocery items yet.",
+    manualSource: "Manual item",
+    weekPlanSource: "From weekly menu",
   },
   es: {
     eyebrow: "Menu de la familia Ryan",
@@ -966,6 +982,7 @@ const translations = {
     cookButton: "Cocinar",
     scheduleTab: "Semana",
     calendarTab: "Calendario",
+    groceryTab: "Compras",
     recipesTab: "Recetas",
     addTab: "Agregar",
     weekHeading: "Esta semana",
@@ -1013,6 +1030,21 @@ const translations = {
     noMealSet: "Sin comida asignada.",
     openDinner: "Abrir receta",
     allergyBadge: "Aviso de alergia",
+    groceryLabel: "Lista compartida",
+    groceryHeading: "Compras de esta semana",
+    generateGroceries: "Generar de la semana",
+    clearChecked: "Borrar marcados",
+    addGroceryItem: "Agregar",
+    groceryPlaceholder: "Agregar leche, limones, pasta...",
+    storeAny: "Cualquier tienda",
+    storePublix: "Publix",
+    storeWholeFoods: "Whole Foods",
+    storeCostco: "Costco",
+    grocerySaved: "Lista de compras guardada.",
+    groceryError: "No se pudo guardar la lista. Intenta otra vez cuando el sitio este en linea.",
+    groceryEmpty: "No hay articulos todavia.",
+    manualSource: "Articulo manual",
+    weekPlanSource: "Del menu semanal",
   },
 };
 
@@ -1073,6 +1105,7 @@ let schedule = normalizeSchedule(JSON.parse(localStorage.getItem("dinner-schedul
 let calendarMeals = normalizeCalendar(JSON.parse(localStorage.getItem("dinner-calendar") || "null") || {});
 let drafts = JSON.parse(localStorage.getItem("dinner-drafts") || "[]");
 let sharedRecipes = [];
+let groceries = [];
 let visibleMonth = new Date();
 visibleMonth.setDate(1);
 let deferredPrompt = null;
@@ -1207,9 +1240,123 @@ function mealSummary(meal) {
   return items.map(({ recipe }) => localize(recipe.name)).join(" · ");
 }
 
+function groceryStoreLabel(store) {
+  if (store === "publix") return t("storePublix");
+  if (store === "whole-foods") return t("storeWholeFoods");
+  if (store === "costco") return t("storeCostco");
+  return t("storeAny");
+}
+
+function cleanIngredientForGrocery(item) {
+  return `${item || ""}`.replace(/\s+/g, " ").trim();
+}
+
+function itemKey(item) {
+  return `${item.store || "any"}::${item.text.toLowerCase()}`;
+}
+
+function groceryItem(text, store = "any", source = "manual", recipeName = "") {
+  return {
+    id: `grocery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    text: cleanIngredientForGrocery(text),
+    checked: false,
+    store,
+    source,
+    recipeName,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function weeklyMealRecipes() {
+  return days.flatMap((day) => mealRecipes(normalizeMealPlan(schedule[day.key])));
+}
+
+function generatedGroceriesFromWeek() {
+  const generated = [];
+  weeklyMealRecipes().forEach(({ recipe }) => {
+    const recipeName = localize(recipe.name);
+    const ingredients = recipe.ingredients[lang] || recipe.ingredients.en || [];
+    ingredients.forEach((ingredient) => {
+      const text = cleanIngredientForGrocery(ingredient);
+      if (text) generated.push(groceryItem(text, "any", "week-plan", recipeName));
+    });
+  });
+  return generated;
+}
+
+function mergeGroceries(existing, incoming) {
+  const byKey = new Map(existing.map((item) => [itemKey(item), item]));
+  incoming.forEach((item) => {
+    if (!byKey.has(itemKey(item))) {
+      byKey.set(itemKey(item), item);
+    }
+  });
+  return [...byKey.values()];
+}
+
+function renderGroceries() {
+  const groups = [
+    { key: "publix", label: t("storePublix") },
+    { key: "whole-foods", label: t("storeWholeFoods") },
+    { key: "costco", label: t("storeCostco") },
+    { key: "any", label: t("storeAny") },
+  ];
+  const activeItems = groceries.filter((item) => !item.checked);
+  const checkedItems = groceries.filter((item) => item.checked);
+  const sections = groups
+    .map((group) => ({
+      ...group,
+      items: activeItems.filter((item) => (item.store || "any") === group.key),
+    }))
+    .filter((group) => group.items.length);
+
+  if (!groceries.length) {
+    $("#groceryList").innerHTML = `<p class="empty-state">${t("groceryEmpty")}</p>`;
+    return;
+  }
+
+  $("#groceryList").innerHTML = [
+    ...sections.map((section) => grocerySection(section.label, section.items)),
+    checkedItems.length ? grocerySection(lang === "en" ? "Checked off" : "Marcados", checkedItems, true) : "",
+  ].join("");
+}
+
+function grocerySection(label, items, checkedSection = false) {
+  return `
+    <section class="grocery-section${checkedSection ? " checked-section" : ""}">
+      <h3>${escapeHtml(label)}</h3>
+      ${items.map((item) => `
+        <label class="grocery-item">
+          <input type="checkbox" data-grocery-id="${item.id}" ${item.checked ? "checked" : ""} />
+          <span>
+            <strong>${escapeHtml(item.text)}</strong>
+            <em>${escapeHtml(item.recipeName || (item.source === "week-plan" ? t("weekPlanSource") : t("manualSource")))}</em>
+          </span>
+          <small>${escapeHtml(groceryStoreLabel(item.store))}</small>
+        </label>
+      `).join("")}
+    </section>
+  `;
+}
+
+function bindGroceryControls() {
+  $$("[data-grocery-id]").forEach((checkbox) => {
+    checkbox.addEventListener("change", async () => {
+      const item = groceries.find((grocery) => grocery.id === checkbox.dataset.groceryId);
+      if (!item) return;
+      item.checked = checkbox.checked;
+      renderGroceries();
+      await saveGroceries();
+    });
+  });
+}
+
 function renderTranslations() {
   $$("[data-i18n]").forEach((node) => {
     node.textContent = t(node.dataset.i18n);
+  });
+  $$("[data-i18n-placeholder]").forEach((node) => {
+    node.placeholder = t(node.dataset.i18nPlaceholder);
   });
   $$("[data-lang]").forEach((button) => {
     button.classList.toggle("active", button.dataset.lang === lang);
@@ -1412,9 +1559,11 @@ function render() {
   renderToday();
   renderSchedule();
   renderCalendar();
+  renderGroceries();
   renderRecipes();
   renderDetail();
   bindOpenButtons();
+  bindGroceryControls();
 }
 
 function bindOpenButtons() {
@@ -1493,6 +1642,41 @@ async function saveSharedRecipe(recipe) {
   return response.json();
 }
 
+async function loadGroceries() {
+  try {
+    const response = await fetch("/.netlify/functions/groceries", {
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("Could not load groceries.");
+    const data = await response.json();
+    groceries = Array.isArray(data.items) ? data.items : [];
+    render();
+  } catch (error) {
+    console.warn(error);
+    $("#groceryStatus").textContent = t("groceryError");
+    $("#groceryStatus").classList.add("error");
+  }
+}
+
+async function saveGroceries() {
+  try {
+    const response = await fetch("/.netlify/functions/groceries", {
+      method: "PUT",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ items: groceries }),
+    });
+    if (!response.ok) throw new Error("Could not save groceries.");
+    const data = await response.json();
+    groceries = Array.isArray(data.items) ? data.items : groceries;
+    $("#groceryStatus").textContent = t("grocerySaved");
+    $("#groceryStatus").classList.remove("error");
+  } catch (error) {
+    console.warn(error);
+    $("#groceryStatus").textContent = t("groceryError");
+    $("#groceryStatus").classList.add("error");
+  }
+}
+
 $$("[data-lang]").forEach((button) => {
   button.addEventListener("click", () => {
     lang = button.dataset.lang;
@@ -1547,6 +1731,32 @@ $("#categoryFilter").addEventListener("change", (event) => {
   categoryFilter = event.target.value;
   renderRecipes();
   bindOpenButtons();
+});
+
+$("#groceryForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const text = $("#groceryInput").value.trim();
+  if (!text) return;
+
+  groceries.unshift(groceryItem(text, $("#groceryStoreInput").value, "manual"));
+  $("#groceryInput").value = "";
+  renderGroceries();
+  bindGroceryControls();
+  await saveGroceries();
+});
+
+$("#generateGroceries").addEventListener("click", async () => {
+  groceries = mergeGroceries(groceries, generatedGroceriesFromWeek());
+  renderGroceries();
+  bindGroceryControls();
+  await saveGroceries();
+});
+
+$("#clearCheckedGroceries").addEventListener("click", async () => {
+  groceries = groceries.filter((item) => !item.checked);
+  renderGroceries();
+  bindGroceryControls();
+  await saveGroceries();
 });
 
 $("#uploadForm").addEventListener("submit", async (event) => {
@@ -1604,3 +1814,4 @@ if ("serviceWorker" in navigator) {
 
 render();
 loadSharedRecipes();
+loadGroceries();

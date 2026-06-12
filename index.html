@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#fbf7ef" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=8" />
+    <link rel="stylesheet" href="styles.css?v=9" />
   </head>
   <body>
     <header class="app-header">
@@ -39,6 +39,7 @@
       <nav class="tabs" aria-label="Views">
         <button type="button" class="active" data-view="schedule" data-i18n="scheduleTab">Schedule</button>
         <button type="button" data-view="calendar" data-i18n="calendarTab">Calendar</button>
+        <button type="button" data-view="grocery" data-i18n="groceryTab">Groceries</button>
         <button type="button" data-view="recipes" data-i18n="recipesTab">Recipes</button>
         <button type="button" data-view="add" data-i18n="addTab">Add</button>
       </nav>
@@ -67,6 +68,31 @@
           <div class="calendar-weekdays" id="calendarWeekdays"></div>
           <div class="calendar-grid" id="calendarGrid"></div>
         </div>
+      </section>
+
+      <section class="view" id="groceryView">
+        <div class="section-heading grocery-heading">
+          <div>
+            <p class="section-label" data-i18n="groceryLabel">Shared grocery list</p>
+            <h2 data-i18n="groceryHeading">Groceries for this week</h2>
+          </div>
+          <div class="grocery-actions">
+            <button class="ghost-button" id="generateGroceries" type="button" data-i18n="generateGroceries">Generate from week</button>
+            <button class="ghost-button" id="clearCheckedGroceries" type="button" data-i18n="clearChecked">Clear checked</button>
+          </div>
+        </div>
+        <form class="grocery-add" id="groceryForm">
+          <input type="text" id="groceryInput" data-i18n-placeholder="groceryPlaceholder" placeholder="Add milk, lemons, pasta..." />
+          <select id="groceryStoreInput" aria-label="Store">
+            <option value="any" data-i18n="storeAny">Either store</option>
+            <option value="publix">Publix</option>
+            <option value="whole-foods">Whole Foods</option>
+            <option value="costco">Costco</option>
+          </select>
+          <button class="primary-action" type="submit" data-i18n="addGroceryItem">Add item</button>
+        </form>
+        <p class="upload-status" id="groceryStatus" role="status"></p>
+        <div class="grocery-list" id="groceryList"></div>
       </section>
 
       <section class="view" id="recipesView">
@@ -170,6 +196,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=8"></script>
+    <script src="app.js?v=9"></script>
   </body>
 </html>
