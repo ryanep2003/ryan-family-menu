@@ -269,7 +269,8 @@ h3 {
   justify-content: flex-end;
 }
 
-.grocery-add {
+.grocery-add,
+.inventory-add {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) minmax(140px, 190px) auto;
   gap: 8px;
@@ -277,7 +278,9 @@ h3 {
 }
 
 .grocery-add input,
-.grocery-add select {
+.grocery-add select,
+.inventory-add input,
+.inventory-add select {
   width: 100%;
   min-height: 44px;
   border: 1px solid var(--line);
@@ -287,19 +290,30 @@ h3 {
   padding: 10px 12px;
 }
 
-.grocery-list {
+.inventory-add {
+  grid-template-columns: minmax(180px, 1fr) minmax(130px, 180px) minmax(130px, 180px) auto;
+}
+
+.grocery-list,
+.inventory-list {
   display: grid;
   gap: 12px;
 }
 
-.grocery-section {
+.inventory-heading {
+  margin-top: 30px;
+}
+
+.grocery-section,
+.inventory-section {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
   padding: 14px;
 }
 
-.grocery-section h3 {
+.grocery-section h3,
+.inventory-section h3 {
   margin: 0 0 10px;
 }
 
@@ -344,6 +358,35 @@ h3 {
 .checked-section .grocery-item em {
   opacity: 0.65;
   text-decoration: line-through;
+}
+
+.inventory-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 50px;
+  padding: 9px 0;
+  border-top: 1px solid #eee5d8;
+}
+
+.inventory-item:first-of-type {
+  border-top: 0;
+}
+
+.inventory-item span {
+  display: grid;
+  gap: 2px;
+}
+
+.inventory-item em {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
+.inventory-item .ghost-button {
+  min-height: 36px;
 }
 
 .calendar-scroll {
@@ -744,7 +787,8 @@ li {
   }
 
   .grocery-actions,
-  .grocery-add {
+  .grocery-add,
+  .inventory-add {
     grid-template-columns: 1fr;
     display: grid;
   }
@@ -755,6 +799,10 @@ li {
 
   .grocery-item small {
     grid-column: 2;
+  }
+
+  .inventory-item {
+    grid-template-columns: 1fr;
   }
 
   .library-tools {

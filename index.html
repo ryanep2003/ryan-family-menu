@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#fbf7ef" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=10" />
+    <link rel="stylesheet" href="styles.css?v=12" />
   </head>
   <body>
     <header class="app-header">
@@ -93,6 +93,26 @@
         </form>
         <p class="upload-status" id="groceryStatus" role="status"></p>
         <div class="grocery-list" id="groceryList"></div>
+
+        <div class="section-heading inventory-heading">
+          <div>
+            <p class="section-label" data-i18n="inventoryLabel">Home inventory</p>
+            <h2 data-i18n="inventoryHeading">Already in the house</h2>
+          </div>
+        </div>
+        <form class="inventory-add" id="inventoryForm">
+          <input type="text" id="inventoryInput" data-i18n-placeholder="inventoryPlaceholder" placeholder="Add eggs, milk, paper towels..." />
+          <input type="text" id="inventoryQuantityInput" data-i18n-placeholder="inventoryQuantityPlaceholder" placeholder="Amount, optional" />
+          <select id="inventoryLocationInput" aria-label="Location">
+            <option value="pantry" data-i18n="locationPantry">Pantry</option>
+            <option value="fridge" data-i18n="locationFridge">Fridge</option>
+            <option value="freezer" data-i18n="locationFreezer">Freezer</option>
+            <option value="household" data-i18n="locationHousehold">Household</option>
+          </select>
+          <button class="primary-action" type="submit" data-i18n="addInventoryItem">Add inventory</button>
+        </form>
+        <p class="upload-status" id="inventoryStatus" role="status"></p>
+        <div class="inventory-list" id="inventoryList"></div>
       </section>
 
       <section class="view" id="recipesView">
@@ -196,6 +216,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=12"></script>
   </body>
 </html>

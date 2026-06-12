@@ -975,6 +975,20 @@ const translations = {
     manualSource: "Manual item",
     weekPlanSource: "From weekly menu",
     installInstructions: "To add this site to your iPhone Home Screen: tap the Share button in the browser toolbar, then choose Add to Home Screen.",
+    inventoryLabel: "Home inventory",
+    inventoryHeading: "Already in the house",
+    inventoryPlaceholder: "Add eggs, milk, paper towels...",
+    inventoryQuantityPlaceholder: "Amount, optional",
+    addInventoryItem: "Add inventory",
+    inventorySaved: "Inventory saved.",
+    inventoryError: "Could not save inventory. Try again when the site is online.",
+    inventoryEmpty: "No inventory items yet.",
+    alreadyHave: "Already have",
+    locationPantry: "Pantry",
+    locationFridge: "Fridge",
+    locationFreezer: "Freezer",
+    locationHousehold: "Household",
+    remove: "Remove",
   },
   es: {
     eyebrow: "Menu de la familia Ryan",
@@ -1047,6 +1061,20 @@ const translations = {
     manualSource: "Articulo manual",
     weekPlanSource: "Del menu semanal",
     installInstructions: "Para agregar este sitio a la pantalla de inicio del iPhone: toca el boton Compartir en el navegador y elige Agregar a pantalla de inicio.",
+    inventoryLabel: "Inventario de casa",
+    inventoryHeading: "Ya esta en la casa",
+    inventoryPlaceholder: "Agregar huevos, leche, papel...",
+    inventoryQuantityPlaceholder: "Cantidad, opcional",
+    addInventoryItem: "Agregar inventario",
+    inventorySaved: "Inventario guardado.",
+    inventoryError: "No se pudo guardar el inventario. Intenta otra vez cuando el sitio este en linea.",
+    inventoryEmpty: "No hay inventario todavia.",
+    alreadyHave: "Ya tenemos",
+    locationPantry: "Despensa",
+    locationFridge: "Refrigerador",
+    locationFreezer: "Congelador",
+    locationHousehold: "Casa",
+    remove: "Quitar",
   },
 };
 
@@ -1108,6 +1136,7 @@ let calendarMeals = normalizeCalendar(JSON.parse(localStorage.getItem("dinner-ca
 let drafts = JSON.parse(localStorage.getItem("dinner-drafts") || "[]");
 let sharedRecipes = [];
 let groceries = [];
+let inventory = [];
 let visibleMonth = new Date();
 visibleMonth.setDate(1);
 let deferredPrompt = null;
@@ -1253,18 +1282,47 @@ function cleanIngredientForGrocery(item) {
   return `${item || ""}`.replace(/\s+/g, " ").trim();
 }
 
+function normalizedWords(value) {
+  const stopWords = new Set([
+    "cup", "cups", "tbsp", "tablespoon", "tablespoons", "tsp", "teaspoon", "teaspoons",
+    "lb", "lbs", "pound", "pounds", "oz", "ounce", "ounces", "gram", "grams", "g",
+    "large", "small", "medium", "fresh", "freshly", "chopped", "diced", "sliced",
+    "minced", "grated", "ground", "kosher", "taste", "optional", "plus", "more",
+    "for", "and", "with", "the", "of", "or", "to", "in",
+  ]);
+
+  return `${value || ""}`
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .map((word) => word.replace(/s$/, ""))
+    .filter((word) => word.length > 2 && !stopWords.has(word) && !/^\d+$/.test(word));
+}
+
+function inventoryMatchFor(text) {
+  const ingredientWords = normalizedWords(text);
+  if (!ingredientWords.length) return null;
+
+  return inventory.find((item) => {
+    const itemWords = normalizedWords(item.text);
+    if (!itemWords.length) return false;
+    return itemWords.every((word) => ingredientWords.includes(word));
+  }) || null;
+}
+
 function itemKey(item) {
   return `${item.store || "any"}::${item.text.toLowerCase()}`;
 }
 
-function groceryItem(text, store = "any", source = "manual", recipeName = "") {
+function groceryItem(text, store = "any", source = "manual", recipeName = "", inventoryItem = null) {
   return {
     id: `grocery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     text: cleanIngredientForGrocery(text),
-    checked: false,
+    checked: Boolean(inventoryItem),
     store,
     source,
     recipeName,
+    inInventory: Boolean(inventoryItem),
     createdAt: new Date().toISOString(),
   };
 }
@@ -1280,7 +1338,7 @@ function generatedGroceriesFromWeek() {
     const ingredients = recipe.ingredients[lang] || recipe.ingredients.en || [];
     ingredients.forEach((ingredient) => {
       const text = cleanIngredientForGrocery(ingredient);
-      if (text) generated.push(groceryItem(text, "any", "week-plan", recipeName));
+      if (text) generated.push(groceryItem(text, "any", "week-plan", recipeName, inventoryMatchFor(text)));
     });
   });
   return generated;
@@ -1303,8 +1361,9 @@ function renderGroceries() {
     { key: "costco", label: t("storeCostco") },
     { key: "any", label: t("storeAny") },
   ];
-  const activeItems = groceries.filter((item) => !item.checked);
-  const checkedItems = groceries.filter((item) => item.checked);
+  const activeItems = groceries.filter((item) => !item.checked && !item.inInventory);
+  const inventoryItems = groceries.filter((item) => item.inInventory);
+  const checkedItems = groceries.filter((item) => item.checked && !item.inInventory);
   const sections = groups
     .map((group) => ({
       ...group,
@@ -1319,6 +1378,7 @@ function renderGroceries() {
 
   $("#groceryList").innerHTML = [
     ...sections.map((section) => grocerySection(section.label, section.items)),
+    inventoryItems.length ? grocerySection(t("alreadyHave"), inventoryItems, true) : "",
     checkedItems.length ? grocerySection(lang === "en" ? "Checked off" : "Marcados", checkedItems, true) : "",
   ].join("");
 }
@@ -1349,6 +1409,66 @@ function bindGroceryControls() {
       item.checked = checkbox.checked;
       renderGroceries();
       await saveGroceries();
+    });
+  });
+}
+
+function inventoryLocationLabel(location) {
+  if (location === "fridge") return t("locationFridge");
+  if (location === "freezer") return t("locationFreezer");
+  if (location === "household") return t("locationHousehold");
+  return t("locationPantry");
+}
+
+function inventoryItem(text, quantity = "", location = "pantry") {
+  return {
+    id: `inventory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    text: cleanIngredientForGrocery(text),
+    quantity: cleanIngredientForGrocery(quantity),
+    location,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function renderInventory() {
+  const groups = [
+    { key: "pantry", label: t("locationPantry") },
+    { key: "fridge", label: t("locationFridge") },
+    { key: "freezer", label: t("locationFreezer") },
+    { key: "household", label: t("locationHousehold") },
+  ].map((group) => ({
+    ...group,
+    items: inventory.filter((item) => (item.location || "pantry") === group.key),
+  })).filter((group) => group.items.length);
+
+  if (!inventory.length) {
+    $("#inventoryList").innerHTML = `<p class="empty-state">${t("inventoryEmpty")}</p>`;
+    return;
+  }
+
+  $("#inventoryList").innerHTML = groups.map((group) => `
+    <section class="inventory-section">
+      <h3>${escapeHtml(group.label)}</h3>
+      ${group.items.map((item) => `
+        <div class="inventory-item">
+          <span>
+            <strong>${escapeHtml(item.text)}</strong>
+            <em>${escapeHtml(item.quantity || inventoryLocationLabel(item.location))}</em>
+          </span>
+          <button class="ghost-button" type="button" data-remove-inventory="${item.id}">${t("remove")}</button>
+        </div>
+      `).join("")}
+    </section>
+  `).join("");
+}
+
+function bindInventoryControls() {
+  $$("[data-remove-inventory]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      inventory = inventory.filter((item) => item.id !== button.dataset.removeInventory);
+      renderInventory();
+      bindInventoryControls();
+      await saveInventory();
     });
   });
 }
@@ -1562,10 +1682,12 @@ function render() {
   renderSchedule();
   renderCalendar();
   renderGroceries();
+  renderInventory();
   renderRecipes();
   renderDetail();
   bindOpenButtons();
   bindGroceryControls();
+  bindInventoryControls();
 }
 
 function bindOpenButtons() {
@@ -1679,6 +1801,41 @@ async function saveGroceries() {
   }
 }
 
+async function loadInventory() {
+  try {
+    const response = await fetch("/.netlify/functions/inventory", {
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("Could not load inventory.");
+    const data = await response.json();
+    inventory = Array.isArray(data.items) ? data.items : [];
+    render();
+  } catch (error) {
+    console.warn(error);
+    $("#inventoryStatus").textContent = t("inventoryError");
+    $("#inventoryStatus").classList.add("error");
+  }
+}
+
+async function saveInventory() {
+  try {
+    const response = await fetch("/.netlify/functions/inventory", {
+      method: "PUT",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ items: inventory }),
+    });
+    if (!response.ok) throw new Error("Could not save inventory.");
+    const data = await response.json();
+    inventory = Array.isArray(data.items) ? data.items : inventory;
+    $("#inventoryStatus").textContent = t("inventorySaved");
+    $("#inventoryStatus").classList.remove("error");
+  } catch (error) {
+    console.warn(error);
+    $("#inventoryStatus").textContent = t("inventoryError");
+    $("#inventoryStatus").classList.add("error");
+  }
+}
+
 $$("[data-lang]").forEach((button) => {
   button.addEventListener("click", () => {
     lang = button.dataset.lang;
@@ -1761,6 +1918,23 @@ $("#clearCheckedGroceries").addEventListener("click", async () => {
   await saveGroceries();
 });
 
+$("#inventoryForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const text = $("#inventoryInput").value.trim();
+  if (!text) return;
+
+  inventory.unshift(inventoryItem(
+    text,
+    $("#inventoryQuantityInput").value.trim(),
+    $("#inventoryLocationInput").value
+  ));
+  $("#inventoryInput").value = "";
+  $("#inventoryQuantityInput").value = "";
+  renderInventory();
+  bindInventoryControls();
+  await saveInventory();
+});
+
 $("#uploadForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const name = $("#nameInput").value.trim();
@@ -1814,9 +1988,12 @@ $("#installButton").addEventListener("click", async () => {
 });
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("service-worker.js");
+  navigator.serviceWorker.register("service-worker.js").then((registration) => {
+    registration.update();
+  });
 }
 
 render();
 loadSharedRecipes();
 loadGroceries();
+loadInventory();

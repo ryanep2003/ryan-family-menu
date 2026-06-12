@@ -1,7 +1,7 @@
 import { getStore } from "@netlify/blobs";
 
-const STORE_NAME = "family-menu-groceries";
-const GROCERIES_KEY = "items";
+const STORE_NAME = "family-menu-inventory";
+const INVENTORY_KEY = "items";
 const MAX_ITEMS = 500;
 
 const jsonHeaders = {
@@ -19,16 +19,15 @@ function jsonResponse(body, status = 200) {
 function cleanItem(item) {
   const text = `${item.text || ""}`.trim().slice(0, 220);
   if (!text) return null;
-  const store = ["any", "publix", "whole-foods", "costco"].includes(item.store) ? item.store : "any";
+  const location = ["pantry", "fridge", "freezer", "household"].includes(item.location)
+    ? item.location
+    : "pantry";
 
   return {
-    id: `${item.id || `grocery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}`,
+    id: `${item.id || `inventory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}`,
     text,
-    checked: Boolean(item.checked),
-    store,
-    source: `${item.source || "manual"}`.slice(0, 80),
-    recipeName: `${item.recipeName || ""}`.trim().slice(0, 160),
-    inInventory: Boolean(item.inInventory),
+    quantity: `${item.quantity || ""}`.trim().slice(0, 80),
+    location,
     createdAt: item.createdAt || new Date().toISOString(),
   };
 }
@@ -39,7 +38,7 @@ function cleanItems(items) {
 }
 
 async function readItems(store) {
-  return (await store.get(GROCERIES_KEY, { type: "json" })) || [];
+  return (await store.get(INVENTORY_KEY, { type: "json" })) || [];
 }
 
 export default async (request) => {
@@ -58,7 +57,7 @@ export default async (request) => {
     }
 
     const items = cleanItems(payload.items);
-    await store.setJSON(GROCERIES_KEY, items);
+    await store.setJSON(INVENTORY_KEY, items);
     return jsonResponse({ items });
   }
 
