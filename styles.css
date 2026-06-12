@@ -207,6 +207,11 @@ h3 {
   background: var(--tomato-dark);
 }
 
+.primary-action:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .ghost-button {
   border: 1px solid var(--line);
   background: var(--surface);
@@ -527,6 +532,17 @@ h3 {
   background: #f6efe2;
   color: var(--muted);
   font-weight: 700;
+}
+
+.upload-status {
+  min-height: 22px;
+  margin: 0;
+  color: var(--sage);
+  font-weight: 850;
+}
+
+.upload-status.error {
+  color: #8f2a1f;
 }
 
 .upload-panel label {

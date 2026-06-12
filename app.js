@@ -929,7 +929,7 @@ const translations = {
     categorySauce: "Sauces",
     categoryDraft: "Drafts",
     addHeading: "Add a recipe",
-    localDraftNote: "Saved recipes stay on this device for now. Shared family uploads need the next backend step.",
+    sharedUploadNote: "Recipes added here save to the live family site for everyone.",
     photoLabel: "Recipe photos",
     nameLabel: "Recipe name",
     categoryLabel: "Category",
@@ -937,7 +937,7 @@ const translations = {
     stepsLabel: "Steps",
     allergyLabel: "Allergy or safety warning",
     noteLabel: "Family notes",
-    saveDraft: "Save draft",
+    saveDraft: "Save to family site",
     selectedRecipe: "Selected recipe",
     markCooked: "Mark cooked",
     ingredients: "Ingredients",
@@ -946,6 +946,8 @@ const translations = {
     sourcePhotos: "Source photos",
     noDinner: "Open dinner",
     draftSaved: "Draft saved",
+    sharedRecipeSaved: "Recipe saved to the family site.",
+    sharedRecipeError: "Could not save to the live site. Try again when the site is online.",
     mainSlot: "Main",
     sideSlot: "Side",
     saladSlot: "Salad",
@@ -982,7 +984,7 @@ const translations = {
     categorySauce: "Salsas",
     categoryDraft: "Borradores",
     addHeading: "Agregar receta",
-    localDraftNote: "Las recetas guardadas quedan en este dispositivo por ahora. Para compartirlas con toda la familia hace falta el siguiente paso de backend.",
+    sharedUploadNote: "Las recetas agregadas aqui se guardan en el sitio familiar para todos.",
     photoLabel: "Fotos de la receta",
     nameLabel: "Nombre de la receta",
     categoryLabel: "Categoria",
@@ -990,7 +992,7 @@ const translations = {
     stepsLabel: "Pasos",
     allergyLabel: "Aviso de alergia o seguridad",
     noteLabel: "Notas de la familia",
-    saveDraft: "Guardar borrador",
+    saveDraft: "Guardar en el sitio familiar",
     selectedRecipe: "Receta seleccionada",
     markCooked: "Marcar hecha",
     ingredients: "Ingredientes",
@@ -999,6 +1001,8 @@ const translations = {
     sourcePhotos: "Fotos originales",
     noDinner: "Abrir cena",
     draftSaved: "Borrador guardado",
+    sharedRecipeSaved: "Receta guardada en el sitio familiar.",
+    sharedRecipeError: "No se pudo guardar en el sitio en vivo. Intenta otra vez cuando el sitio este en linea.",
     mainSlot: "Principal",
     sideSlot: "Guarnicion",
     saladSlot: "Ensalada",
@@ -1068,6 +1072,7 @@ let selectedRecipeId = "meatballs";
 let schedule = normalizeSchedule(JSON.parse(localStorage.getItem("dinner-schedule") || "null"));
 let calendarMeals = normalizeCalendar(JSON.parse(localStorage.getItem("dinner-calendar") || "null") || {});
 let drafts = JSON.parse(localStorage.getItem("dinner-drafts") || "[]");
+let sharedRecipes = [];
 let visibleMonth = new Date();
 visibleMonth.setDate(1);
 let deferredPrompt = null;
@@ -1084,27 +1089,33 @@ function t(key) {
 function allRecipes() {
   return [
     ...recipes,
-    ...drafts.map((draft) => ({
-      ...draft,
-      name: { en: draft.name, es: draft.name },
-      meta: { en: "Draft", es: "Borrador" },
-      short: { en: draft.notes || "Needs review", es: draft.notes || "Necesita revision" },
-      tags: { en: "Draft", es: "Borrador" },
-      category: draft.category || "draft",
-      allergyWarning: draft.allergyWarning
-        ? { en: draft.allergyWarning, es: draft.allergyWarning }
-        : undefined,
-      ingredients: {
-        en: splitLines(draft.ingredientsText, "Add ingredients after review."),
-        es: splitLines(draft.ingredientsText, "Agrega ingredientes despues de revisar."),
-      },
-      steps: {
-        en: splitLines(draft.stepsText, "Add cooking steps after review."),
-        es: splitLines(draft.stepsText, "Agrega los pasos despues de revisar."),
-      },
-      notes: { en: draft.notes || "No notes yet.", es: draft.notes || "Sin notas todavia." },
-    })),
+    ...sharedRecipes.map((recipe) => uploadToRecipe(recipe, "Shared upload", "Receta compartida")),
+    ...drafts.map((draft) => uploadToRecipe(draft, "Local draft", "Borrador local")),
   ];
+}
+
+function uploadToRecipe(upload, enMeta, esMeta) {
+  return {
+    ...upload,
+    name: { en: upload.name, es: upload.name },
+    meta: { en: enMeta, es: esMeta },
+    short: { en: upload.notes || "Needs review", es: upload.notes || "Necesita revision" },
+    tags: { en: enMeta, es: esMeta },
+    category: upload.category || "draft",
+    allergyWarning: upload.allergyWarning
+      ? { en: upload.allergyWarning, es: upload.allergyWarning }
+      : undefined,
+    ingredients: {
+      en: splitLines(upload.ingredientsText, "Add ingredients after review."),
+      es: splitLines(upload.ingredientsText, "Agrega ingredientes despues de revisar."),
+    },
+    steps: {
+      en: splitLines(upload.stepsText, "Add cooking steps after review."),
+      es: splitLines(upload.stepsText, "Agrega los pasos despues de revisar."),
+    },
+    notes: { en: upload.notes || "No notes yet.", es: upload.notes || "Sin notas todavia." },
+    photos: upload.photos?.length ? upload.photos : ["assets/meatballs-2.jpg"],
+  };
 }
 
 function recipeById(id) {
@@ -1421,14 +1432,65 @@ function setView(viewName) {
   $$(".tabs button").forEach((button) => button.classList.toggle("active", button.dataset.view === viewName));
 }
 
+function readFileAsDataUrl(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function resizeImageFile(file) {
+  const dataUrl = await readFileAsDataUrl(file);
+  const image = new Image();
+  image.src = dataUrl;
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = reject;
+  });
+
+  const maxSide = 1200;
+  const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+  canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  return canvas.toDataURL("image/jpeg", 0.78);
+}
+
 function readFilesAsDataUrls(files) {
   return Promise.all(
-    [...files].map((file) => new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.readAsDataURL(file);
-    }))
+    [...files].slice(0, 3).map((file) => resizeImageFile(file))
   );
+}
+
+async function loadSharedRecipes() {
+  try {
+    const response = await fetch("/.netlify/functions/recipes", {
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("Could not load shared recipes.");
+    const data = await response.json();
+    sharedRecipes = Array.isArray(data.recipes) ? data.recipes : [];
+    render();
+  } catch (error) {
+    console.warn(error);
+  }
+}
+
+async function saveSharedRecipe(recipe) {
+  const response = await fetch("/.netlify/functions/recipes", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify(recipe),
+  });
+
+  if (!response.ok) {
+    throw new Error("Could not save shared recipe.");
+  }
+
+  return response.json();
 }
 
 $$("[data-lang]").forEach((button) => {
@@ -1492,21 +1554,36 @@ $("#uploadForm").addEventListener("submit", async (event) => {
   const name = $("#nameInput").value.trim();
   if (!name) return;
 
-  const photos = await readFilesAsDataUrls($("#photoInput").files);
-  drafts.push({
-    id: `draft-${Date.now()}`,
-    name,
-    category: $("#categoryInput").value,
-    ingredientsText: $("#ingredientsInput").value.trim(),
-    stepsText: $("#stepsInput").value.trim(),
-    allergyWarning: $("#allergyInput").value.trim(),
-    notes: $("#noteInput").value.trim(),
-    photos: photos.length ? photos : ["assets/meatballs-2.jpg"],
-  });
-  localStorage.setItem("dinner-drafts", JSON.stringify(drafts));
-  $("#uploadForm").reset();
-  setView("recipes");
-  render();
+  const submitButton = $("#uploadForm .primary-action");
+  const status = $("#uploadStatus");
+  submitButton.disabled = true;
+  status.textContent = lang === "en" ? "Saving to live site..." : "Guardando en el sitio...";
+  status.classList.remove("error");
+
+  try {
+    const photos = await readFilesAsDataUrls($("#photoInput").files);
+    const recipe = {
+      name,
+      category: $("#categoryInput").value,
+      ingredientsText: $("#ingredientsInput").value.trim(),
+      stepsText: $("#stepsInput").value.trim(),
+      allergyWarning: $("#allergyInput").value.trim(),
+      notes: $("#noteInput").value.trim(),
+      photos: photos.length ? photos : ["assets/meatballs-2.jpg"],
+    };
+    const saved = await saveSharedRecipe(recipe);
+    sharedRecipes.unshift(saved.recipe);
+    $("#uploadForm").reset();
+    status.textContent = t("sharedRecipeSaved");
+    setView("recipes");
+    render();
+  } catch (error) {
+    console.warn(error);
+    status.textContent = t("sharedRecipeError");
+    status.classList.add("error");
+  } finally {
+    submitButton.disabled = false;
+  }
 });
 
 window.addEventListener("beforeinstallprompt", (event) => {
@@ -1526,3 +1603,4 @@ if ("serviceWorker" in navigator) {
 }
 
 render();
+loadSharedRecipes();
