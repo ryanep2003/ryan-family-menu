@@ -117,8 +117,13 @@ export default async (request) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    const message = data.error?.message || "Image recognition failed.";
+    const authError = response.status === 401 || /authentication token|api key|issuer/i.test(message);
+
     return jsonResponse({
-      error: data.error?.message || "Image recognition failed.",
+      error: authError
+        ? "OpenAI API key is missing or invalid in Netlify. Set OPENAI_API_KEY to a valid OpenAI project API key."
+        : message,
     }, response.status);
   }
 
