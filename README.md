@@ -22,6 +22,7 @@ Current features:
 - Roasted Brussels Sprouts Salad entered from the uploaded recipe photos
 - Chicken Noodle Soup entered with a possible allergy warning from the uploaded family note
 - Ina Garten's Pot Roast entered from the uploaded recipe photos
+- Basil Pesto Pasta entered from the uploaded recipe photos
 - Original recipe photos kept beside the cleaned-up recipe card
 - Draft upload form for adding the next recipe photos
 

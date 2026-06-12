@@ -826,6 +826,81 @@ const recipes = [
       "assets/pot-roast-3.jpg",
     ],
   },
+  {
+    id: "basil-pesto-pasta",
+    name: {
+      en: "Basil Pesto Pasta",
+      es: "Pasta con pesto de albahaca",
+    },
+    meta: {
+      en: "20-25 minutes · Serves 4 · Mess 2/4",
+      es: "20-25 minutos · 4 porciones · Desorden 2/4",
+    },
+    short: {
+      en: "Fresh basil pesto with olive oil, walnuts, garlic, parmesan, pecorino, and pasta.",
+      es: "Pesto fresco de albahaca con aceite de oliva, nueces, ajo, parmesano, pecorino y pasta.",
+    },
+    tags: {
+      en: "Pasta · Quick dinner · Vegetarian",
+      es: "Pasta · Cena rapida · Vegetariana",
+    },
+    ingredients: {
+      en: [
+        "Kosher salt",
+        "5 bunches basil, leaves picked",
+        "1 cup extra-virgin olive oil",
+        "Scant 1/2 cup walnuts",
+        "4 large garlic cloves, peeled",
+        "Pinch chile flakes, optional",
+        "6 tablespoons grated Parmigiano-Reggiano",
+        "6 tablespoons grated Pecorino Romano",
+        "1 lb fusilli, penne, orecchiette, or trenette",
+        "1 tablespoon kosher salt, for pasta water",
+      ],
+      es: [
+        "Sal kosher",
+        "5 manojos de albahaca, hojas separadas",
+        "1 taza de aceite de oliva extra virgen",
+        "Casi 1/2 taza de nueces",
+        "4 dientes grandes de ajo, pelados",
+        "Una pizca de hojuelas de chile, opcional",
+        "6 cucharadas de Parmigiano-Reggiano rallado",
+        "6 cucharadas de Pecorino Romano rallado",
+        "1 libra de fusilli, penne, orecchiette o trenette",
+        "1 cucharada de sal kosher, para el agua de la pasta",
+      ],
+    },
+    steps: {
+      en: [
+        "Prepare a bowl of ice water and bring a large pot of generously salted water to a rolling boil.",
+        "Add basil and blanch for 30 seconds, then move it to the ice bath with tongs. Keep the pot of salted water for pasta.",
+        "When basil is cool, remove it from the ice bath and squeeze it out well. Put it in a food processor. Reserve 1/2 cup ice water and some ice cubes.",
+        "In a small pot, combine 1/4 cup olive oil with walnuts, garlic, and chile flakes if using. Toast over medium-low until lightly browned and fragrant, about 10 minutes.",
+        "Strain the infused oil into a bowl. Add toasted garlic and walnuts to the food processor.",
+        "Run the processor and slowly add the infused oil until emulsified. Add reserved ice cubes and ice water and blend well.",
+        "When the processor bowl feels cold, add both cheeses and blend again. Add salt and blend once more.",
+        "Cook pasta al dente in the reserved salted water. Drain, return to the pot, and fold in basil pesto and kosher salt. Serve immediately.",
+      ],
+      es: [
+        "Prepara un tazon con agua helada y hierve una olla grande con agua bien salada.",
+        "Agrega la albahaca y blanquea 30 segundos; pasala al agua helada con pinzas. Guarda esa agua salada para la pasta.",
+        "Cuando la albahaca este fria, sacala del agua y exprimela bien. Ponla en un procesador. Reserva 1/2 taza de agua helada y algunos cubos de hielo.",
+        "En una olla pequena, combina 1/4 taza de aceite de oliva con nueces, ajo y chile si usas. Tuesta a fuego medio-bajo hasta que este dorado y fragante, unos 10 minutos.",
+        "Cuela el aceite infusionado en un tazon. Agrega el ajo y las nueces tostadas al procesador.",
+        "Prende el procesador y agrega lentamente el aceite infusionado hasta emulsionar. Agrega hielo y agua helada reservada y mezcla bien.",
+        "Cuando el tazon del procesador este frio al tacto, agrega ambos quesos y mezcla otra vez. Agrega sal y mezcla una vez mas.",
+        "Cocina la pasta al dente en el agua salada reservada. Escurre, regresa a la olla y mezcla con el pesto y sal kosher. Sirve de inmediato.",
+      ],
+    },
+    notes: {
+      en: "Blanching the basil helps keep the pesto bright green. Pesto can last up to 2 weeks in the fridge or 3 months in the freezer.",
+      es: "Blanquear la albahaca ayuda a mantener el pesto verde brillante. El pesto puede durar hasta 2 semanas en el refrigerador o 3 meses en el congelador.",
+    },
+    photos: [
+      "assets/basil-pesto-1.jpg",
+      "assets/basil-pesto-2.jpg",
+    ],
+  },
 ];
 
 const translations = {
