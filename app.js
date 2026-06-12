@@ -920,9 +920,22 @@ const translations = {
     nextMonth: "Next",
     reset: "Reset",
     libraryHeading: "Recipe library",
-    addHeading: "Add a recipe photo",
+    searchLabel: "Search recipes",
+    categoryFilterLabel: "Category",
+    categoryAll: "All",
+    categoryMain: "Mains",
+    categorySide: "Sides",
+    categorySalad: "Salads",
+    categorySauce: "Sauces",
+    categoryDraft: "Drafts",
+    addHeading: "Add a recipe",
+    localDraftNote: "Saved recipes stay on this device for now. Shared family uploads need the next backend step.",
     photoLabel: "Recipe photos",
     nameLabel: "Recipe name",
+    categoryLabel: "Category",
+    ingredientsLabel: "Ingredients",
+    stepsLabel: "Steps",
+    allergyLabel: "Allergy or safety warning",
     noteLabel: "Family notes",
     saveDraft: "Save draft",
     selectedRecipe: "Selected recipe",
@@ -933,6 +946,16 @@ const translations = {
     sourcePhotos: "Source photos",
     noDinner: "Open dinner",
     draftSaved: "Draft saved",
+    mainSlot: "Main",
+    sideSlot: "Side",
+    saladSlot: "Salad",
+    notesSlot: "Notes",
+    chooseMain: "Choose main",
+    chooseSide: "Choose side",
+    chooseSalad: "Choose salad",
+    noMealSet: "No meal set yet.",
+    openDinner: "Open dinner",
+    allergyBadge: "Allergy note",
   },
   es: {
     eyebrow: "Menu de la familia Ryan",
@@ -950,9 +973,22 @@ const translations = {
     nextMonth: "Siguiente",
     reset: "Reiniciar",
     libraryHeading: "Recetas",
-    addHeading: "Agregar foto de receta",
+    searchLabel: "Buscar recetas",
+    categoryFilterLabel: "Categoria",
+    categoryAll: "Todas",
+    categoryMain: "Platos fuertes",
+    categorySide: "Guarniciones",
+    categorySalad: "Ensaladas",
+    categorySauce: "Salsas",
+    categoryDraft: "Borradores",
+    addHeading: "Agregar receta",
+    localDraftNote: "Las recetas guardadas quedan en este dispositivo por ahora. Para compartirlas con toda la familia hace falta el siguiente paso de backend.",
     photoLabel: "Fotos de la receta",
     nameLabel: "Nombre de la receta",
+    categoryLabel: "Categoria",
+    ingredientsLabel: "Ingredientes",
+    stepsLabel: "Pasos",
+    allergyLabel: "Aviso de alergia o seguridad",
     noteLabel: "Notas de la familia",
     saveDraft: "Guardar borrador",
     selectedRecipe: "Receta seleccionada",
@@ -963,6 +999,16 @@ const translations = {
     sourcePhotos: "Fotos originales",
     noDinner: "Abrir cena",
     draftSaved: "Borrador guardado",
+    mainSlot: "Principal",
+    sideSlot: "Guarnicion",
+    saladSlot: "Ensalada",
+    notesSlot: "Notas",
+    chooseMain: "Elegir principal",
+    chooseSide: "Elegir guarnicion",
+    chooseSalad: "Elegir ensalada",
+    noMealSet: "Sin comida asignada.",
+    openDinner: "Abrir receta",
+    allergyBadge: "Aviso de alergia",
   },
 };
 
@@ -976,24 +1022,57 @@ const days = [
   { key: "sun", en: "Sunday", es: "Domingo" },
 ];
 
+const categoryLabels = {
+  main: { en: "Main", es: "Principal" },
+  side: { en: "Side", es: "Guarnicion" },
+  salad: { en: "Salad", es: "Ensalada" },
+  sauce: { en: "Sauce", es: "Salsa" },
+  draft: { en: "Draft", es: "Borrador" },
+};
+
+const recipeCategories = {
+  meatballs: "main",
+  "chicken-milanese": "main",
+  "halibut-summer-vegetables": "main",
+  "lemon-chicken": "main",
+  "zaatar-parmesan-potatoes": "side",
+  "lemon-bucatini-pasta": "main",
+  "pasta-with-meat-sauce": "main",
+  "strawberry-crunch-salad": "salad",
+  "roasted-brussels-sprouts-salad": "salad",
+  "chicken-noodle-soup": "main",
+  "ina-garten-pot-roast": "main",
+  "basil-pesto-pasta": "main",
+};
+
+const mealSlots = [
+  { key: "main", label: "mainSlot", choose: "chooseMain", categories: ["main"] },
+  { key: "side", label: "sideSlot", choose: "chooseSide", categories: ["side", "sauce"] },
+  { key: "salad", label: "saladSlot", choose: "chooseSalad", categories: ["salad"] },
+];
+
+const emptyMeal = { main: "", side: "", salad: "", notes: "" };
+
 const defaultSchedule = {
-  mon: "meatballs",
-  tue: "",
-  wed: "",
-  thu: "",
-  fri: "",
-  sat: "",
-  sun: "",
+  mon: { ...emptyMeal, main: "meatballs", side: "zaatar-parmesan-potatoes" },
+  tue: { ...emptyMeal, main: "chicken-milanese", salad: "strawberry-crunch-salad" },
+  wed: { ...emptyMeal, main: "lemon-chicken", side: "zaatar-parmesan-potatoes" },
+  thu: { ...emptyMeal, main: "halibut-summer-vegetables" },
+  fri: { ...emptyMeal, main: "pasta-with-meat-sauce", salad: "roasted-brussels-sprouts-salad" },
+  sat: { ...emptyMeal },
+  sun: { ...emptyMeal },
 };
 
 let lang = localStorage.getItem("dinner-lang") || "en";
 let selectedRecipeId = "meatballs";
-let schedule = JSON.parse(localStorage.getItem("dinner-schedule") || "null") || defaultSchedule;
-let calendarMeals = JSON.parse(localStorage.getItem("dinner-calendar") || "null") || {};
+let schedule = normalizeSchedule(JSON.parse(localStorage.getItem("dinner-schedule") || "null"));
+let calendarMeals = normalizeCalendar(JSON.parse(localStorage.getItem("dinner-calendar") || "null") || {});
 let drafts = JSON.parse(localStorage.getItem("dinner-drafts") || "[]");
 let visibleMonth = new Date();
 visibleMonth.setDate(1);
 let deferredPrompt = null;
+let recipeSearch = "";
+let categoryFilter = "all";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -1011,8 +1090,18 @@ function allRecipes() {
       meta: { en: "Draft", es: "Borrador" },
       short: { en: draft.notes || "Needs review", es: draft.notes || "Necesita revision" },
       tags: { en: "Draft", es: "Borrador" },
-      ingredients: { en: ["Add ingredients after review."], es: ["Agrega ingredientes despues de revisar."] },
-      steps: { en: ["Add cooking steps after review."], es: ["Agrega los pasos despues de revisar."] },
+      category: draft.category || "draft",
+      allergyWarning: draft.allergyWarning
+        ? { en: draft.allergyWarning, es: draft.allergyWarning }
+        : undefined,
+      ingredients: {
+        en: splitLines(draft.ingredientsText, "Add ingredients after review."),
+        es: splitLines(draft.ingredientsText, "Agrega ingredientes despues de revisar."),
+      },
+      steps: {
+        en: splitLines(draft.stepsText, "Add cooking steps after review."),
+        es: splitLines(draft.stepsText, "Agrega los pasos despues de revisar."),
+      },
       notes: { en: draft.notes || "No notes yet.", es: draft.notes || "Sin notas todavia." },
     })),
   ];
@@ -1027,6 +1116,49 @@ function localize(value) {
   return value[lang] || value.en || "";
 }
 
+function escapeHtml(value) {
+  return `${value || ""}`.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }[character]));
+}
+
+function splitLines(text, fallback) {
+  const lines = (text || "").split("\n").map((line) => line.trim()).filter(Boolean);
+  return lines.length ? lines : [fallback];
+}
+
+function categoryFor(recipe) {
+  return recipe.category || recipeCategories[recipe.id] || "main";
+}
+
+function categoryLabel(category) {
+  return localize(categoryLabels[category] || categoryLabels.main);
+}
+
+function normalizeMealPlan(value) {
+  if (!value) return { ...emptyMeal };
+  if (typeof value === "string") return { ...emptyMeal, main: value };
+  return { ...emptyMeal, ...value };
+}
+
+function normalizeSchedule(raw) {
+  const source = raw || defaultSchedule;
+  return days.reduce((result, day) => {
+    result[day.key] = normalizeMealPlan(source[day.key]);
+    return result;
+  }, {});
+}
+
+function normalizeCalendar(raw) {
+  return Object.fromEntries(
+    Object.entries(raw || {}).map(([dateKey, value]) => [dateKey, normalizeMealPlan(value)])
+  );
+}
+
 function formatDateKey(date) {
   const year = date.getFullYear();
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
@@ -1035,10 +1167,33 @@ function formatDateKey(date) {
 }
 
 function todaysRecipeId() {
+  return todaysMealPlan().main || "meatballs";
+}
+
+function todaysMealPlan() {
   const today = new Date();
   const todayKey = formatDateKey(today);
   const weekKey = days[(today.getDay() + 6) % 7].key;
-  return calendarMeals[todayKey] || schedule[weekKey] || "meatballs";
+  return normalizeMealPlan(calendarMeals[todayKey] || schedule[weekKey]);
+}
+
+function mealRecipes(meal) {
+  return mealSlots
+    .map((slot) => ({
+      ...slot,
+      recipe: meal[slot.key] ? recipeById(meal[slot.key]) : null,
+    }))
+    .filter((item) => item.recipe);
+}
+
+function mealHasWarning(meal) {
+  return mealRecipes(meal).some(({ recipe }) => recipe.allergyWarning);
+}
+
+function mealSummary(meal) {
+  const items = mealRecipes(meal);
+  if (!items.length) return t("noMealSet");
+  return items.map(({ recipe }) => localize(recipe.name)).join(" · ");
 }
 
 function renderTranslations() {
@@ -1051,43 +1206,102 @@ function renderTranslations() {
 }
 
 function renderToday() {
-  const recipe = recipeById(todaysRecipeId());
-  $("#todayRecipeName").textContent = localize(recipe.name);
-  $("#todayMeta").textContent = `${localize(recipe.meta)} · ${localize(recipe.tags)}`;
+  const meal = todaysMealPlan();
+  const mainRecipe = meal.main ? recipeById(meal.main) : null;
+  const recipesForMeal = mealRecipes(meal);
+  $("#todayRecipeName").textContent = mainRecipe ? localize(mainRecipe.name) : t("noMealSet");
+  $("#todayMeta").textContent = recipesForMeal.length
+    ? `${recipesForMeal.length} ${lang === "en" ? "planned item(s)" : "receta(s) planeadas"}${mealHasWarning(meal) ? ` · ${t("allergyBadge")}` : ""}`
+    : t("noMealSet");
+  $("#todayMealList").innerHTML = recipesForMeal
+    .map(({ key, recipe }) => `
+      <button type="button" data-open="${recipe.id}">
+        <span>${t(`${key}Slot`)}</span>
+        <strong>${escapeHtml(localize(recipe.name))}</strong>
+        ${recipe.allergyWarning ? `<em>${t("allergyBadge")}</em>` : ""}
+      </button>
+    `)
+    .join("");
+}
+
+function optionsForSlot(slot, selectedId = "") {
+  const selectedRecipe = selectedId ? recipeById(selectedId) : null;
+  const allowed = allRecipes().filter((recipe) => slot.categories.includes(categoryFor(recipe)) || recipe.id === selectedId);
+  const recipesForOptions = selectedRecipe && !allowed.some((recipe) => recipe.id === selectedRecipe.id)
+    ? [...allowed, selectedRecipe]
+    : allowed;
+
+  return recipesForOptions
+    .map((recipe) => `<option value="${recipe.id}"${recipe.id === selectedId ? " selected" : ""}>${escapeHtml(localize(recipe.name))}</option>`)
+    .join("");
+}
+
+function renderMealControls(meal, context, label) {
+  const recipesForMeal = mealRecipes(meal);
+  return `
+    ${label ? `<strong>${escapeHtml(label)}</strong>` : ""}
+    <div class="meal-picker">
+      ${mealSlots.map((slot) => `
+        <label>
+          <span>${t(slot.label)}</span>
+          <select data-meal-context="${context}" data-slot="${slot.key}">
+            <option value="">${t(slot.choose)}</option>
+            ${optionsForSlot(slot, meal[slot.key])}
+          </select>
+        </label>
+      `).join("")}
+      <label class="meal-notes">
+        <span>${t("notesSlot")}</span>
+        <textarea data-meal-context="${context}" data-slot="notes" rows="2">${escapeHtml(meal.notes || "")}</textarea>
+      </label>
+    </div>
+    <p class="${mealHasWarning(meal) ? "has-warning" : ""}">${escapeHtml(mealSummary(meal))}</p>
+    <div class="meal-open-buttons">
+      ${recipesForMeal.map(({ recipe }) => `
+        <button class="ghost-button" type="button" data-open="${recipe.id}">
+          ${t("openDinner")}
+        </button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function bindMealControls() {
+  $$("[data-meal-context]").forEach((control) => {
+    control.addEventListener("change", () => {
+      const [type, key] = control.dataset.mealContext.split(":");
+      const slot = control.dataset.slot;
+      const target = type === "week" ? schedule[key] : (calendarMeals[key] || { ...emptyMeal });
+      target[slot] = control.value;
+
+      if (type === "week") {
+        schedule[key] = target;
+        localStorage.setItem("dinner-schedule", JSON.stringify(schedule));
+      } else {
+        calendarMeals[key] = target;
+        if (!target.main && !target.side && !target.salad && !target.notes) {
+          delete calendarMeals[key];
+        }
+        localStorage.setItem("dinner-calendar", JSON.stringify(calendarMeals));
+      }
+      render();
+    });
+  });
 }
 
 function renderSchedule() {
   const grid = $("#scheduleGrid");
-  const options = allRecipes()
-    .map((recipe) => `<option value="${recipe.id}">${localize(recipe.name)}</option>`)
-    .join("");
-
   grid.innerHTML = days
     .map((day) => {
-      const chosen = schedule[day.key] || "";
-      const recipe = chosen ? recipeById(chosen) : null;
+      const meal = normalizeMealPlan(schedule[day.key]);
       return `
         <div class="day-card">
-          <strong>${day[lang]}</strong>
-          <select data-day="${day.key}">
-            <option value="">${lang === "en" ? "Choose dinner" : "Elegir cena"}</option>
-            ${options}
-          </select>
-          <p>${recipe ? localize(recipe.short) : lang === "en" ? "No dinner set yet." : "Sin cena asignada."}</p>
-          ${recipe ? `<button class="ghost-button" type="button" data-open="${recipe.id}">${t("noDinner")}</button>` : ""}
+          ${renderMealControls(meal, `week:${day.key}`, day[lang])}
         </div>
       `;
     })
     .join("");
-
-  $$("select[data-day]").forEach((select) => {
-    select.value = schedule[select.dataset.day] || "";
-    select.addEventListener("change", () => {
-      schedule[select.dataset.day] = select.value;
-      localStorage.setItem("dinner-schedule", JSON.stringify(schedule));
-      render();
-    });
-  });
+  bindMealControls();
 }
 
 function monthName(date) {
@@ -1111,18 +1325,13 @@ function calendarDateRange() {
 
 function renderCalendar() {
   const todayKey = formatDateKey(new Date());
-  const recipesForOptions = allRecipes();
-  const options = recipesForOptions
-    .map((recipe) => `<option value="${recipe.id}">${localize(recipe.name)}</option>`)
-    .join("");
 
   $("#monthTitle").textContent = monthName(visibleMonth);
   $("#calendarWeekdays").innerHTML = days.map((day) => `<span>${day[lang].slice(0, 3)}</span>`).join("");
   $("#calendarGrid").innerHTML = calendarDateRange()
     .map((date) => {
       const dateKey = formatDateKey(date);
-      const recipeId = calendarMeals[dateKey] || "";
-      const recipe = recipeId ? recipeById(recipeId) : null;
+      const meal = normalizeMealPlan(calendarMeals[dateKey]);
       const classes = [
         "calendar-day",
         date.getMonth() === visibleMonth.getMonth() ? "" : "outside-month",
@@ -1134,43 +1343,44 @@ function renderCalendar() {
           <div class="calendar-date">
             <span class="date-number">${date.getDate()}</span>
           </div>
-          <select data-calendar-date="${dateKey}" aria-label="${dateKey}">
-            <option value="">${lang === "en" ? "Choose dinner" : "Elegir cena"}</option>
-            ${options}
-          </select>
-          <p>${recipe ? localize(recipe.short) : lang === "en" ? "Open dinner" : "Cena abierta"}</p>
-          ${recipe ? `<button class="ghost-button" type="button" data-open="${recipe.id}">${t("noDinner")}</button>` : ""}
+          ${renderMealControls(meal, `calendar:${dateKey}`, "")}
         </div>
       `;
     })
     .join("");
-
-  $$("select[data-calendar-date]").forEach((select) => {
-    select.value = calendarMeals[select.dataset.calendarDate] || "";
-    select.addEventListener("change", () => {
-      if (select.value) {
-        calendarMeals[select.dataset.calendarDate] = select.value;
-      } else {
-        delete calendarMeals[select.dataset.calendarDate];
-      }
-      localStorage.setItem("dinner-calendar", JSON.stringify(calendarMeals));
-      render();
-    });
-  });
+  bindMealControls();
 }
 
 function renderRecipes() {
-  $("#recipeCount").textContent = `${allRecipes().length}`;
-  $("#recipeList").innerHTML = allRecipes()
+  const search = recipeSearch.trim().toLowerCase();
+  const filtered = allRecipes().filter((recipe) => {
+    const categoryMatch = categoryFilter === "all" || categoryFor(recipe) === categoryFilter;
+    const haystack = [
+      localize(recipe.name),
+      localize(recipe.meta),
+      localize(recipe.short),
+      localize(recipe.tags),
+      categoryLabel(categoryFor(recipe)),
+    ].join(" ").toLowerCase();
+    return categoryMatch && (!search || haystack.includes(search));
+  });
+
+  $("#recipeCount").textContent = `${filtered.length}/${allRecipes().length}`;
+  $("#recipeList").innerHTML = filtered
     .map((recipe) => `
       <button class="recipe-card" type="button" data-open="${recipe.id}">
         <img src="${recipe.photos[0]}" alt="" />
-        <h3>${localize(recipe.name)}</h3>
-        <p>${localize(recipe.meta)}</p>
-        <p>${localize(recipe.short)}</p>
+        <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
+        ${recipe.allergyWarning ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
+        <h3>${escapeHtml(localize(recipe.name))}</h3>
+        <p>${escapeHtml(localize(recipe.meta))}</p>
+        <p>${escapeHtml(localize(recipe.short))}</p>
       </button>
     `)
     .join("");
+  if (!filtered.length) {
+    $("#recipeList").innerHTML = `<p class="empty-state">${lang === "en" ? "No matching recipes." : "No hay recetas que coincidan."}</p>`;
+  }
 }
 
 function renderDetail() {
@@ -1180,8 +1390,8 @@ function renderDetail() {
   $("#detailMeta").textContent = localize(recipe.meta);
   $("#allergyWarning").hidden = !warning;
   $("#allergyWarning").textContent = warning;
-  $("#ingredientList").innerHTML = recipe.ingredients[lang].map((item) => `<li>${item}</li>`).join("");
-  $("#stepList").innerHTML = recipe.steps[lang].map((item) => `<li>${item}</li>`).join("");
+  $("#ingredientList").innerHTML = (recipe.ingredients[lang] || recipe.ingredients.en).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  $("#stepList").innerHTML = (recipe.steps[lang] || recipe.steps.en).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   $("#familyNotes").textContent = localize(recipe.notes);
   $("#photoStrip").innerHTML = recipe.photos.map((src) => `<img src="${src}" alt="" />`).join("");
 }
@@ -1240,7 +1450,7 @@ $$("[data-scroll-to]").forEach((button) => {
 });
 
 $("#resetWeek").addEventListener("click", () => {
-  schedule = { ...defaultSchedule };
+  schedule = normalizeSchedule(defaultSchedule);
   localStorage.setItem("dinner-schedule", JSON.stringify(schedule));
   render();
 });
@@ -1265,6 +1475,18 @@ $("#markCooked").addEventListener("click", () => {
   $("#markCooked").textContent = lang === "en" ? "Cooked today" : "Hecha hoy";
 });
 
+$("#recipeSearch").addEventListener("input", (event) => {
+  recipeSearch = event.target.value;
+  renderRecipes();
+  bindOpenButtons();
+});
+
+$("#categoryFilter").addEventListener("change", (event) => {
+  categoryFilter = event.target.value;
+  renderRecipes();
+  bindOpenButtons();
+});
+
 $("#uploadForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const name = $("#nameInput").value.trim();
@@ -1274,6 +1496,10 @@ $("#uploadForm").addEventListener("submit", async (event) => {
   drafts.push({
     id: `draft-${Date.now()}`,
     name,
+    category: $("#categoryInput").value,
+    ingredientsText: $("#ingredientsInput").value.trim(),
+    stepsText: $("#stepsInput").value.trim(),
+    allergyWarning: $("#allergyInput").value.trim(),
     notes: $("#noteInput").value.trim(),
     photos: photos.length ? photos : ["assets/meatballs-2.jpg"],
   });

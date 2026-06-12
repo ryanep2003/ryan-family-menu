@@ -147,6 +147,43 @@ h3 {
   color: rgba(255, 255, 255, 0.86);
 }
 
+.today-meal-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.today-meal-list button {
+  display: grid;
+  gap: 2px;
+  max-width: 230px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  text-align: left;
+}
+
+.today-meal-list span {
+  color: #f3c15d;
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.today-meal-list strong {
+  font-size: 0.92rem;
+}
+
+.today-meal-list em {
+  color: #ffe0d7;
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 850;
+}
+
 .today-band .section-label {
   color: #f3c15d;
 }
@@ -293,12 +330,14 @@ h3 {
   color: #fff;
 }
 
-.calendar-day select {
+.calendar-day select,
+.calendar-day textarea {
   width: 100%;
   min-height: 38px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
+  padding: 8px;
 }
 
 .calendar-day p {
@@ -309,7 +348,7 @@ h3 {
 }
 
 .day-card {
-  min-height: 178px;
+  min-height: 250px;
   padding: 12px;
 }
 
@@ -319,18 +358,102 @@ h3 {
   color: var(--sage);
 }
 
-.day-card select {
+.day-card select,
+.day-card textarea {
   width: 100%;
   min-height: 40px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
+  padding: 8px;
 }
 
 .day-card p {
   margin: 12px 0 0;
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.day-card p.has-warning,
+.calendar-day p.has-warning {
+  color: #8f2a1f;
+  font-weight: 850;
+}
+
+.meal-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.meal-picker label {
+  display: grid;
+  gap: 4px;
+}
+
+.meal-picker span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.meal-notes textarea {
+  min-height: 54px;
+  resize: vertical;
+}
+
+.meal-open-buttons {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.calendar-day .meal-open-buttons .ghost-button,
+.day-card .meal-open-buttons .ghost-button {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 8px;
+  font-size: 0.84rem;
+}
+
+.calendar-day .meal-picker {
+  gap: 6px;
+}
+
+.calendar-day .meal-picker span {
+  font-size: 0.68rem;
+}
+
+.calendar-day .meal-notes textarea {
+  min-height: 44px;
+}
+
+.library-tools {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 240px);
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.library-tools label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.library-tools input,
+.library-tools select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 10px 12px;
+  text-transform: none;
 }
 
 .recipe-list {
@@ -359,10 +482,51 @@ h3 {
   color: var(--muted);
 }
 
+.category-pill,
+.warning-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  margin: 0 6px 8px 0;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.category-pill {
+  background: #eef3ec;
+  color: var(--sage);
+}
+
+.warning-pill {
+  background: #fff3ef;
+  color: #8f2a1f;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+}
+
 .upload-panel {
   display: grid;
   gap: 14px;
   padding: 16px;
+}
+
+.upload-note {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f6efe2;
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .upload-panel label {
@@ -373,7 +537,8 @@ h3 {
 }
 
 .upload-panel input,
-.upload-panel textarea {
+.upload-panel textarea,
+.upload-panel select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -453,6 +618,14 @@ li {
     min-height: 270px;
   }
 
+  .today-meal-list {
+    display: grid;
+  }
+
+  .today-meal-list button {
+    max-width: none;
+  }
+
   .primary-action,
   .ghost-button {
     width: 100%;
@@ -468,6 +641,10 @@ li {
 
   .tabs {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .library-tools {
+    grid-template-columns: 1fr;
   }
 
   .calendar-actions {

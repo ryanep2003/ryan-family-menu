@@ -31,6 +31,7 @@
           <p class="section-label" data-i18n="tonight">Tonight</p>
           <h2 id="todayRecipeName">A 100% Chance of Meatballs</h2>
           <p id="todayMeta">1 hour · Serves 4 · Babysitter friendly</p>
+          <div class="today-meal-list" id="todayMealList"></div>
         </div>
         <button class="primary-action" type="button" data-scroll-to="recipeDetail" data-i18n="cookButton">Cook this</button>
       </section>
@@ -73,14 +74,32 @@
           <h2 data-i18n="libraryHeading">Recipe library</h2>
           <span id="recipeCount"></span>
         </div>
+        <div class="library-tools">
+          <label>
+            <span data-i18n="searchLabel">Search recipes</span>
+            <input type="search" id="recipeSearch" placeholder="chicken, salad, pasta" />
+          </label>
+          <label>
+            <span data-i18n="categoryFilterLabel">Category</span>
+            <select id="categoryFilter">
+              <option value="all" data-i18n="categoryAll">All</option>
+              <option value="main" data-i18n="categoryMain">Mains</option>
+              <option value="side" data-i18n="categorySide">Sides</option>
+              <option value="salad" data-i18n="categorySalad">Salads</option>
+              <option value="sauce" data-i18n="categorySauce">Sauces</option>
+              <option value="draft" data-i18n="categoryDraft">Drafts</option>
+            </select>
+          </label>
+        </div>
         <div class="recipe-list" id="recipeList"></div>
       </section>
 
       <section class="view" id="addView">
         <div class="section-heading">
-          <h2 data-i18n="addHeading">Add a recipe photo</h2>
+          <h2 data-i18n="addHeading">Add a recipe</h2>
         </div>
         <form class="upload-panel" id="uploadForm">
+          <p class="upload-note" data-i18n="localDraftNote">Saved recipes stay on this device for now. Shared family uploads need the next backend step.</p>
           <label>
             <span data-i18n="photoLabel">Recipe photos</span>
             <input type="file" id="photoInput" accept="image/*" multiple />
@@ -88,6 +107,27 @@
           <label>
             <span data-i18n="nameLabel">Recipe name</span>
             <input type="text" id="nameInput" placeholder="Grandma's chicken tacos" />
+          </label>
+          <label>
+            <span data-i18n="categoryLabel">Category</span>
+            <select id="categoryInput">
+              <option value="main" data-i18n="categoryMain">Mains</option>
+              <option value="side" data-i18n="categorySide">Sides</option>
+              <option value="salad" data-i18n="categorySalad">Salads</option>
+              <option value="sauce" data-i18n="categorySauce">Sauces</option>
+            </select>
+          </label>
+          <label>
+            <span data-i18n="ingredientsLabel">Ingredients</span>
+            <textarea id="ingredientsInput" rows="5" placeholder="One ingredient per line"></textarea>
+          </label>
+          <label>
+            <span data-i18n="stepsLabel">Steps</span>
+            <textarea id="stepsInput" rows="6" placeholder="One step per line"></textarea>
+          </label>
+          <label>
+            <span data-i18n="allergyLabel">Allergy or safety warning</span>
+            <textarea id="allergyInput" rows="3" placeholder="Example: do not serve to Grace until ingredient is confirmed"></textarea>
           </label>
           <label>
             <span data-i18n="noteLabel">Family notes</span>
