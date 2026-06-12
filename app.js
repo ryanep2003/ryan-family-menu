@@ -974,6 +974,7 @@ const translations = {
     groceryEmpty: "No grocery items yet.",
     manualSource: "Manual item",
     weekPlanSource: "From weekly menu",
+    installInstructions: "To add this site to your iPhone Home Screen: tap the Share button in the browser toolbar, then choose Add to Home Screen.",
   },
   es: {
     eyebrow: "Menu de la familia Ryan",
@@ -1045,6 +1046,7 @@ const translations = {
     groceryEmpty: "No hay articulos todavia.",
     manualSource: "Articulo manual",
     weekPlanSource: "Del menu semanal",
+    installInstructions: "Para agregar este sitio a la pantalla de inicio del iPhone: toca el boton Compartir en el navegador y elige Agregar a pantalla de inicio.",
   },
 };
 
@@ -1805,7 +1807,10 @@ $("#installButton").addEventListener("click", async () => {
   if (deferredPrompt) {
     deferredPrompt.prompt();
     deferredPrompt = null;
+    return;
   }
+
+  window.alert(t("installInstructions"));
 });
 
 if ("serviceWorker" in navigator) {
