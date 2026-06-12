@@ -28,6 +28,9 @@ function cleanItem(item) {
     text,
     quantity: `${item.quantity || ""}`.trim().slice(0, 80),
     location,
+    photos: Array.isArray(item.photos)
+      ? item.photos.filter((photo) => typeof photo === "string" && photo.startsWith("data:image/")).slice(0, 1)
+      : [],
     createdAt: item.createdAt || new Date().toISOString(),
   };
 }

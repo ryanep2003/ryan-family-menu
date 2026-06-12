@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#fbf7ef" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=12" />
+    <link rel="stylesheet" href="styles.css?v=13" />
   </head>
   <body>
     <header class="app-header">
@@ -103,6 +103,7 @@
         <form class="inventory-add" id="inventoryForm">
           <input type="text" id="inventoryInput" data-i18n-placeholder="inventoryPlaceholder" placeholder="Add eggs, milk, paper towels..." />
           <input type="text" id="inventoryQuantityInput" data-i18n-placeholder="inventoryQuantityPlaceholder" placeholder="Amount, optional" />
+          <input type="file" id="inventoryPhotoInput" accept="image/*" capture="environment" />
           <select id="inventoryLocationInput" aria-label="Location">
             <option value="pantry" data-i18n="locationPantry">Pantry</option>
             <option value="fridge" data-i18n="locationFridge">Fridge</option>
@@ -216,6 +217,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=12"></script>
+    <script src="app.js?v=13"></script>
   </body>
 </html>

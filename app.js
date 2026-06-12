@@ -979,6 +979,7 @@ const translations = {
     inventoryHeading: "Already in the house",
     inventoryPlaceholder: "Add eggs, milk, paper towels...",
     inventoryQuantityPlaceholder: "Amount, optional",
+    inventoryPhotoLabel: "Inventory photo",
     addInventoryItem: "Add inventory",
     inventorySaved: "Inventory saved.",
     inventoryError: "Could not save inventory. Try again when the site is online.",
@@ -1065,6 +1066,7 @@ const translations = {
     inventoryHeading: "Ya esta en la casa",
     inventoryPlaceholder: "Agregar huevos, leche, papel...",
     inventoryQuantityPlaceholder: "Cantidad, opcional",
+    inventoryPhotoLabel: "Foto del inventario",
     addInventoryItem: "Agregar inventario",
     inventorySaved: "Inventario guardado.",
     inventoryError: "No se pudo guardar el inventario. Intenta otra vez cuando el sitio este en linea.",
@@ -1420,12 +1422,13 @@ function inventoryLocationLabel(location) {
   return t("locationPantry");
 }
 
-function inventoryItem(text, quantity = "", location = "pantry") {
+function inventoryItem(text, quantity = "", location = "pantry", photos = []) {
   return {
     id: `inventory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     text: cleanIngredientForGrocery(text),
     quantity: cleanIngredientForGrocery(quantity),
     location,
+    photos,
     createdAt: new Date().toISOString(),
   };
 }
@@ -1451,6 +1454,7 @@ function renderInventory() {
       <h3>${escapeHtml(group.label)}</h3>
       ${group.items.map((item) => `
         <div class="inventory-item">
+          ${item.photos?.[0] ? `<img src="${item.photos[0]}" alt="" />` : ""}
           <span>
             <strong>${escapeHtml(item.text)}</strong>
             <em>${escapeHtml(item.quantity || inventoryLocationLabel(item.location))}</em>
@@ -1732,9 +1736,9 @@ async function resizeImageFile(file) {
   return canvas.toDataURL("image/jpeg", 0.78);
 }
 
-function readFilesAsDataUrls(files) {
+function readFilesAsDataUrls(files, limit = 3) {
   return Promise.all(
-    [...files].slice(0, 3).map((file) => resizeImageFile(file))
+    [...files].slice(0, limit).map((file) => resizeImageFile(file))
   );
 }
 
@@ -1923,13 +1927,16 @@ $("#inventoryForm").addEventListener("submit", async (event) => {
   const text = $("#inventoryInput").value.trim();
   if (!text) return;
 
+  const photos = await readFilesAsDataUrls($("#inventoryPhotoInput").files, 1);
   inventory.unshift(inventoryItem(
     text,
     $("#inventoryQuantityInput").value.trim(),
-    $("#inventoryLocationInput").value
+    $("#inventoryLocationInput").value,
+    photos
   ));
   $("#inventoryInput").value = "";
   $("#inventoryQuantityInput").value = "";
+  $("#inventoryPhotoInput").value = "";
   renderInventory();
   bindInventoryControls();
   await saveInventory();
