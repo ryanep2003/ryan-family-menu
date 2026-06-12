@@ -980,6 +980,14 @@ const translations = {
     inventoryPlaceholder: "Add eggs, milk, paper towels...",
     inventoryQuantityPlaceholder: "Amount, optional",
     inventoryPhotoLabel: "Inventory photo",
+    inventoryScanHeading: "Scan inventory photos",
+    inventoryScanNote: "Upload fridge, freezer, pantry, or receipt photos. Review the suggestions before adding them.",
+    scanInventoryPhotos: "Scan photos",
+    inventoryScanWorking: "Scanning photos...",
+    inventoryScanError: "Could not scan photos. Check the OpenAI key in Netlify, then try again.",
+    inventoryScanEmpty: "No clear inventory items found. Try a closer photo.",
+    inventorySuggestionsHeading: "Review suggestions",
+    addSelectedInventory: "Add selected",
     addInventoryItem: "Add inventory",
     inventorySaved: "Inventory saved.",
     inventoryError: "Could not save inventory. Try again when the site is online.",
@@ -1067,6 +1075,14 @@ const translations = {
     inventoryPlaceholder: "Agregar huevos, leche, papel...",
     inventoryQuantityPlaceholder: "Cantidad, opcional",
     inventoryPhotoLabel: "Foto del inventario",
+    inventoryScanHeading: "Escanear fotos de inventario",
+    inventoryScanNote: "Sube fotos del refrigerador, congelador, despensa o recibos. Revisa las sugerencias antes de agregarlas.",
+    scanInventoryPhotos: "Escanear fotos",
+    inventoryScanWorking: "Escaneando fotos...",
+    inventoryScanError: "No se pudieron escanear las fotos. Revisa la llave de OpenAI en Netlify e intenta otra vez.",
+    inventoryScanEmpty: "No se encontraron articulos claros. Intenta una foto mas cercana.",
+    inventorySuggestionsHeading: "Revisar sugerencias",
+    addSelectedInventory: "Agregar seleccionados",
     addInventoryItem: "Agregar inventario",
     inventorySaved: "Inventario guardado.",
     inventoryError: "No se pudo guardar el inventario. Intenta otra vez cuando el sitio este en linea.",
@@ -1139,6 +1155,7 @@ let drafts = JSON.parse(localStorage.getItem("dinner-drafts") || "[]");
 let sharedRecipes = [];
 let groceries = [];
 let inventory = [];
+let inventorySuggestions = [];
 let visibleMonth = new Date();
 visibleMonth.setDate(1);
 let deferredPrompt = null;
@@ -1477,6 +1494,76 @@ function bindInventoryControls() {
   });
 }
 
+function renderInventorySuggestions() {
+  const panel = $("#inventorySuggestions");
+  if (!panel) return;
+
+  if (!inventorySuggestions.length) {
+    panel.hidden = true;
+    panel.innerHTML = "";
+    return;
+  }
+
+  panel.hidden = false;
+  panel.innerHTML = `
+    <h3>${t("inventorySuggestionsHeading")}</h3>
+    <div class="suggestion-list">
+      ${inventorySuggestions.map((item, index) => `
+        <label class="suggestion-item">
+          <input type="checkbox" data-inventory-suggestion="${index}" checked />
+          <span>
+            <strong>${escapeHtml(item.text)}</strong>
+            <em>${escapeHtml([item.quantity, inventoryLocationLabel(item.location)].filter(Boolean).join(" · "))}</em>
+          </span>
+        </label>
+      `).join("")}
+    </div>
+    <button class="primary-action" type="button" id="addInventorySuggestions">${t("addSelectedInventory")}</button>
+  `;
+
+  $("#addInventorySuggestions").addEventListener("click", async () => {
+    const selected = $$("[data-inventory-suggestion]")
+      .filter((checkbox) => checkbox.checked)
+      .map((checkbox) => inventorySuggestions[Number(checkbox.dataset.inventorySuggestion)])
+      .filter(Boolean);
+
+    if (!selected.length) return;
+
+    inventory = mergeInventory(inventory, selected.map((item) => inventoryItem(
+      item.text,
+      item.quantity,
+      item.location,
+      []
+    )));
+    inventorySuggestions = [];
+    renderInventorySuggestions();
+    renderInventory();
+    bindInventoryControls();
+    await saveInventory();
+  });
+}
+
+function mergeInventory(existingItems, newItems) {
+  const key = (item) => `${(item.location || "pantry").toLowerCase()}::${(item.text || "").trim().toLowerCase()}`;
+  const merged = new Map(existingItems.map((item) => [key(item), item]));
+
+  newItems.forEach((item) => {
+    const itemKey = key(item);
+    if (merged.has(itemKey)) {
+      const current = merged.get(itemKey);
+      merged.set(itemKey, {
+        ...current,
+        quantity: item.quantity || current.quantity,
+        location: item.location || current.location,
+      });
+    } else {
+      merged.set(itemKey, item);
+    }
+  });
+
+  return [...merged.values()];
+}
+
 function renderTranslations() {
   $$("[data-i18n]").forEach((node) => {
     node.textContent = t(node.dataset.i18n);
@@ -1687,6 +1774,7 @@ function render() {
   renderCalendar();
   renderGroceries();
   renderInventory();
+  renderInventorySuggestions();
   renderRecipes();
   renderDetail();
   bindOpenButtons();
@@ -1840,6 +1928,21 @@ async function saveInventory() {
   }
 }
 
+async function recognizeInventory(images, location) {
+  const response = await fetch("/.netlify/functions/recognize-inventory", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ images, location }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || "Could not scan inventory photos.");
+  }
+
+  return Array.isArray(data.items) ? data.items : [];
+}
+
 $$("[data-lang]").forEach((button) => {
   button.addEventListener("click", () => {
     lang = button.dataset.lang;
@@ -1940,6 +2043,34 @@ $("#inventoryForm").addEventListener("submit", async (event) => {
   renderInventory();
   bindInventoryControls();
   await saveInventory();
+});
+
+$("#inventoryScanForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const files = $("#inventoryScanPhotoInput").files;
+  if (!files.length) return;
+
+  const submitButton = $("#inventoryScanForm .primary-action");
+  const status = $("#inventoryStatus");
+  submitButton.disabled = true;
+  status.textContent = t("inventoryScanWorking");
+  status.classList.remove("error");
+
+  try {
+    const images = await readFilesAsDataUrls(files, 6);
+    inventorySuggestions = await recognizeInventory(images, $("#inventoryScanLocationInput").value);
+    $("#inventoryScanPhotoInput").value = "";
+    renderInventorySuggestions();
+    status.textContent = inventorySuggestions.length ? "" : t("inventoryScanEmpty");
+  } catch (error) {
+    console.warn(error);
+    inventorySuggestions = [];
+    renderInventorySuggestions();
+    status.textContent = error.message || t("inventoryScanError");
+    status.classList.add("error");
+  } finally {
+    submitButton.disabled = false;
+  }
 });
 
 $("#uploadForm").addEventListener("submit", async (event) => {

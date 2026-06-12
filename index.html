@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#fbf7ef" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=13" />
+    <link rel="stylesheet" href="styles.css?v=14" />
   </head>
   <body>
     <header class="app-header">
@@ -112,6 +112,23 @@
           </select>
           <button class="primary-action" type="submit" data-i18n="addInventoryItem">Add inventory</button>
         </form>
+        <div class="inventory-scan-panel">
+          <div>
+            <h3 data-i18n="inventoryScanHeading">Scan inventory photos</h3>
+            <p data-i18n="inventoryScanNote">Upload fridge, freezer, pantry, or receipt photos. Review the suggestions before adding them.</p>
+          </div>
+          <form class="inventory-scan" id="inventoryScanForm">
+            <input type="file" id="inventoryScanPhotoInput" accept="image/*" capture="environment" multiple />
+            <select id="inventoryScanLocationInput" aria-label="Default location">
+              <option value="fridge" data-i18n="locationFridge">Fridge</option>
+              <option value="pantry" data-i18n="locationPantry">Pantry</option>
+              <option value="freezer" data-i18n="locationFreezer">Freezer</option>
+              <option value="household" data-i18n="locationHousehold">Household</option>
+            </select>
+            <button class="primary-action" type="submit" data-i18n="scanInventoryPhotos">Scan photos</button>
+          </form>
+          <div class="inventory-suggestions" id="inventorySuggestions" hidden></div>
+        </div>
         <p class="upload-status" id="inventoryStatus" role="status"></p>
         <div class="inventory-list" id="inventoryList"></div>
       </section>
@@ -217,6 +234,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=13"></script>
+    <script src="app.js?v=14"></script>
   </body>
 </html>

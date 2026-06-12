@@ -294,6 +294,84 @@ h3 {
   grid-template-columns: minmax(180px, 1fr) minmax(130px, 180px) minmax(150px, 220px) minmax(130px, 180px) auto;
 }
 
+.inventory-scan-panel {
+  display: grid;
+  gap: 12px;
+  margin: 12px 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.inventory-scan-panel h3 {
+  margin: 0 0 6px;
+}
+
+.inventory-scan-panel p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.inventory-scan {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(130px, 180px) auto;
+  gap: 8px;
+}
+
+.inventory-scan input,
+.inventory-scan select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  padding: 10px 12px;
+}
+
+.inventory-suggestions {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.inventory-suggestions h3 {
+  margin: 0;
+}
+
+.suggestion-list {
+  display: grid;
+  gap: 8px;
+}
+
+.suggestion-item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #eee5d8;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.suggestion-item input {
+  width: 18px;
+  height: 18px;
+}
+
+.suggestion-item span {
+  display: grid;
+  gap: 2px;
+}
+
+.suggestion-item em {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-style: normal;
+}
+
 .grocery-list,
 .inventory-list {
   display: grid;
@@ -796,7 +874,8 @@ li {
 
   .grocery-actions,
   .grocery-add,
-  .inventory-add {
+  .inventory-add,
+  .inventory-scan {
     grid-template-columns: 1fr;
     display: grid;
   }
