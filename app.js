@@ -1425,6 +1425,7 @@ async function loadSharedState() {
       return;
     }
 
+    const missingWeekStart = !data.state.weekStart;
     schedule = normalizeSchedule(data.state.schedule);
     calendarMeals = normalizeCalendar(data.state.calendarMeals);
     weekStartKey = data.state.weekStart || currentWeekStartKey();
@@ -1433,7 +1434,7 @@ async function loadSharedState() {
     const rolledForward = rollWeekForwardIfNeeded();
     saveSharedStateLocally();
     render();
-    if (rolledForward) await saveSharedState();
+    if (rolledForward || missingWeekStart) await saveSharedState();
   } catch (error) {
     console.warn(error);
   }
