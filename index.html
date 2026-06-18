@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#fbf7ef" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=14" />
+    <link rel="stylesheet" href="styles.css?v=15" />
   </head>
   <body>
     <header class="app-header">
@@ -26,33 +26,79 @@
     </header>
 
     <main>
-      <section class="today-band">
-        <div>
-          <p class="section-label" data-i18n="tonight">Tonight</p>
-          <h2 id="todayRecipeName">A 100% Chance of Meatballs</h2>
-          <p id="todayMeta">1 hour · Serves 4 · Babysitter friendly</p>
-          <div class="today-meal-list" id="todayMealList"></div>
-        </div>
-        <button class="primary-action" type="button" data-scroll-to="recipeDetail" data-i18n="cookButton">Cook this</button>
-      </section>
-
       <nav class="tabs" aria-label="Views">
-        <button type="button" class="active" data-view="schedule" data-i18n="scheduleTab">Schedule</button>
-        <button type="button" data-view="calendar" data-i18n="calendarTab">Calendar</button>
+        <button type="button" class="active" data-view="today" data-i18n="todayTab">Today</button>
+        <button type="button" data-view="schedule" data-i18n="scheduleTab">Week</button>
         <button type="button" data-view="grocery" data-i18n="groceryTab">Groceries</button>
         <button type="button" data-view="recipes" data-i18n="recipesTab">Recipes</button>
         <button type="button" data-view="add" data-i18n="addTab">Add</button>
       </nav>
 
-      <section class="view active" id="scheduleView">
+      <section class="view active" id="todayView">
+        <section class="today-band">
+          <div>
+            <p class="section-label" data-i18n="tonight">Tonight</p>
+            <h2 id="todayRecipeName">A 100% Chance of Meatballs</h2>
+            <p id="todayMeta">1 planned item</p>
+            <div class="today-meal-list" id="todayMealList"></div>
+          </div>
+          <button class="primary-action" id="cookToday" type="button" data-i18n="cookButton">Cook this</button>
+        </section>
+
+        <div class="today-shortcuts">
+          <button type="button" data-view-target="grocery">
+            <span data-i18n="groceryShortcut">Shopping list</span>
+            <strong id="todayGrocerySummary">0 items to buy</strong>
+          </button>
+          <button type="button" data-view-target="grocery" data-view-scroll="inventoryHeading">
+            <span data-i18n="inventoryShortcut">Home inventory</span>
+            <strong id="todayInventorySummary">0 items at home</strong>
+          </button>
+        </div>
+
+        <div class="today-dashboard">
+          <section class="today-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="section-label" data-i18n="tasksLabel">Shared checklist</p>
+                <h2 data-i18n="tasksHeading">Today's cooking tasks</h2>
+              </div>
+              <span id="taskProgress"></span>
+            </div>
+            <form class="task-add" id="taskForm">
+              <input type="text" id="taskInput" data-i18n-placeholder="taskPlaceholder" placeholder="Prep chicken, make rice..." required />
+              <select id="taskAssigneeInput" aria-label="Assigned to">
+                <option value="family" data-i18n="assigneeFamily">Anyone</option>
+                <option value="parents" data-i18n="assigneeParents">Parents</option>
+                <option value="nanny" data-i18n="assigneeNanny">Nanny</option>
+                <option value="kids" data-i18n="assigneeKids">Kids</option>
+              </select>
+              <button class="primary-action" type="submit" data-i18n="addTask">Add task</button>
+            </form>
+            <div class="task-list" id="taskList"></div>
+          </section>
+
+          <section class="today-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="section-label" data-i18n="favoritesLabel">Quick planning</p>
+                <h2 data-i18n="favoritesHeading">Family favorites</h2>
+              </div>
+            </div>
+            <div class="favorite-list" id="favoriteList"></div>
+            <button class="text-action" type="button" data-view-target="recipes" data-i18n="chooseFavorites">Choose favorites in Recipes</button>
+          </section>
+        </div>
+        <p class="upload-status error" id="sharedStateStatus" role="status"></p>
+      </section>
+
+      <section class="view" id="scheduleView">
         <div class="section-heading">
           <h2 data-i18n="weekHeading">This week</h2>
           <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Reset</button>
         </div>
         <div class="schedule-grid" id="scheduleGrid"></div>
-      </section>
 
-      <section class="view" id="calendarView">
         <div class="section-heading calendar-heading">
           <div>
             <p class="section-label" data-i18n="monthLabel">Recipe calendar</p>
@@ -78,6 +124,7 @@
           </div>
           <div class="grocery-actions">
             <button class="ghost-button" id="generateGroceries" type="button" data-i18n="generateGroceries">Generate from week</button>
+            <button class="ghost-button" type="button" data-scroll-to="inventoryHeading" data-i18n="jumpInventory">Home inventory</button>
             <button class="ghost-button" id="clearCheckedGroceries" type="button" data-i18n="clearChecked">Clear checked</button>
           </div>
         </div>
@@ -94,7 +141,7 @@
         <p class="upload-status" id="groceryStatus" role="status"></p>
         <div class="grocery-list" id="groceryList"></div>
 
-        <div class="section-heading inventory-heading">
+        <div class="section-heading inventory-heading" id="inventoryHeading">
           <div>
             <p class="section-label" data-i18n="inventoryLabel">Home inventory</p>
             <h2 data-i18n="inventoryHeading">Already in the house</h2>
@@ -202,14 +249,17 @@
         </form>
       </section>
 
-      <section class="recipe-detail" id="recipeDetail">
+      <section class="recipe-detail" id="recipeDetail" hidden>
         <div class="detail-top">
           <div>
             <p class="section-label" data-i18n="selectedRecipe">Selected recipe</p>
             <h2 id="detailName">A 100% Chance of Meatballs</h2>
             <p id="detailMeta">Makes 18 meatballs · 1 hour · Mess 2/4</p>
           </div>
-          <button class="ghost-button" id="markCooked" type="button" data-i18n="markCooked">Mark cooked</button>
+          <div class="detail-actions">
+            <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
+            <button class="ghost-button" id="markCooked" type="button" data-i18n="markCooked">Mark cooked</button>
+          </div>
         </div>
 
         <div class="detail-layout">
@@ -234,6 +284,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=14"></script>
+    <script src="app.js?v=15"></script>
   </body>
 </html>

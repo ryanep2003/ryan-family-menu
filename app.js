@@ -907,9 +907,10 @@ const translations = {
   en: {
     eyebrow: "Ryan Family Menu",
     title: "Tonight, made simple.",
+    todayTab: "Today",
     tonight: "Tonight",
     cookButton: "Cook this",
-    scheduleTab: "Schedule",
+    scheduleTab: "Week",
     calendarTab: "Calendar",
     groceryTab: "Groceries",
     recipesTab: "Recipes",
@@ -998,10 +999,33 @@ const translations = {
     locationFreezer: "Freezer",
     locationHousehold: "Household",
     remove: "Remove",
+    tasksLabel: "Shared checklist",
+    tasksHeading: "Today's cooking tasks",
+    taskPlaceholder: "Prep chicken, make rice...",
+    assigneeFamily: "Anyone",
+    assigneeParents: "Parents",
+    assigneeNanny: "Nanny",
+    assigneeKids: "Kids",
+    addTask: "Add task",
+    tasksEmpty: "No cooking tasks for today.",
+    favoritesLabel: "Quick planning",
+    favoritesHeading: "Family favorites",
+    favoritesEmpty: "Favorite recipes will appear here.",
+    chooseFavorites: "Choose favorites in Recipes",
+    addFavorite: "Add favorite",
+    removeFavorite: "Favorite",
+    planNextOpen: "Plan next open night",
+    sharedStateError: "Changes are saved on this phone and will sync when the site is online.",
+    jumpInventory: "Home inventory",
+    groceryShortcut: "Shopping list",
+    inventoryShortcut: "Home inventory",
+    itemsToBuy: "items to buy",
+    itemsAtHome: "items at home",
   },
   es: {
     eyebrow: "Menu de la familia Ryan",
     title: "La cena, mas facil.",
+    todayTab: "Hoy",
     tonight: "Esta noche",
     cookButton: "Cocinar",
     scheduleTab: "Semana",
@@ -1093,6 +1117,28 @@ const translations = {
     locationFreezer: "Congelador",
     locationHousehold: "Casa",
     remove: "Quitar",
+    tasksLabel: "Lista compartida",
+    tasksHeading: "Tareas de cocina de hoy",
+    taskPlaceholder: "Preparar pollo, hacer arroz...",
+    assigneeFamily: "Cualquiera",
+    assigneeParents: "Padres",
+    assigneeNanny: "Ninera",
+    assigneeKids: "Ninos",
+    addTask: "Agregar tarea",
+    tasksEmpty: "No hay tareas de cocina para hoy.",
+    favoritesLabel: "Planificacion rapida",
+    favoritesHeading: "Favoritos de la familia",
+    favoritesEmpty: "Las recetas favoritas apareceran aqui.",
+    chooseFavorites: "Elegir favoritos en Recetas",
+    addFavorite: "Agregar favorito",
+    removeFavorite: "Favorito",
+    planNextOpen: "Planear la proxima noche libre",
+    sharedStateError: "Los cambios se guardaron en este telefono y se sincronizaran cuando el sitio este en linea.",
+    jumpInventory: "Inventario de casa",
+    groceryShortcut: "Lista de compras",
+    inventoryShortcut: "Inventario de casa",
+    itemsToBuy: "articulos por comprar",
+    itemsAtHome: "articulos en casa",
   },
 };
 
@@ -1151,6 +1197,8 @@ let lang = localStorage.getItem("dinner-lang") || "en";
 let selectedRecipeId = "meatballs";
 let schedule = normalizeSchedule(JSON.parse(localStorage.getItem("dinner-schedule") || "null"));
 let calendarMeals = normalizeCalendar(JSON.parse(localStorage.getItem("dinner-calendar") || "null") || {});
+let favorites = JSON.parse(localStorage.getItem("dinner-favorites") || "[]");
+let tasks = JSON.parse(localStorage.getItem("dinner-tasks") || "[]");
 let drafts = JSON.parse(localStorage.getItem("dinner-drafts") || "[]");
 let sharedRecipes = [];
 let groceries = [];
@@ -1258,6 +1306,68 @@ function formatDateKey(date) {
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   const day = `${date.getDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function sharedStateSnapshot() {
+  return { schedule, calendarMeals, favorites, tasks };
+}
+
+function saveSharedStateLocally() {
+  localStorage.setItem("dinner-schedule", JSON.stringify(schedule));
+  localStorage.setItem("dinner-calendar", JSON.stringify(calendarMeals));
+  localStorage.setItem("dinner-favorites", JSON.stringify(favorites));
+  localStorage.setItem("dinner-tasks", JSON.stringify(tasks));
+}
+
+async function saveSharedState() {
+  saveSharedStateLocally();
+
+  try {
+    const response = await fetch("/.netlify/functions/family-state", {
+      method: "PUT",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ state: sharedStateSnapshot() }),
+    });
+    if (!response.ok) throw new Error("Could not save shared family state.");
+    const data = await response.json();
+    if (data.state) {
+      schedule = normalizeSchedule(data.state.schedule);
+      calendarMeals = normalizeCalendar(data.state.calendarMeals);
+      favorites = Array.isArray(data.state.favorites) ? data.state.favorites : favorites;
+      tasks = Array.isArray(data.state.tasks) ? data.state.tasks : tasks;
+      saveSharedStateLocally();
+    }
+    const status = $("#sharedStateStatus");
+    if (status) status.textContent = "";
+  } catch (error) {
+    console.warn(error);
+    const status = $("#sharedStateStatus");
+    if (status) status.textContent = t("sharedStateError");
+  }
+}
+
+async function loadSharedState() {
+  try {
+    const response = await fetch("/.netlify/functions/family-state", {
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("Could not load shared family state.");
+    const data = await response.json();
+
+    if (!data.state) {
+      await saveSharedState();
+      return;
+    }
+
+    schedule = normalizeSchedule(data.state.schedule);
+    calendarMeals = normalizeCalendar(data.state.calendarMeals);
+    favorites = Array.isArray(data.state.favorites) ? data.state.favorites : [];
+    tasks = Array.isArray(data.state.tasks) ? data.state.tasks : [];
+    saveSharedStateLocally();
+    render();
+  } catch (error) {
+    console.warn(error);
+  }
 }
 
 function todaysRecipeId() {
@@ -1565,6 +1675,7 @@ function mergeInventory(existingItems, newItems) {
 }
 
 function renderTranslations() {
+  document.documentElement.lang = lang;
   $$("[data-i18n]").forEach((node) => {
     node.textContent = t(node.dataset.i18n);
   });
@@ -1593,6 +1704,106 @@ function renderToday() {
       </button>
     `)
     .join("");
+  const toBuy = groceries.filter((item) => !item.checked && !item.inInventory).length;
+  $("#todayGrocerySummary").textContent = `${toBuy} ${t("itemsToBuy")}`;
+  $("#todayInventorySummary").textContent = `${inventory.length} ${t("itemsAtHome")}`;
+  $("#cookToday").disabled = !mainRecipe;
+}
+
+function taskAssigneeLabel(assignee) {
+  const labels = {
+    family: "assigneeFamily",
+    parents: "assigneeParents",
+    nanny: "assigneeNanny",
+    kids: "assigneeKids",
+  };
+  return t(labels[assignee] || labels.family);
+}
+
+function todaysTasks() {
+  const todayKey = formatDateKey(new Date());
+  return tasks.filter((task) => task.date === todayKey);
+}
+
+function renderTasks() {
+  const currentTasks = todaysTasks();
+  const completed = currentTasks.filter((task) => task.completed).length;
+  $("#taskProgress").textContent = currentTasks.length ? `${completed}/${currentTasks.length}` : "";
+
+  $("#taskList").innerHTML = currentTasks.length
+    ? currentTasks.map((task) => `
+        <div class="task-item${task.completed ? " completed" : ""}">
+          <label>
+            <input type="checkbox" data-task-id="${escapeHtml(task.id)}" ${task.completed ? "checked" : ""} />
+            <span>
+              <strong>${escapeHtml(task.text)}</strong>
+              <small>${escapeHtml(taskAssigneeLabel(task.assignee))}</small>
+            </span>
+          </label>
+          <button class="icon-remove" type="button" data-remove-task="${escapeHtml(task.id)}" aria-label="${t("remove")}">×</button>
+        </div>
+      `).join("")
+    : `<p class="empty-state compact">${t("tasksEmpty")}</p>`;
+
+  $$('[data-task-id]').forEach((checkbox) => {
+    checkbox.addEventListener("change", async () => {
+      const task = tasks.find((item) => item.id === checkbox.dataset.taskId);
+      if (!task) return;
+      task.completed = checkbox.checked;
+      renderTasks();
+      await saveSharedState();
+    });
+  });
+
+  $$('[data-remove-task]').forEach((button) => {
+    button.addEventListener("click", async () => {
+      tasks = tasks.filter((task) => task.id !== button.dataset.removeTask);
+      renderTasks();
+      await saveSharedState();
+    });
+  });
+}
+
+function nextOpenMealDate() {
+  const start = new Date();
+  for (let offset = 0; offset < 14; offset += 1) {
+    const date = new Date(start);
+    date.setDate(start.getDate() + offset);
+    const dateKey = formatDateKey(date);
+    const weekKey = days[(date.getDay() + 6) % 7].key;
+    const meal = normalizeMealPlan(calendarMeals[dateKey] || schedule[weekKey]);
+    if (!meal.main) return { dateKey, meal };
+  }
+  return { dateKey: formatDateKey(start), meal: todaysMealPlan() };
+}
+
+function renderFavorites() {
+  const favoriteRecipes = favorites
+    .map((id) => allRecipes().find((recipe) => recipe.id === id))
+    .filter(Boolean);
+  $("#favoriteList").innerHTML = favoriteRecipes.length
+    ? favoriteRecipes.map((recipe) => `
+        <div class="favorite-item">
+          <button class="favorite-open" type="button" data-open="${recipe.id}">
+            <img src="${recipe.photos[0]}" alt="" />
+            <span>
+              <strong>${escapeHtml(localize(recipe.name))}</strong>
+              <small>${escapeHtml(categoryLabel(categoryFor(recipe)))}</small>
+            </span>
+          </button>
+          <button class="ghost-button compact-button" type="button" data-plan-favorite="${recipe.id}">${t("planNextOpen")}</button>
+        </div>
+      `).join("")
+    : `<p class="empty-state compact">${t("favoritesEmpty")}</p>`;
+
+  $$('[data-plan-favorite]').forEach((button) => {
+    button.addEventListener("click", async () => {
+      const target = nextOpenMealDate();
+      calendarMeals[target.dateKey] = { ...target.meal, main: button.dataset.planFavorite };
+      render();
+      await saveSharedState();
+    });
+  });
 }
 
 function optionsForSlot(slot, selectedId = "") {
@@ -1639,7 +1850,7 @@ function renderMealControls(meal, context, label) {
 
 function bindMealControls() {
   $$("[data-meal-context]").forEach((control) => {
-    control.addEventListener("change", () => {
+    control.addEventListener("change", async () => {
       const [type, key] = control.dataset.mealContext.split(":");
       const slot = control.dataset.slot;
       const target = type === "week" ? schedule[key] : (calendarMeals[key] || { ...emptyMeal });
@@ -1647,15 +1858,14 @@ function bindMealControls() {
 
       if (type === "week") {
         schedule[key] = target;
-        localStorage.setItem("dinner-schedule", JSON.stringify(schedule));
       } else {
         calendarMeals[key] = target;
         if (!target.main && !target.side && !target.salad && !target.notes) {
           delete calendarMeals[key];
         }
-        localStorage.setItem("dinner-calendar", JSON.stringify(calendarMeals));
       }
       render();
+      await saveSharedState();
     });
   });
 }
@@ -1742,6 +1952,7 @@ function renderRecipes() {
       <button class="recipe-card" type="button" data-open="${recipe.id}">
         <img src="${recipe.photos[0]}" alt="" />
         <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
+        ${favorites.includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}
         ${recipe.allergyWarning ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
         <h3>${escapeHtml(localize(recipe.name))}</h3>
         <p>${escapeHtml(localize(recipe.meta))}</p>
@@ -1765,11 +1976,16 @@ function renderDetail() {
   $("#stepList").innerHTML = (recipe.steps[lang] || recipe.steps.en).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   $("#familyNotes").textContent = localize(recipe.notes);
   $("#photoStrip").innerHTML = recipe.photos.map((src) => `<img src="${src}" alt="" />`).join("");
+  const isFavorite = favorites.includes(recipe.id);
+  $("#favoriteRecipe").textContent = t(isFavorite ? "removeFavorite" : "addFavorite");
+  $("#favoriteRecipe").setAttribute("aria-pressed", `${isFavorite}`);
 }
 
 function render() {
   renderTranslations();
   renderToday();
+  renderTasks();
+  renderFavorites();
   renderSchedule();
   renderCalendar();
   renderGroceries();
@@ -1787,6 +2003,7 @@ function bindOpenButtons() {
     button.addEventListener("click", () => {
       selectedRecipeId = button.dataset.open;
       renderDetail();
+      $("#recipeDetail").hidden = false;
       $("#recipeDetail").scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
@@ -1795,6 +2012,7 @@ function bindOpenButtons() {
 function setView(viewName) {
   $$(".view").forEach((view) => view.classList.toggle("active", view.id === `${viewName}View`));
   $$(".tabs button").forEach((button) => button.classList.toggle("active", button.dataset.view === viewName));
+  $("#recipeDetail").hidden = true;
 }
 
 function readFileAsDataUrl(file) {
@@ -1955,16 +2173,64 @@ $$(".tabs button").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
 
+$$('[data-view-target]').forEach((button) => {
+  button.addEventListener("click", () => {
+    setView(button.dataset.viewTarget);
+    if (button.dataset.viewScroll) {
+      requestAnimationFrame(() => {
+        $(`#${button.dataset.viewScroll}`).scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  });
+});
+
 $$("[data-scroll-to]").forEach((button) => {
   button.addEventListener("click", () => {
     $(`#${button.dataset.scrollTo}`).scrollIntoView({ behavior: "smooth", block: "start" });
   });
 });
 
-$("#resetWeek").addEventListener("click", () => {
+$("#resetWeek").addEventListener("click", async () => {
   schedule = normalizeSchedule(defaultSchedule);
-  localStorage.setItem("dinner-schedule", JSON.stringify(schedule));
   render();
+  await saveSharedState();
+});
+
+$("#taskForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const text = $("#taskInput").value.trim();
+  if (!text) return;
+
+  tasks.unshift({
+    id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    text,
+    assignee: $("#taskAssigneeInput").value,
+    date: formatDateKey(new Date()),
+    completed: false,
+    createdAt: new Date().toISOString(),
+  });
+  $("#taskInput").value = "";
+  renderTasks();
+  await saveSharedState();
+});
+
+$("#favoriteRecipe").addEventListener("click", async () => {
+  if (favorites.includes(selectedRecipeId)) {
+    favorites = favorites.filter((id) => id !== selectedRecipeId);
+  } else {
+    favorites = [selectedRecipeId, ...favorites];
+  }
+  render();
+  await saveSharedState();
+});
+
+$("#cookToday").addEventListener("click", () => {
+  const mainRecipe = todaysMealPlan().main;
+  if (!mainRecipe) return;
+  selectedRecipeId = mainRecipe;
+  renderDetail();
+  $("#recipeDetail").hidden = false;
+  $("#recipeDetail").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
 $("#previousMonth").addEventListener("click", () => {
@@ -2132,6 +2398,7 @@ if ("serviceWorker" in navigator) {
 }
 
 render();
+loadSharedState();
 loadSharedRecipes();
 loadGroceries();
 loadInventory();
