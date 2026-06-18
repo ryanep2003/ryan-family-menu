@@ -921,9 +921,9 @@ const translations = {
     thisMonth: "This month",
     nextMonth: "Next",
     reset: "Clear week",
-    clearWeekConfirm: "Clear every meal and note from the repeating weekly plan? Custom calendar dates will not be changed.",
-    weekRepeatsNote: "This plan repeats each week unless you customize a calendar date.",
-    weeklyPlan: "Weekly plan",
+    clearWeekConfirm: "Clear every meal and note from this week's seven dates?",
+    weekRepeatsNote: "These meals apply only to this week's dates and appear in the calendar below.",
+    weeklyPlan: "This week",
     customDate: "Custom date",
     useWeeklyPlan: "Use weekly plan",
     libraryHeading: "Recipe library",
@@ -1044,9 +1044,9 @@ const translations = {
     thisMonth: "Este mes",
     nextMonth: "Siguiente",
     reset: "Borrar semana",
-    clearWeekConfirm: "Borrar todas las comidas y notas del plan semanal? Las fechas personalizadas no cambiaran.",
-    weekRepeatsNote: "Este plan se repite cada semana a menos que personalices una fecha.",
-    weeklyPlan: "Plan semanal",
+    clearWeekConfirm: "Borrar todas las comidas y notas de las siete fechas de esta semana?",
+    weekRepeatsNote: "Estas comidas se aplican solo a las fechas de esta semana y aparecen en el calendario.",
+    weeklyPlan: "Esta semana",
     customDate: "Fecha personalizada",
     useWeeklyPlan: "Usar plan semanal",
     libraryHeading: "Recetas",
@@ -1207,6 +1207,7 @@ let lang = localStorage.getItem("dinner-lang") || "en";
 let selectedRecipeId = "meatballs";
 let schedule = normalizeSchedule(JSON.parse(localStorage.getItem("dinner-schedule") || "null"));
 let calendarMeals = normalizeCalendar(JSON.parse(localStorage.getItem("dinner-calendar") || "null") || {});
+let weekStartKey = localStorage.getItem("dinner-week-start") || currentWeekStartKey();
 let favorites = JSON.parse(localStorage.getItem("dinner-favorites") || "[]");
 let tasks = JSON.parse(localStorage.getItem("dinner-tasks") || "[]");
 let drafts = JSON.parse(localStorage.getItem("dinner-drafts") || "[]");
@@ -1318,10 +1319,49 @@ function formatDateKey(date) {
   return `${year}-${month}-${day}`;
 }
 
+function currentWeekStartKey() {
+  const start = new Date();
+  start.setHours(12, 0, 0, 0);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  return formatDateKey(start);
+}
+
+function dateFromKey(dateKey) {
+  return new Date(`${dateKey}T12:00:00`);
+}
+
+function activeWeekDateKeys() {
+  const start = dateFromKey(weekStartKey);
+  return days.map((day, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return { ...day, date, dateKey: formatDateKey(date) };
+  });
+}
+
+function mealHasContent(meal) {
+  return Boolean(meal.main || meal.side || meal.salad || meal.notes);
+}
+
+function rollWeekForwardIfNeeded() {
+  const currentStart = currentWeekStartKey();
+  if (weekStartKey === currentStart) return false;
+
+  activeWeekDateKeys().forEach(({ key, dateKey }) => {
+    const meal = normalizeMealPlan(schedule[key]);
+    if (mealHasContent(meal) && !Object.prototype.hasOwnProperty.call(calendarMeals, dateKey)) {
+      calendarMeals[dateKey] = meal;
+    }
+  });
+
+  weekStartKey = currentStart;
+  schedule = normalizeSchedule(Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])));
+  return true;
+}
+
 function weeklyMealForDateKey(dateKey) {
-  const date = new Date(`${dateKey}T12:00:00`);
-  const weekKey = days[(date.getDay() + 6) % 7].key;
-  return normalizeMealPlan(schedule[weekKey]);
+  const weekDate = activeWeekDateKeys().find((item) => item.dateKey === dateKey);
+  return weekDate ? normalizeMealPlan(schedule[weekDate.key]) : { ...emptyMeal };
 }
 
 function calendarMealForDateKey(dateKey) {
@@ -1331,12 +1371,13 @@ function calendarMealForDateKey(dateKey) {
 }
 
 function sharedStateSnapshot() {
-  return { schedule, calendarMeals, favorites, tasks };
+  return { weekStart: weekStartKey, schedule, calendarMeals, favorites, tasks };
 }
 
 function saveSharedStateLocally() {
   localStorage.setItem("dinner-schedule", JSON.stringify(schedule));
   localStorage.setItem("dinner-calendar", JSON.stringify(calendarMeals));
+  localStorage.setItem("dinner-week-start", weekStartKey);
   localStorage.setItem("dinner-favorites", JSON.stringify(favorites));
   localStorage.setItem("dinner-tasks", JSON.stringify(tasks));
 }
@@ -1355,6 +1396,7 @@ async function saveSharedState() {
     if (data.state) {
       schedule = normalizeSchedule(data.state.schedule);
       calendarMeals = normalizeCalendar(data.state.calendarMeals);
+      weekStartKey = data.state.weekStart || weekStartKey;
       favorites = Array.isArray(data.state.favorites) ? data.state.favorites : favorites;
       tasks = Array.isArray(data.state.tasks) ? data.state.tasks : tasks;
       saveSharedStateLocally();
@@ -1377,16 +1419,21 @@ async function loadSharedState() {
     const data = await response.json();
 
     if (!data.state) {
+      rollWeekForwardIfNeeded();
       await saveSharedState();
+      render();
       return;
     }
 
     schedule = normalizeSchedule(data.state.schedule);
     calendarMeals = normalizeCalendar(data.state.calendarMeals);
+    weekStartKey = data.state.weekStart || currentWeekStartKey();
     favorites = Array.isArray(data.state.favorites) ? data.state.favorites : [];
     tasks = Array.isArray(data.state.tasks) ? data.state.tasks : [];
+    const rolledForward = rollWeekForwardIfNeeded();
     saveSharedStateLocally();
     render();
+    if (rolledForward) await saveSharedState();
   } catch (error) {
     console.warn(error);
   }
@@ -1397,10 +1444,7 @@ function todaysRecipeId() {
 }
 
 function todaysMealPlan() {
-  const today = new Date();
-  const todayKey = formatDateKey(today);
-  const weekKey = days[(today.getDay() + 6) % 7].key;
-  return normalizeMealPlan(calendarMeals[todayKey] || schedule[weekKey]);
+  return calendarMealForDateKey(formatDateKey(new Date()));
 }
 
 function mealRecipes(meal) {
@@ -1792,8 +1836,7 @@ function nextOpenMealDate() {
     const date = new Date(start);
     date.setDate(start.getDate() + offset);
     const dateKey = formatDateKey(date);
-    const weekKey = days[(date.getDay() + 6) % 7].key;
-    const meal = normalizeMealPlan(calendarMeals[dateKey] || schedule[weekKey]);
+    const meal = calendarMealForDateKey(dateKey);
     if (!meal.main) return { dateKey, meal };
   }
   return { dateKey: formatDateKey(start), meal: todaysMealPlan() };
@@ -1875,13 +1918,14 @@ function bindMealControls() {
     control.addEventListener("change", async () => {
       const [type, key] = control.dataset.mealContext.split(":");
       const slot = control.dataset.slot;
-      const target = type === "week"
-        ? schedule[key]
-        : { ...calendarMealForDateKey(key) };
+      const target = { ...calendarMealForDateKey(key) };
       target[slot] = control.value;
 
-      if (type === "week") {
-        schedule[key] = target;
+      if (type === "weekdate") {
+        const weekDate = activeWeekDateKeys().find((item) => item.dateKey === key);
+        if (!weekDate) return;
+        schedule[weekDate.key] = target;
+        delete calendarMeals[key];
       } else {
         calendarMeals[key] = target;
       }
@@ -1893,12 +1937,17 @@ function bindMealControls() {
 
 function renderSchedule() {
   const grid = $("#scheduleGrid");
-  grid.innerHTML = days
+  const weekDates = activeWeekDateKeys();
+  const todayKey = formatDateKey(new Date());
+  const rangeFormatter = new Intl.DateTimeFormat(lang === "es" ? "es-US" : "en-US", { month: "short", day: "numeric" });
+  $("#weekTitle").textContent = `${t("weekHeading")} · ${rangeFormatter.format(weekDates[0].date)}–${rangeFormatter.format(weekDates[6].date)}`;
+  grid.innerHTML = weekDates
     .map((day) => {
-      const meal = normalizeMealPlan(schedule[day.key]);
+      const meal = calendarMealForDateKey(day.dateKey);
+      const label = `${day[lang]} · ${rangeFormatter.format(day.date)}${day.dateKey === todayKey ? ` · ${t("todayTab")}` : ""}`;
       return `
-        <div class="day-card">
-          ${renderMealControls(meal, `week:${day.key}`, day[lang])}
+        <div class="day-card${day.dateKey === todayKey ? " today" : ""}">
+          ${renderMealControls(meal, `weekdate:${day.dateKey}`, label)}
         </div>
       `;
     })
@@ -1927,6 +1976,7 @@ function calendarDateRange() {
 
 function renderCalendar() {
   const todayKey = formatDateKey(new Date());
+  const activeDateKeys = new Set(activeWeekDateKeys().map((item) => item.dateKey));
 
   $("#monthTitle").textContent = monthName(visibleMonth);
   $("#calendarWeekdays").innerHTML = days.map((day) => `<span>${day[lang].slice(0, 3)}</span>`).join("");
@@ -1934,6 +1984,7 @@ function renderCalendar() {
     .map((date) => {
       const dateKey = formatDateKey(date);
       const hasOverride = Object.prototype.hasOwnProperty.call(calendarMeals, dateKey);
+      const isThisWeek = activeDateKeys.has(dateKey);
       const meal = calendarMealForDateKey(dateKey);
       const classes = [
         "calendar-day",
@@ -1942,10 +1993,10 @@ function renderCalendar() {
       ].filter(Boolean).join(" ");
 
       return `
-        <div class="${classes}${hasOverride ? " custom-date" : " weekly-date"}">
+        <div class="${classes}${hasOverride ? " custom-date" : isThisWeek ? " weekly-date" : ""}">
           <div class="calendar-date">
             <span class="date-number">${date.getDate()}</span>
-            <span class="calendar-source">${t(hasOverride ? "customDate" : "weeklyPlan")}</span>
+            ${hasOverride || isThisWeek ? `<span class="calendar-source">${t(hasOverride ? "customDate" : "weeklyPlan")}</span>` : ""}
           </div>
           ${renderMealControls(meal, `calendar:${dateKey}`, "")}
           ${hasOverride ? `<button class="calendar-inherit" type="button" data-use-weekly-plan="${dateKey}">${t("useWeeklyPlan")}</button>` : ""}
@@ -2224,6 +2275,7 @@ $$("[data-scroll-to]").forEach((button) => {
 $("#resetWeek").addEventListener("click", async () => {
   if (!window.confirm(t("clearWeekConfirm"))) return;
   schedule = normalizeSchedule(Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])));
+  activeWeekDateKeys().forEach(({ dateKey }) => delete calendarMeals[dateKey]);
   render();
   await saveSharedState();
 });

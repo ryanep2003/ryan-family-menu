@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#fbf7ef" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=16" />
+    <link rel="stylesheet" href="styles.css?v=17" />
   </head>
   <body>
     <header class="app-header">
@@ -95,8 +95,8 @@
       <section class="view" id="scheduleView">
         <div class="section-heading">
           <div>
-            <h2 data-i18n="weekHeading">This week</h2>
-            <p class="section-note" data-i18n="weekRepeatsNote">This plan repeats each week unless you customize a calendar date.</p>
+            <h2 id="weekTitle" data-i18n="weekHeading">This week</h2>
+            <p class="section-note" data-i18n="weekRepeatsNote">These meals apply only to this week's dates and appear in the calendar below.</p>
           </div>
           <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Clear week</button>
         </div>
@@ -287,6 +287,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=16"></script>
+    <script src="app.js?v=17"></script>
   </body>
 </html>

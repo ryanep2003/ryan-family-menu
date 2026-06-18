@@ -74,6 +74,7 @@ function cleanTasks(value) {
 
 export function cleanState(value) {
   return {
+    weekStart: /^\d{4}-\d{2}-\d{2}$/.test(value?.weekStart) ? value.weekStart : "",
     schedule: cleanSchedule(value?.schedule),
     calendarMeals: cleanCalendar(value?.calendarMeals),
     favorites: cleanFavorites(value?.favorites),
