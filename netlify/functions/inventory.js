@@ -22,16 +22,21 @@ function cleanItem(item) {
   const location = ["pantry", "fridge", "freezer", "household"].includes(item.location)
     ? item.location
     : "pantry";
+  const stockState = ["full", "some", "low", "out"].includes(item.stockState)
+    ? item.stockState
+    : "some";
 
   return {
     id: `${item.id || `inventory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}`,
     text,
     quantity: `${item.quantity || ""}`.trim().slice(0, 80),
     location,
+    stockState,
     photos: Array.isArray(item.photos)
       ? item.photos.filter((photo) => typeof photo === "string" && photo.startsWith("data:image/")).slice(0, 1)
       : [],
     createdAt: item.createdAt || new Date().toISOString(),
+    updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
   };
 }
 

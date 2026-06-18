@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#fbf7ef" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=18" />
+    <link rel="stylesheet" href="styles.css?v=19" />
   </head>
   <body>
     <header class="app-header">
@@ -120,67 +120,88 @@
       </section>
 
       <section class="view" id="groceryView">
-        <div class="section-heading grocery-heading">
-          <div>
-            <p class="section-label" data-i18n="groceryLabel">Shared grocery list</p>
-            <h2 data-i18n="groceryHeading">Groceries for this week</h2>
-          </div>
-          <div class="grocery-actions">
-            <button class="ghost-button" id="generateGroceries" type="button" data-i18n="generateGroceries">Generate from week</button>
-            <button class="ghost-button" type="button" data-scroll-to="inventoryHeading" data-i18n="jumpInventory">Home inventory</button>
-            <button class="ghost-button" id="clearCheckedGroceries" type="button" data-i18n="clearChecked">Clear checked</button>
-          </div>
+        <div class="inventory-mode-switch" role="tablist" aria-label="Shopping and home inventory">
+          <button class="active" type="button" role="tab" data-inventory-mode="shopping" data-i18n="shoppingMode">Shopping</button>
+          <button type="button" role="tab" data-inventory-mode="home" data-i18n="atHomeMode">At Home</button>
         </div>
-        <form class="grocery-add" id="groceryForm">
-          <input type="text" id="groceryInput" data-i18n-placeholder="groceryPlaceholder" placeholder="Add milk, lemons, pasta..." />
-          <select id="groceryStoreInput" aria-label="Store">
-            <option value="any" data-i18n="storeAny">Either store</option>
-            <option value="publix">Publix</option>
-            <option value="whole-foods">Whole Foods</option>
-            <option value="costco">Costco</option>
-          </select>
-          <button class="primary-action" type="submit" data-i18n="addGroceryItem">Add item</button>
-        </form>
-        <p class="upload-status" id="groceryStatus" role="status"></p>
-        <div class="grocery-list" id="groceryList"></div>
 
-        <div class="section-heading inventory-heading" id="inventoryHeading">
-          <div>
-            <p class="section-label" data-i18n="inventoryLabel">Home inventory</p>
-            <h2 data-i18n="inventoryHeading">Already in the house</h2>
+        <div id="shoppingPanel">
+          <div class="section-heading grocery-heading">
+            <div>
+              <p class="section-label" data-i18n="groceryLabel">Shared grocery list</p>
+              <h2 data-i18n="groceryHeading">Groceries for this week</h2>
+            </div>
+            <div class="grocery-actions">
+              <button class="primary-action" id="restockPurchased" type="button" hidden data-i18n="movePurchasedHome">Move purchased home</button>
+              <button class="ghost-button" id="generateGroceries" type="button" data-i18n="generateGroceries">Generate from week</button>
+              <button class="ghost-button" id="clearCheckedGroceries" type="button" data-i18n="clearChecked">Clear checked</button>
+            </div>
           </div>
-        </div>
-        <form class="inventory-add" id="inventoryForm">
-          <input type="text" id="inventoryInput" data-i18n-placeholder="inventoryPlaceholder" placeholder="Add eggs, milk, paper towels..." />
-          <input type="text" id="inventoryQuantityInput" data-i18n-placeholder="inventoryQuantityPlaceholder" placeholder="Amount, optional" />
-          <input type="file" id="inventoryPhotoInput" accept="image/*" capture="environment" />
-          <select id="inventoryLocationInput" aria-label="Location">
-            <option value="pantry" data-i18n="locationPantry">Pantry</option>
-            <option value="fridge" data-i18n="locationFridge">Fridge</option>
-            <option value="freezer" data-i18n="locationFreezer">Freezer</option>
-            <option value="household" data-i18n="locationHousehold">Household</option>
-          </select>
-          <button class="primary-action" type="submit" data-i18n="addInventoryItem">Add inventory</button>
-        </form>
-        <div class="inventory-scan-panel">
-          <div>
-            <h3 data-i18n="inventoryScanHeading">Scan inventory photos</h3>
-            <p data-i18n="inventoryScanNote">Upload fridge, freezer, pantry, or receipt photos. Review the suggestions before adding them.</p>
-          </div>
-          <form class="inventory-scan" id="inventoryScanForm">
-            <input type="file" id="inventoryScanPhotoInput" accept="image/*" capture="environment" multiple />
-            <select id="inventoryScanLocationInput" aria-label="Default location">
-              <option value="fridge" data-i18n="locationFridge">Fridge</option>
-              <option value="pantry" data-i18n="locationPantry">Pantry</option>
-              <option value="freezer" data-i18n="locationFreezer">Freezer</option>
-              <option value="household" data-i18n="locationHousehold">Household</option>
+          <form class="grocery-add" id="groceryForm">
+            <input type="text" id="groceryInput" data-i18n-placeholder="groceryPlaceholder" placeholder="Add milk, lemons, pasta..." />
+            <select id="groceryStoreInput" aria-label="Store">
+              <option value="any" data-i18n="storeAny">Either store</option>
+              <option value="publix">Publix</option>
+              <option value="whole-foods">Whole Foods</option>
+              <option value="costco">Costco</option>
             </select>
-            <button class="primary-action" type="submit" data-i18n="scanInventoryPhotos">Scan photos</button>
+            <button class="primary-action" type="submit" data-i18n="addGroceryItem">Add item</button>
           </form>
-          <div class="inventory-suggestions" id="inventorySuggestions" hidden></div>
+          <p class="upload-status" id="groceryStatus" role="status"></p>
+          <div class="grocery-list" id="groceryList"></div>
         </div>
-        <p class="upload-status" id="inventoryStatus" role="status"></p>
-        <div class="inventory-list" id="inventoryList"></div>
+
+        <div id="homePanel" hidden>
+          <div class="section-heading inventory-heading" id="inventoryHeading">
+            <div>
+              <p class="section-label" data-i18n="inventoryLabel">Home inventory</p>
+              <h2 data-i18n="inventoryHeading">What is in the house</h2>
+            </div>
+            <div class="inventory-tools">
+              <details>
+                <summary data-i18n="addInventoryItem">Add item</summary>
+                <form class="inventory-add" id="inventoryForm">
+                  <input type="text" id="inventoryInput" data-i18n-placeholder="inventoryPlaceholder" placeholder="Add eggs, milk, paper towels..." />
+                  <input type="text" id="inventoryQuantityInput" data-i18n-placeholder="inventoryQuantityPlaceholder" placeholder="Amount, optional" />
+                  <input type="file" id="inventoryPhotoInput" accept="image/*" capture="environment" />
+                  <select id="inventoryLocationInput" aria-label="Location">
+                    <option value="pantry" data-i18n="locationPantry">Pantry</option>
+                    <option value="fridge" data-i18n="locationFridge">Fridge</option>
+                    <option value="freezer" data-i18n="locationFreezer">Freezer</option>
+                    <option value="household" data-i18n="locationHousehold">Household</option>
+                  </select>
+                  <button class="primary-action" type="submit" data-i18n="addInventoryItem">Add item</button>
+                </form>
+              </details>
+              <details>
+                <summary data-i18n="scanShelf">Scan shelf</summary>
+                <div class="inventory-scan-panel">
+                  <p data-i18n="inventoryScanNote">Upload fridge, freezer, pantry, or receipt photos. Review the suggestions before adding them.</p>
+                  <form class="inventory-scan" id="inventoryScanForm">
+                    <input type="file" id="inventoryScanPhotoInput" accept="image/*" capture="environment" multiple />
+                    <select id="inventoryScanLocationInput" aria-label="Default location">
+                      <option value="fridge" data-i18n="locationFridge">Fridge</option>
+                      <option value="pantry" data-i18n="locationPantry">Pantry</option>
+                      <option value="freezer" data-i18n="locationFreezer">Freezer</option>
+                      <option value="household" data-i18n="locationHousehold">Household</option>
+                    </select>
+                    <button class="primary-action" type="submit" data-i18n="scanInventoryPhotos">Scan photos</button>
+                  </form>
+                  <div class="inventory-suggestions" id="inventorySuggestions" hidden></div>
+                </div>
+              </details>
+            </div>
+          </div>
+          <div class="inventory-filters" role="group" aria-label="Inventory location">
+            <button class="active" type="button" data-inventory-filter="all" data-i18n="locationAll">All</button>
+            <button type="button" data-inventory-filter="fridge" data-i18n="locationFridge">Fridge</button>
+            <button type="button" data-inventory-filter="freezer" data-i18n="locationFreezer">Freezer</button>
+            <button type="button" data-inventory-filter="pantry" data-i18n="locationPantry">Pantry</button>
+            <button type="button" data-inventory-filter="household" data-i18n="locationHousehold">Household</button>
+          </div>
+          <p class="upload-status" id="inventoryStatus" role="status"></p>
+          <div class="inventory-list" id="inventoryList"></div>
+        </div>
       </section>
 
       <section class="view" id="recipesView">
@@ -287,6 +308,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=18"></script>
+    <script src="app.js?v=19"></script>
   </body>
 </html>

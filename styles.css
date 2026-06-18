@@ -477,6 +477,33 @@ h3 {
   justify-content: flex-end;
 }
 
+.inventory-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  max-width: 430px;
+  margin: 22px 0 8px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #eee7dc;
+}
+
+.inventory-mode-switch button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.inventory-mode-switch button.active {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 1px 5px rgba(61, 43, 27, 0.12);
+}
+
 .grocery-add,
 .inventory-add {
   display: grid;
@@ -587,7 +614,79 @@ h3 {
 }
 
 .inventory-heading {
-  margin-top: 30px;
+  align-items: flex-start;
+  margin-top: 22px;
+}
+
+.inventory-tools {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.inventory-tools details {
+  position: relative;
+}
+
+.inventory-tools summary {
+  min-height: 44px;
+  padding: 11px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-weight: 850;
+  list-style: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.inventory-tools summary::-webkit-details-marker {
+  display: none;
+}
+
+.inventory-tools details[open] summary {
+  margin-bottom: 8px;
+  background: var(--ink);
+  color: #fff;
+}
+
+.inventory-tools .inventory-add,
+.inventory-tools .inventory-scan-panel {
+  position: absolute;
+  z-index: 8;
+  right: 0;
+  width: min(760px, calc(100vw - 28px));
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.inventory-filters {
+  display: flex;
+  gap: 7px;
+  max-width: 100%;
+  margin: 12px 0 18px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.inventory-filters button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.inventory-filters button.active {
+  border-color: var(--sage);
+  background: var(--sage);
+  color: #fff;
 }
 
 .grocery-section,
@@ -648,7 +747,7 @@ h3 {
 
 .inventory-item {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(140px, 1fr) minmax(104px, 120px) auto;
   align-items: center;
   gap: 10px;
   min-height: 50px;
@@ -671,6 +770,49 @@ h3 {
 .inventory-item span {
   display: grid;
   gap: 2px;
+}
+
+.stock-select {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 9px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.stock-low {
+  border-color: var(--gold);
+  background: #fff8e6;
+}
+
+.stock-out {
+  border-color: #c97b72;
+  background: #fff0ed;
+  color: var(--tomato-dark);
+}
+
+.inventory-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-item-actions .ghost-button {
+  min-height: 38px;
+  padding: 0 12px;
+}
+
+.text-button {
+  min-height: 38px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .inventory-item em {
@@ -1171,13 +1313,42 @@ li {
   }
 
   .inventory-item {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto minmax(0, 1fr) minmax(92px, 108px);
   }
 
   .inventory-item img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .inventory-item-actions {
+    grid-column: 2 / -1;
+    justify-content: flex-end;
+  }
+
+  .inventory-item-actions .ghost-button {
+    width: auto;
+  }
+
+  .inventory-tools {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
-    height: auto;
-    max-height: 180px;
+  }
+
+  .inventory-tools summary {
+    text-align: center;
+  }
+
+  .inventory-tools details[open] {
+    grid-column: 1 / -1;
+  }
+
+  .inventory-tools .inventory-add,
+  .inventory-tools .inventory-scan-panel {
+    position: static;
+    width: 100%;
+    margin-top: 8px;
   }
 
   .library-tools {

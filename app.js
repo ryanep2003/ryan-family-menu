@@ -978,11 +978,16 @@ const translations = {
     grocerySaved: "Grocery list saved.",
     groceryError: "Could not save the grocery list. Try again when the site is online.",
     groceryEmpty: "No grocery items yet.",
+    shoppingMode: "Shopping",
+    atHomeMode: "At Home",
+    movePurchasedHome: "Move purchased home",
+    movedPurchasedHome: "Purchased items moved home.",
     manualSource: "Manual item",
     weekPlanSource: "From weekly menu",
+    restockSource: "Restock from home",
     installInstructions: "To add this site to your iPhone Home Screen: tap the Share button in the browser toolbar, then choose Add to Home Screen.",
     inventoryLabel: "Home inventory",
-    inventoryHeading: "Already in the house",
+    inventoryHeading: "What is in the house",
     inventoryPlaceholder: "Add eggs, milk, paper towels...",
     inventoryQuantityPlaceholder: "Amount, optional",
     inventoryPhotoLabel: "Inventory photo",
@@ -994,7 +999,8 @@ const translations = {
     inventoryScanEmpty: "No clear inventory items found. Try a closer photo.",
     inventorySuggestionsHeading: "Review suggestions",
     addSelectedInventory: "Add selected",
-    addInventoryItem: "Add inventory",
+    addInventoryItem: "Add item",
+    scanShelf: "Scan shelf",
     inventorySaved: "Inventory saved.",
     inventoryError: "Could not save inventory. Try again when the site is online.",
     inventoryEmpty: "No inventory items yet.",
@@ -1003,6 +1009,14 @@ const translations = {
     locationFridge: "Fridge",
     locationFreezer: "Freezer",
     locationHousehold: "Household",
+    locationAll: "All",
+    stockFull: "Full",
+    stockSome: "Some",
+    stockLow: "Low",
+    stockOut: "Out",
+    addToShopping: "Add to shopping",
+    addedToShopping: "Added to shopping list.",
+    noInventoryMatches: "No items in this location.",
     remove: "Remove",
     tasksLabel: "Shared checklist",
     tasksHeading: "Today's cooking tasks",
@@ -1101,11 +1115,16 @@ const translations = {
     grocerySaved: "Lista de compras guardada.",
     groceryError: "No se pudo guardar la lista. Intenta otra vez cuando el sitio este en linea.",
     groceryEmpty: "No hay articulos todavia.",
+    shoppingMode: "Compras",
+    atHomeMode: "En casa",
+    movePurchasedHome: "Guardar compras en casa",
+    movedPurchasedHome: "Las compras se guardaron en casa.",
     manualSource: "Articulo manual",
     weekPlanSource: "Del menu semanal",
+    restockSource: "Reponer de casa",
     installInstructions: "Para agregar este sitio a la pantalla de inicio del iPhone: toca el boton Compartir en el navegador y elige Agregar a pantalla de inicio.",
     inventoryLabel: "Inventario de casa",
-    inventoryHeading: "Ya esta en la casa",
+    inventoryHeading: "Lo que hay en la casa",
     inventoryPlaceholder: "Agregar huevos, leche, papel...",
     inventoryQuantityPlaceholder: "Cantidad, opcional",
     inventoryPhotoLabel: "Foto del inventario",
@@ -1117,7 +1136,8 @@ const translations = {
     inventoryScanEmpty: "No se encontraron articulos claros. Intenta una foto mas cercana.",
     inventorySuggestionsHeading: "Revisar sugerencias",
     addSelectedInventory: "Agregar seleccionados",
-    addInventoryItem: "Agregar inventario",
+    addInventoryItem: "Agregar articulo",
+    scanShelf: "Escanear estante",
     inventorySaved: "Inventario guardado.",
     inventoryError: "No se pudo guardar el inventario. Intenta otra vez cuando el sitio este en linea.",
     inventoryEmpty: "No hay inventario todavia.",
@@ -1126,6 +1146,14 @@ const translations = {
     locationFridge: "Refrigerador",
     locationFreezer: "Congelador",
     locationHousehold: "Casa",
+    locationAll: "Todo",
+    stockFull: "Lleno",
+    stockSome: "Algo",
+    stockLow: "Poco",
+    stockOut: "Agotado",
+    addToShopping: "Agregar a compras",
+    addedToShopping: "Agregado a la lista de compras.",
+    noInventoryMatches: "No hay articulos en este lugar.",
     remove: "Quitar",
     tasksLabel: "Lista compartida",
     tasksHeading: "Tareas de cocina de hoy",
@@ -1215,6 +1243,8 @@ let sharedRecipes = [];
 let groceries = [];
 let inventory = [];
 let inventorySuggestions = [];
+let inventoryMode = "shopping";
+let inventoryFilter = "all";
 let visibleMonth = new Date();
 visibleMonth.setDate(1);
 let deferredPrompt = null;
@@ -1495,11 +1525,12 @@ function normalizedWords(value) {
     .filter((word) => word.length > 2 && !stopWords.has(word) && !/^\d+$/.test(word));
 }
 
-function inventoryMatchFor(text) {
+function inventoryMatchFor(text, includeDepleted = false) {
   const ingredientWords = normalizedWords(text);
   if (!ingredientWords.length) return null;
 
   return inventory.find((item) => {
+    if (!includeDepleted && ["low", "out"].includes(item.stockState)) return false;
     const itemWords = normalizedWords(item.text);
     if (!itemWords.length) return false;
     return itemWords.every((word) => ingredientWords.includes(word));
@@ -1569,6 +1600,7 @@ function renderGroceries() {
 
   if (!groceries.length) {
     $("#groceryList").innerHTML = `<p class="empty-state">${t("groceryEmpty")}</p>`;
+    renderPurchasedAction();
     return;
   }
 
@@ -1577,6 +1609,18 @@ function renderGroceries() {
     inventoryItems.length ? grocerySection(t("alreadyHave"), inventoryItems, true) : "",
     checkedItems.length ? grocerySection(lang === "en" ? "Checked off" : "Marcados", checkedItems, true) : "",
   ].join("");
+  renderPurchasedAction();
+}
+
+function purchasedGroceries() {
+  return groceries.filter((item) => item.checked && !item.inInventory);
+}
+
+function renderPurchasedAction() {
+  const button = $("#restockPurchased");
+  const count = purchasedGroceries().length;
+  button.hidden = count === 0;
+  button.textContent = count ? `${t("movePurchasedHome")} (${count})` : t("movePurchasedHome");
 }
 
 function grocerySection(label, items, checkedSection = false) {
@@ -1588,7 +1632,7 @@ function grocerySection(label, items, checkedSection = false) {
           <input type="checkbox" data-grocery-id="${item.id}" ${item.checked ? "checked" : ""} />
           <span>
             <strong>${escapeHtml(item.text)}</strong>
-            <em>${escapeHtml(item.recipeName || (item.source === "week-plan" ? t("weekPlanSource") : t("manualSource")))}</em>
+            <em>${escapeHtml(item.recipeName || (item.source === "week-plan" ? t("weekPlanSource") : item.source === "inventory-restock" ? t("restockSource") : t("manualSource")))}</em>
           </span>
           <small>${escapeHtml(groceryStoreLabel(item.store))}</small>
         </label>
@@ -1616,15 +1660,30 @@ function inventoryLocationLabel(location) {
   return t("locationPantry");
 }
 
-function inventoryItem(text, quantity = "", location = "pantry", photos = []) {
+function inventoryItem(text, quantity = "", location = "pantry", photos = [], stockState = "some") {
   return {
     id: `inventory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     text: cleanIngredientForGrocery(text),
     quantity: cleanIngredientForGrocery(quantity),
     location,
     photos,
+    stockState,
     createdAt: new Date().toISOString(),
   };
+}
+
+function inventoryStockLabel(stockState) {
+  return t({ full: "stockFull", some: "stockSome", low: "stockLow", out: "stockOut" }[stockState] || "stockSome");
+}
+
+function renderInventoryMode() {
+  $("#shoppingPanel").hidden = inventoryMode !== "shopping";
+  $("#homePanel").hidden = inventoryMode !== "home";
+  $$("[data-inventory-mode]").forEach((button) => {
+    const active = button.dataset.inventoryMode === inventoryMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", `${active}`);
+  });
 }
 
 function renderInventory() {
@@ -1635,11 +1694,17 @@ function renderInventory() {
     { key: "household", label: t("locationHousehold") },
   ].map((group) => ({
     ...group,
-    items: inventory.filter((item) => (item.location || "pantry") === group.key),
+    items: inventory.filter((item) => (item.location || "pantry") === group.key
+      && (inventoryFilter === "all" || group.key === inventoryFilter)),
   })).filter((group) => group.items.length);
 
   if (!inventory.length) {
     $("#inventoryList").innerHTML = `<p class="empty-state">${t("inventoryEmpty")}</p>`;
+    return;
+  }
+
+  if (!groups.length) {
+    $("#inventoryList").innerHTML = `<p class="empty-state">${t("noInventoryMatches")}</p>`;
     return;
   }
 
@@ -1649,11 +1714,17 @@ function renderInventory() {
       ${group.items.map((item) => `
         <div class="inventory-item">
           ${item.photos?.[0] ? `<img src="${item.photos[0]}" alt="" />` : ""}
-          <span>
+          <span class="inventory-item-copy">
             <strong>${escapeHtml(item.text)}</strong>
             <em>${escapeHtml(item.quantity || inventoryLocationLabel(item.location))}</em>
           </span>
-          <button class="ghost-button" type="button" data-remove-inventory="${item.id}">${t("remove")}</button>
+          <select class="stock-select stock-${item.stockState || "some"}" data-stock-state="${item.id}" aria-label="${escapeHtml(item.text)} stock">
+            ${["full", "some", "low", "out"].map((state) => `<option value="${state}" ${state === (item.stockState || "some") ? "selected" : ""}>${inventoryStockLabel(state)}</option>`).join("")}
+          </select>
+          <div class="inventory-item-actions">
+            <button class="ghost-button" type="button" data-add-inventory-to-shopping="${item.id}">${t("addToShopping")}</button>
+            <button class="text-button" type="button" data-remove-inventory="${item.id}">${t("remove")}</button>
+          </div>
         </div>
       `).join("")}
     </section>
@@ -1661,6 +1732,43 @@ function renderInventory() {
 }
 
 function bindInventoryControls() {
+  $$("[data-stock-state]").forEach((select) => {
+    select.addEventListener("change", async () => {
+      const item = inventory.find((entry) => entry.id === select.dataset.stockState);
+      if (!item) return;
+      item.stockState = select.value;
+      item.updatedAt = new Date().toISOString();
+      renderInventory();
+      bindInventoryControls();
+      await saveInventory();
+    });
+  });
+
+  $$("[data-add-inventory-to-shopping]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const item = inventory.find((entry) => entry.id === button.dataset.addInventoryToShopping);
+      if (!item) return;
+      item.stockState = "out";
+      item.updatedAt = new Date().toISOString();
+      const matchingGrocery = groceries.find((entry) => entry.text.toLowerCase() === item.text.toLowerCase());
+      if (matchingGrocery) {
+        matchingGrocery.checked = false;
+        matchingGrocery.inInventory = false;
+        matchingGrocery.source = "inventory-restock";
+      } else {
+        groceries.unshift(groceryItem(item.text, "any", "inventory-restock"));
+      }
+      inventoryMode = "shopping";
+      $("#groceryStatus").textContent = t("addedToShopping");
+      renderGroceries();
+      renderInventory();
+      renderInventoryMode();
+      bindGroceryControls();
+      bindInventoryControls();
+      await Promise.all([saveInventory(), saveGroceries()]);
+    });
+  });
+
   $$("[data-remove-inventory]").forEach((button) => {
     button.addEventListener("click", async () => {
       inventory = inventory.filter((item) => item.id !== button.dataset.removeInventory);
@@ -1732,6 +1840,8 @@ function mergeInventory(existingItems, newItems) {
         ...current,
         quantity: item.quantity || current.quantity,
         location: item.location || current.location,
+        stockState: item.stockState || current.stockState || "some",
+        updatedAt: new Date().toISOString(),
       });
     } else {
       merged.set(itemKey, item);
@@ -1773,7 +1883,7 @@ function renderToday() {
     .join("");
   const toBuy = groceries.filter((item) => !item.checked && !item.inInventory).length;
   $("#todayGrocerySummary").textContent = `${toBuy} ${t("itemsToBuy")}`;
-  $("#todayInventorySummary").textContent = `${inventory.length} ${t("itemsAtHome")}`;
+  $("#todayInventorySummary").textContent = `${inventory.filter((item) => item.stockState !== "out").length} ${t("itemsAtHome")}`;
   $("#cookToday").disabled = !mainRecipe;
 }
 
@@ -2066,6 +2176,7 @@ function renderDetail() {
 
 function render() {
   renderTranslations();
+  renderInventoryMode();
   renderToday();
   renderTasks();
   renderFavorites();
@@ -2252,6 +2363,33 @@ $$("[data-lang]").forEach((button) => {
   });
 });
 
+$$("[data-inventory-mode]").forEach((button) => {
+  button.addEventListener("click", () => {
+    inventoryMode = button.dataset.inventoryMode;
+    renderInventoryMode();
+  });
+});
+
+$$(".inventory-tools details").forEach((details) => {
+  details.addEventListener("toggle", () => {
+    if (!details.open) return;
+    $$(".inventory-tools details").forEach((other) => {
+      if (other !== details) other.open = false;
+    });
+  });
+});
+
+$$("[data-inventory-filter]").forEach((button) => {
+  button.addEventListener("click", () => {
+    inventoryFilter = button.dataset.inventoryFilter;
+    $$("[data-inventory-filter]").forEach((filterButton) => {
+      filterButton.classList.toggle("active", filterButton.dataset.inventoryFilter === inventoryFilter);
+    });
+    renderInventory();
+    bindInventoryControls();
+  });
+});
+
 $$(".tabs button").forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.view));
 });
@@ -2374,6 +2512,31 @@ $("#clearCheckedGroceries").addEventListener("click", async () => {
   renderGroceries();
   bindGroceryControls();
   await saveGroceries();
+});
+
+$("#restockPurchased").addEventListener("click", async () => {
+  const purchased = purchasedGroceries();
+  if (!purchased.length) return;
+
+  purchased.forEach((grocery) => {
+    const existing = inventoryMatchFor(grocery.text, true);
+    if (existing) {
+      existing.stockState = "full";
+      existing.updatedAt = new Date().toISOString();
+    } else {
+      inventory.unshift(inventoryItem(grocery.text, "", "pantry", [], "full"));
+    }
+  });
+  const purchasedIds = new Set(purchased.map((item) => item.id));
+  groceries = groceries.filter((item) => !purchasedIds.has(item.id));
+  inventoryMode = "home";
+  $("#inventoryStatus").textContent = t("movedPurchasedHome");
+  renderGroceries();
+  renderInventory();
+  renderInventoryMode();
+  bindGroceryControls();
+  bindInventoryControls();
+  await Promise.all([saveInventory(), saveGroceries()]);
 });
 
 $("#inventoryForm").addEventListener("submit", async (event) => {
