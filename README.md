@@ -39,3 +39,17 @@ The current version stores edits in this browser. The next version should add a 
 This folder is ready for Netlify. Use `.` as the publish directory and leave the build command blank.
 
 After connecting this repo to Netlify, any pushed update should redeploy the Ryan Family Menu site automatically.
+
+## Inventory Photo Scanning
+
+The inventory scanner uses the OpenAI API from the Netlify function at `netlify/functions/recognize-inventory.js`. Manual inventory entry works without this setup; these steps only enable the "Scan photos" button.
+
+1. Create or open an OpenAI API account at `https://platform.openai.com/`.
+2. Add a small API billing budget or credit limit first, such as $5, so the inventory trial stays controlled.
+3. Create a project API key.
+4. In Netlify, open the site settings and add these environment variables:
+   - `OPENAI_API_KEY`: your OpenAI project API key
+   - `OPENAI_MODEL`: optional; defaults to `gpt-5.4-mini`
+5. Redeploy the Netlify site after saving the environment variables.
+
+Once deployed, open the app, go to Home inventory, upload fridge, freezer, pantry, or receipt photos, and review the suggestions before adding them.

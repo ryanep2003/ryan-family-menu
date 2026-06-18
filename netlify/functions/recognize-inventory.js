@@ -5,7 +5,7 @@ const jsonHeaders = {
 
 const ALLOWED_LOCATIONS = new Set(["pantry", "fridge", "freezer", "household"]);
 const MAX_IMAGES = 6;
-const MODEL = process.env.OPENAI_MODEL || "gpt-5.5";
+const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
