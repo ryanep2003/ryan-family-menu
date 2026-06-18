@@ -920,7 +920,12 @@ const translations = {
     previousMonth: "Previous",
     thisMonth: "This month",
     nextMonth: "Next",
-    reset: "Reset",
+    reset: "Clear week",
+    clearWeekConfirm: "Clear every meal and note from the repeating weekly plan? Custom calendar dates will not be changed.",
+    weekRepeatsNote: "This plan repeats each week unless you customize a calendar date.",
+    weeklyPlan: "Weekly plan",
+    customDate: "Custom date",
+    useWeeklyPlan: "Use weekly plan",
     libraryHeading: "Recipe library",
     searchLabel: "Search recipes",
     categoryFilterLabel: "Category",
@@ -1038,7 +1043,12 @@ const translations = {
     previousMonth: "Anterior",
     thisMonth: "Este mes",
     nextMonth: "Siguiente",
-    reset: "Reiniciar",
+    reset: "Borrar semana",
+    clearWeekConfirm: "Borrar todas las comidas y notas del plan semanal? Las fechas personalizadas no cambiaran.",
+    weekRepeatsNote: "Este plan se repite cada semana a menos que personalices una fecha.",
+    weeklyPlan: "Plan semanal",
+    customDate: "Fecha personalizada",
+    useWeeklyPlan: "Usar plan semanal",
     libraryHeading: "Recetas",
     searchLabel: "Buscar recetas",
     categoryFilterLabel: "Categoria",
@@ -1306,6 +1316,18 @@ function formatDateKey(date) {
   const month = `${date.getMonth() + 1}`.padStart(2, "0");
   const day = `${date.getDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function weeklyMealForDateKey(dateKey) {
+  const date = new Date(`${dateKey}T12:00:00`);
+  const weekKey = days[(date.getDay() + 6) % 7].key;
+  return normalizeMealPlan(schedule[weekKey]);
+}
+
+function calendarMealForDateKey(dateKey) {
+  return Object.prototype.hasOwnProperty.call(calendarMeals, dateKey)
+    ? normalizeMealPlan(calendarMeals[dateKey])
+    : weeklyMealForDateKey(dateKey);
 }
 
 function sharedStateSnapshot() {
@@ -1853,16 +1875,15 @@ function bindMealControls() {
     control.addEventListener("change", async () => {
       const [type, key] = control.dataset.mealContext.split(":");
       const slot = control.dataset.slot;
-      const target = type === "week" ? schedule[key] : (calendarMeals[key] || { ...emptyMeal });
+      const target = type === "week"
+        ? schedule[key]
+        : { ...calendarMealForDateKey(key) };
       target[slot] = control.value;
 
       if (type === "week") {
         schedule[key] = target;
       } else {
         calendarMeals[key] = target;
-        if (!target.main && !target.side && !target.salad && !target.notes) {
-          delete calendarMeals[key];
-        }
       }
       render();
       await saveSharedState();
@@ -1912,7 +1933,8 @@ function renderCalendar() {
   $("#calendarGrid").innerHTML = calendarDateRange()
     .map((date) => {
       const dateKey = formatDateKey(date);
-      const meal = normalizeMealPlan(calendarMeals[dateKey]);
+      const hasOverride = Object.prototype.hasOwnProperty.call(calendarMeals, dateKey);
+      const meal = calendarMealForDateKey(dateKey);
       const classes = [
         "calendar-day",
         date.getMonth() === visibleMonth.getMonth() ? "" : "outside-month",
@@ -1920,16 +1942,25 @@ function renderCalendar() {
       ].filter(Boolean).join(" ");
 
       return `
-        <div class="${classes}">
+        <div class="${classes}${hasOverride ? " custom-date" : " weekly-date"}">
           <div class="calendar-date">
             <span class="date-number">${date.getDate()}</span>
+            <span class="calendar-source">${t(hasOverride ? "customDate" : "weeklyPlan")}</span>
           </div>
           ${renderMealControls(meal, `calendar:${dateKey}`, "")}
+          ${hasOverride ? `<button class="calendar-inherit" type="button" data-use-weekly-plan="${dateKey}">${t("useWeeklyPlan")}</button>` : ""}
         </div>
       `;
     })
     .join("");
   bindMealControls();
+  $$('[data-use-weekly-plan]').forEach((button) => {
+    button.addEventListener("click", async () => {
+      delete calendarMeals[button.dataset.useWeeklyPlan];
+      render();
+      await saveSharedState();
+    });
+  });
 }
 
 function renderRecipes() {
@@ -2191,7 +2222,8 @@ $$("[data-scroll-to]").forEach((button) => {
 });
 
 $("#resetWeek").addEventListener("click", async () => {
-  schedule = normalizeSchedule(defaultSchedule);
+  if (!window.confirm(t("clearWeekConfirm"))) return;
+  schedule = normalizeSchedule(Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])));
   render();
   await saveSharedState();
 });

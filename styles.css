@@ -448,6 +448,13 @@ h3 {
   margin: 22px 0 12px;
 }
 
+.section-note {
+  max-width: 620px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .schedule-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(130px, 1fr));
@@ -891,10 +898,30 @@ h3 {
 
 .recipe-card img {
   width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-  border-radius: 6px;
-  margin-bottom: 12px;
+  min-height: 34px;
+  margin-bottom: 6px;
+}
+
+.calendar-source {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.calendar-day.custom-date {
+  border-color: var(--gold);
+}
+
+.calendar-inherit {
+  min-height: 34px;
+  margin-top: 8px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--tomato);
+  font-size: 0.75rem;
+  font-weight: 800;
 }
 
 .recipe-card p {
