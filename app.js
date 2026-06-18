@@ -2397,6 +2397,10 @@ $$(".tabs button").forEach((button) => {
 $$('[data-view-target]').forEach((button) => {
   button.addEventListener("click", () => {
     setView(button.dataset.viewTarget);
+    if (button.dataset.inventoryTarget) {
+      inventoryMode = button.dataset.inventoryTarget;
+      renderInventoryMode();
+    }
     if (button.dataset.viewScroll) {
       requestAnimationFrame(() => {
         $(`#${button.dataset.viewScroll}`).scrollIntoView({ behavior: "smooth", block: "start" });
