@@ -1288,6 +1288,7 @@ visibleMonth.setDate(1);
 let deferredPrompt = null;
 let recipeSearch = "";
 let categoryFilter = "all";
+let groceryControlsBound = false;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -1685,34 +1686,42 @@ function grocerySection(label, items, options = {}) {
 }
 
 function bindGroceryControls() {
-  $$("[data-grocery-id]").forEach((checkbox) => {
-    checkbox.addEventListener("change", async () => {
-      const item = groceries.find((grocery) => grocery.id === checkbox.dataset.groceryId);
-      if (!item) return;
-      item.checked = checkbox.checked;
-      renderGroceries();
-      await saveGroceries();
-    });
+  if (groceryControlsBound) return;
+  groceryControlsBound = true;
+
+  $("#groceryList").addEventListener("change", async (event) => {
+    const checkbox = event.target.closest("[data-grocery-id]");
+    if (!checkbox) return;
+
+    const item = groceries.find((grocery) => grocery.id === checkbox.dataset.groceryId);
+    if (!item) return;
+    item.checked = checkbox.checked;
+    renderGroceries();
+    await saveGroceries();
   });
 
-  $$("[data-check-grocery-section]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const ids = new Set(button.dataset.checkGrocerySection.split("|").filter(Boolean));
+  $("#groceryList").addEventListener("click", async (event) => {
+    const checkButton = event.target.closest("[data-check-grocery-section]");
+    const deleteButton = event.target.closest("[data-delete-grocery-section]");
+
+    if (checkButton) {
+      event.preventDefault();
+      const ids = new Set(checkButton.dataset.checkGrocerySection.split("|").filter(Boolean));
       groceries.forEach((item) => {
         if (ids.has(item.id)) item.checked = true;
       });
       renderGroceries();
       await saveGroceries();
-    });
-  });
+      return;
+    }
 
-  $$("[data-delete-grocery-section]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const ids = new Set(button.dataset.deleteGrocerySection.split("|").filter(Boolean));
+    if (deleteButton) {
+      event.preventDefault();
+      const ids = new Set(deleteButton.dataset.deleteGrocerySection.split("|").filter(Boolean));
       groceries = groceries.filter((item) => !ids.has(item.id));
       renderGroceries();
       await saveGroceries();
-    });
+    }
   });
 }
 
