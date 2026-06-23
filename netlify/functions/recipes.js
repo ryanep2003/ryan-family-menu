@@ -5,6 +5,7 @@ const RECIPES_KEY = "recipes";
 const INDEX_KEY = "recipe-index";
 const RECIPE_PREFIX = "recipe:";
 const MAX_PHOTOS = 3;
+const MAX_PHOTO_BYTES = 500000;
 const MAX_TEXT_LENGTH = 12000;
 const MAX_RECIPES = 200;
 
@@ -27,7 +28,9 @@ function cleanText(value, limit = MAX_TEXT_LENGTH) {
 function cleanPhotos(photos) {
   if (!Array.isArray(photos)) return [];
   return photos
-    .filter((photo) => typeof photo === "string" && photo.startsWith("data:image/"))
+    .filter((photo) => typeof photo === "string"
+      && photo.startsWith("data:image/")
+      && photo.length * 0.75 <= MAX_PHOTO_BYTES)
     .slice(0, MAX_PHOTOS);
 }
 

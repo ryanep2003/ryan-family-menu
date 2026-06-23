@@ -2295,8 +2295,9 @@ function readFileAsDataUrl(file) {
 }
 
 async function resizeImageFile(file, options = {}) {
-  const maxSide = options.maxSide || 1200;
-  const quality = options.quality || 0.78;
+  let maxSide = options.maxSide || 1200;
+  let quality = options.quality || 0.78;
+  const maxBytes = options.maxBytes || Infinity;
   const dataUrl = await readFileAsDataUrl(file);
   const image = new Image();
   image.src = dataUrl;
@@ -2305,13 +2306,23 @@ async function resizeImageFile(file, options = {}) {
     image.onerror = reject;
   });
 
-  const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
   const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(image.width * scale));
-  canvas.height = Math.max(1, Math.round(image.height * scale));
-  canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+  let resized = "";
 
-  return canvas.toDataURL("image/jpeg", quality);
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+    resized = canvas.toDataURL("image/jpeg", quality);
+
+    if (resized.length * 0.75 <= maxBytes) return resized;
+
+    maxSide = Math.max(420, Math.round(maxSide * 0.82));
+    quality = Math.max(0.46, quality - 0.08);
+  }
+
+  return resized;
 }
 
 function readFilesAsDataUrls(files, limit = 3, options = {}) {
@@ -2701,8 +2712,9 @@ $("#uploadForm").addEventListener("submit", async (event) => {
 
   try {
     const photos = await readFilesAsDataUrls($("#photoInput").files, 3, {
-      maxSide: 900,
-      quality: 0.72,
+      maxSide: 700,
+      quality: 0.68,
+      maxBytes: 420000,
     });
     const recipe = {
       name,
