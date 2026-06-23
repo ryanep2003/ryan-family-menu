@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#fbf7ef" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=19" />
+    <link rel="stylesheet" href="styles.css?v=20" />
   </head>
   <body>
     <header class="app-header">
@@ -68,10 +68,12 @@
             <form class="task-add" id="taskForm">
               <input type="text" id="taskInput" data-i18n-placeholder="taskPlaceholder" placeholder="Prep chicken, make rice..." required />
               <select id="taskAssigneeInput" aria-label="Assigned to">
-                <option value="family" data-i18n="assigneeFamily">Anyone</option>
-                <option value="parents" data-i18n="assigneeParents">Parents</option>
-                <option value="nanny" data-i18n="assigneeNanny">Nanny</option>
-                <option value="kids" data-i18n="assigneeKids">Kids</option>
+                <option value="alyson" data-i18n="assigneeAlyson">Alyson</option>
+                <option value="eric" data-i18n="assigneeEric">Eric</option>
+                <option value="nelly" data-i18n="assigneeNelly">Nelly</option>
+                <option value="theo" data-i18n="assigneeTheo">Theo</option>
+                <option value="pierce" data-i18n="assigneePierce">Pierce</option>
+                <option value="other" data-i18n="assigneeOther">Other</option>
               </select>
               <button class="primary-action" type="submit" data-i18n="addTask">Add task</button>
             </form>
@@ -281,10 +283,12 @@
             <p id="detailMeta">Makes 18 meatballs · 1 hour · Mess 2/4</p>
           </div>
           <div class="detail-actions">
+            <button class="primary-action" id="addRecipeGroceries" type="button" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
             <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
             <button class="ghost-button" id="markCooked" type="button" data-i18n="markCooked">Mark cooked</button>
           </div>
         </div>
+        <p class="upload-status detail-status" id="detailStatus" role="status"></p>
 
         <div class="detail-layout">
           <article>
@@ -308,6 +312,6 @@
       </section>
     </main>
 
-    <script src="app.js?v=19"></script>
+    <script type="module" src="app.js?v=20"></script>
   </body>
 </html>

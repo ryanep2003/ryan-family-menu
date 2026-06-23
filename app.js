@@ -1,3 +1,11 @@
+import {
+  cleanIngredientForGrocery,
+  groceryItem,
+  groceryItemsFromRecipe,
+  inventoryMatchFor as findInventoryMatch,
+  mergeGroceries,
+} from "./grocery-logic.js";
+
 const recipes = [
   {
     id: "meatballs",
@@ -954,7 +962,8 @@ const translations = {
     noDinner: "Open dinner",
     draftSaved: "Draft saved",
     sharedRecipeSaved: "Recipe saved to the family site.",
-    sharedRecipeError: "Could not save to the live site. Try again when the site is online.",
+    sharedRecipeError: "Could not save to the live site.",
+    localDraftSaved: "Live save failed, so this recipe was saved as a draft on this phone.",
     mainSlot: "Main",
     sideSlot: "Side",
     saladSlot: "Salad",
@@ -985,6 +994,13 @@ const translations = {
     manualSource: "Manual item",
     weekPlanSource: "From weekly menu",
     restockSource: "Restock from home",
+    addOnsSection: "Add-ons",
+    alreadyAtHomeLabel: "At home",
+    selectedRecipeSource: "From selected recipe",
+    checkSection: "Check section",
+    deleteSection: "Delete section",
+    checkedOffSection: "Checked off",
+    onShoppingList: "Also on shopping list",
     installInstructions: "To add this site to your iPhone Home Screen: tap the Share button in the browser toolbar, then choose Add to Home Screen.",
     inventoryLabel: "Home inventory",
     inventoryHeading: "What is in the house",
@@ -1021,10 +1037,12 @@ const translations = {
     tasksLabel: "Shared checklist",
     tasksHeading: "Today's cooking tasks",
     taskPlaceholder: "Prep chicken, make rice...",
-    assigneeFamily: "Anyone",
-    assigneeParents: "Parents",
-    assigneeNanny: "Nanny",
-    assigneeKids: "Kids",
+    assigneeAlyson: "Alyson",
+    assigneeEric: "Eric",
+    assigneeNelly: "Nelly",
+    assigneeTheo: "Theo",
+    assigneePierce: "Pierce",
+    assigneeOther: "Other",
     addTask: "Add task",
     tasksEmpty: "No cooking tasks for today.",
     favoritesLabel: "Quick planning",
@@ -1033,6 +1051,11 @@ const translations = {
     chooseFavorites: "Choose favorites in Recipes",
     addFavorite: "Add favorite",
     removeFavorite: "Favorite",
+    addRecipeToGroceries: "Add ingredients to groceries",
+    recipeGroceriesAdded: "Added {count} ingredient(s) to groceries.",
+    recipeGroceriesAddedWithHome: "Added {count} ingredient(s) to groceries. {homeCount} already at home.",
+    recipeGroceriesNoNew: "Everything from this recipe is already on the list or at home.",
+    recipeGroceriesError: "Could not save the shared grocery list. Try again when the site is online.",
     planNextOpen: "Plan next open night",
     sharedStateError: "Changes are saved on this phone and will sync when the site is online.",
     jumpInventory: "Home inventory",
@@ -1091,7 +1114,8 @@ const translations = {
     noDinner: "Abrir cena",
     draftSaved: "Borrador guardado",
     sharedRecipeSaved: "Receta guardada en el sitio familiar.",
-    sharedRecipeError: "No se pudo guardar en el sitio en vivo. Intenta otra vez cuando el sitio este en linea.",
+    sharedRecipeError: "No se pudo guardar en el sitio en vivo.",
+    localDraftSaved: "No se pudo guardar en vivo, asi que la receta quedo como borrador en este telefono.",
     mainSlot: "Principal",
     sideSlot: "Guarnicion",
     saladSlot: "Ensalada",
@@ -1122,6 +1146,13 @@ const translations = {
     manualSource: "Articulo manual",
     weekPlanSource: "Del menu semanal",
     restockSource: "Reponer de casa",
+    addOnsSection: "Extras",
+    alreadyAtHomeLabel: "En casa",
+    selectedRecipeSource: "De receta seleccionada",
+    checkSection: "Marcar seccion",
+    deleteSection: "Borrar seccion",
+    checkedOffSection: "Marcados",
+    onShoppingList: "Tambien en la lista de compras",
     installInstructions: "Para agregar este sitio a la pantalla de inicio del iPhone: toca el boton Compartir en el navegador y elige Agregar a pantalla de inicio.",
     inventoryLabel: "Inventario de casa",
     inventoryHeading: "Lo que hay en la casa",
@@ -1158,10 +1189,12 @@ const translations = {
     tasksLabel: "Lista compartida",
     tasksHeading: "Tareas de cocina de hoy",
     taskPlaceholder: "Preparar pollo, hacer arroz...",
-    assigneeFamily: "Cualquiera",
-    assigneeParents: "Padres",
-    assigneeNanny: "Ninera",
-    assigneeKids: "Ninos",
+    assigneeAlyson: "Alyson",
+    assigneeEric: "Eric",
+    assigneeNelly: "Nelly",
+    assigneeTheo: "Theo",
+    assigneePierce: "Pierce",
+    assigneeOther: "Otro",
     addTask: "Agregar tarea",
     tasksEmpty: "No hay tareas de cocina para hoy.",
     favoritesLabel: "Planificacion rapida",
@@ -1170,6 +1203,11 @@ const translations = {
     chooseFavorites: "Elegir favoritos en Recetas",
     addFavorite: "Agregar favorito",
     removeFavorite: "Favorito",
+    addRecipeToGroceries: "Agregar ingredientes a compras",
+    recipeGroceriesAdded: "Se agregaron {count} ingrediente(s) a compras.",
+    recipeGroceriesAddedWithHome: "Se agregaron {count} ingrediente(s) a compras. {homeCount} ya estan en casa.",
+    recipeGroceriesNoNew: "Todo lo de esta receta ya esta en la lista o en casa.",
+    recipeGroceriesError: "No se pudo guardar la lista compartida. Intenta otra vez cuando el sitio este en linea.",
     planNextOpen: "Planear la proxima noche libre",
     sharedStateError: "Los cambios se guardaron en este telefono y se sincronizaran cuando el sitio este en linea.",
     jumpInventory: "Inventario de casa",
@@ -1504,54 +1542,40 @@ function groceryStoreLabel(store) {
   return t("storeAny");
 }
 
-function cleanIngredientForGrocery(item) {
-  return `${item || ""}`.replace(/\s+/g, " ").trim();
-}
-
-function normalizedWords(value) {
-  const stopWords = new Set([
-    "cup", "cups", "tbsp", "tablespoon", "tablespoons", "tsp", "teaspoon", "teaspoons",
-    "lb", "lbs", "pound", "pounds", "oz", "ounce", "ounces", "gram", "grams", "g",
-    "large", "small", "medium", "fresh", "freshly", "chopped", "diced", "sliced",
-    "minced", "grated", "ground", "kosher", "taste", "optional", "plus", "more",
-    "for", "and", "with", "the", "of", "or", "to", "in",
-  ]);
-
-  return `${value || ""}`
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, " ")
-    .split(/\s+/)
-    .map((word) => word.replace(/s$/, ""))
-    .filter((word) => word.length > 2 && !stopWords.has(word) && !/^\d+$/.test(word));
-}
-
 function inventoryMatchFor(text, includeDepleted = false) {
-  const ingredientWords = normalizedWords(text);
-  if (!ingredientWords.length) return null;
-
-  return inventory.find((item) => {
-    if (!includeDepleted && ["low", "out"].includes(item.stockState)) return false;
-    const itemWords = normalizedWords(item.text);
-    if (!itemWords.length) return false;
-    return itemWords.every((word) => ingredientWords.includes(word));
-  }) || null;
+  return findInventoryMatch(inventory, text, includeDepleted);
 }
 
-function itemKey(item) {
-  return `${item.store || "any"}::${item.text.toLowerCase()}`;
-}
-
-function groceryItem(text, store = "any", source = "manual", recipeName = "", inventoryItem = null) {
-  return {
-    id: `grocery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    text: cleanIngredientForGrocery(text),
-    checked: Boolean(inventoryItem),
-    store,
+function recipeGroceries(recipe, source = "recipe-detail") {
+  return groceryItemsFromRecipe(recipe, lang, inventory).map((item) => ({
+    ...item,
     source,
-    recipeName,
-    inInventory: Boolean(inventoryItem),
-    createdAt: new Date().toISOString(),
-  };
+  }));
+}
+
+function detailStatusMessage(key, replacements = {}) {
+  return Object.entries(replacements).reduce(
+    (message, [name, value]) => message.replaceAll(`{${name}}`, value),
+    t(key),
+  );
+}
+
+function setDetailStatus(message = "", isError = false) {
+  const status = $("#detailStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("error", isError);
+}
+
+function detailGroceriesMessage(addedCount, atHomeCount) {
+  if (!addedCount) return t("recipeGroceriesNoNew");
+  if (atHomeCount) {
+    return detailStatusMessage("recipeGroceriesAddedWithHome", {
+      count: addedCount,
+      homeCount: atHomeCount,
+    });
+  }
+  return detailStatusMessage("recipeGroceriesAdded", { count: addedCount });
 }
 
 function weeklyMealRecipes() {
@@ -1559,44 +1583,55 @@ function weeklyMealRecipes() {
 }
 
 function generatedGroceriesFromWeek() {
-  const generated = [];
-  weeklyMealRecipes().forEach(({ recipe }) => {
-    const recipeName = localize(recipe.name);
-    const ingredients = recipe.ingredients[lang] || recipe.ingredients.en || [];
-    ingredients.forEach((ingredient) => {
-      const text = cleanIngredientForGrocery(ingredient);
-      if (text) generated.push(groceryItem(text, "any", "week-plan", recipeName, inventoryMatchFor(text)));
-    });
-  });
-  return generated;
+  return weeklyMealRecipes().flatMap(({ recipe }) => recipeGroceries(recipe, "week-plan"));
 }
 
-function mergeGroceries(existing, incoming) {
-  const byKey = new Map(existing.map((item) => [itemKey(item), item]));
-  incoming.forEach((item) => {
-    if (!byKey.has(itemKey(item))) {
-      byKey.set(itemKey(item), item);
-    }
+function grocerySourceLabel(item) {
+  if (item.recipeName) return item.recipeName;
+  if (item.source === "inventory-restock") return t("restockSource");
+  return t("addOnsSection");
+}
+
+function groceryItemNote(item) {
+  if (item.source === "week-plan") return t("weekPlanSource");
+  if (item.source === "recipe-detail") return t("selectedRecipeSource");
+  if (item.source === "inventory-restock") return t("restockSource");
+  return t("manualSource");
+}
+
+function groupGroceriesBySource(items) {
+  const groups = new Map();
+  items.forEach((item) => {
+    const label = grocerySourceLabel(item);
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(item);
   });
-  return [...byKey.values()];
+  return [...groups.entries()].map(([label, groupItems]) => ({ label, items: groupItems }));
+}
+
+function shoppingOverlapFor(text) {
+  return groceries.find((item) =>
+    !item.inInventory && !item.checked && findInventoryMatch([{ text, stockState: "some" }], item.text)
+  ) || null;
+}
+
+function groceryAtHomeNote(item) {
+  if (item.inInventory) return "";
+  const match = inventoryMatchFor(item.text);
+  if (!match) return "";
+  return `${t("alreadyAtHomeLabel")}: ${match.quantity || inventoryLocationLabel(match.location)}`;
+}
+
+function inventoryShoppingNote(item) {
+  const overlap = shoppingOverlapFor(item.text);
+  return overlap ? `${t("onShoppingList")}: ${overlap.text}` : "";
 }
 
 function renderGroceries() {
-  const groups = [
-    { key: "publix", label: t("storePublix") },
-    { key: "whole-foods", label: t("storeWholeFoods") },
-    { key: "costco", label: t("storeCostco") },
-    { key: "any", label: t("storeAny") },
-  ];
   const activeItems = groceries.filter((item) => !item.checked && !item.inInventory);
   const inventoryItems = groceries.filter((item) => item.inInventory);
   const checkedItems = groceries.filter((item) => item.checked && !item.inInventory);
-  const sections = groups
-    .map((group) => ({
-      ...group,
-      items: activeItems.filter((item) => (item.store || "any") === group.key),
-    }))
-    .filter((group) => group.items.length);
+  const sections = groupGroceriesBySource(activeItems);
 
   if (!groceries.length) {
     $("#groceryList").innerHTML = `<p class="empty-state">${t("groceryEmpty")}</p>`;
@@ -1606,8 +1641,8 @@ function renderGroceries() {
 
   $("#groceryList").innerHTML = [
     ...sections.map((section) => grocerySection(section.label, section.items)),
-    inventoryItems.length ? grocerySection(t("alreadyHave"), inventoryItems, true) : "",
-    checkedItems.length ? grocerySection(lang === "en" ? "Checked off" : "Marcados", checkedItems, true) : "",
+    inventoryItems.length ? grocerySection(t("alreadyHave"), inventoryItems, { checkedSection: true }) : "",
+    checkedItems.length ? grocerySection(t("checkedOffSection"), checkedItems, { checkedSection: true }) : "",
   ].join("");
   renderPurchasedAction();
 }
@@ -1623,16 +1658,24 @@ function renderPurchasedAction() {
   button.textContent = count ? `${t("movePurchasedHome")} (${count})` : t("movePurchasedHome");
 }
 
-function grocerySection(label, items, checkedSection = false) {
+function grocerySection(label, items, options = {}) {
+  const sectionIds = items.map((item) => item.id).join("|");
   return `
-    <section class="grocery-section${checkedSection ? " checked-section" : ""}">
-      <h3>${escapeHtml(label)}</h3>
+    <section class="grocery-section${options.checkedSection ? " checked-section" : ""}">
+      <div class="grocery-section-header">
+        <h3>${escapeHtml(label)}</h3>
+        <div class="grocery-section-actions">
+          ${options.checkedSection ? "" : `<button class="text-button" type="button" data-check-grocery-section="${escapeHtml(sectionIds)}">${t("checkSection")}</button>`}
+          <button class="text-button" type="button" data-delete-grocery-section="${escapeHtml(sectionIds)}">${t("deleteSection")}</button>
+        </div>
+      </div>
       ${items.map((item) => `
         <label class="grocery-item">
           <input type="checkbox" data-grocery-id="${item.id}" ${item.checked ? "checked" : ""} />
           <span>
             <strong>${escapeHtml(item.text)}</strong>
-            <em>${escapeHtml(item.recipeName || (item.source === "week-plan" ? t("weekPlanSource") : item.source === "inventory-restock" ? t("restockSource") : t("manualSource")))}</em>
+            <em>${escapeHtml(groceryItemNote(item))}</em>
+            ${groceryAtHomeNote(item) ? `<em class="at-home-note">${escapeHtml(groceryAtHomeNote(item))}</em>` : ""}
           </span>
           <small>${escapeHtml(groceryStoreLabel(item.store))}</small>
         </label>
@@ -1647,6 +1690,26 @@ function bindGroceryControls() {
       const item = groceries.find((grocery) => grocery.id === checkbox.dataset.groceryId);
       if (!item) return;
       item.checked = checkbox.checked;
+      renderGroceries();
+      await saveGroceries();
+    });
+  });
+
+  $$("[data-check-grocery-section]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const ids = new Set(button.dataset.checkGrocerySection.split("|").filter(Boolean));
+      groceries.forEach((item) => {
+        if (ids.has(item.id)) item.checked = true;
+      });
+      renderGroceries();
+      await saveGroceries();
+    });
+  });
+
+  $$("[data-delete-grocery-section]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const ids = new Set(button.dataset.deleteGrocerySection.split("|").filter(Boolean));
+      groceries = groceries.filter((item) => !ids.has(item.id));
       renderGroceries();
       await saveGroceries();
     });
@@ -1717,6 +1780,7 @@ function renderInventory() {
           <span class="inventory-item-copy">
             <strong>${escapeHtml(item.text)}</strong>
             <em>${escapeHtml(item.quantity || inventoryLocationLabel(item.location))}</em>
+            ${inventoryShoppingNote(item) ? `<em class="shopping-overlap">${escapeHtml(inventoryShoppingNote(item))}</em>` : ""}
           </span>
           <select class="stock-select stock-${item.stockState || "some"}" data-stock-state="${item.id}" aria-label="${escapeHtml(item.text)} stock">
             ${["full", "some", "low", "out"].map((state) => `<option value="${state}" ${state === (item.stockState || "some") ? "selected" : ""}>${inventoryStockLabel(state)}</option>`).join("")}
@@ -1756,7 +1820,7 @@ function bindInventoryControls() {
         matchingGrocery.inInventory = false;
         matchingGrocery.source = "inventory-restock";
       } else {
-        groceries.unshift(groceryItem(item.text, "any", "inventory-restock"));
+        groceries.unshift(groceryItem(item.text, { source: "inventory-restock" }));
       }
       inventoryMode = "shopping";
       $("#groceryStatus").textContent = t("addedToShopping");
@@ -1889,12 +1953,14 @@ function renderToday() {
 
 function taskAssigneeLabel(assignee) {
   const labels = {
-    family: "assigneeFamily",
-    parents: "assigneeParents",
-    nanny: "assigneeNanny",
-    kids: "assigneeKids",
+    alyson: "assigneeAlyson",
+    eric: "assigneeEric",
+    nelly: "assigneeNelly",
+    theo: "assigneeTheo",
+    pierce: "assigneePierce",
+    other: "assigneeOther",
   };
-  return t(labels[assignee] || labels.family);
+  return t(labels[assignee] || labels.other);
 }
 
 function todaysTasks() {
@@ -2172,6 +2238,8 @@ function renderDetail() {
   const isFavorite = favorites.includes(recipe.id);
   $("#favoriteRecipe").textContent = t(isFavorite ? "removeFavorite" : "addFavorite");
   $("#favoriteRecipe").setAttribute("aria-pressed", `${isFavorite}`);
+  $("#addRecipeGroceries").textContent = t("addRecipeToGroceries");
+  setDetailStatus("");
 }
 
 function render() {
@@ -2217,7 +2285,9 @@ function readFileAsDataUrl(file) {
   });
 }
 
-async function resizeImageFile(file) {
+async function resizeImageFile(file, options = {}) {
+  const maxSide = options.maxSide || 1200;
+  const quality = options.quality || 0.78;
   const dataUrl = await readFileAsDataUrl(file);
   const image = new Image();
   image.src = dataUrl;
@@ -2226,19 +2296,18 @@ async function resizeImageFile(file) {
     image.onerror = reject;
   });
 
-  const maxSide = 1200;
   const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(image.width * scale));
   canvas.height = Math.max(1, Math.round(image.height * scale));
   canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
 
-  return canvas.toDataURL("image/jpeg", 0.78);
+  return canvas.toDataURL("image/jpeg", quality);
 }
 
-function readFilesAsDataUrls(files, limit = 3) {
+function readFilesAsDataUrls(files, limit = 3, options = {}) {
   return Promise.all(
-    [...files].slice(0, limit).map((file) => resizeImageFile(file))
+    [...files].slice(0, limit).map((file) => resizeImageFile(file, options))
   );
 }
 
@@ -2263,11 +2332,12 @@ async function saveSharedRecipe(recipe) {
     body: JSON.stringify(recipe),
   });
 
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error("Could not save shared recipe.");
+    throw new Error(data.error || t("sharedRecipeError"));
   }
 
-  return response.json();
+  return data;
 }
 
 async function loadGroceries() {
@@ -2298,10 +2368,12 @@ async function saveGroceries() {
     groceries = Array.isArray(data.items) ? data.items : groceries;
     $("#groceryStatus").textContent = t("grocerySaved");
     $("#groceryStatus").classList.remove("error");
+    return true;
   } catch (error) {
     console.warn(error);
     $("#groceryStatus").textContent = t("groceryError");
     $("#groceryStatus").classList.add("error");
+    return false;
   }
 }
 
@@ -2451,6 +2523,18 @@ $("#favoriteRecipe").addEventListener("click", async () => {
   await saveSharedState();
 });
 
+$("#addRecipeGroceries").addEventListener("click", async () => {
+  const incoming = recipeGroceries(recipeById(selectedRecipeId));
+  const merged = mergeGroceries(groceries, incoming);
+  const addedCount = merged.length - groceries.length;
+  const atHomeCount = incoming.filter((item) => item.inInventory).length;
+  groceries = merged;
+  render();
+  setDetailStatus(detailGroceriesMessage(addedCount, atHomeCount));
+  const saved = await saveGroceries();
+  if (!saved) setDetailStatus(t("recipeGroceriesError"), true);
+});
+
 $("#cookToday").addEventListener("click", () => {
   const mainRecipe = todaysMealPlan().main;
   if (!mainRecipe) return;
@@ -2497,7 +2581,11 @@ $("#groceryForm").addEventListener("submit", async (event) => {
   const text = $("#groceryInput").value.trim();
   if (!text) return;
 
-  groceries.unshift(groceryItem(text, $("#groceryStoreInput").value, "manual"));
+  groceries.unshift(groceryItem(text, {
+    store: $("#groceryStoreInput").value,
+    source: "manual",
+    inventoryItem: inventoryMatchFor(text),
+  }));
   $("#groceryInput").value = "";
   renderGroceries();
   bindGroceryControls();
@@ -2603,7 +2691,10 @@ $("#uploadForm").addEventListener("submit", async (event) => {
   status.classList.remove("error");
 
   try {
-    const photos = await readFilesAsDataUrls($("#photoInput").files);
+    const photos = await readFilesAsDataUrls($("#photoInput").files, 3, {
+      maxSide: 900,
+      quality: 0.72,
+    });
     const recipe = {
       name,
       category: $("#categoryInput").value,
@@ -2621,8 +2712,24 @@ $("#uploadForm").addEventListener("submit", async (event) => {
     render();
   } catch (error) {
     console.warn(error);
-    status.textContent = t("sharedRecipeError");
+    const fallbackDraft = {
+      id: `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name,
+      category: $("#categoryInput").value,
+      ingredientsText: $("#ingredientsInput").value.trim(),
+      stepsText: $("#stepsInput").value.trim(),
+      allergyWarning: $("#allergyInput").value.trim(),
+      notes: $("#noteInput").value.trim(),
+      photos: ["assets/meatballs-2.jpg"],
+      createdAt: new Date().toISOString(),
+    };
+    drafts.unshift(fallbackDraft);
+    localStorage.setItem("dinner-drafts", JSON.stringify(drafts));
+    status.textContent = error.message
+      ? `${t("localDraftSaved")} ${error.message}`
+      : t("localDraftSaved");
     status.classList.add("error");
+    renderRecipes();
   } finally {
     submitButton.disabled = false;
   }

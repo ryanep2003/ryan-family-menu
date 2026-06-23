@@ -7,6 +7,7 @@ const MEAL_KEYS = ["main", "side", "salad", "notes"];
 const MAX_CALENDAR_DAYS = 730;
 const MAX_FAVORITES = 100;
 const MAX_TASKS = 300;
+const TASK_ASSIGNEES = ["alyson", "eric", "nelly", "theo", "pierce", "other"];
 
 const jsonHeaders = {
   "content-type": "application/json",
@@ -53,9 +54,9 @@ function cleanFavorites(value) {
 function cleanTask(task) {
   const text = cleanText(task?.text, 220);
   if (!text) return null;
-  const assignee = ["family", "parents", "nanny", "kids"].includes(task.assignee)
+  const assignee = TASK_ASSIGNEES.includes(task.assignee)
     ? task.assignee
-    : "family";
+    : "other";
 
   return {
     id: cleanText(task.id, 160) || `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
