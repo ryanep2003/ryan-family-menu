@@ -1587,6 +1587,17 @@ function generatedGroceriesFromWeek() {
   return weeklyMealRecipes().flatMap(({ recipe }) => recipeGroceries(recipe, "week-plan"));
 }
 
+function manualGroceryItemsFromText(text, store) {
+  return text
+    .split(/\n|,|;/)
+    .map((item) => cleanIngredientForGrocery(item))
+    .filter(Boolean)
+    .map((item) => groceryItem(item, {
+      store,
+      source: "manual",
+    }));
+}
+
 function recipeForGroceryItem(item) {
   if (item.recipeId) {
     const byId = allRecipes().find((recipe) => recipe.id === item.recipeId);
@@ -2638,11 +2649,10 @@ $("#groceryForm").addEventListener("submit", async (event) => {
   const text = $("#groceryInput").value.trim();
   if (!text) return;
 
-  groceries.unshift(groceryItem(text, {
-    store: $("#groceryStoreInput").value,
-    source: "manual",
-    inventoryItem: inventoryMatchFor(text),
-  }));
+  groceries = [
+    ...manualGroceryItemsFromText(text, $("#groceryStoreInput").value),
+    ...groceries,
+  ];
   $("#groceryInput").value = "";
   renderGroceries();
   bindGroceryControls();

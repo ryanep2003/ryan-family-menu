@@ -514,6 +514,7 @@ h3 {
 }
 
 .grocery-add input,
+.grocery-add textarea,
 .grocery-add select,
 .inventory-add input,
 .inventory-add select {
@@ -524,6 +525,10 @@ h3 {
   background: #fff;
   color: var(--ink);
   padding: 10px 12px;
+}
+
+.grocery-add textarea {
+  resize: vertical;
 }
 
 .inventory-add {
