@@ -27,6 +27,7 @@ function cleanItem(item) {
     checked: Boolean(item.checked),
     store,
     source: `${item.source || "manual"}`.slice(0, 80),
+    recipeId: `${item.recipeId || ""}`.trim().slice(0, 160),
     recipeName: `${item.recipeName || ""}`.trim().slice(0, 160),
     inInventory: Boolean(item.inInventory),
     createdAt: item.createdAt || new Date().toISOString(),

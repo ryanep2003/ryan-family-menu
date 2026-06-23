@@ -758,6 +758,11 @@ h3 {
   font-style: normal;
 }
 
+.grocery-item .translation-note {
+  color: var(--ink);
+  font-weight: 700;
+}
+
 .grocery-item .at-home-note,
 .inventory-item .shopping-overlap {
   color: var(--tomato-dark);

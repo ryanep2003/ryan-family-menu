@@ -1587,10 +1587,46 @@ function generatedGroceriesFromWeek() {
   return weeklyMealRecipes().flatMap(({ recipe }) => recipeGroceries(recipe, "week-plan"));
 }
 
+function recipeForGroceryItem(item) {
+  if (item.recipeId) {
+    const byId = allRecipes().find((recipe) => recipe.id === item.recipeId);
+    if (byId) return byId;
+  }
+
+  if (!item.recipeName) return null;
+  return allRecipes().find((recipe) => [
+    localize(recipe.name),
+    recipe.name?.en,
+    recipe.name?.es,
+  ].includes(item.recipeName)) || null;
+}
+
 function grocerySourceLabel(item) {
+  const recipe = recipeForGroceryItem(item);
+  if (recipe) return localize(recipe.name);
   if (item.recipeName) return item.recipeName;
   if (item.source === "inventory-restock") return t("restockSource");
   return t("addOnsSection");
+}
+
+function groceryIngredientTranslation(item) {
+  const recipe = recipeForGroceryItem(item);
+  if (!recipe) return "";
+
+  const englishIngredients = recipe.ingredients?.en || [];
+  const spanishIngredients = recipe.ingredients?.es || [];
+  const currentIngredients = recipe.ingredients?.[lang] || englishIngredients;
+  const itemText = cleanIngredientForGrocery(item.text).toLowerCase();
+  const ingredientIndex = [...englishIngredients, ...spanishIngredients, ...currentIngredients]
+    .findIndex((ingredient) => cleanIngredientForGrocery(ingredient).toLowerCase() === itemText);
+  const index = ingredientIndex >= englishIngredients.length + spanishIngredients.length
+    ? ingredientIndex - englishIngredients.length - spanishIngredients.length
+    : ingredientIndex >= englishIngredients.length
+      ? ingredientIndex - englishIngredients.length
+      : ingredientIndex;
+  const translated = currentIngredients[index] || "";
+
+  return cleanIngredientForGrocery(translated).toLowerCase() === itemText ? "" : translated;
 }
 
 function groceryItemNote(item) {
@@ -1675,6 +1711,7 @@ function grocerySection(label, items, options = {}) {
           <input type="checkbox" data-grocery-id="${item.id}" ${item.checked ? "checked" : ""} />
           <span>
             <strong>${escapeHtml(item.text)}</strong>
+            ${groceryIngredientTranslation(item) ? `<em class="translation-note">${escapeHtml(groceryIngredientTranslation(item))}</em>` : ""}
             <em>${escapeHtml(groceryItemNote(item))}</em>
             ${groceryAtHomeNote(item) ? `<em class="at-home-note">${escapeHtml(groceryAtHomeNote(item))}</em>` : ""}
           </span>

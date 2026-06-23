@@ -43,6 +43,7 @@ function itemKey(item) {
 export function groceryItem(text, {
   store = "any",
   source = "manual",
+  recipeId = "",
   recipeName = "",
   inventoryItem = null,
 } = {}) {
@@ -52,6 +53,7 @@ export function groceryItem(text, {
     checked: Boolean(inventoryItem),
     store,
     source,
+    recipeId,
     recipeName,
     inInventory: Boolean(inventoryItem),
     createdAt: new Date().toISOString(),
@@ -77,6 +79,7 @@ export function groceryItemsFromRecipe(recipe, lang, inventory) {
     .filter(Boolean)
     .map((text) => groceryItem(text, {
       source: "recipe-detail",
+      recipeId: recipe.id,
       recipeName,
       inventoryItem: inventoryMatchFor(inventory, text),
     }));

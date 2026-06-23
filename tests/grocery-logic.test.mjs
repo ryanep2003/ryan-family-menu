@@ -23,6 +23,7 @@ test("inventoryMatchFor ignores low and out stock by default", () => {
 
 test("groceryItemsFromRecipe tags items already at home and keeps recipe context", () => {
   const recipe = {
+    id: "lemon-chicken",
     name: { en: "Lemon Chicken", es: "Pollo al limon" },
     ingredients: {
       en: ["4 lemons", "1 cup olive oil"],
@@ -34,6 +35,7 @@ test("groceryItemsFromRecipe tags items already at home and keeps recipe context
   const items = groceryItemsFromRecipe(recipe, "en", inventory);
 
   assert.equal(items.length, 2);
+  assert.equal(items[0].recipeId, "lemon-chicken");
   assert.equal(items[0].recipeName, "Lemon Chicken");
   assert.equal(items[0].inInventory, true);
   assert.equal(items[0].checked, true);
