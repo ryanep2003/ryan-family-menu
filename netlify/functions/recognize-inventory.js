@@ -1,5 +1,6 @@
 import { requireWriteAuth } from "./_auth.js";
 import { jsonResponse } from "./_http.js";
+import { cleanImageDataUrl, openAiErrorMessage, outputTextFromResponse, parseJsonObject } from "./_openai.js";
 
 const ALLOWED_LOCATIONS = new Set(["pantry", "fridge", "freezer", "household"]);
 const MAX_IMAGES = 6;
@@ -8,11 +9,6 @@ const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 
 function cleanLocation(location, fallback = "fridge") {
   return ALLOWED_LOCATIONS.has(location) ? location : fallback;
-}
-
-function cleanImageDataUrl(value) {
-  if (typeof value !== "string" || !value.startsWith("data:image/")) return "";
-  return value.length * 0.75 <= MAX_IMAGE_BYTES ? value : "";
 }
 
 function cleanSuggestion(item, fallbackLocation) {
@@ -25,30 +21,6 @@ function cleanSuggestion(item, fallbackLocation) {
     location: cleanLocation(item?.location, fallbackLocation),
     confidence: Math.max(0, Math.min(1, Number(item?.confidence) || 0.7)),
   };
-}
-
-function parseJsonObject(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    try {
-      return JSON.parse(match[0]);
-    } catch {
-      return null;
-    }
-  }
-}
-
-function outputTextFromResponse(data) {
-  if (typeof data.output_text === "string") return data.output_text;
-
-  return (data.output || [])
-    .flatMap((entry) => entry.content || [])
-    .map((content) => content.text || "")
-    .join("\n")
-    .trim();
 }
 
 export default async (request) => {
@@ -73,7 +45,7 @@ export default async (request) => {
   const fallbackLocation = cleanLocation(payload.location, "fridge");
   const images = Array.isArray(payload.images)
     ? payload.images
-        .map(cleanImageDataUrl)
+        .map((image) => cleanImageDataUrl(image, MAX_IMAGE_BYTES))
         .filter(Boolean)
         .slice(0, MAX_IMAGES)
     : [];
@@ -118,13 +90,8 @@ export default async (request) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const message = data.error?.message || "Image recognition failed.";
-    const authError = response.status === 401 || /authentication token|api key|issuer/i.test(message);
-
     return jsonResponse({
-      error: authError
-        ? "OpenAI API key is missing or invalid in Netlify. Set OPENAI_API_KEY to a valid OpenAI project API key."
-        : message,
+      error: openAiErrorMessage(response, data, "Image recognition failed."),
     }, response.status);
   }
 

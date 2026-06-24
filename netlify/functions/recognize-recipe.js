@@ -1,5 +1,6 @@
 import { requireWriteAuth } from "./_auth.js";
 import { jsonResponse } from "./_http.js";
+import { cleanImageDataUrl, openAiErrorMessage, outputTextFromResponse, parseJsonObject } from "./_openai.js";
 
 const MAX_IMAGES = 3;
 const MAX_IMAGE_BYTES = 700000;
@@ -19,35 +20,6 @@ function cleanLines(value, limit = 80) {
 
 function cleanCategory(value) {
   return ["main", "side", "salad", "sauce"].includes(value) ? value : "";
-}
-
-function cleanImageDataUrl(value) {
-  if (typeof value !== "string" || !value.startsWith("data:image/")) return "";
-  return value.length * 0.75 <= MAX_IMAGE_BYTES ? value : "";
-}
-
-function parseJsonObject(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    try {
-      return JSON.parse(match[0]);
-    } catch {
-      return null;
-    }
-  }
-}
-
-function outputTextFromResponse(data) {
-  if (typeof data.output_text === "string") return data.output_text;
-
-  return (data.output || [])
-    .flatMap((entry) => entry.content || [])
-    .map((content) => content.text || "")
-    .join("\n")
-    .trim();
 }
 
 export default async (request) => {
@@ -71,7 +43,7 @@ export default async (request) => {
 
   const images = Array.isArray(payload.images)
     ? payload.images
-        .map(cleanImageDataUrl)
+        .map((image) => cleanImageDataUrl(image, MAX_IMAGE_BYTES))
         .filter(Boolean)
         .slice(0, MAX_IMAGES)
     : [];
@@ -117,13 +89,8 @@ export default async (request) => {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const message = data.error?.message || "Recipe photo scan failed.";
-    const authError = response.status === 401 || /authentication token|api key|issuer/i.test(message);
-
     return jsonResponse({
-      error: authError
-        ? "OpenAI API key is missing or invalid in Netlify. Set OPENAI_API_KEY to a valid OpenAI project API key."
-        : message,
+      error: openAiErrorMessage(response, data, "Recipe photo scan failed."),
     }, response.status);
   }
 

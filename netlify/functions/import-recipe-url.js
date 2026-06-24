@@ -1,5 +1,6 @@
 import { requireWriteAuth } from "./_auth.js";
 import { jsonResponse } from "./_http.js";
+import { outputTextFromResponse, parseJsonObject } from "./_openai.js";
 
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const MAX_HTML_CHARS = 900000;
@@ -78,30 +79,6 @@ function absolutizeUrl(value, baseUrl) {
   } catch {
     return "";
   }
-}
-
-function parseJsonObject(text) {
-  try {
-    return JSON.parse(text);
-  } catch {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    try {
-      return JSON.parse(match[0]);
-    } catch {
-      return null;
-    }
-  }
-}
-
-function outputTextFromResponse(data) {
-  if (typeof data.output_text === "string") return data.output_text;
-
-  return (data.output || [])
-    .flatMap((entry) => entry.content || [])
-    .map((content) => content.text || "")
-    .join("\n")
-    .trim();
 }
 
 function typeMatches(value, target) {
