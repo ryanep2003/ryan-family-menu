@@ -56,7 +56,11 @@ const mealSlots = [
   { key: "salad", label: "saladSlot", choose: "chooseSalad", categories: ["salad"] },
 ];
 
-let lang = readStringStorage(localStorage, "dinner-lang", "en");
+function supportedLang(value) {
+  return Object.prototype.hasOwnProperty.call(translations, value) ? value : "en";
+}
+
+let lang = supportedLang(readStringStorage(localStorage, "dinner-lang", "en"));
 let selectedRecipeId = "meatballs";
 let schedule = normalizeSchedule(readJsonStorage(localStorage, "dinner-schedule", null));
 let calendarMeals = normalizeCalendar(readJsonStorage(localStorage, "dinner-calendar", {}));
@@ -87,7 +91,8 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
 function t(key) {
-  return translations[lang][key] || translations.en[key] || key;
+  const messages = translations[lang] || translations.en;
+  return messages[key] || translations.en[key] || key;
 }
 
 function allRecipes() {
@@ -809,7 +814,7 @@ async function recognizeReceipt(images) {
 
 $$("[data-lang]").forEach((button) => {
   button.addEventListener("click", () => {
-    lang = button.dataset.lang;
+    lang = supportedLang(button.dataset.lang);
     localStorage.setItem("dinner-lang", lang);
     render();
   });
