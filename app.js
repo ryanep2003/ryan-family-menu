@@ -63,6 +63,8 @@ visibleMonth.setDate(1);
 let deferredPrompt = null;
 let recipeSearch = "";
 let categoryFilter = "all";
+let hadServiceWorkerController = false;
+let appUpdateNoticeShown = false;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -464,6 +466,14 @@ function renderTranslations() {
   $$("[data-lang]").forEach((button) => {
     button.classList.toggle("active", button.dataset.lang === lang);
   });
+}
+
+function showAppUpdateNotice() {
+  if (appUpdateNoticeShown) return;
+  const notice = $("#appUpdateNotice");
+  if (!notice) return;
+  appUpdateNoticeShown = true;
+  notice.hidden = false;
 }
 
 function renderToday() {
@@ -1301,9 +1311,33 @@ $("#installButton").addEventListener("click", async () => {
   window.alert(t("installInstructions"));
 });
 
+$("#refreshApp").addEventListener("click", () => {
+  window.location.reload();
+});
+
 if ("serviceWorker" in navigator) {
+  hadServiceWorkerController = Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (hadServiceWorkerController) showAppUpdateNotice();
+    hadServiceWorkerController = true;
+  });
+
   navigator.serviceWorker.register("service-worker.js").then((registration) => {
     registration.update();
+    if (registration.waiting && navigator.serviceWorker.controller) {
+      showAppUpdateNotice();
+    }
+
+    registration.addEventListener("updatefound", () => {
+      const worker = registration.installing;
+      if (!worker) return;
+
+      worker.addEventListener("statechange", () => {
+        if (worker.state === "installed" && navigator.serviceWorker.controller) {
+          showAppUpdateNotice();
+        }
+      });
+    });
   });
 }
 
