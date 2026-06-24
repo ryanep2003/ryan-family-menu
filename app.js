@@ -5,6 +5,7 @@ import {
   inventoryMatchFor as findInventoryMatch,
   mergeGroceries,
 } from "./grocery-logic.js";
+import { inventoryItem, mergeInventory } from "./inventory-logic.js";
 import { getJson, postJson, putJson } from "./api.js";
 import { readFilesAsDataUrls } from "./images.js";
 import {
@@ -1764,18 +1765,6 @@ function inventoryLocationLabel(location) {
   return t("locationPantry");
 }
 
-function inventoryItem(text, quantity = "", location = "pantry", photos = [], stockState = "some") {
-  return {
-    id: `inventory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    text: cleanIngredientForGrocery(text),
-    quantity: cleanIngredientForGrocery(quantity),
-    location,
-    photos,
-    stockState,
-    createdAt: new Date().toISOString(),
-  };
-}
-
 function inventoryStockLabel(stockState) {
   return t({ full: "stockFull", some: "stockSome", low: "stockLow", out: "stockOut" }[stockState] || "stockSome");
 }
@@ -1985,29 +1974,6 @@ function renderReceiptSuggestions() {
     bindInventoryControls();
     await Promise.all([saveInventory(), saveGroceries()]);
   });
-}
-
-function mergeInventory(existingItems, newItems) {
-  const key = (item) => `${(item.location || "pantry").toLowerCase()}::${(item.text || "").trim().toLowerCase()}`;
-  const merged = new Map(existingItems.map((item) => [key(item), item]));
-
-  newItems.forEach((item) => {
-    const itemKey = key(item);
-    if (merged.has(itemKey)) {
-      const current = merged.get(itemKey);
-      merged.set(itemKey, {
-        ...current,
-        quantity: item.quantity || current.quantity,
-        location: item.location || current.location,
-        stockState: item.stockState || current.stockState || "some",
-        updatedAt: new Date().toISOString(),
-      });
-    } else {
-      merged.set(itemKey, item);
-    }
-  });
-
-  return [...merged.values()];
 }
 
 function renderTranslations() {
