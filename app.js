@@ -22,6 +22,7 @@ import { createRecipeLibraryUi } from "./recipe-library-ui.js";
 import { createReceiptUi } from "./receipt-ui.js";
 import { recipes } from "./recipes-data.js";
 import { createScheduleUi } from "./schedule-ui.js";
+import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage-utils.js";
 import { translations } from "./translations.js";
 import {
   applyVersionConflict,
@@ -55,18 +56,18 @@ const mealSlots = [
   { key: "salad", label: "saladSlot", choose: "chooseSalad", categories: ["salad"] },
 ];
 
-let lang = localStorage.getItem("dinner-lang") || "en";
+let lang = readStringStorage(localStorage, "dinner-lang", "en");
 let selectedRecipeId = "meatballs";
-let schedule = normalizeSchedule(JSON.parse(localStorage.getItem("dinner-schedule") || "null"));
-let calendarMeals = normalizeCalendar(JSON.parse(localStorage.getItem("dinner-calendar") || "null") || {});
-let weekStartKey = localStorage.getItem("dinner-week-start") || currentWeekStartKey();
-let sharedStateVersion = Number(localStorage.getItem("dinner-state-version") || 0);
-let favorites = JSON.parse(localStorage.getItem("dinner-favorites") || "[]");
-let tasks = JSON.parse(localStorage.getItem("dinner-tasks") || "[]");
-let drafts = JSON.parse(localStorage.getItem("dinner-drafts") || "[]");
+let schedule = normalizeSchedule(readJsonStorage(localStorage, "dinner-schedule", null));
+let calendarMeals = normalizeCalendar(readJsonStorage(localStorage, "dinner-calendar", {}));
+let weekStartKey = readStringStorage(localStorage, "dinner-week-start", currentWeekStartKey());
+let sharedStateVersion = readNumberStorage(localStorage, "dinner-state-version", 0);
+let favorites = readJsonStorage(localStorage, "dinner-favorites", []);
+let tasks = readJsonStorage(localStorage, "dinner-tasks", []);
+let drafts = readJsonStorage(localStorage, "dinner-drafts", []);
 let sharedRecipes = [];
-let recipeEdits = JSON.parse(localStorage.getItem("dinner-recipe-edits") || "{}");
-let deletedRecipeIds = JSON.parse(localStorage.getItem("dinner-deleted-recipes") || "[]");
+let recipeEdits = readJsonStorage(localStorage, "dinner-recipe-edits", {});
+let deletedRecipeIds = readJsonStorage(localStorage, "dinner-deleted-recipes", []);
 let importedRecipePhotos = [];
 let groceries = [];
 let groceryVersion = 0;
