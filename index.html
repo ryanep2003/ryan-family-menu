@@ -257,6 +257,13 @@
             <input type="file" id="photoInput" accept="image/*" multiple />
           </label>
           <label>
+            <span data-i18n="recipeUrlLabel">Recipe URL</span>
+            <div class="url-import-row">
+              <input type="url" id="recipeUrlInput" data-i18n-placeholder="recipeUrlPlaceholder" placeholder="https://example.com/recipe" />
+              <button class="ghost-button compact-button" id="importRecipeUrl" type="button" data-i18n="importRecipeUrl">Pull from URL</button>
+            </div>
+          </label>
+          <label>
             <span data-i18n="nameLabel">Recipe name</span>
             <input type="text" id="nameInput" placeholder="Grandma's chicken tacos" />
           </label>

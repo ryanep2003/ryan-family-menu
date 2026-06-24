@@ -946,10 +946,17 @@ const translations = {
     addHeading: "Add a recipe",
     sharedUploadNote: "Recipes added here save to the live family site for everyone.",
     photoLabel: "Recipe photos",
+    recipeUrlLabel: "Recipe URL",
+    recipeUrlPlaceholder: "Paste a recipe link",
+    importRecipeUrl: "Pull from URL",
     scanRecipePhotos: "Scan recipe photos",
     recipeScanWorking: "Reading recipe photos...",
     recipeScanSaved: "Recipe photos scanned. Review before saving.",
     recipeScanError: "Could not read the recipe photos. You can still type the recipe manually.",
+    recipeUrlWorking: "Reading recipe URL...",
+    recipeUrlSaved: "Recipe URL imported. Review before saving.",
+    recipeUrlError: "Could not read that recipe URL. You can still type the recipe manually.",
+    recipeUrlRequired: "Paste a recipe URL first.",
     nameLabel: "Recipe name",
     categoryLabel: "Category",
     ingredientsLabel: "Ingredients",
@@ -1120,10 +1127,17 @@ const translations = {
     addHeading: "Agregar receta",
     sharedUploadNote: "Las recetas agregadas aqui se guardan en el sitio familiar para todos.",
     photoLabel: "Fotos de la receta",
+    recipeUrlLabel: "URL de la receta",
+    recipeUrlPlaceholder: "Pega un enlace de receta",
+    importRecipeUrl: "Traer de URL",
     scanRecipePhotos: "Escanear fotos de receta",
     recipeScanWorking: "Leyendo fotos de receta...",
     recipeScanSaved: "Fotos escaneadas. Revisa antes de guardar.",
     recipeScanError: "No se pudieron leer las fotos. Puedes escribir la receta manualmente.",
+    recipeUrlWorking: "Leyendo URL de receta...",
+    recipeUrlSaved: "URL importada. Revisa antes de guardar.",
+    recipeUrlError: "No se pudo leer esa URL. Puedes escribir la receta manualmente.",
+    recipeUrlRequired: "Pega primero una URL de receta.",
     nameLabel: "Nombre de la receta",
     categoryLabel: "Categoria",
     ingredientsLabel: "Ingredientes",
@@ -1324,6 +1338,7 @@ let drafts = JSON.parse(localStorage.getItem("dinner-drafts") || "[]");
 let sharedRecipes = [];
 let recipeEdits = JSON.parse(localStorage.getItem("dinner-recipe-edits") || "{}");
 let deletedRecipeIds = JSON.parse(localStorage.getItem("dinner-deleted-recipes") || "[]");
+let importedRecipePhotos = [];
 let groceries = [];
 let inventory = [];
 let inventorySuggestions = [];
@@ -2666,6 +2681,30 @@ async function recognizeRecipe(images) {
   return data.recipe || {};
 }
 
+async function importRecipeUrl(url) {
+  const response = await fetch("/.netlify/functions/import-recipe-url", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ url }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || t("recipeUrlError"));
+  }
+
+  return data.recipe || {};
+}
+
+function fillUploadFormFromRecipe(recipe, { overwrite = false } = {}) {
+  if ((overwrite || !$("#nameInput").value.trim()) && recipe.name) $("#nameInput").value = recipe.name;
+  if (recipe.category) $("#categoryInput").value = recipe.category;
+  if ((overwrite || !$("#ingredientsInput").value.trim()) && recipe.ingredientsText) $("#ingredientsInput").value = recipe.ingredientsText;
+  if ((overwrite || !$("#stepsInput").value.trim()) && recipe.stepsText) $("#stepsInput").value = recipe.stepsText;
+  if ((overwrite || !$("#allergyInput").value.trim()) && recipe.allergyWarning) $("#allergyInput").value = recipe.allergyWarning;
+  if ((overwrite || !$("#noteInput").value.trim()) && recipe.notes) $("#noteInput").value = recipe.notes;
+}
+
 async function recognizeReceipt(images) {
   const response = await fetch("/.netlify/functions/recognize-receipt", {
     method: "POST",
@@ -3049,16 +3088,40 @@ $("#photoInput").addEventListener("change", async () => {
       maxBytes: 650000,
     });
     const recipe = await recognizeRecipe(images);
-    if (!$("#nameInput").value.trim() && recipe.name) $("#nameInput").value = recipe.name;
-    if (recipe.category) $("#categoryInput").value = recipe.category;
-    if (!$("#ingredientsInput").value.trim() && recipe.ingredientsText) $("#ingredientsInput").value = recipe.ingredientsText;
-    if (!$("#stepsInput").value.trim() && recipe.stepsText) $("#stepsInput").value = recipe.stepsText;
-    if (!$("#noteInput").value.trim() && recipe.notes) $("#noteInput").value = recipe.notes;
+    fillUploadFormFromRecipe(recipe);
     status.textContent = t("recipeScanSaved");
   } catch (error) {
     console.warn(error);
     status.textContent = error.message || t("recipeScanError");
     status.classList.add("error");
+  }
+});
+
+$("#importRecipeUrl").addEventListener("click", async () => {
+  const url = $("#recipeUrlInput").value.trim();
+  const status = $("#uploadStatus");
+  if (!url) {
+    status.textContent = t("recipeUrlRequired");
+    status.classList.add("error");
+    return;
+  }
+
+  const button = $("#importRecipeUrl");
+  button.disabled = true;
+  status.textContent = t("recipeUrlWorking");
+  status.classList.remove("error");
+
+  try {
+    const recipe = await importRecipeUrl(url);
+    fillUploadFormFromRecipe(recipe, { overwrite: true });
+    importedRecipePhotos = Array.isArray(recipe.photos) ? recipe.photos : [];
+    status.textContent = t("recipeUrlSaved");
+  } catch (error) {
+    console.warn(error);
+    status.textContent = error.message || t("recipeUrlError");
+    status.classList.add("error");
+  } finally {
+    button.disabled = false;
   }
 });
 
@@ -3079,6 +3142,7 @@ $("#uploadForm").addEventListener("submit", async (event) => {
       quality: 0.68,
       maxBytes: 420000,
     });
+    const recipePhotos = photos.length ? photos : importedRecipePhotos;
     const recipe = {
       name,
       category: $("#categoryInput").value,
@@ -3086,11 +3150,12 @@ $("#uploadForm").addEventListener("submit", async (event) => {
       stepsText: $("#stepsInput").value.trim(),
       allergyWarning: $("#allergyInput").value.trim(),
       notes: $("#noteInput").value.trim(),
-      photos: photos.length ? photos : ["assets/meatballs-2.jpg"],
+      photos: recipePhotos.length ? recipePhotos : ["assets/meatballs-2.jpg"],
     };
     const saved = await saveSharedRecipe(recipe);
     sharedRecipes.unshift(saved.recipe);
     $("#uploadForm").reset();
+    importedRecipePhotos = [];
     status.textContent = t("sharedRecipeSaved");
     setView("recipes");
     render();
@@ -3104,7 +3169,7 @@ $("#uploadForm").addEventListener("submit", async (event) => {
       stepsText: $("#stepsInput").value.trim(),
       allergyWarning: $("#allergyInput").value.trim(),
       notes: $("#noteInput").value.trim(),
-      photos: ["assets/meatballs-2.jpg"],
+      photos: importedRecipePhotos.length ? importedRecipePhotos : ["assets/meatballs-2.jpg"],
       createdAt: new Date().toISOString(),
     };
     drafts.unshift(fallbackDraft);

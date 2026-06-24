@@ -1210,6 +1210,12 @@ h3 {
   font-weight: 500;
 }
 
+.url-import-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
 .recipe-detail {
   margin: 24px 0 36px;
   padding: 18px;
@@ -1452,6 +1458,10 @@ li {
 
   .edit-recipe-actions {
     display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .url-import-row {
     grid-template-columns: 1fr;
   }
 
