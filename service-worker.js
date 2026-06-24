@@ -1,4 +1,4 @@
-const CACHE_NAME = "ryan-family-menu-v40";
+const CACHE_NAME = "ryan-family-menu-v41";
 const ASSETS = [
   "./",
   "./index.html",
@@ -42,14 +42,20 @@ self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/.netlify/functions/")) return;
+  if (url.origin !== self.location.origin) return;
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        if (response.ok && response.type === "basic") {
+          const copy = response.clone();
+          event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)));
+        }
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(async () => {
+        const cached = await caches.match(event.request);
+        return cached || caches.match("./index.html");
+      })
   );
 });
