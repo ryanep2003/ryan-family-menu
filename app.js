@@ -91,6 +91,14 @@ function recipeById(id) {
   return allRecipes().find((recipe) => recipe.id === id) || allRecipes()[0] || recipes[0];
 }
 
+function draftById(id) {
+  return drafts.find((draft) => draft.id === id) || null;
+}
+
+function persistDrafts() {
+  localStorage.setItem("dinner-drafts", JSON.stringify(drafts));
+}
+
 function recipeToEditableUpload(recipe) {
   return recipeToEditable(recipe, lang, localize);
 }
@@ -783,6 +791,7 @@ function renderRecipes() {
 
 function renderDetail() {
   const recipe = recipeById(selectedRecipeId);
+  const isLocalDraft = Boolean(draftById(recipe.id));
   const warning = recipe.allergyWarning ? localize(recipe.allergyWarning) : "";
   $("#editRecipeForm").hidden = true;
   $("#detailName").textContent = localize(recipe.name);
@@ -796,6 +805,7 @@ function renderDetail() {
   const isFavorite = favorites.includes(recipe.id);
   $("#favoriteRecipe").textContent = t(isFavorite ? "removeFavorite" : "addFavorite");
   $("#favoriteRecipe").setAttribute("aria-pressed", `${isFavorite}`);
+  $("#publishDraftRecipe").hidden = !isLocalDraft;
   $("#addRecipeGroceries").textContent = t("addRecipeToGroceries");
   setDetailStatus("");
 }
@@ -993,9 +1003,7 @@ const recipeFormUi = createRecipeFormUi({
   prependDraft: (draft) => {
     drafts.unshift(draft);
   },
-  persistDrafts: () => {
-    localStorage.setItem("dinner-drafts", JSON.stringify(drafts));
-  },
+  persistDrafts,
   updateMealsAfterRecipeDelete,
   setView,
   render,
@@ -1102,6 +1110,34 @@ $("#favoriteRecipe").addEventListener("click", async () => {
   }
   render();
   await saveSharedState();
+});
+
+$("#publishDraftRecipe").addEventListener("click", async () => {
+  const draft = draftById(selectedRecipeId);
+  if (!draft) return;
+
+  const button = $("#publishDraftRecipe");
+  button.disabled = true;
+  setDetailStatus(t("publishingDraftRecipe"));
+
+  try {
+    const recipe = recipeToEditableUpload(recipeById(selectedRecipeId));
+    const saved = await saveSharedRecipe(recipe);
+    drafts = drafts.filter((item) => item.id !== draft.id);
+    delete recipeEdits[draft.id];
+    persistDrafts();
+    saveSharedStateLocally();
+    sharedRecipes.unshift(saved.recipe);
+    selectedRecipeId = saved.recipe.id;
+    render();
+    $("#recipeDetail").hidden = false;
+    setDetailStatus(t("draftRecipePublished"));
+  } catch (error) {
+    console.warn(error);
+    setDetailStatus(error.message ? `${t("draftRecipePublishError")} ${error.message}` : t("draftRecipePublishError"), true);
+  } finally {
+    button.disabled = false;
+  }
 });
 
 $("#addRecipeGroceries").addEventListener("click", async () => {
