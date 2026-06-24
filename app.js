@@ -11,6 +11,7 @@ import { createGroceryUi } from "./grocery-ui.js";
 import { createInventoryUi } from "./inventory-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
 import { createRecipeFormUi } from "./recipe-form-ui.js";
+import { createRecipeLibraryUi } from "./recipe-library-ui.js";
 import { recipes } from "./recipes-data.js";
 import { translations } from "./translations.js";
 import {
@@ -756,59 +757,37 @@ function renderCalendar() {
   });
 }
 
-function renderRecipes() {
-  const search = recipeSearch.trim().toLowerCase();
-  const filtered = allRecipes().filter((recipe) => {
-    const categoryMatch = categoryFilter === "all" || categoryFor(recipe) === categoryFilter;
-    const haystack = [
-      localize(recipe.name),
-      localize(recipe.meta),
-      localize(recipe.short),
-      localize(recipe.tags),
-      categoryLabel(categoryFor(recipe)),
-    ].join(" ").toLowerCase();
-    return categoryMatch && (!search || haystack.includes(search));
-  });
+const recipeLibraryUi = createRecipeLibraryUi({
+  $,
+  $$,
+  t,
+  escapeHtml,
+  localize,
+  categoryFor,
+  categoryLabel,
+  getLang: () => lang,
+  getFavorites: () => favorites,
+  allRecipes,
+  recipeById,
+  draftById,
+  getSelectedRecipeId: () => selectedRecipeId,
+  setSelectedRecipeId: (id) => {
+    selectedRecipeId = id;
+  },
+  getRecipeSearch: () => recipeSearch,
+  setRecipeSearch: (search) => {
+    recipeSearch = search;
+  },
+  getCategoryFilter: () => categoryFilter,
+  setCategoryFilter: (filter) => {
+    categoryFilter = filter;
+  },
+  setDetailStatus,
+});
 
-  $("#recipeCount").textContent = `${filtered.length}/${allRecipes().length}`;
-  $("#recipeList").innerHTML = filtered
-    .map((recipe) => `
-      <button class="recipe-card" type="button" data-open="${recipe.id}">
-        <img src="${recipe.photos[0]}" alt="" />
-        <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
-        ${favorites.includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}
-        ${recipe.allergyWarning ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
-        <h3>${escapeHtml(localize(recipe.name))}</h3>
-        <p>${escapeHtml(localize(recipe.meta))}</p>
-        <p>${escapeHtml(localize(recipe.short))}</p>
-      </button>
-    `)
-    .join("");
-  if (!filtered.length) {
-    $("#recipeList").innerHTML = `<p class="empty-state">${lang === "en" ? "No matching recipes." : "No hay recetas que coincidan."}</p>`;
-  }
-}
-
-function renderDetail() {
-  const recipe = recipeById(selectedRecipeId);
-  const isLocalDraft = Boolean(draftById(recipe.id));
-  const warning = recipe.allergyWarning ? localize(recipe.allergyWarning) : "";
-  $("#editRecipeForm").hidden = true;
-  $("#detailName").textContent = localize(recipe.name);
-  $("#detailMeta").textContent = localize(recipe.meta);
-  $("#allergyWarning").hidden = !warning;
-  $("#allergyWarning").textContent = warning;
-  $("#ingredientList").innerHTML = (recipe.ingredients[lang] || recipe.ingredients.en).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-  $("#stepList").innerHTML = (recipe.steps[lang] || recipe.steps.en).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-  $("#familyNotes").textContent = localize(recipe.notes);
-  $("#photoStrip").innerHTML = recipe.photos.map((src) => `<img src="${src}" alt="" />`).join("");
-  const isFavorite = favorites.includes(recipe.id);
-  $("#favoriteRecipe").textContent = t(isFavorite ? "removeFavorite" : "addFavorite");
-  $("#favoriteRecipe").setAttribute("aria-pressed", `${isFavorite}`);
-  $("#publishDraftRecipe").hidden = !isLocalDraft;
-  $("#addRecipeGroceries").textContent = t("addRecipeToGroceries");
-  setDetailStatus("");
-}
+const renderRecipes = () => recipeLibraryUi.renderRecipes();
+const renderDetail = () => recipeLibraryUi.renderDetail();
+const bindOpenButtons = () => recipeLibraryUi.bindOpenButtons();
 
 function render() {
   renderTranslations();
@@ -826,17 +805,6 @@ function render() {
   bindOpenButtons();
   bindGroceryControls();
   bindInventoryControls();
-}
-
-function bindOpenButtons() {
-  $$("[data-open]").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectedRecipeId = button.dataset.open;
-      renderDetail();
-      $("#recipeDetail").hidden = false;
-      $("#recipeDetail").scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  });
 }
 
 function setView(viewName) {
@@ -1183,17 +1151,7 @@ $("#markCooked").addEventListener("click", () => {
   $("#markCooked").textContent = lang === "en" ? "Cooked today" : "Hecha hoy";
 });
 
-$("#recipeSearch").addEventListener("input", (event) => {
-  recipeSearch = event.target.value;
-  renderRecipes();
-  bindOpenButtons();
-});
-
-$("#categoryFilter").addEventListener("change", (event) => {
-  categoryFilter = event.target.value;
-  renderRecipes();
-  bindOpenButtons();
-});
+recipeLibraryUi.bindLibraryControls();
 
 $("#groceryForm").addEventListener("submit", async (event) => {
   event.preventDefault();
