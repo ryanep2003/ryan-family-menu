@@ -13,6 +13,17 @@ import {
   recipeToEditableUpload as recipeToEditable,
   uploadToRecipe,
 } from "./recipe-utils.js";
+import {
+  activeWeekDateKeys as dateKeysForWeek,
+  currentWeekStartKey,
+  days,
+  emptyMeal,
+  formatDateKey,
+  mealHasContent,
+  normalizeCalendar,
+  normalizeMealPlan,
+  normalizeSchedule,
+} from "./schedule-utils.js";
 
 const recipes = [
   {
@@ -1284,33 +1295,11 @@ const translations = {
   },
 };
 
-const days = [
-  { key: "mon", en: "Monday", es: "Lunes" },
-  { key: "tue", en: "Tuesday", es: "Martes" },
-  { key: "wed", en: "Wednesday", es: "Miercoles" },
-  { key: "thu", en: "Thursday", es: "Jueves" },
-  { key: "fri", en: "Friday", es: "Viernes" },
-  { key: "sat", en: "Saturday", es: "Sabado" },
-  { key: "sun", en: "Sunday", es: "Domingo" },
-];
-
 const mealSlots = [
   { key: "main", label: "mainSlot", choose: "chooseMain", categories: ["main"] },
   { key: "side", label: "sideSlot", choose: "chooseSide", categories: ["side", "sauce"] },
   { key: "salad", label: "saladSlot", choose: "chooseSalad", categories: ["salad"] },
 ];
-
-const emptyMeal = { main: "", side: "", salad: "", notes: "" };
-
-const defaultSchedule = {
-  mon: { ...emptyMeal, main: "meatballs", side: "zaatar-parmesan-potatoes" },
-  tue: { ...emptyMeal, main: "chicken-milanese", salad: "strawberry-crunch-salad" },
-  wed: { ...emptyMeal, main: "lemon-chicken", side: "zaatar-parmesan-potatoes" },
-  thu: { ...emptyMeal, main: "halibut-summer-vegetables" },
-  fri: { ...emptyMeal, main: "pasta-with-meat-sauce", salad: "roasted-brussels-sprouts-salad" },
-  sat: { ...emptyMeal },
-  sun: { ...emptyMeal },
-};
 
 let lang = localStorage.getItem("dinner-lang") || "en";
 let selectedRecipeId = "meatballs";
@@ -1397,55 +1386,8 @@ function categoryLabel(category) {
   return localizedCategoryLabel(category, localize);
 }
 
-function normalizeMealPlan(value) {
-  if (!value) return { ...emptyMeal };
-  if (typeof value === "string") return { ...emptyMeal, main: value };
-  return { ...emptyMeal, ...value };
-}
-
-function normalizeSchedule(raw) {
-  const source = raw || defaultSchedule;
-  return days.reduce((result, day) => {
-    result[day.key] = normalizeMealPlan(source[day.key]);
-    return result;
-  }, {});
-}
-
-function normalizeCalendar(raw) {
-  return Object.fromEntries(
-    Object.entries(raw || {}).map(([dateKey, value]) => [dateKey, normalizeMealPlan(value)])
-  );
-}
-
-function formatDateKey(date) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function currentWeekStartKey() {
-  const start = new Date();
-  start.setHours(12, 0, 0, 0);
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-  return formatDateKey(start);
-}
-
-function dateFromKey(dateKey) {
-  return new Date(`${dateKey}T12:00:00`);
-}
-
 function activeWeekDateKeys() {
-  const start = dateFromKey(weekStartKey);
-  return days.map((day, index) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-    return { ...day, date, dateKey: formatDateKey(date) };
-  });
-}
-
-function mealHasContent(meal) {
-  return Boolean(meal.main || meal.side || meal.salad || meal.notes);
+  return dateKeysForWeek(weekStartKey);
 }
 
 function rollWeekForwardIfNeeded() {
