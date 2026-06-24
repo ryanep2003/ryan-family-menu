@@ -1,22 +1,11 @@
 import { getStore } from "@netlify/blobs";
 import { requireWriteAuth } from "./_auth.js";
+import { jsonResponse } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 
 const STORE_NAME = "family-menu-groceries";
 const GROCERIES_KEY = "items";
 const MAX_ITEMS = 500;
-
-const jsonHeaders = {
-  "content-type": "application/json",
-  "cache-control": "no-store",
-};
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: jsonHeaders,
-  });
-}
 
 function cleanItem(item) {
   const text = `${item.text || ""}`.trim().slice(0, 220);

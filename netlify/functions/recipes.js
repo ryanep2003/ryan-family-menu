@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { requireWriteAuth } from "./_auth.js";
+import { jsonResponse } from "./_http.js";
 
 const STORE_NAME = "family-menu-recipes";
 const RECIPES_KEY = "recipes";
@@ -9,18 +10,6 @@ const MAX_PHOTOS = 3;
 const MAX_PHOTO_BYTES = 500000;
 const MAX_TEXT_LENGTH = 12000;
 const MAX_RECIPES = 200;
-
-const jsonHeaders = {
-  "content-type": "application/json",
-  "cache-control": "no-store",
-};
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: jsonHeaders,
-  });
-}
 
 function cleanText(value, limit = MAX_TEXT_LENGTH) {
   return `${value || ""}`.trim().slice(0, limit);

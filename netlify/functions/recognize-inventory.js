@@ -1,21 +1,10 @@
 import { requireWriteAuth } from "./_auth.js";
-
-const jsonHeaders = {
-  "content-type": "application/json",
-  "cache-control": "no-store",
-};
+import { jsonResponse } from "./_http.js";
 
 const ALLOWED_LOCATIONS = new Set(["pantry", "fridge", "freezer", "household"]);
 const MAX_IMAGES = 6;
 const MAX_IMAGE_BYTES = 700000;
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: jsonHeaders,
-  });
-}
 
 function cleanLocation(location, fallback = "fridge") {
   return ALLOWED_LOCATIONS.has(location) ? location : fallback;

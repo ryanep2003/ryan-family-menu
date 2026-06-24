@@ -1,21 +1,10 @@
 import { requireWriteAuth } from "./_auth.js";
-
-const jsonHeaders = {
-  "content-type": "application/json",
-  "cache-control": "no-store",
-};
+import { jsonResponse } from "./_http.js";
 
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const MAX_HTML_CHARS = 900000;
 const MAX_TEXT_CHARS = 16000;
 const MAX_PHOTO_BYTES = 420000;
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: jsonHeaders,
-  });
-}
 
 function cleanText(value, limit) {
   return `${value || ""}`.replace(/\s+/g, " ").trim().slice(0, limit);

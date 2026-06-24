@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { requireWriteAuth } from "./_auth.js";
+import { jsonResponse } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 
 const STORE_NAME = "family-menu-state";
@@ -13,18 +14,6 @@ const MAX_RECIPE_EDITS = 300;
 const MAX_DELETED_RECIPES = 300;
 const MAX_PHOTO_BYTES = 500000;
 const TASK_ASSIGNEES = ["alyson", "eric", "nelly", "theo", "pierce", "other"];
-
-const jsonHeaders = {
-  "content-type": "application/json",
-  "cache-control": "no-store",
-};
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: jsonHeaders,
-  });
-}
 
 function cleanText(value, maxLength) {
   return `${value || ""}`.trim().slice(0, maxLength);

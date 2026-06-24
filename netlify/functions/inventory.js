@@ -1,23 +1,12 @@
 import { getStore } from "@netlify/blobs";
 import { requireWriteAuth } from "./_auth.js";
+import { jsonResponse } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 
 const STORE_NAME = "family-menu-inventory";
 const INVENTORY_KEY = "items";
 const MAX_ITEMS = 500;
 const MAX_PHOTO_BYTES = 500000;
-
-const jsonHeaders = {
-  "content-type": "application/json",
-  "cache-control": "no-store",
-};
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: jsonHeaders,
-  });
-}
 
 function cleanPhoto(value) {
   const photo = `${value || ""}`.trim();

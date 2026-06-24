@@ -1,20 +1,9 @@
 import { requireWriteAuth } from "./_auth.js";
-
-const jsonHeaders = {
-  "content-type": "application/json",
-  "cache-control": "no-store",
-};
+import { jsonResponse } from "./_http.js";
 
 const MAX_IMAGES = 4;
 const MAX_IMAGE_BYTES = 700000;
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
-
-function jsonResponse(body, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: jsonHeaders,
-  });
-}
 
 function cleanText(value, limit = 160) {
   return `${value || ""}`.trim().slice(0, limit);
