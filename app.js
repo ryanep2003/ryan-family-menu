@@ -476,6 +476,15 @@ function showAppUpdateNotice() {
   notice.hidden = false;
 }
 
+function installInstructions() {
+  const platform = navigator.userAgent || "";
+  const isAndroid = /Android/i.test(platform);
+  const isIos = /iPhone|iPad|iPod/i.test(platform);
+  if (isAndroid) return t("installInstructionsAndroid");
+  if (isIos) return t("installInstructionsIos");
+  return t("installInstructions");
+}
+
 function renderToday() {
   const meal = todaysMealPlan();
   const mainRecipe = meal.main ? recipeById(meal.main) : null;
@@ -1308,7 +1317,7 @@ $("#installButton").addEventListener("click", async () => {
     return;
   }
 
-  window.alert(t("installInstructions"));
+  window.alert(installInstructions());
 });
 
 $("#refreshApp").addEventListener("click", () => {
