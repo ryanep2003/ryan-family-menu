@@ -71,18 +71,18 @@ export function createInventoryUi({
         <h3>${escapeHtml(group.label)}</h3>
         ${group.items.map((item) => `
           <div class="inventory-item">
-            ${item.photos?.[0] ? `<img src="${item.photos[0]}" alt="" />` : ""}
+            ${item.photos?.[0] ? `<img src="${escapeHtml(item.photos[0])}" alt="" />` : ""}
             <span class="inventory-item-copy">
               <strong>${escapeHtml(item.text)}</strong>
               <em>${escapeHtml(item.quantity || inventoryLocationLabel(item.location))}</em>
               ${inventoryShoppingNote(item) ? `<em class="shopping-overlap">${escapeHtml(inventoryShoppingNote(item))}</em>` : ""}
             </span>
-            <select class="stock-select stock-${item.stockState || "some"}" data-stock-state="${item.id}" aria-label="${escapeHtml(item.text)} stock">
+            <select class="stock-select stock-${escapeHtml(item.stockState || "some")}" data-stock-state="${escapeHtml(item.id)}" aria-label="${escapeHtml(item.text)} stock">
               ${["full", "some", "low", "out"].map((state) => `<option value="${state}" ${state === (item.stockState || "some") ? "selected" : ""}>${inventoryStockLabel(state)}</option>`).join("")}
             </select>
             <div class="inventory-item-actions">
-              <button class="ghost-button" type="button" data-add-inventory-to-shopping="${item.id}">${t("addToShopping")}</button>
-              <button class="text-button" type="button" data-remove-inventory="${item.id}">${t("remove")}</button>
+              <button class="ghost-button" type="button" data-add-inventory-to-shopping="${escapeHtml(item.id)}">${t("addToShopping")}</button>
+              <button class="text-button" type="button" data-remove-inventory="${escapeHtml(item.id)}">${t("remove")}</button>
             </div>
           </div>
         `).join("")}
