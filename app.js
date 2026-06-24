@@ -5,6 +5,8 @@ import {
   inventoryMatchFor as findInventoryMatch,
   mergeGroceries,
 } from "./grocery-logic.js";
+import { getJson, postJson, putJson } from "./api.js";
+import { readFilesAsDataUrls } from "./images.js";
 
 const recipes = [
   {
@@ -1359,13 +1361,6 @@ function t(key) {
   return translations[lang][key] || translations.en[key] || key;
 }
 
-function jsonHeaders({ write = false } = {}) {
-  const headers = { "content-type": "application/json", accept: "application/json" };
-  const token = localStorage.getItem("dinner-family-write-token") || "";
-  if (write && token) headers["x-family-write-token"] = token;
-  return headers;
-}
-
 function allRecipes() {
   return [
     ...recipes,
@@ -1558,13 +1553,11 @@ async function saveSharedState() {
   saveSharedStateLocally();
 
   try {
-    const response = await fetch("/.netlify/functions/family-state", {
-      method: "PUT",
-      headers: jsonHeaders({ write: true }),
-      body: JSON.stringify({ state: sharedStateSnapshot() }),
-    });
-    if (!response.ok) throw new Error("Could not save shared family state.");
-    const data = await response.json();
+    const data = await putJson(
+      "/.netlify/functions/family-state",
+      { state: sharedStateSnapshot() },
+      "Could not save shared family state."
+    );
     if (data.state) {
       schedule = normalizeSchedule(data.state.schedule);
       calendarMeals = normalizeCalendar(data.state.calendarMeals);
@@ -1586,11 +1579,7 @@ async function saveSharedState() {
 
 async function loadSharedState() {
   try {
-    const response = await fetch("/.netlify/functions/family-state", {
-      headers: { accept: "application/json" },
-    });
-    if (!response.ok) throw new Error("Could not load shared family state.");
-    const data = await response.json();
+    const data = await getJson("/.netlify/functions/family-state", "Could not load shared family state.");
 
     if (!data.state) {
       rollWeekForwardIfNeeded();
@@ -2520,58 +2509,9 @@ function setView(viewName) {
   $("#recipeDetail").hidden = true;
 }
 
-function readFileAsDataUrl(file) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.readAsDataURL(file);
-  });
-}
-
-async function resizeImageFile(file, options = {}) {
-  let maxSide = options.maxSide || 1200;
-  let quality = options.quality || 0.78;
-  const maxBytes = options.maxBytes || Infinity;
-  const dataUrl = await readFileAsDataUrl(file);
-  const image = new Image();
-  image.src = dataUrl;
-  await new Promise((resolve, reject) => {
-    image.onload = resolve;
-    image.onerror = reject;
-  });
-
-  const canvas = document.createElement("canvas");
-  let resized = "";
-
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
-    canvas.width = Math.max(1, Math.round(image.width * scale));
-    canvas.height = Math.max(1, Math.round(image.height * scale));
-    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
-    resized = canvas.toDataURL("image/jpeg", quality);
-
-    if (resized.length * 0.75 <= maxBytes) return resized;
-
-    maxSide = Math.max(420, Math.round(maxSide * 0.82));
-    quality = Math.max(0.46, quality - 0.08);
-  }
-
-  return resized;
-}
-
-function readFilesAsDataUrls(files, limit = 3, options = {}) {
-  return Promise.all(
-    [...files].slice(0, limit).map((file) => resizeImageFile(file, options))
-  );
-}
-
 async function loadSharedRecipes() {
   try {
-    const response = await fetch("/.netlify/functions/recipes", {
-      headers: { accept: "application/json" },
-    });
-    if (!response.ok) throw new Error("Could not load shared recipes.");
-    const data = await response.json();
+    const data = await getJson("/.netlify/functions/recipes", "Could not load shared recipes.");
     sharedRecipes = Array.isArray(data.recipes) ? data.recipes : [];
     render();
   } catch (error) {
@@ -2580,27 +2520,12 @@ async function loadSharedRecipes() {
 }
 
 async function saveSharedRecipe(recipe) {
-  const response = await fetch("/.netlify/functions/recipes", {
-    method: "POST",
-    headers: jsonHeaders({ write: true }),
-    body: JSON.stringify(recipe),
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || t("sharedRecipeError"));
-  }
-
-  return data;
+  return postJson("/.netlify/functions/recipes", recipe, t("sharedRecipeError"));
 }
 
 async function loadGroceries() {
   try {
-    const response = await fetch("/.netlify/functions/groceries", {
-      headers: { accept: "application/json" },
-    });
-    if (!response.ok) throw new Error("Could not load groceries.");
-    const data = await response.json();
+    const data = await getJson("/.netlify/functions/groceries", "Could not load groceries.");
     groceries = Array.isArray(data.items) ? data.items : [];
     render();
   } catch (error) {
@@ -2612,13 +2537,7 @@ async function loadGroceries() {
 
 async function saveGroceries() {
   try {
-    const response = await fetch("/.netlify/functions/groceries", {
-      method: "PUT",
-      headers: jsonHeaders({ write: true }),
-      body: JSON.stringify({ items: groceries }),
-    });
-    if (!response.ok) throw new Error("Could not save groceries.");
-    const data = await response.json();
+    const data = await putJson("/.netlify/functions/groceries", { items: groceries }, "Could not save groceries.");
     groceries = Array.isArray(data.items) ? data.items : groceries;
     $("#groceryStatus").textContent = t("grocerySaved");
     $("#groceryStatus").classList.remove("error");
@@ -2633,11 +2552,7 @@ async function saveGroceries() {
 
 async function loadInventory() {
   try {
-    const response = await fetch("/.netlify/functions/inventory", {
-      headers: { accept: "application/json" },
-    });
-    if (!response.ok) throw new Error("Could not load inventory.");
-    const data = await response.json();
+    const data = await getJson("/.netlify/functions/inventory", "Could not load inventory.");
     inventory = Array.isArray(data.items) ? data.items : [];
     render();
   } catch (error) {
@@ -2649,13 +2564,7 @@ async function loadInventory() {
 
 async function saveInventory() {
   try {
-    const response = await fetch("/.netlify/functions/inventory", {
-      method: "PUT",
-      headers: jsonHeaders({ write: true }),
-      body: JSON.stringify({ items: inventory }),
-    });
-    if (!response.ok) throw new Error("Could not save inventory.");
-    const data = await response.json();
+    const data = await putJson("/.netlify/functions/inventory", { items: inventory }, "Could not save inventory.");
     inventory = Array.isArray(data.items) ? data.items : inventory;
     $("#inventoryStatus").textContent = t("inventorySaved");
     $("#inventoryStatus").classList.remove("error");
@@ -2667,47 +2576,21 @@ async function saveInventory() {
 }
 
 async function recognizeInventory(images, location) {
-  const response = await fetch("/.netlify/functions/recognize-inventory", {
-    method: "POST",
-    headers: jsonHeaders({ write: true }),
-    body: JSON.stringify({ images, location }),
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || "Could not scan inventory photos.");
-  }
-
+  const data = await postJson(
+    "/.netlify/functions/recognize-inventory",
+    { images, location },
+    "Could not scan inventory photos."
+  );
   return Array.isArray(data.items) ? data.items : [];
 }
 
 async function recognizeRecipe(images) {
-  const response = await fetch("/.netlify/functions/recognize-recipe", {
-    method: "POST",
-    headers: jsonHeaders({ write: true }),
-    body: JSON.stringify({ images }),
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || t("recipeScanError"));
-  }
-
+  const data = await postJson("/.netlify/functions/recognize-recipe", { images }, t("recipeScanError"));
   return data.recipe || {};
 }
 
 async function importRecipeUrl(url) {
-  const response = await fetch("/.netlify/functions/import-recipe-url", {
-    method: "POST",
-    headers: jsonHeaders({ write: true }),
-    body: JSON.stringify({ url }),
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || t("recipeUrlError"));
-  }
-
+  const data = await postJson("/.netlify/functions/import-recipe-url", { url }, t("recipeUrlError"));
   return data.recipe || {};
 }
 
@@ -2721,17 +2604,7 @@ function fillUploadFormFromRecipe(recipe, { overwrite = false } = {}) {
 }
 
 async function recognizeReceipt(images) {
-  const response = await fetch("/.netlify/functions/recognize-receipt", {
-    method: "POST",
-    headers: jsonHeaders({ write: true }),
-    body: JSON.stringify({ images }),
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || t("receiptScanError"));
-  }
-
+  const data = await postJson("/.netlify/functions/recognize-receipt", { images }, t("receiptScanError"));
   return Array.isArray(data.items) ? data.items : [];
 }
 
