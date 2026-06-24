@@ -1,4 +1,5 @@
 import { getStore } from "@netlify/blobs";
+import { requireWriteAuth } from "./_auth.js";
 
 const STORE_NAME = "family-menu-groceries";
 const GROCERIES_KEY = "items";
@@ -51,6 +52,9 @@ export default async (request) => {
   }
 
   if (request.method === "PUT") {
+    const authError = requireWriteAuth(request);
+    if (authError) return authError;
+
     let payload;
     try {
       payload = await request.json();

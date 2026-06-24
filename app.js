@@ -949,7 +949,6 @@ const translations = {
     recipeUrlLabel: "Recipe URL",
     recipeUrlPlaceholder: "Paste a recipe link",
     importRecipeUrl: "Pull from URL",
-    scanRecipePhotos: "Scan recipe photos",
     recipeScanWorking: "Reading recipe photos...",
     recipeScanSaved: "Recipe photos scanned. Review before saving.",
     recipeScanError: "Could not read the recipe photos. You can still type the recipe manually.",
@@ -1131,7 +1130,6 @@ const translations = {
     recipeUrlLabel: "URL de la receta",
     recipeUrlPlaceholder: "Pega un enlace de receta",
     importRecipeUrl: "Traer de URL",
-    scanRecipePhotos: "Escanear fotos de receta",
     recipeScanWorking: "Leyendo fotos de receta...",
     recipeScanSaved: "Fotos escaneadas. Revisa antes de guardar.",
     recipeScanError: "No se pudieron leer las fotos. Puedes escribir la receta manualmente.",
@@ -1361,6 +1359,13 @@ function t(key) {
   return translations[lang][key] || translations.en[key] || key;
 }
 
+function jsonHeaders({ write = false } = {}) {
+  const headers = { "content-type": "application/json", accept: "application/json" };
+  const token = localStorage.getItem("dinner-family-write-token") || "";
+  if (write && token) headers["x-family-write-token"] = token;
+  return headers;
+}
+
 function allRecipes() {
   return [
     ...recipes,
@@ -1555,7 +1560,7 @@ async function saveSharedState() {
   try {
     const response = await fetch("/.netlify/functions/family-state", {
       method: "PUT",
-      headers: { "content-type": "application/json", accept: "application/json" },
+      headers: jsonHeaders({ write: true }),
       body: JSON.stringify({ state: sharedStateSnapshot() }),
     });
     if (!response.ok) throw new Error("Could not save shared family state.");
@@ -2577,7 +2582,7 @@ async function loadSharedRecipes() {
 async function saveSharedRecipe(recipe) {
   const response = await fetch("/.netlify/functions/recipes", {
     method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
+    headers: jsonHeaders({ write: true }),
     body: JSON.stringify(recipe),
   });
 
@@ -2609,7 +2614,7 @@ async function saveGroceries() {
   try {
     const response = await fetch("/.netlify/functions/groceries", {
       method: "PUT",
-      headers: { "content-type": "application/json", accept: "application/json" },
+      headers: jsonHeaders({ write: true }),
       body: JSON.stringify({ items: groceries }),
     });
     if (!response.ok) throw new Error("Could not save groceries.");
@@ -2646,7 +2651,7 @@ async function saveInventory() {
   try {
     const response = await fetch("/.netlify/functions/inventory", {
       method: "PUT",
-      headers: { "content-type": "application/json", accept: "application/json" },
+      headers: jsonHeaders({ write: true }),
       body: JSON.stringify({ items: inventory }),
     });
     if (!response.ok) throw new Error("Could not save inventory.");
@@ -2664,7 +2669,7 @@ async function saveInventory() {
 async function recognizeInventory(images, location) {
   const response = await fetch("/.netlify/functions/recognize-inventory", {
     method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
+    headers: jsonHeaders({ write: true }),
     body: JSON.stringify({ images, location }),
   });
 
@@ -2679,7 +2684,7 @@ async function recognizeInventory(images, location) {
 async function recognizeRecipe(images) {
   const response = await fetch("/.netlify/functions/recognize-recipe", {
     method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
+    headers: jsonHeaders({ write: true }),
     body: JSON.stringify({ images }),
   });
 
@@ -2694,7 +2699,7 @@ async function recognizeRecipe(images) {
 async function importRecipeUrl(url) {
   const response = await fetch("/.netlify/functions/import-recipe-url", {
     method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
+    headers: jsonHeaders({ write: true }),
     body: JSON.stringify({ url }),
   });
 
@@ -2718,7 +2723,7 @@ function fillUploadFormFromRecipe(recipe, { overwrite = false } = {}) {
 async function recognizeReceipt(images) {
   const response = await fetch("/.netlify/functions/recognize-receipt", {
     method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
+    headers: jsonHeaders({ write: true }),
     body: JSON.stringify({ images }),
   });
 

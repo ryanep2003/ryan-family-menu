@@ -1,4 +1,5 @@
 import { getStore } from "@netlify/blobs";
+import { requireWriteAuth } from "./_auth.js";
 
 const STORE_NAME = "family-menu-state";
 const STATE_KEY = "shared-state";
@@ -9,6 +10,7 @@ const MAX_FAVORITES = 100;
 const MAX_TASKS = 300;
 const MAX_RECIPE_EDITS = 300;
 const MAX_DELETED_RECIPES = 300;
+const MAX_PHOTO_BYTES = 500000;
 const TASK_ASSIGNEES = ["alyson", "eric", "nelly", "theo", "pierce", "other"];
 
 const jsonHeaders = {
@@ -25,6 +27,13 @@ function jsonResponse(body, status = 200) {
 
 function cleanText(value, maxLength) {
   return `${value || ""}`.trim().slice(0, maxLength);
+}
+
+function cleanPhoto(value) {
+  const photo = `${value || ""}`.trim();
+  if (/^assets\/[\w.-]+\.jpe?g$/i.test(photo)) return photo;
+  if (photo.startsWith("data:image/") && photo.length * 0.75 <= MAX_PHOTO_BYTES) return photo;
+  return "";
 }
 
 function cleanMeal(value) {
@@ -91,7 +100,7 @@ function cleanRecipeEdit(edit) {
     allergyWarning: cleanText(edit.allergyWarning, 600),
     notes: cleanText(edit.notes, 2000),
     photos: Array.isArray(edit.photos)
-      ? edit.photos.filter((photo) => typeof photo === "string").slice(0, 3)
+      ? edit.photos.map(cleanPhoto).filter(Boolean).slice(0, 3)
       : [],
     updatedAt: edit.updatedAt || new Date().toISOString(),
   };
@@ -134,6 +143,9 @@ export default async (request) => {
   }
 
   if (request.method === "PUT") {
+    const authError = requireWriteAuth(request);
+    if (authError) return authError;
+
     let payload;
     try {
       payload = await request.json();

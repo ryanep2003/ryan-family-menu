@@ -1,9 +1,12 @@
+import { requireWriteAuth } from "./_auth.js";
+
 const jsonHeaders = {
   "content-type": "application/json",
   "cache-control": "no-store",
 };
 
 const MAX_IMAGES = 4;
+const MAX_IMAGE_BYTES = 700000;
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 
 function jsonResponse(body, status = 200) {
@@ -26,6 +29,11 @@ function cleanReceiptItem(item) {
     quantity: cleanText(item?.quantity, 80),
     confidence: Math.max(0, Math.min(1, Number(item?.confidence) || 0.7)),
   };
+}
+
+function cleanImageDataUrl(value) {
+  if (typeof value !== "string" || !value.startsWith("data:image/")) return "";
+  return value.length * 0.75 <= MAX_IMAGE_BYTES ? value : "";
 }
 
 function parseJsonObject(text) {
@@ -61,6 +69,9 @@ export default async (request) => {
     return jsonResponse({ error: "Missing OPENAI_API_KEY in Netlify environment variables." }, 500);
   }
 
+  const authError = requireWriteAuth(request);
+  if (authError) return authError;
+
   let payload;
   try {
     payload = await request.json();
@@ -70,7 +81,8 @@ export default async (request) => {
 
   const images = Array.isArray(payload.images)
     ? payload.images
-        .filter((image) => typeof image === "string" && image.startsWith("data:image/"))
+        .map(cleanImageDataUrl)
+        .filter(Boolean)
         .slice(0, MAX_IMAGES)
     : [];
 

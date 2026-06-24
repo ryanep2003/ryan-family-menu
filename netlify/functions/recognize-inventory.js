@@ -1,3 +1,5 @@
+import { requireWriteAuth } from "./_auth.js";
+
 const jsonHeaders = {
   "content-type": "application/json",
   "cache-control": "no-store",
@@ -5,6 +7,7 @@ const jsonHeaders = {
 
 const ALLOWED_LOCATIONS = new Set(["pantry", "fridge", "freezer", "household"]);
 const MAX_IMAGES = 6;
+const MAX_IMAGE_BYTES = 700000;
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 
 function jsonResponse(body, status = 200) {
@@ -16,6 +19,11 @@ function jsonResponse(body, status = 200) {
 
 function cleanLocation(location, fallback = "fridge") {
   return ALLOWED_LOCATIONS.has(location) ? location : fallback;
+}
+
+function cleanImageDataUrl(value) {
+  if (typeof value !== "string" || !value.startsWith("data:image/")) return "";
+  return value.length * 0.75 <= MAX_IMAGE_BYTES ? value : "";
 }
 
 function cleanSuggestion(item, fallbackLocation) {
@@ -63,6 +71,9 @@ export default async (request) => {
     return jsonResponse({ error: "Missing OPENAI_API_KEY in Netlify environment variables." }, 500);
   }
 
+  const authError = requireWriteAuth(request);
+  if (authError) return authError;
+
   let payload;
   try {
     payload = await request.json();
@@ -73,7 +84,8 @@ export default async (request) => {
   const fallbackLocation = cleanLocation(payload.location, "fridge");
   const images = Array.isArray(payload.images)
     ? payload.images
-        .filter((image) => typeof image === "string" && image.startsWith("data:image/"))
+        .map(cleanImageDataUrl)
+        .filter(Boolean)
         .slice(0, MAX_IMAGES)
     : [];
 

@@ -1,38 +1,17 @@
 # Ryan Family Menu
 
-This is a first working prototype for a private family dinner planner.
-
-Open `index.html` in a browser, or use the local preview URL while the server is running.
+Private family dinner planner deployed on Netlify.
 
 Current features:
 
-- Weekly dinner schedule
-- Monthly recipe calendar with editable dinner dates
-- Recipe library
-- "Tonight" dinner view
-- English / Spanish toggle
-- First recipe entered from the uploaded meatball recipe photos
-- Second recipe entered from the uploaded Chicken Milanese recipe photos
-- Third recipe entered from the uploaded halibut with summer vegetables recipe photos
-- Fourth recipe entered from the uploaded Lemon Chicken family recipe photo
-- Potato side dish entered from the uploaded smashed potato fries photo
-- Lemon Bucatini Pasta entered from the uploaded recipe photo
-- Pasta with Meat Sauce entered from the uploaded recipe photo
-- Strawberry Crunch Salad entered from the uploaded recipe photos
-- Roasted Brussels Sprouts Salad entered from the uploaded recipe photos
-- Chicken Noodle Soup entered with a possible allergy warning from the uploaded family note
-- Ina Garten's Pot Roast entered from the uploaded recipe photos
-- Basil Pesto Pasta entered from the uploaded recipe photos
-- Original recipe photos kept beside the cleaned-up recipe card
-- Draft upload form for adding the next recipe photos
-
-Good next uploads:
-
-- 5 to 10 common family dinners
-- Any recipe the babysitter may cook
-- Kid preference notes, substitutions, or location notes for ingredients
-
-The current version stores edits in this browser. The next version should add a shared login and database so everyone sees and can update the same recipe calendar from their own phone.
+- Weekly dinner schedule and monthly meal calendar
+- Recipe library with built-in recipes plus shared recipe uploads
+- Recipe photo scanning and recipe URL import
+- Recipe editing, hiding/deleting from the family menu, and photo replacement
+- Shared grocery list grouped by meal, with receipt scanning
+- Home inventory tracking with shelf-photo scanning
+- English / Spanish UI toggle and Spanish grocery item helper text
+- Installable web app shell with a small offline cache
 
 ## Deploying
 
@@ -40,16 +19,51 @@ This folder is ready for Netlify. Use `.` as the publish directory and leave the
 
 After connecting this repo to Netlify, any pushed update should redeploy the Ryan Family Menu site automatically.
 
-## Inventory Photo Scanning
+## Storage
 
-The inventory scanner uses the OpenAI API from the Netlify function at `netlify/functions/recognize-inventory.js`. Manual inventory entry works without this setup; these steps only enable the "Scan photos" button.
+Shared data is stored with Netlify Blobs from the functions in `netlify/functions/`:
 
-1. Create or open an OpenAI API account at `https://platform.openai.com/`.
-2. Add a small API billing budget or credit limit first, such as $5, so the inventory trial stays controlled.
-3. Create a project API key.
-4. In Netlify, open the site settings and add these environment variables:
-   - `OPENAI_API_KEY`: your OpenAI project API key
-   - `OPENAI_MODEL`: optional; defaults to `gpt-5.4-mini`
-5. Redeploy the Netlify site after saving the environment variables.
+- `recipes.js`: shared uploaded recipes
+- `family-state.js`: schedule, calendar meals, favorites, tasks, recipe edits, hidden/deleted recipes
+- `groceries.js`: shared grocery list
+- `inventory.js`: home inventory
 
-Once deployed, open the app, go to Home inventory, upload fridge, freezer, pantry, or receipt photos, and review the suggestions before adding them.
+The browser also keeps local fallbacks in `localStorage` so the app remains usable if a live save fails.
+
+## Optional Family Write Token
+
+By default, write endpoints stay open to preserve the current frictionless family workflow.
+
+For basic write protection, set this Netlify environment variable:
+
+- `FAMILY_WRITE_TOKEN`: shared secret required for writes and AI-powered imports/scans
+
+Then set the same value in the browser once:
+
+```js
+localStorage.setItem("dinner-family-write-token", "your-shared-secret")
+```
+
+Reload the app after setting it. Reads remain public unless Netlify site-level access controls are configured.
+
+## OpenAI-Powered Scanning
+
+Photo and URL parsing use the OpenAI API from Netlify functions:
+
+- `recognize-recipe.js`
+- `recognize-receipt.js`
+- `recognize-inventory.js`
+- `import-recipe-url.js`
+
+Required Netlify environment variables:
+
+- `OPENAI_API_KEY`: OpenAI project API key
+- `OPENAI_MODEL`: optional; defaults to `gpt-5.4-mini`
+
+Keep a small API billing limit while testing. Manual recipe, grocery, and inventory entry works without OpenAI configured.
+
+## Maintenance Notes
+
+- Keep `app.js` simple until it is split by domain; avoid adding new framework dependencies.
+- Do not precache every recipe photo in `service-worker.js`; large assets should be cached on demand.
+- Prefer small sanitizer/test additions when changing Netlify functions.

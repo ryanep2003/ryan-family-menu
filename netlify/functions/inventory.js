@@ -1,8 +1,10 @@
 import { getStore } from "@netlify/blobs";
+import { requireWriteAuth } from "./_auth.js";
 
 const STORE_NAME = "family-menu-inventory";
 const INVENTORY_KEY = "items";
 const MAX_ITEMS = 500;
+const MAX_PHOTO_BYTES = 500000;
 
 const jsonHeaders = {
   "content-type": "application/json",
@@ -14,6 +16,12 @@ function jsonResponse(body, status = 200) {
     status,
     headers: jsonHeaders,
   });
+}
+
+function cleanPhoto(value) {
+  const photo = `${value || ""}`.trim();
+  if (photo.startsWith("data:image/") && photo.length * 0.75 <= MAX_PHOTO_BYTES) return photo;
+  return "";
 }
 
 function cleanItem(item) {
@@ -33,7 +41,7 @@ function cleanItem(item) {
     location,
     stockState,
     photos: Array.isArray(item.photos)
-      ? item.photos.filter((photo) => typeof photo === "string" && photo.startsWith("data:image/")).slice(0, 1)
+      ? item.photos.map(cleanPhoto).filter(Boolean).slice(0, 1)
       : [],
     createdAt: item.createdAt || new Date().toISOString(),
     updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
@@ -57,6 +65,9 @@ export default async (request) => {
   }
 
   if (request.method === "PUT") {
+    const authError = requireWriteAuth(request);
+    if (authError) return authError;
+
     let payload;
     try {
       payload = await request.json();

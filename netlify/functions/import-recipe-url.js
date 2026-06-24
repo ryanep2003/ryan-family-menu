@@ -1,3 +1,5 @@
+import { requireWriteAuth } from "./_auth.js";
+
 const jsonHeaders = {
   "content-type": "application/json",
   "cache-control": "no-store",
@@ -31,11 +33,18 @@ function cleanCategory(value) {
   return ["main", "side", "salad", "sauce"].includes(value) ? value : "";
 }
 
+function isBlockedHost(hostname) {
+  const host = `${hostname || ""}`.toLowerCase().replace(/^\[|\]$/g, "");
+  if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true;
+  if (host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:")) return true;
+  return /^(0\.|10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(host);
+}
+
 function safeUrl(value) {
   try {
     const url = new URL(value);
     if (!["http:", "https:"].includes(url.protocol)) return null;
-    if (/^(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/i.test(url.hostname)) return null;
+    if (isBlockedHost(url.hostname)) return null;
     return url;
   } catch {
     return null;
@@ -199,7 +208,6 @@ function recipeFromJsonLd(recipe, html, url) {
     stepsText: steps.join("\n"),
     allergyWarning: "",
     notes,
-    sourceUrl: url,
     imageUrl: imageUrlFromRecipe(recipe, url) || openGraphImage(html, url),
   };
 }
@@ -240,7 +248,6 @@ async function recipeFromTextWithAi(text, url, html) {
     stepsText: cleanLines(parsed.steps).join("\n"),
     allergyWarning: "",
     notes: cleanText(parsed.notes, 900),
-    sourceUrl: url,
     imageUrl: openGraphImage(html, url),
   };
 }
@@ -252,6 +259,8 @@ async function imageAsDataUrl(imageUrl) {
   try {
     const response = await fetch(url, {
       headers: { accept: "image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8" },
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
     });
     if (!response.ok) return "";
     const contentType = response.headers.get("content-type") || "";
@@ -272,6 +281,9 @@ export default async (request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
+  const authError = requireWriteAuth(request);
+  if (authError) return authError;
+
   let payload;
   try {
     payload = await request.json();
@@ -287,6 +299,8 @@ export default async (request) => {
       accept: "text/html,application/xhtml+xml",
       "user-agent": "RyanFamilyMenu/1.0 recipe importer",
     },
+    redirect: "manual",
+    signal: AbortSignal.timeout(8000),
   }).catch(() => null);
 
   if (!page?.ok) return jsonResponse({ error: "Could not open that recipe URL." }, 502);
@@ -315,7 +329,6 @@ export default async (request) => {
       stepsText: recipe.stepsText,
       allergyWarning: recipe.allergyWarning,
       notes: recipe.notes,
-      sourceUrl: recipe.sourceUrl,
       photos: photo ? [photo] : [],
     },
   });
