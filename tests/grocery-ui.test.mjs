@@ -1,0 +1,153 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { cleanIngredientForGrocery, inventoryMatchFor } from "../grocery-logic.js";
+import { createGroceryUi } from "../grocery-ui.js";
+
+function element() {
+  const listeners = new Map();
+  return {
+    hidden: false,
+    innerHTML: "",
+    textContent: "",
+    addEventListener(type, listener) {
+      listeners.set(type, listener);
+    },
+    async dispatch(type, target) {
+      await listeners.get(type)?.({
+        target,
+        preventDefault() {
+          this.prevented = true;
+        },
+      });
+    },
+  };
+}
+
+function harness(overrides = {}) {
+  const elements = {
+    "#groceryList": element(),
+    "#restockPurchased": element(),
+  };
+  const state = {
+    lang: "es",
+    saveCalls: 0,
+    groceries: [
+      {
+        id: "grocery-1",
+        text: "4 lemons",
+        checked: false,
+        store: "any",
+        source: "week-plan",
+        recipeId: "lemon-chicken",
+        recipeName: "Lemon Chicken",
+      },
+      {
+        id: "grocery-2",
+        text: "1 cup olive oil",
+        checked: false,
+        store: "any",
+        source: "week-plan",
+        recipeId: "lemon-chicken",
+        recipeName: "Lemon Chicken",
+      },
+    ],
+    inventory: [],
+    recipes: [
+      {
+        id: "lemon-chicken",
+        name: { en: "Lemon Chicken", es: "Pollo al limon" },
+        ingredients: {
+          en: ["4 lemons", "1 cup olive oil"],
+          es: ["4 limones", "1 taza de aceite de oliva"],
+        },
+      },
+    ],
+    ...overrides.state,
+  };
+
+  const ui = createGroceryUi({
+    $: (selector) => elements[selector],
+    t: (key) => ({
+      groceryEmpty: "Empty",
+      movePurchasedHome: "Move purchased home",
+      checkSection: "Check section",
+      deleteSection: "Delete section",
+      alreadyHave: "Already have",
+      checkedOffSection: "Checked off",
+      weekPlanSource: "Weekly menu",
+      selectedRecipeSource: "Selected recipe",
+      restockSource: "Restock",
+      addOnsSection: "Add-ons",
+      manualSource: "Manual",
+      alreadyAtHomeLabel: "At home",
+      onShoppingList: "On shopping list",
+    }[key] || key),
+    escapeHtml: (value) => `${value || ""}`,
+    cleanIngredientForGrocery,
+    findInventoryMatch: inventoryMatchFor,
+    getLang: () => state.lang,
+    getGroceries: () => state.groceries,
+    setGroceries: (groceries) => {
+      state.groceries = groceries;
+    },
+    getInventory: () => state.inventory,
+    allRecipes: () => state.recipes,
+    localize: (value) => typeof value === "string" ? value : value?.[state.lang] || value?.en || "",
+    groceryStoreLabel: () => "Any store",
+    inventoryLocationLabel: (location) => location,
+    saveGroceries: async () => {
+      state.saveCalls += 1;
+      return true;
+    },
+  });
+
+  ui.bindGroceryControls();
+  return { elements, state, ui };
+}
+
+function actionTarget(selector, sectionIds) {
+  return {
+    closest(requestedSelector) {
+      if (requestedSelector !== selector) return null;
+      return {
+        dataset: selector === "[data-delete-grocery-section]"
+          ? { deleteGrocerySection: sectionIds }
+          : { checkGrocerySection: sectionIds },
+      };
+    },
+  };
+}
+
+test("renderGroceries shows Spanish ingredient text under grocery items", () => {
+  const { elements, ui } = harness();
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /4 limones/);
+  assert.match(elements["#groceryList"].innerHTML, /1 taza de aceite de oliva/);
+});
+
+test("delete section removes every item in that grocery section", async () => {
+  const { elements, state } = harness();
+
+  await elements["#groceryList"].dispatch(
+    "click",
+    actionTarget("[data-delete-grocery-section]", "grocery-1|grocery-2")
+  );
+
+  assert.deepEqual(state.groceries, []);
+  assert.equal(state.saveCalls, 1);
+});
+
+test("check section marks every item in that grocery section", async () => {
+  const { elements, state } = harness();
+
+  await elements["#groceryList"].dispatch(
+    "click",
+    actionTarget("[data-check-grocery-section]", "grocery-1|grocery-2")
+  );
+
+  assert.equal(state.groceries.every((item) => item.checked), true);
+  assert.equal(state.saveCalls, 1);
+});
