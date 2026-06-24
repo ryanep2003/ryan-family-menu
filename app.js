@@ -22,6 +22,11 @@ import { recipes } from "./recipes-data.js";
 import { createScheduleUi } from "./schedule-ui.js";
 import { translations } from "./translations.js";
 import {
+  applyVersionConflict,
+  loadVersionedCollection,
+  saveVersionedCollection,
+} from "./versioned-collection-client.js";
+import {
   categoryFor,
   categoryLabel as localizedCategoryLabel,
   recipeToEditableUpload as recipeToEditable,
@@ -643,10 +648,18 @@ async function saveSharedRecipe(recipe) {
 
 async function loadGroceries() {
   try {
-    const data = await getJson("/.netlify/functions/groceries", "Could not load groceries.");
-    groceries = Array.isArray(data.items) ? data.items : [];
-    groceryVersion = Number(data.version) || 0;
-    render();
+    await loadVersionedCollection({
+      getJson,
+      url: "/.netlify/functions/groceries",
+      fallbackMessage: "Could not load groceries.",
+      setItems: (items) => {
+        groceries = items;
+      },
+      setVersion: (version) => {
+        groceryVersion = version;
+      },
+      render,
+    });
   } catch (error) {
     console.warn(error);
     $("#groceryStatus").textContent = t("groceryError");
@@ -656,21 +669,33 @@ async function loadGroceries() {
 
 async function saveGroceries() {
   try {
-    const data = await putJson(
-      "/.netlify/functions/groceries",
-      { items: groceries, version: groceryVersion },
-      "Could not save groceries."
-    );
-    groceries = Array.isArray(data.items) ? data.items : groceries;
-    groceryVersion = Number(data.version) || groceryVersion;
+    await saveVersionedCollection({
+      putJson,
+      url: "/.netlify/functions/groceries",
+      fallbackMessage: "Could not save groceries.",
+      items: groceries,
+      version: groceryVersion,
+      setItems: (items) => {
+        groceries = items;
+      },
+      setVersion: (version) => {
+        groceryVersion = version;
+      },
+    });
     $("#groceryStatus").textContent = t("grocerySaved");
     $("#groceryStatus").classList.remove("error");
     return true;
   } catch (error) {
     console.warn(error);
-    if (error.status === 409 && Array.isArray(error.data?.items)) {
-      groceries = error.data.items;
-      groceryVersion = Number(error.data.version) || groceryVersion;
+    if (applyVersionConflict(error, {
+      setItems: (items) => {
+        groceries = items;
+      },
+      setVersion: (version) => {
+        groceryVersion = version;
+      },
+      currentVersion: groceryVersion,
+    })) {
       renderGroceries();
       bindGroceryControls();
       $("#groceryStatus").textContent = t("groceryConflict");
@@ -685,10 +710,18 @@ async function saveGroceries() {
 
 async function loadInventory() {
   try {
-    const data = await getJson("/.netlify/functions/inventory", "Could not load inventory.");
-    inventory = Array.isArray(data.items) ? data.items : [];
-    inventoryVersion = Number(data.version) || 0;
-    render();
+    await loadVersionedCollection({
+      getJson,
+      url: "/.netlify/functions/inventory",
+      fallbackMessage: "Could not load inventory.",
+      setItems: (items) => {
+        inventory = items;
+      },
+      setVersion: (version) => {
+        inventoryVersion = version;
+      },
+      render,
+    });
   } catch (error) {
     console.warn(error);
     $("#inventoryStatus").textContent = t("inventoryError");
@@ -698,20 +731,32 @@ async function loadInventory() {
 
 async function saveInventory() {
   try {
-    const data = await putJson(
-      "/.netlify/functions/inventory",
-      { items: inventory, version: inventoryVersion },
-      "Could not save inventory."
-    );
-    inventory = Array.isArray(data.items) ? data.items : inventory;
-    inventoryVersion = Number(data.version) || inventoryVersion;
+    await saveVersionedCollection({
+      putJson,
+      url: "/.netlify/functions/inventory",
+      fallbackMessage: "Could not save inventory.",
+      items: inventory,
+      version: inventoryVersion,
+      setItems: (items) => {
+        inventory = items;
+      },
+      setVersion: (version) => {
+        inventoryVersion = version;
+      },
+    });
     $("#inventoryStatus").textContent = t("inventorySaved");
     $("#inventoryStatus").classList.remove("error");
   } catch (error) {
     console.warn(error);
-    if (error.status === 409 && Array.isArray(error.data?.items)) {
-      inventory = error.data.items;
-      inventoryVersion = Number(error.data.version) || inventoryVersion;
+    if (applyVersionConflict(error, {
+      setItems: (items) => {
+        inventory = items;
+      },
+      setVersion: (version) => {
+        inventoryVersion = version;
+      },
+      currentVersion: inventoryVersion,
+    })) {
       renderInventory();
       bindInventoryControls();
       $("#inventoryStatus").textContent = t("inventoryConflict");
