@@ -16,7 +16,10 @@ export async function getJson(url, fallbackMessage) {
   const data = await parseJson(response);
 
   if (!response.ok) {
-    throw new Error(data.error || fallbackMessage);
+    const error = new Error(data.error || fallbackMessage);
+    error.status = response.status;
+    error.data = data;
+    throw error;
   }
 
   return data;
@@ -31,7 +34,10 @@ export async function postJson(url, body, fallbackMessage) {
   const data = await parseJson(response);
 
   if (!response.ok) {
-    throw new Error(data.error || fallbackMessage);
+    const error = new Error(data.error || fallbackMessage);
+    error.status = response.status;
+    error.data = data;
+    throw error;
   }
 
   return data;
@@ -46,7 +52,10 @@ export async function putJson(url, body, fallbackMessage) {
   const data = await parseJson(response);
 
   if (!response.ok) {
-    throw new Error(data.error || fallbackMessage);
+    const error = new Error(data.error || fallbackMessage);
+    error.status = response.status;
+    error.data = data;
+    throw error;
   }
 
   return data;

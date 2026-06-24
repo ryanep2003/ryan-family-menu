@@ -1024,6 +1024,7 @@ const translations = {
     storeCostco: "Costco",
     grocerySaved: "Grocery list saved.",
     groceryError: "Could not save the grocery list. Try again when the site is online.",
+    groceryConflict: "Grocery list changed on another phone. Latest list loaded; please try your change again.",
     groceryEmpty: "No grocery items yet.",
     scanReceipt: "Scan receipt",
     receiptScanNote: "Upload a receipt photo. Review matches before moving items home.",
@@ -1068,6 +1069,7 @@ const translations = {
     scanShelf: "Scan shelf",
     inventorySaved: "Inventory saved.",
     inventoryError: "Could not save inventory. Try again when the site is online.",
+    inventoryConflict: "Inventory changed on another phone. Latest inventory loaded; please try your change again.",
     inventoryEmpty: "No inventory items yet.",
     alreadyHave: "Already have",
     locationPantry: "Pantry",
@@ -1107,6 +1109,7 @@ const translations = {
     recipeGroceriesError: "Could not save the shared grocery list. Try again when the site is online.",
     planNextOpen: "Plan next open night",
     sharedStateError: "Changes are saved on this phone and will sync when the site is online.",
+    sharedStateConflict: "Family menu changed on another phone. Latest menu loaded; please try your change again.",
     jumpInventory: "Home inventory",
     groceryShortcut: "Shopping list",
     inventoryShortcut: "Home inventory",
@@ -1205,6 +1208,7 @@ const translations = {
     storeCostco: "Costco",
     grocerySaved: "Lista de compras guardada.",
     groceryError: "No se pudo guardar la lista. Intenta otra vez cuando el sitio este en linea.",
+    groceryConflict: "La lista cambio en otro telefono. Se cargo la lista nueva; intenta el cambio otra vez.",
     groceryEmpty: "No hay articulos todavia.",
     scanReceipt: "Escanear recibo",
     receiptScanNote: "Sube una foto del recibo. Revisa coincidencias antes de guardar en casa.",
@@ -1249,6 +1253,7 @@ const translations = {
     scanShelf: "Escanear estante",
     inventorySaved: "Inventario guardado.",
     inventoryError: "No se pudo guardar el inventario. Intenta otra vez cuando el sitio este en linea.",
+    inventoryConflict: "El inventario cambio en otro telefono. Se cargo el inventario nuevo; intenta otra vez.",
     inventoryEmpty: "No hay inventario todavia.",
     alreadyHave: "Ya tenemos",
     locationPantry: "Despensa",
@@ -1288,6 +1293,7 @@ const translations = {
     recipeGroceriesError: "No se pudo guardar la lista compartida. Intenta otra vez cuando el sitio este en linea.",
     planNextOpen: "Planear la proxima noche libre",
     sharedStateError: "Los cambios se guardaron en este telefono y se sincronizaran cuando el sitio este en linea.",
+    sharedStateConflict: "El menu cambio en otro telefono. Se cargo el menu nuevo; intenta el cambio otra vez.",
     jumpInventory: "Inventario de casa",
     groceryShortcut: "Lista de compras",
     inventoryShortcut: "Inventario de casa",
@@ -1307,6 +1313,7 @@ let selectedRecipeId = "meatballs";
 let schedule = normalizeSchedule(JSON.parse(localStorage.getItem("dinner-schedule") || "null"));
 let calendarMeals = normalizeCalendar(JSON.parse(localStorage.getItem("dinner-calendar") || "null") || {});
 let weekStartKey = localStorage.getItem("dinner-week-start") || currentWeekStartKey();
+let sharedStateVersion = Number(localStorage.getItem("dinner-state-version") || 0);
 let favorites = JSON.parse(localStorage.getItem("dinner-favorites") || "[]");
 let tasks = JSON.parse(localStorage.getItem("dinner-tasks") || "[]");
 let drafts = JSON.parse(localStorage.getItem("dinner-drafts") || "[]");
@@ -1315,7 +1322,9 @@ let recipeEdits = JSON.parse(localStorage.getItem("dinner-recipe-edits") || "{}"
 let deletedRecipeIds = JSON.parse(localStorage.getItem("dinner-deleted-recipes") || "[]");
 let importedRecipePhotos = [];
 let groceries = [];
+let groceryVersion = 0;
 let inventory = [];
+let inventoryVersion = 0;
 let inventorySuggestions = [];
 let receiptSuggestions = [];
 let inventoryMode = "shopping";
@@ -1426,6 +1435,7 @@ function saveSharedStateLocally() {
   localStorage.setItem("dinner-schedule", JSON.stringify(schedule));
   localStorage.setItem("dinner-calendar", JSON.stringify(calendarMeals));
   localStorage.setItem("dinner-week-start", weekStartKey);
+  localStorage.setItem("dinner-state-version", `${sharedStateVersion}`);
   localStorage.setItem("dinner-favorites", JSON.stringify(favorites));
   localStorage.setItem("dinner-tasks", JSON.stringify(tasks));
   localStorage.setItem("dinner-recipe-edits", JSON.stringify(recipeEdits));
@@ -1438,9 +1448,10 @@ async function saveSharedState() {
   try {
     const data = await putJson(
       "/.netlify/functions/family-state",
-      { state: sharedStateSnapshot() },
+      { state: sharedStateSnapshot(), version: sharedStateVersion },
       "Could not save shared family state."
     );
+    sharedStateVersion = Number(data.version) || sharedStateVersion;
     if (data.state) {
       schedule = normalizeSchedule(data.state.schedule);
       calendarMeals = normalizeCalendar(data.state.calendarMeals);
@@ -1456,6 +1467,20 @@ async function saveSharedState() {
   } catch (error) {
     console.warn(error);
     const status = $("#sharedStateStatus");
+    if (error.status === 409 && error.data?.state) {
+      sharedStateVersion = Number(error.data.version) || sharedStateVersion;
+      schedule = normalizeSchedule(error.data.state.schedule);
+      calendarMeals = normalizeCalendar(error.data.state.calendarMeals);
+      weekStartKey = error.data.state.weekStart || weekStartKey;
+      favorites = Array.isArray(error.data.state.favorites) ? error.data.state.favorites : favorites;
+      tasks = Array.isArray(error.data.state.tasks) ? error.data.state.tasks : tasks;
+      recipeEdits = error.data.state.recipeEdits && typeof error.data.state.recipeEdits === "object" ? error.data.state.recipeEdits : recipeEdits;
+      deletedRecipeIds = Array.isArray(error.data.state.deletedRecipeIds) ? error.data.state.deletedRecipeIds : deletedRecipeIds;
+      saveSharedStateLocally();
+      render();
+      if (status) status.textContent = t("sharedStateConflict");
+      return;
+    }
     if (status) status.textContent = t("sharedStateError");
   }
 }
@@ -1463,6 +1488,7 @@ async function saveSharedState() {
 async function loadSharedState() {
   try {
     const data = await getJson("/.netlify/functions/family-state", "Could not load shared family state.");
+    sharedStateVersion = Number(data.version) || 0;
 
     if (!data.state) {
       rollWeekForwardIfNeeded();
@@ -2375,6 +2401,7 @@ async function loadGroceries() {
   try {
     const data = await getJson("/.netlify/functions/groceries", "Could not load groceries.");
     groceries = Array.isArray(data.items) ? data.items : [];
+    groceryVersion = Number(data.version) || 0;
     render();
   } catch (error) {
     console.warn(error);
@@ -2385,13 +2412,27 @@ async function loadGroceries() {
 
 async function saveGroceries() {
   try {
-    const data = await putJson("/.netlify/functions/groceries", { items: groceries }, "Could not save groceries.");
+    const data = await putJson(
+      "/.netlify/functions/groceries",
+      { items: groceries, version: groceryVersion },
+      "Could not save groceries."
+    );
     groceries = Array.isArray(data.items) ? data.items : groceries;
+    groceryVersion = Number(data.version) || groceryVersion;
     $("#groceryStatus").textContent = t("grocerySaved");
     $("#groceryStatus").classList.remove("error");
     return true;
   } catch (error) {
     console.warn(error);
+    if (error.status === 409 && Array.isArray(error.data?.items)) {
+      groceries = error.data.items;
+      groceryVersion = Number(error.data.version) || groceryVersion;
+      renderGroceries();
+      bindGroceryControls();
+      $("#groceryStatus").textContent = t("groceryConflict");
+      $("#groceryStatus").classList.add("error");
+      return false;
+    }
     $("#groceryStatus").textContent = t("groceryError");
     $("#groceryStatus").classList.add("error");
     return false;
@@ -2402,6 +2443,7 @@ async function loadInventory() {
   try {
     const data = await getJson("/.netlify/functions/inventory", "Could not load inventory.");
     inventory = Array.isArray(data.items) ? data.items : [];
+    inventoryVersion = Number(data.version) || 0;
     render();
   } catch (error) {
     console.warn(error);
@@ -2412,12 +2454,26 @@ async function loadInventory() {
 
 async function saveInventory() {
   try {
-    const data = await putJson("/.netlify/functions/inventory", { items: inventory }, "Could not save inventory.");
+    const data = await putJson(
+      "/.netlify/functions/inventory",
+      { items: inventory, version: inventoryVersion },
+      "Could not save inventory."
+    );
     inventory = Array.isArray(data.items) ? data.items : inventory;
+    inventoryVersion = Number(data.version) || inventoryVersion;
     $("#inventoryStatus").textContent = t("inventorySaved");
     $("#inventoryStatus").classList.remove("error");
   } catch (error) {
     console.warn(error);
+    if (error.status === 409 && Array.isArray(error.data?.items)) {
+      inventory = error.data.items;
+      inventoryVersion = Number(error.data.version) || inventoryVersion;
+      renderInventory();
+      bindInventoryControls();
+      $("#inventoryStatus").textContent = t("inventoryConflict");
+      $("#inventoryStatus").classList.add("error");
+      return;
+    }
     $("#inventoryStatus").textContent = t("inventoryError");
     $("#inventoryStatus").classList.add("error");
   }

@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { requireWriteAuth } from "./_auth.js";
+import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 
 const STORE_NAME = "family-menu-groceries";
 const GROCERIES_KEY = "items";
@@ -41,14 +42,19 @@ function cleanItems(items) {
 }
 
 async function readItems(store) {
-  return (await store.get(GROCERIES_KEY, { type: "json" })) || [];
+  const saved = (await store.get(GROCERIES_KEY, { type: "json" })) || [];
+  const record = versionedRecord(saved, "items");
+  return {
+    ...record,
+    items: Array.isArray(record.items) ? record.items : [],
+  };
 }
 
 export default async (request) => {
   const store = getStore(STORE_NAME);
 
   if (request.method === "GET") {
-    return jsonResponse({ items: await readItems(store) });
+    return jsonResponse(await readItems(store));
   }
 
   if (request.method === "PUT") {
@@ -62,9 +68,19 @@ export default async (request) => {
       return jsonResponse({ error: "Invalid JSON" }, 400);
     }
 
-    const items = cleanItems(payload.items);
-    await store.setJSON(GROCERIES_KEY, items);
-    return jsonResponse({ items });
+    const current = await readItems(store);
+    if (hasVersionConflict(payload.version, current.version)) {
+      return jsonResponse({
+        error: "Grocery list changed on another device. Refresh and try again.",
+        items: current.items,
+        version: current.version,
+        updatedAt: current.updatedAt,
+      }, 409);
+    }
+
+    const record = nextVersionedRecord("items", cleanItems(payload.items), current.version);
+    await store.setJSON(GROCERIES_KEY, record);
+    return jsonResponse(record);
   }
 
   return jsonResponse({ error: "Method not allowed" }, 405);

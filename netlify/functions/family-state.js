@@ -1,5 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { requireWriteAuth } from "./_auth.js";
+import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 
 const STORE_NAME = "family-menu-state";
 const STATE_KEY = "shared-state";
@@ -135,11 +136,15 @@ export function cleanState(value) {
   };
 }
 
+function stateRecord(saved) {
+  return versionedRecord(saved, "state");
+}
+
 export default async (request) => {
   const store = getStore(STORE_NAME);
 
   if (request.method === "GET") {
-    return jsonResponse({ state: await store.get(STATE_KEY, { type: "json" }) });
+    return jsonResponse(stateRecord(await store.get(STATE_KEY, { type: "json" })));
   }
 
   if (request.method === "PUT") {
@@ -153,9 +158,19 @@ export default async (request) => {
       return jsonResponse({ error: "Invalid JSON" }, 400);
     }
 
-    const state = cleanState(payload.state);
-    await store.setJSON(STATE_KEY, state);
-    return jsonResponse({ state });
+    const current = stateRecord(await store.get(STATE_KEY, { type: "json" }));
+    if (hasVersionConflict(payload.version, current.version)) {
+      return jsonResponse({
+        error: "Family menu changed on another device. Refresh and try again.",
+        state: current.state,
+        version: current.version,
+        updatedAt: current.updatedAt,
+      }, 409);
+    }
+
+    const record = nextVersionedRecord("state", cleanState(payload.state), current.version);
+    await store.setJSON(STATE_KEY, record);
+    return jsonResponse(record);
   }
 
   return jsonResponse({ error: "Method not allowed" }, 405);
