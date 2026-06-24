@@ -8,6 +8,7 @@ import {
 import { inventoryItem, mergeInventory } from "./inventory-logic.js";
 import { getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
+import { createInventoryUi } from "./inventory-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
 import { createRecipeFormUi } from "./recipe-form-ui.js";
 import { recipes } from "./recipes-data.js";
@@ -330,6 +331,12 @@ function manualGroceryItemsFromText(text, store) {
     }));
 }
 
+let inventoryUi;
+
+function inventoryLocationLabel(location) {
+  return inventoryUi.inventoryLocationLabel(location);
+}
+
 const groceryUi = createGroceryUi({
   $,
   t,
@@ -355,169 +362,42 @@ const purchasedGroceries = () => groceryUi.purchasedGroceries();
 const shoppingMatchForReceiptItem = (text) => groceryUi.shoppingMatchForReceiptItem(text);
 const inventoryShoppingNote = (item) => groceryUi.inventoryShoppingNote(item);
 
-function inventoryLocationLabel(location) {
-  if (location === "fridge") return t("locationFridge");
-  if (location === "freezer") return t("locationFreezer");
-  if (location === "household") return t("locationHousehold");
-  return t("locationPantry");
-}
+inventoryUi = createInventoryUi({
+  $,
+  $$,
+  t,
+  escapeHtml,
+  groceryItem,
+  inventoryItem,
+  mergeInventory,
+  inventoryShoppingNote,
+  renderGroceries,
+  bindGroceryControls,
+  saveGroceries,
+  saveInventory,
+  getInventory: () => inventory,
+  setInventory: (items) => {
+    inventory = items;
+  },
+  getGroceries: () => groceries,
+  setGroceries: (items) => {
+    groceries = items;
+  },
+  getInventoryMode: () => inventoryMode,
+  setInventoryMode: (mode) => {
+    inventoryMode = mode;
+  },
+  getInventoryFilter: () => inventoryFilter,
+  getInventorySuggestions: () => inventorySuggestions,
+  setInventorySuggestions: (items) => {
+    inventorySuggestions = items;
+  },
+});
 
-function inventoryStockLabel(stockState) {
-  return t({ full: "stockFull", some: "stockSome", low: "stockLow", out: "stockOut" }[stockState] || "stockSome");
-}
-
-function renderInventoryMode() {
-  $("#shoppingPanel").hidden = inventoryMode !== "shopping";
-  $("#homePanel").hidden = inventoryMode !== "home";
-  $$("[data-inventory-mode]").forEach((button) => {
-    const active = button.dataset.inventoryMode === inventoryMode;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-selected", `${active}`);
-  });
-}
-
-function renderInventory() {
-  const groups = [
-    { key: "pantry", label: t("locationPantry") },
-    { key: "fridge", label: t("locationFridge") },
-    { key: "freezer", label: t("locationFreezer") },
-    { key: "household", label: t("locationHousehold") },
-  ].map((group) => ({
-    ...group,
-    items: inventory.filter((item) => (item.location || "pantry") === group.key
-      && (inventoryFilter === "all" || group.key === inventoryFilter)),
-  })).filter((group) => group.items.length);
-
-  if (!inventory.length) {
-    $("#inventoryList").innerHTML = `<p class="empty-state">${t("inventoryEmpty")}</p>`;
-    return;
-  }
-
-  if (!groups.length) {
-    $("#inventoryList").innerHTML = `<p class="empty-state">${t("noInventoryMatches")}</p>`;
-    return;
-  }
-
-  $("#inventoryList").innerHTML = groups.map((group) => `
-    <section class="inventory-section">
-      <h3>${escapeHtml(group.label)}</h3>
-      ${group.items.map((item) => `
-        <div class="inventory-item">
-          ${item.photos?.[0] ? `<img src="${item.photos[0]}" alt="" />` : ""}
-          <span class="inventory-item-copy">
-            <strong>${escapeHtml(item.text)}</strong>
-            <em>${escapeHtml(item.quantity || inventoryLocationLabel(item.location))}</em>
-            ${inventoryShoppingNote(item) ? `<em class="shopping-overlap">${escapeHtml(inventoryShoppingNote(item))}</em>` : ""}
-          </span>
-          <select class="stock-select stock-${item.stockState || "some"}" data-stock-state="${item.id}" aria-label="${escapeHtml(item.text)} stock">
-            ${["full", "some", "low", "out"].map((state) => `<option value="${state}" ${state === (item.stockState || "some") ? "selected" : ""}>${inventoryStockLabel(state)}</option>`).join("")}
-          </select>
-          <div class="inventory-item-actions">
-            <button class="ghost-button" type="button" data-add-inventory-to-shopping="${item.id}">${t("addToShopping")}</button>
-            <button class="text-button" type="button" data-remove-inventory="${item.id}">${t("remove")}</button>
-          </div>
-        </div>
-      `).join("")}
-    </section>
-  `).join("");
-}
-
-function bindInventoryControls() {
-  $$("[data-stock-state]").forEach((select) => {
-    select.addEventListener("change", async () => {
-      const item = inventory.find((entry) => entry.id === select.dataset.stockState);
-      if (!item) return;
-      item.stockState = select.value;
-      item.updatedAt = new Date().toISOString();
-      renderInventory();
-      bindInventoryControls();
-      await saveInventory();
-    });
-  });
-
-  $$("[data-add-inventory-to-shopping]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      const item = inventory.find((entry) => entry.id === button.dataset.addInventoryToShopping);
-      if (!item) return;
-      item.stockState = "out";
-      item.updatedAt = new Date().toISOString();
-      const matchingGrocery = groceries.find((entry) => entry.text.toLowerCase() === item.text.toLowerCase());
-      if (matchingGrocery) {
-        matchingGrocery.checked = false;
-        matchingGrocery.inInventory = false;
-        matchingGrocery.source = "inventory-restock";
-      } else {
-        groceries.unshift(groceryItem(item.text, { source: "inventory-restock" }));
-      }
-      inventoryMode = "shopping";
-      $("#groceryStatus").textContent = t("addedToShopping");
-      renderGroceries();
-      renderInventory();
-      renderInventoryMode();
-      bindGroceryControls();
-      bindInventoryControls();
-      await Promise.all([saveInventory(), saveGroceries()]);
-    });
-  });
-
-  $$("[data-remove-inventory]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      inventory = inventory.filter((item) => item.id !== button.dataset.removeInventory);
-      renderInventory();
-      bindInventoryControls();
-      await saveInventory();
-    });
-  });
-}
-
-function renderInventorySuggestions() {
-  const panel = $("#inventorySuggestions");
-  if (!panel) return;
-
-  if (!inventorySuggestions.length) {
-    panel.hidden = true;
-    panel.innerHTML = "";
-    return;
-  }
-
-  panel.hidden = false;
-  panel.innerHTML = `
-    <h3>${t("inventorySuggestionsHeading")}</h3>
-    <div class="suggestion-list">
-      ${inventorySuggestions.map((item, index) => `
-        <label class="suggestion-item">
-          <input type="checkbox" data-inventory-suggestion="${index}" checked />
-          <span>
-            <strong>${escapeHtml(item.text)}</strong>
-            <em>${escapeHtml([item.quantity, inventoryLocationLabel(item.location)].filter(Boolean).join(" · "))}</em>
-          </span>
-        </label>
-      `).join("")}
-    </div>
-    <button class="primary-action" type="button" id="addInventorySuggestions">${t("addSelectedInventory")}</button>
-  `;
-
-  $("#addInventorySuggestions").addEventListener("click", async () => {
-    const selected = $$("[data-inventory-suggestion]")
-      .filter((checkbox) => checkbox.checked)
-      .map((checkbox) => inventorySuggestions[Number(checkbox.dataset.inventorySuggestion)])
-      .filter(Boolean);
-
-    if (!selected.length) return;
-
-    inventory = mergeInventory(inventory, selected.map((item) => inventoryItem(
-      item.text,
-      item.quantity,
-      item.location,
-      []
-    )));
-    inventorySuggestions = [];
-    renderInventorySuggestions();
-    renderInventory();
-    bindInventoryControls();
-    await saveInventory();
-  });
-}
+const renderInventoryMode = () => inventoryUi.renderInventoryMode();
+const renderInventory = () => inventoryUi.renderInventory();
+const bindInventoryControls = () => inventoryUi.bindInventoryControls();
+const renderInventorySuggestions = () => inventoryUi.renderInventorySuggestions();
 
 function renderReceiptSuggestions() {
   const panel = $("#receiptSuggestions");
