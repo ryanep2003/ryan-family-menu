@@ -5,6 +5,7 @@ import {
   inventoryMatchFor as findInventoryMatch,
   mergeGroceries,
 } from "./grocery-logic.js";
+import { bindInstallPrompt, registerServiceWorker } from "./app-lifecycle.js";
 import {
   normalizeSharedState,
   persistSharedState,
@@ -74,10 +75,8 @@ let inventoryMode = "shopping";
 let inventoryFilter = "all";
 let visibleMonth = new Date();
 visibleMonth.setDate(1);
-let deferredPrompt = null;
 let recipeSearch = "";
 let categoryFilter = "all";
-let hadServiceWorkerController = false;
 let appUpdateNoticeShown = false;
 
 const $ = (selector) => document.querySelector(selector);
@@ -465,15 +464,6 @@ function showAppUpdateNotice() {
   if (!notice) return;
   appUpdateNoticeShown = true;
   notice.hidden = false;
-}
-
-function installInstructions() {
-  const platform = navigator.userAgent || "";
-  const isAndroid = /Android/i.test(platform);
-  const isIos = /iPhone|iPad|iPod/i.test(platform);
-  if (isAndroid) return t("installInstructionsAndroid");
-  if (isIos) return t("installInstructionsIos");
-  return t("installInstructions");
 }
 
 const dashboardUi = createDashboardUi({
@@ -1048,50 +1038,8 @@ $("#inventoryScanForm").addEventListener("submit", async (event) => {
   }
 });
 
-window.addEventListener("beforeinstallprompt", (event) => {
-  event.preventDefault();
-  deferredPrompt = event;
-});
-
-$("#installButton").addEventListener("click", async () => {
-  if (deferredPrompt) {
-    deferredPrompt.prompt();
-    deferredPrompt = null;
-    return;
-  }
-
-  window.alert(installInstructions());
-});
-
-$("#refreshApp").addEventListener("click", () => {
-  window.location.reload();
-});
-
-if ("serviceWorker" in navigator) {
-  hadServiceWorkerController = Boolean(navigator.serviceWorker.controller);
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
-    if (hadServiceWorkerController) showAppUpdateNotice();
-    hadServiceWorkerController = true;
-  });
-
-  navigator.serviceWorker.register("service-worker.js").then((registration) => {
-    registration.update();
-    if (registration.waiting && navigator.serviceWorker.controller) {
-      showAppUpdateNotice();
-    }
-
-    registration.addEventListener("updatefound", () => {
-      const worker = registration.installing;
-      if (!worker) return;
-
-      worker.addEventListener("statechange", () => {
-        if (worker.state === "installed" && navigator.serviceWorker.controller) {
-          showAppUpdateNotice();
-        }
-      });
-    });
-  });
-}
+bindInstallPrompt({ $, t });
+registerServiceWorker({ $, onUpdateAvailable: showAppUpdateNotice });
 
 render();
 loadSharedState();

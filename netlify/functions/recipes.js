@@ -1,6 +1,6 @@
 import { getStore } from "@netlify/blobs";
 import { requireWriteAuth } from "./_auth.js";
-import { jsonResponse } from "./_http.js";
+import { jsonResponse, readJsonRequest } from "./_http.js";
 
 const STORE_NAME = "family-menu-recipes";
 const RECIPES_KEY = "recipes";
@@ -8,6 +8,7 @@ const INDEX_KEY = "recipe-index";
 const RECIPE_PREFIX = "recipe:";
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_BYTES = 500000;
+const MAX_REQUEST_BYTES = 2000000;
 const MAX_TEXT_LENGTH = 12000;
 const MAX_RECIPES = 200;
 
@@ -96,12 +97,8 @@ export default async (request) => {
     const authError = requireWriteAuth(request);
     if (authError) return authError;
 
-    let payload;
-    try {
-      payload = await request.json();
-    } catch {
-      return jsonResponse({ error: "Invalid JSON" }, 400);
-    }
+    const { payload, error } = await readJsonRequest(request, { maxBytes: MAX_REQUEST_BYTES });
+    if (error) return error;
 
     const recipe = cleanRecipe(payload);
     if (!recipe) {

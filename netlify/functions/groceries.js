@@ -1,11 +1,12 @@
 import { getStore } from "@netlify/blobs";
 import { requireWriteAuth } from "./_auth.js";
-import { jsonResponse } from "./_http.js";
+import { jsonResponse, readJsonRequest } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 
 const STORE_NAME = "family-menu-groceries";
 const GROCERIES_KEY = "items";
 const MAX_ITEMS = 500;
+const MAX_REQUEST_BYTES = 250000;
 
 function cleanItem(item) {
   const text = `${item.text || ""}`.trim().slice(0, 220);
@@ -50,12 +51,8 @@ export default async (request) => {
     const authError = requireWriteAuth(request);
     if (authError) return authError;
 
-    let payload;
-    try {
-      payload = await request.json();
-    } catch {
-      return jsonResponse({ error: "Invalid JSON" }, 400);
-    }
+    const { payload, error } = await readJsonRequest(request, { maxBytes: MAX_REQUEST_BYTES });
+    if (error) return error;
 
     const current = await readItems(store);
     if (hasVersionConflict(payload.version, current.version)) {
