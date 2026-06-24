@@ -1,9 +1,10 @@
 import { requireWriteAuth } from "./_auth.js";
-import { jsonResponse } from "./_http.js";
+import { jsonResponse, readJsonRequest } from "./_http.js";
 import { cleanImageDataUrl, openAiErrorMessage, outputTextFromResponse, parseJsonObject } from "./_openai.js";
 
 const MAX_IMAGES = 3;
 const MAX_IMAGE_BYTES = 700000;
+const MAX_REQUEST_BYTES = 3000000;
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 
 function cleanText(value, limit) {
@@ -34,12 +35,8 @@ export default async (request) => {
     return jsonResponse({ error: "Missing OPENAI_API_KEY in Netlify environment variables." }, 500);
   }
 
-  let payload;
-  try {
-    payload = await request.json();
-  } catch {
-    return jsonResponse({ error: "Invalid JSON" }, 400);
-  }
+  const { payload, error } = await readJsonRequest(request, { maxBytes: MAX_REQUEST_BYTES });
+  if (error) return error;
 
   const images = Array.isArray(payload.images)
     ? payload.images
