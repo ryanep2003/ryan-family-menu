@@ -10,6 +10,7 @@ import {
   persistSharedState,
   sharedStateSnapshot as familyStateSnapshot,
 } from "./family-state.js";
+import { createDashboardUi } from "./dashboard-ui.js";
 import { inventoryItem, mergeInventory } from "./inventory-logic.js";
 import { getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
@@ -258,10 +259,6 @@ function todaysRecipeId() {
   return todaysMealPlan().main || "meatballs";
 }
 
-function todaysMealPlan() {
-  return calendarMealForDateKey(formatDateKey(new Date()));
-}
-
 function mealRecipes(meal) {
   return mealSlots
     .map((slot) => ({
@@ -495,125 +492,45 @@ function installInstructions() {
   return t("installInstructions");
 }
 
-function renderToday() {
-  const meal = todaysMealPlan();
-  const mainRecipe = meal.main ? recipeById(meal.main) : null;
-  const recipesForMeal = mealRecipes(meal);
-  $("#todayRecipeName").textContent = mainRecipe ? localize(mainRecipe.name) : t("noMealSet");
-  $("#todayMeta").textContent = recipesForMeal.length
-    ? `${recipesForMeal.length} ${lang === "en" ? "planned item(s)" : "receta(s) planeadas"}${mealHasWarning(meal) ? ` · ${t("allergyBadge")}` : ""}`
-    : t("noMealSet");
-  $("#todayMealList").innerHTML = recipesForMeal
-    .map(({ key, recipe }) => `
-      <button type="button" data-open="${recipe.id}">
-        <span>${t(`${key}Slot`)}</span>
-        <strong>${escapeHtml(localize(recipe.name))}</strong>
-        ${recipe.allergyWarning ? `<em>${t("allergyBadge")}</em>` : ""}
-      </button>
-    `)
-    .join("");
-  const toBuy = groceries.filter((item) => !item.checked && !item.inInventory).length;
-  $("#todayGrocerySummary").textContent = `${toBuy} ${t("itemsToBuy")}`;
-  $("#todayInventorySummary").textContent = `${inventory.filter((item) => item.stockState !== "out").length} ${t("itemsAtHome")}`;
-  $("#cookToday").disabled = !mainRecipe;
-}
+const dashboardUi = createDashboardUi({
+  $,
+  $$,
+  t,
+  escapeHtml,
+  localize,
+  formatDateKey,
+  categoryFor,
+  categoryLabel,
+  mealRecipes,
+  mealHasWarning,
+  calendarMealForDateKey,
+  recipeById,
+  allRecipes,
+  saveSharedState,
+  render,
+  renderDetail,
+  getLang: () => lang,
+  getFavorites: () => favorites,
+  getTasks: () => tasks,
+  setTasks: (nextTasks) => {
+    tasks = nextTasks;
+  },
+  getGroceries: () => groceries,
+  getInventory: () => inventory,
+  getCalendarMeals: () => calendarMeals,
+  setCalendarMeals: (nextCalendarMeals) => {
+    calendarMeals = normalizeCalendar(nextCalendarMeals);
+  },
+  getSelectedRecipeId: () => selectedRecipeId,
+  setSelectedRecipeId: (id) => {
+    selectedRecipeId = id;
+  },
+});
 
-function taskAssigneeLabel(assignee) {
-  const labels = {
-    alyson: "assigneeAlyson",
-    eric: "assigneeEric",
-    nelly: "assigneeNelly",
-    theo: "assigneeTheo",
-    pierce: "assigneePierce",
-    other: "assigneeOther",
-  };
-  return t(labels[assignee] || labels.other);
-}
-
-function todaysTasks() {
-  const todayKey = formatDateKey(new Date());
-  return tasks.filter((task) => task.date === todayKey);
-}
-
-function renderTasks() {
-  const currentTasks = todaysTasks();
-  const completed = currentTasks.filter((task) => task.completed).length;
-  $("#taskProgress").textContent = currentTasks.length ? `${completed}/${currentTasks.length}` : "";
-
-  $("#taskList").innerHTML = currentTasks.length
-    ? currentTasks.map((task) => `
-        <div class="task-item${task.completed ? " completed" : ""}">
-          <label>
-            <input type="checkbox" data-task-id="${escapeHtml(task.id)}" ${task.completed ? "checked" : ""} />
-            <span>
-              <strong>${escapeHtml(task.text)}</strong>
-              <small>${escapeHtml(taskAssigneeLabel(task.assignee))}</small>
-            </span>
-          </label>
-          <button class="icon-remove" type="button" data-remove-task="${escapeHtml(task.id)}" aria-label="${t("remove")}">×</button>
-        </div>
-      `).join("")
-    : `<p class="empty-state compact">${t("tasksEmpty")}</p>`;
-
-  $$('[data-task-id]').forEach((checkbox) => {
-    checkbox.addEventListener("change", async () => {
-      const task = tasks.find((item) => item.id === checkbox.dataset.taskId);
-      if (!task) return;
-      task.completed = checkbox.checked;
-      renderTasks();
-      await saveSharedState();
-    });
-  });
-
-  $$('[data-remove-task]').forEach((button) => {
-    button.addEventListener("click", async () => {
-      tasks = tasks.filter((task) => task.id !== button.dataset.removeTask);
-      renderTasks();
-      await saveSharedState();
-    });
-  });
-}
-
-function nextOpenMealDate() {
-  const start = new Date();
-  for (let offset = 0; offset < 14; offset += 1) {
-    const date = new Date(start);
-    date.setDate(start.getDate() + offset);
-    const dateKey = formatDateKey(date);
-    const meal = calendarMealForDateKey(dateKey);
-    if (!meal.main) return { dateKey, meal };
-  }
-  return { dateKey: formatDateKey(start), meal: todaysMealPlan() };
-}
-
-function renderFavorites() {
-  const favoriteRecipes = favorites
-    .map((id) => allRecipes().find((recipe) => recipe.id === id))
-    .filter(Boolean);
-  $("#favoriteList").innerHTML = favoriteRecipes.length
-    ? favoriteRecipes.map((recipe) => `
-        <div class="favorite-item">
-          <button class="favorite-open" type="button" data-open="${recipe.id}">
-            <img src="${recipe.photos[0]}" alt="" />
-            <span>
-              <strong>${escapeHtml(localize(recipe.name))}</strong>
-              <small>${escapeHtml(categoryLabel(categoryFor(recipe)))}</small>
-            </span>
-          </button>
-          <button class="ghost-button compact-button" type="button" data-plan-favorite="${recipe.id}">${t("planNextOpen")}</button>
-        </div>
-      `).join("")
-    : `<p class="empty-state compact">${t("favoritesEmpty")}</p>`;
-
-  $$('[data-plan-favorite]').forEach((button) => {
-    button.addEventListener("click", async () => {
-      const target = nextOpenMealDate();
-      calendarMeals[target.dateKey] = { ...target.meal, main: button.dataset.planFavorite };
-      render();
-      await saveSharedState();
-    });
-  });
-}
+const todaysMealPlan = () => dashboardUi.todaysMealPlan();
+const renderToday = () => dashboardUi.renderToday();
+const renderTasks = () => dashboardUi.renderTasks();
+const renderFavorites = () => dashboardUi.renderFavorites();
 
 const scheduleUi = createScheduleUi({
   $,
@@ -943,23 +860,7 @@ $$("[data-scroll-to]").forEach((button) => {
 
 scheduleUi.bindScheduleControls();
 
-$("#taskForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const text = $("#taskInput").value.trim();
-  if (!text) return;
-
-  tasks.unshift({
-    id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    text,
-    assignee: $("#taskAssigneeInput").value,
-    date: formatDateKey(new Date()),
-    completed: false,
-    createdAt: new Date().toISOString(),
-  });
-  $("#taskInput").value = "";
-  renderTasks();
-  await saveSharedState();
-});
+dashboardUi.bindDashboardControls();
 
 $("#favoriteRecipe").addEventListener("click", async () => {
   if (favorites.includes(selectedRecipeId)) {
@@ -1012,15 +913,6 @@ $("#addRecipeGroceries").addEventListener("click", async () => {
 });
 
 recipeFormUi.bind();
-
-$("#cookToday").addEventListener("click", () => {
-  const mainRecipe = todaysMealPlan().main;
-  if (!mainRecipe) return;
-  selectedRecipeId = mainRecipe;
-  renderDetail();
-  $("#recipeDetail").hidden = false;
-  $("#recipeDetail").scrollIntoView({ behavior: "smooth", block: "start" });
-});
 
 $("#markCooked").addEventListener("click", () => {
   $("#markCooked").textContent = lang === "en" ? "Cooked today" : "Hecha hoy";
