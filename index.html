@@ -135,6 +135,7 @@
             </div>
             <div class="grocery-actions">
               <button class="primary-action" id="restockPurchased" type="button" hidden data-i18n="movePurchasedHome">Move purchased home</button>
+              <button class="ghost-button" id="scanReceiptToggle" type="button" data-i18n="scanReceipt">Scan receipt</button>
               <button class="ghost-button" id="generateGroceries" type="button" data-i18n="generateGroceries">Generate from week</button>
               <button class="ghost-button" id="clearCheckedGroceries" type="button" data-i18n="clearChecked">Clear checked</button>
             </div>
@@ -149,6 +150,20 @@
             </select>
             <button class="primary-action" type="submit" data-i18n="addGroceryItem">Add item</button>
           </form>
+          <div class="inventory-scan-panel receipt-scan-panel" id="receiptScanPanel" hidden>
+            <p data-i18n="receiptScanNote">Upload a receipt photo. Review matches before moving items home.</p>
+            <form class="inventory-scan" id="receiptScanForm">
+              <input type="file" id="receiptScanPhotoInput" accept="image/*" capture="environment" multiple />
+              <select id="receiptScanLocationInput" aria-label="Default location">
+                <option value="pantry" data-i18n="locationPantry">Pantry</option>
+                <option value="fridge" data-i18n="locationFridge">Fridge</option>
+                <option value="freezer" data-i18n="locationFreezer">Freezer</option>
+                <option value="household" data-i18n="locationHousehold">Household</option>
+              </select>
+              <button class="primary-action" type="submit" data-i18n="scanReceiptPhotos">Scan receipt</button>
+            </form>
+            <div class="inventory-suggestions" id="receiptSuggestions" hidden></div>
+          </div>
           <p class="upload-status" id="groceryStatus" role="status"></p>
           <div class="grocery-list" id="groceryList"></div>
         </div>

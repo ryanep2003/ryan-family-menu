@@ -991,6 +991,17 @@ const translations = {
     grocerySaved: "Grocery list saved.",
     groceryError: "Could not save the grocery list. Try again when the site is online.",
     groceryEmpty: "No grocery items yet.",
+    scanReceipt: "Scan receipt",
+    receiptScanNote: "Upload a receipt photo. Review matches before moving items home.",
+    scanReceiptPhotos: "Scan receipt",
+    receiptScanWorking: "Reading receipt...",
+    receiptScanEmpty: "No clear receipt items found. Try a closer photo.",
+    receiptScanError: "Could not scan receipt. Check the OpenAI key in Netlify, then try again.",
+    receiptSuggestionsHeading: "Review receipt",
+    receiptMatch: "Shopping match",
+    receiptNewItem: "New item",
+    addSelectedReceipt: "Move selected home",
+    receiptItemsMoved: "Receipt items moved home.",
     shoppingMode: "Shopping",
     atHomeMode: "At Home",
     movePurchasedHome: "Move purchased home",
@@ -1147,6 +1158,17 @@ const translations = {
     grocerySaved: "Lista de compras guardada.",
     groceryError: "No se pudo guardar la lista. Intenta otra vez cuando el sitio este en linea.",
     groceryEmpty: "No hay articulos todavia.",
+    scanReceipt: "Escanear recibo",
+    receiptScanNote: "Sube una foto del recibo. Revisa coincidencias antes de guardar en casa.",
+    scanReceiptPhotos: "Escanear recibo",
+    receiptScanWorking: "Leyendo recibo...",
+    receiptScanEmpty: "No se encontraron articulos claros. Intenta una foto mas cercana.",
+    receiptScanError: "No se pudo escanear el recibo. Revisa la llave de OpenAI en Netlify e intenta otra vez.",
+    receiptSuggestionsHeading: "Revisar recibo",
+    receiptMatch: "Coincide con compras",
+    receiptNewItem: "Articulo nuevo",
+    addSelectedReceipt: "Guardar seleccionados en casa",
+    receiptItemsMoved: "Articulos del recibo guardados en casa.",
     shoppingMode: "Compras",
     atHomeMode: "En casa",
     movePurchasedHome: "Guardar compras en casa",
@@ -1289,6 +1311,7 @@ let sharedRecipes = [];
 let groceries = [];
 let inventory = [];
 let inventorySuggestions = [];
+let receiptSuggestions = [];
 let inventoryMode = "shopping";
 let inventoryFilter = "all";
 let visibleMonth = new Date();
@@ -1671,6 +1694,12 @@ function shoppingOverlapFor(text) {
   ) || null;
 }
 
+function shoppingMatchForReceiptItem(text) {
+  return groceries.find((item) =>
+    !item.inInventory && !item.checked && findInventoryMatch([{ text, stockState: "some" }], item.text)
+  ) || null;
+}
+
 function groceryAtHomeNote(item) {
   if (item.inInventory) return "";
   const match = inventoryMatchFor(item.text);
@@ -1954,6 +1983,60 @@ function renderInventorySuggestions() {
     renderInventory();
     bindInventoryControls();
     await saveInventory();
+  });
+}
+
+function renderReceiptSuggestions() {
+  const panel = $("#receiptSuggestions");
+  if (!panel) return;
+
+  if (!receiptSuggestions.length) {
+    panel.hidden = true;
+    panel.innerHTML = "";
+    return;
+  }
+
+  panel.hidden = false;
+  panel.innerHTML = `
+    <h3>${t("receiptSuggestionsHeading")}</h3>
+    <div class="suggestion-list">
+      ${receiptSuggestions.map((item, index) => `
+        <label class="suggestion-item">
+          <input type="checkbox" data-receipt-suggestion="${index}" checked />
+          <span>
+            <strong>${escapeHtml(item.text)}</strong>
+            <em>${escapeHtml([item.quantity, item.matchText ? `${t("receiptMatch")}: ${item.matchText}` : t("receiptNewItem")].filter(Boolean).join(" · "))}</em>
+          </span>
+        </label>
+      `).join("")}
+    </div>
+    <button class="primary-action" type="button" id="addReceiptSuggestions">${t("addSelectedReceipt")}</button>
+  `;
+
+  $("#addReceiptSuggestions").addEventListener("click", async () => {
+    const selected = $$("[data-receipt-suggestion]")
+      .filter((checkbox) => checkbox.checked)
+      .map((checkbox) => receiptSuggestions[Number(checkbox.dataset.receiptSuggestion)])
+      .filter(Boolean);
+
+    if (!selected.length) return;
+
+    const matchedIds = new Set(selected.map((item) => item.matchId).filter(Boolean));
+    inventory = mergeInventory(inventory, selected.map((item) => inventoryItem(
+      item.matchText || item.text,
+      item.quantity,
+      $("#receiptScanLocationInput").value,
+      [],
+      "full"
+    )));
+    groceries = groceries.filter((item) => !matchedIds.has(item.id));
+    receiptSuggestions = [];
+    $("#groceryStatus").textContent = t("receiptItemsMoved");
+    renderReceiptSuggestions();
+    renderGroceries();
+    renderInventory();
+    bindInventoryControls();
+    await Promise.all([saveInventory(), saveGroceries()]);
   });
 }
 
@@ -2518,6 +2601,21 @@ async function recognizeRecipe(images) {
   return data.recipe || {};
 }
 
+async function recognizeReceipt(images) {
+  const response = await fetch("/.netlify/functions/recognize-receipt", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ images }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || t("receiptScanError"));
+  }
+
+  return Array.isArray(data.items) ? data.items : [];
+}
+
 $$("[data-lang]").forEach((button) => {
   button.addEventListener("click", () => {
     lang = button.dataset.lang;
@@ -2694,6 +2792,50 @@ $("#clearCheckedGroceries").addEventListener("click", async () => {
   renderGroceries();
   bindGroceryControls();
   await saveGroceries();
+});
+
+$("#scanReceiptToggle").addEventListener("click", () => {
+  $("#receiptScanPanel").hidden = !$("#receiptScanPanel").hidden;
+});
+
+$("#receiptScanForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const files = $("#receiptScanPhotoInput").files;
+  if (!files.length) return;
+
+  const submitButton = $("#receiptScanForm .primary-action");
+  const status = $("#groceryStatus");
+  submitButton.disabled = true;
+  status.textContent = t("receiptScanWorking");
+  status.classList.remove("error");
+
+  try {
+    const images = await readFilesAsDataUrls(files, 4, {
+      maxSide: 1100,
+      quality: 0.74,
+      maxBytes: 650000,
+    });
+    const items = await recognizeReceipt(images);
+    receiptSuggestions = items.map((item) => {
+      const match = shoppingMatchForReceiptItem(item.text);
+      return {
+        ...item,
+        matchId: match?.id || "",
+        matchText: match?.text || "",
+      };
+    });
+    $("#receiptScanPhotoInput").value = "";
+    renderReceiptSuggestions();
+    status.textContent = receiptSuggestions.length ? "" : t("receiptScanEmpty");
+  } catch (error) {
+    console.warn(error);
+    receiptSuggestions = [];
+    renderReceiptSuggestions();
+    status.textContent = error.message || t("receiptScanError");
+    status.classList.add("error");
+  } finally {
+    submitButton.disabled = false;
+  }
 });
 
 $("#restockPurchased").addEventListener("click", async () => {
