@@ -9,6 +9,7 @@ import { inventoryItem, mergeInventory } from "./inventory-logic.js";
 import { getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
+import { createRecipeFormUi } from "./recipe-form-ui.js";
 import {
   categoryFor,
   categoryLabel as localizedCategoryLabel,
@@ -1003,6 +1004,7 @@ const translations = {
     sharedRecipeSaved: "Recipe saved to the family site.",
     sharedRecipeError: "Could not save to the live site.",
     localDraftSaved: "Live save failed, so this recipe was saved as a draft on this phone.",
+    savingRecipeLive: "Saving to live site...",
     mainSlot: "Main",
     sideSlot: "Side",
     saladSlot: "Salad",
@@ -1187,6 +1189,7 @@ const translations = {
     sharedRecipeSaved: "Receta guardada en el sitio familiar.",
     sharedRecipeError: "No se pudo guardar en el sitio en vivo.",
     localDraftSaved: "No se pudo guardar en vivo, asi que la receta quedo como borrador en este telefono.",
+    savingRecipeLive: "Guardando en el sitio...",
     mainSlot: "Principal",
     sideSlot: "Guarnicion",
     saladSlot: "Ensalada",
@@ -2174,24 +2177,6 @@ function renderDetail() {
   setDetailStatus("");
 }
 
-function populateEditRecipeForm(recipe) {
-  const editable = recipeToEditableUpload(recipe);
-  $("#editNameInput").value = editable.name;
-  $("#editCategoryInput").value = editable.category;
-  $("#editIngredientsInput").value = editable.ingredientsText;
-  $("#editStepsInput").value = editable.stepsText;
-  $("#editAllergyInput").value = editable.allergyWarning;
-  $("#editNoteInput").value = editable.notes;
-  $("#editPhotoInput").value = "";
-  renderEditPhotoPreview(editable.photos);
-}
-
-function renderEditPhotoPreview(photos) {
-  $("#editPhotoPreview").innerHTML = photos
-    .map((src) => `<img src="${escapeHtml(src)}" alt="" />`)
-    .join("");
-}
-
 function render() {
   renderTranslations();
   renderInventoryMode();
@@ -2342,14 +2327,58 @@ async function importRecipeUrl(url) {
   return data.recipe || {};
 }
 
-function fillUploadFormFromRecipe(recipe, { overwrite = false } = {}) {
-  if ((overwrite || !$("#nameInput").value.trim()) && recipe.name) $("#nameInput").value = recipe.name;
-  if (recipe.category) $("#categoryInput").value = recipe.category;
-  if ((overwrite || !$("#ingredientsInput").value.trim()) && recipe.ingredientsText) $("#ingredientsInput").value = recipe.ingredientsText;
-  if ((overwrite || !$("#stepsInput").value.trim()) && recipe.stepsText) $("#stepsInput").value = recipe.stepsText;
-  if ((overwrite || !$("#allergyInput").value.trim()) && recipe.allergyWarning) $("#allergyInput").value = recipe.allergyWarning;
-  if ((overwrite || !$("#noteInput").value.trim()) && recipe.notes) $("#noteInput").value = recipe.notes;
-}
+const recipeFormUi = createRecipeFormUi({
+  $,
+  t,
+  escapeHtml,
+  localize,
+  recipeToEditableUpload,
+  readFilesAsDataUrls,
+  recognizeRecipe,
+  importRecipeUrl,
+  saveSharedRecipe,
+  saveSharedState,
+  recipeById,
+  allRecipes,
+  getSelectedRecipeId: () => selectedRecipeId,
+  setSelectedRecipeId: (id) => {
+    selectedRecipeId = id;
+  },
+  setRecipeEdit: (id, edit) => {
+    recipeEdits[id] = edit;
+  },
+  removeRecipeEdit: (id) => {
+    delete recipeEdits[id];
+  },
+  removeDeletedRecipeId: (id) => {
+    deletedRecipeIds = deletedRecipeIds.filter((deletedId) => deletedId !== id);
+  },
+  addDeletedRecipeId: (id) => {
+    deletedRecipeIds = [...new Set([id, ...deletedRecipeIds])];
+  },
+  getFavorites: () => favorites,
+  setFavorites: (nextFavorites) => {
+    favorites = nextFavorites;
+  },
+  getImportedRecipePhotos: () => importedRecipePhotos,
+  setImportedRecipePhotos: (photos) => {
+    importedRecipePhotos = photos;
+  },
+  prependSharedRecipe: (recipe) => {
+    sharedRecipes.unshift(recipe);
+  },
+  prependDraft: (draft) => {
+    drafts.unshift(draft);
+  },
+  persistDrafts: () => {
+    localStorage.setItem("dinner-drafts", JSON.stringify(drafts));
+  },
+  updateMealsAfterRecipeDelete,
+  setView,
+  render,
+  renderRecipes,
+  setDetailStatus,
+});
 
 async function recognizeReceipt(images) {
   const data = await postJson("/.netlify/functions/recognize-receipt", { images }, t("receiptScanError"));
@@ -2464,91 +2493,7 @@ $("#addRecipeGroceries").addEventListener("click", async () => {
   if (!saved) setDetailStatus(t("recipeGroceriesError"), true);
 });
 
-$("#editRecipe").addEventListener("click", () => {
-  const recipe = recipeById(selectedRecipeId);
-  if (!recipe) return;
-  populateEditRecipeForm(recipe);
-  $("#editRecipeForm").hidden = false;
-  setDetailStatus("");
-  $("#editRecipeForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
-});
-
-$("#cancelRecipeEdit").addEventListener("click", () => {
-  $("#editRecipeForm").hidden = true;
-  $("#editPhotoInput").value = "";
-  setDetailStatus("");
-});
-
-$("#editPhotoInput").addEventListener("change", () => {
-  const files = [...$("#editPhotoInput").files].slice(0, 3);
-  if (!files.length) {
-    renderEditPhotoPreview(recipeToEditableUpload(recipeById(selectedRecipeId)).photos);
-    return;
-  }
-
-  renderEditPhotoPreview(files.map((file) => URL.createObjectURL(file)));
-});
-
-$("#editRecipeForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const current = recipeById(selectedRecipeId);
-  const name = $("#editNameInput").value.trim();
-  if (!current || !name) return;
-  const submitButton = $("#editRecipeForm .primary-action");
-  submitButton.disabled = true;
-
-  try {
-    const replacementPhotos = await readFilesAsDataUrls($("#editPhotoInput").files, 3, {
-      maxSide: 700,
-      quality: 0.68,
-      maxBytes: 420000,
-    });
-
-    recipeEdits[selectedRecipeId] = {
-      id: selectedRecipeId,
-      name,
-      category: $("#editCategoryInput").value,
-      ingredientsText: $("#editIngredientsInput").value.trim(),
-      stepsText: $("#editStepsInput").value.trim(),
-      allergyWarning: $("#editAllergyInput").value.trim(),
-      notes: $("#editNoteInput").value.trim(),
-      photos: replacementPhotos.length
-        ? replacementPhotos
-        : current.photos?.length ? current.photos : ["assets/meatballs-2.jpg"],
-      updatedAt: new Date().toISOString(),
-    };
-    deletedRecipeIds = deletedRecipeIds.filter((id) => id !== selectedRecipeId);
-    $("#editRecipeForm").hidden = true;
-    render();
-    $("#recipeDetail").hidden = false;
-    setDetailStatus(t("recipeUpdated"));
-    await saveSharedState();
-    setDetailStatus(t("recipeUpdated"));
-  } catch (error) {
-    console.warn(error);
-    setDetailStatus(t("sharedRecipeError"), true);
-  } finally {
-    submitButton.disabled = false;
-  }
-});
-
-$("#deleteRecipe").addEventListener("click", async () => {
-  const current = recipeById(selectedRecipeId);
-  if (!current || !window.confirm(t("deleteRecipeConfirm"))) return;
-
-  deletedRecipeIds = [...new Set([selectedRecipeId, ...deletedRecipeIds])];
-  delete recipeEdits[selectedRecipeId];
-  favorites = favorites.filter((id) => id !== selectedRecipeId);
-  updateMealsAfterRecipeDelete(selectedRecipeId);
-  selectedRecipeId = allRecipes()[0]?.id || recipes[0].id;
-  $("#editRecipeForm").hidden = true;
-  render();
-  $("#recipeDetail").hidden = true;
-  const status = $("#sharedStateStatus");
-  if (status) status.textContent = t("recipeDeleted");
-  await saveSharedState();
-  if (status) status.textContent = t("recipeDeleted");
-});
+recipeFormUi.bind();
 
 $("#cookToday").addEventListener("click", () => {
   const mainRecipe = todaysMealPlan().main;
@@ -2732,117 +2677,6 @@ $("#inventoryScanForm").addEventListener("submit", async (event) => {
     renderInventorySuggestions();
     status.textContent = error.message || t("inventoryScanError");
     status.classList.add("error");
-  } finally {
-    submitButton.disabled = false;
-  }
-});
-
-$("#photoInput").addEventListener("change", async () => {
-  const files = $("#photoInput").files;
-  if (!files.length) return;
-
-  const status = $("#uploadStatus");
-  status.textContent = t("recipeScanWorking");
-  status.classList.remove("error");
-
-  try {
-    const images = await readFilesAsDataUrls(files, 3, {
-      maxSide: 1100,
-      quality: 0.74,
-      maxBytes: 650000,
-    });
-    const recipe = await recognizeRecipe(images);
-    fillUploadFormFromRecipe(recipe);
-    status.textContent = t("recipeScanSaved");
-  } catch (error) {
-    console.warn(error);
-    status.textContent = error.message || t("recipeScanError");
-    status.classList.add("error");
-  }
-});
-
-$("#importRecipeUrl").addEventListener("click", async () => {
-  const url = $("#recipeUrlInput").value.trim();
-  const status = $("#uploadStatus");
-  if (!url) {
-    status.textContent = t("recipeUrlRequired");
-    status.classList.add("error");
-    return;
-  }
-
-  const button = $("#importRecipeUrl");
-  button.disabled = true;
-  status.textContent = t("recipeUrlWorking");
-  status.classList.remove("error");
-
-  try {
-    const recipe = await importRecipeUrl(url);
-    fillUploadFormFromRecipe(recipe, { overwrite: true });
-    importedRecipePhotos = Array.isArray(recipe.photos) ? recipe.photos : [];
-    status.textContent = t("recipeUrlSaved");
-  } catch (error) {
-    console.warn(error);
-    status.textContent = error.message || t("recipeUrlError");
-    status.classList.add("error");
-  } finally {
-    button.disabled = false;
-  }
-});
-
-$("#uploadForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const name = $("#nameInput").value.trim();
-  if (!name) return;
-
-  const submitButton = $("#uploadForm .primary-action");
-  const status = $("#uploadStatus");
-  submitButton.disabled = true;
-  status.textContent = lang === "en" ? "Saving to live site..." : "Guardando en el sitio...";
-  status.classList.remove("error");
-
-  try {
-    const photos = await readFilesAsDataUrls($("#photoInput").files, 3, {
-      maxSide: 700,
-      quality: 0.68,
-      maxBytes: 420000,
-    });
-    const recipePhotos = photos.length ? photos : importedRecipePhotos;
-    const recipe = {
-      name,
-      category: $("#categoryInput").value,
-      ingredientsText: $("#ingredientsInput").value.trim(),
-      stepsText: $("#stepsInput").value.trim(),
-      allergyWarning: $("#allergyInput").value.trim(),
-      notes: $("#noteInput").value.trim(),
-      photos: recipePhotos.length ? recipePhotos : ["assets/meatballs-2.jpg"],
-    };
-    const saved = await saveSharedRecipe(recipe);
-    sharedRecipes.unshift(saved.recipe);
-    $("#uploadForm").reset();
-    importedRecipePhotos = [];
-    status.textContent = t("sharedRecipeSaved");
-    setView("recipes");
-    render();
-  } catch (error) {
-    console.warn(error);
-    const fallbackDraft = {
-      id: `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      name,
-      category: $("#categoryInput").value,
-      ingredientsText: $("#ingredientsInput").value.trim(),
-      stepsText: $("#stepsInput").value.trim(),
-      allergyWarning: $("#allergyInput").value.trim(),
-      notes: $("#noteInput").value.trim(),
-      photos: importedRecipePhotos.length ? importedRecipePhotos : ["assets/meatballs-2.jpg"],
-      createdAt: new Date().toISOString(),
-    };
-    drafts.unshift(fallbackDraft);
-    localStorage.setItem("dinner-drafts", JSON.stringify(drafts));
-    status.textContent = error.message
-      ? `${t("localDraftSaved")} ${error.message}`
-      : t("localDraftSaved");
-    status.classList.add("error");
-    renderRecipes();
   } finally {
     submitButton.disabled = false;
   }
