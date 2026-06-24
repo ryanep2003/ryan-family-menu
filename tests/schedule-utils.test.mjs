@@ -9,6 +9,7 @@ import {
   normalizeCalendar,
   normalizeMealPlan,
   normalizeSchedule,
+  removeRecipeFromPlans,
 } from "../schedule-utils.js";
 
 test("formatDateKey and currentWeekStartKey use local noon week boundaries", () => {
@@ -49,4 +50,24 @@ test("schedule and calendar normalization keep expected shape", () => {
 test("mealHasContent checks any planned slot or notes", () => {
   assert.equal(mealHasContent({ ...emptyMeal }), false);
   assert.equal(mealHasContent({ ...emptyMeal, notes: "pizza night" }), true);
+});
+
+test("removeRecipeFromPlans clears deleted recipes from weekly and calendar meals", () => {
+  const result = removeRecipeFromPlans(
+    {
+      mon: { ...emptyMeal, main: "deleted-recipe", side: "keeper" },
+      tue: { ...emptyMeal, salad: "deleted-recipe", notes: "remember sauce" },
+    },
+    {
+      "2026-06-24": { ...emptyMeal, main: "keeper", side: "deleted-recipe" },
+    },
+    "deleted-recipe",
+  );
+
+  assert.equal(result.schedule.mon.main, "");
+  assert.equal(result.schedule.mon.side, "keeper");
+  assert.equal(result.schedule.tue.salad, "");
+  assert.equal(result.schedule.tue.notes, "remember sauce");
+  assert.equal(result.calendarMeals["2026-06-24"].main, "keeper");
+  assert.equal(result.calendarMeals["2026-06-24"].side, "");
 });

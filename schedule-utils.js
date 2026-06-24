@@ -70,3 +70,17 @@ export function activeWeekDateKeys(weekStartKey) {
 export function mealHasContent(meal) {
   return Boolean(meal.main || meal.side || meal.salad || meal.notes);
 }
+
+export function removeRecipeFromPlans(schedule, calendarMeals, recipeId, slotKeys = ["main", "side", "salad"]) {
+  const clearMeal = (meal) => Object.fromEntries(
+    Object.entries(normalizeMealPlan(meal)).map(([key, value]) =>
+      slotKeys.includes(key) && value === recipeId ? [key, ""] : [key, value])
+  );
+
+  return {
+    schedule: normalizeSchedule(Object.fromEntries(days.map((day) => [day.key, clearMeal(schedule?.[day.key])]))),
+    calendarMeals: Object.fromEntries(
+      Object.entries(calendarMeals || {}).map(([dateKey, meal]) => [dateKey, clearMeal(meal)])
+    ),
+  };
+}

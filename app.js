@@ -46,6 +46,7 @@ import {
   normalizeCalendar,
   normalizeMealPlan,
   normalizeSchedule,
+  removeRecipeFromPlans,
 } from "./schedule-utils.js";
 
 const mealSlots = [
@@ -116,15 +117,9 @@ function recipeToEditableUpload(recipe) {
 }
 
 function updateMealsAfterRecipeDelete(recipeId) {
-  const clearMeal = (meal) => Object.fromEntries(
-    Object.entries(normalizeMealPlan(meal)).map(([key, value]) =>
-      mealSlots.some((slot) => slot.key === key) && value === recipeId ? [key, ""] : [key, value])
-  );
-
-  schedule = normalizeSchedule(Object.fromEntries(days.map((day) => [day.key, clearMeal(schedule[day.key])])));
-  calendarMeals = Object.fromEntries(
-    Object.entries(calendarMeals).map(([dateKey, meal]) => [dateKey, clearMeal(meal)])
-  );
+  const updated = removeRecipeFromPlans(schedule, calendarMeals, recipeId, mealSlots.map((slot) => slot.key));
+  schedule = updated.schedule;
+  calendarMeals = updated.calendarMeals;
 }
 
 function localize(value) {
