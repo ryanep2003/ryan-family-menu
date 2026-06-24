@@ -13,6 +13,7 @@ import { readFilesAsDataUrls } from "./images.js";
 import { createRecipeFormUi } from "./recipe-form-ui.js";
 import { createRecipeLibraryUi } from "./recipe-library-ui.js";
 import { recipes } from "./recipes-data.js";
+import { createScheduleUi } from "./schedule-ui.js";
 import { translations } from "./translations.js";
 import {
   categoryFor,
@@ -614,148 +615,44 @@ function renderFavorites() {
   });
 }
 
-function optionsForSlot(slot, selectedId = "") {
-  const selectedRecipe = selectedId ? recipeById(selectedId) : null;
-  const allowed = allRecipes().filter((recipe) => slot.categories.includes(categoryFor(recipe)) || recipe.id === selectedId);
-  const recipesForOptions = selectedRecipe && !allowed.some((recipe) => recipe.id === selectedRecipe.id)
-    ? [...allowed, selectedRecipe]
-    : allowed;
+const scheduleUi = createScheduleUi({
+  $,
+  $$,
+  t,
+  escapeHtml,
+  localize,
+  formatDateKey,
+  normalizeMealPlan,
+  mealSlots,
+  days,
+  emptyMeal,
+  categoryFor,
+  activeWeekDateKeys,
+  calendarMealForDateKey,
+  mealRecipes,
+  mealHasWarning,
+  mealSummary,
+  recipeById,
+  allRecipes,
+  saveSharedState,
+  render,
+  getLang: () => lang,
+  getSchedule: () => schedule,
+  setSchedule: (nextSchedule) => {
+    schedule = normalizeSchedule(nextSchedule);
+  },
+  getCalendarMeals: () => calendarMeals,
+  setCalendarMeals: (nextCalendarMeals) => {
+    calendarMeals = normalizeCalendar(nextCalendarMeals);
+  },
+  getVisibleMonth: () => visibleMonth,
+  setVisibleMonth: (month) => {
+    visibleMonth = month;
+  },
+});
 
-  return recipesForOptions
-    .map((recipe) => `<option value="${recipe.id}"${recipe.id === selectedId ? " selected" : ""}>${escapeHtml(localize(recipe.name))}</option>`)
-    .join("");
-}
-
-function renderMealControls(meal, context, label) {
-  const recipesForMeal = mealRecipes(meal);
-  return `
-    ${label ? `<strong>${escapeHtml(label)}</strong>` : ""}
-    <div class="meal-picker">
-      ${mealSlots.map((slot) => `
-        <label>
-          <span>${t(slot.label)}</span>
-          <select data-meal-context="${context}" data-slot="${slot.key}">
-            <option value="">${t(slot.choose)}</option>
-            ${optionsForSlot(slot, meal[slot.key])}
-          </select>
-        </label>
-      `).join("")}
-      <label class="meal-notes">
-        <span>${t("notesSlot")}</span>
-        <textarea data-meal-context="${context}" data-slot="notes" rows="2">${escapeHtml(meal.notes || "")}</textarea>
-      </label>
-    </div>
-    <p class="${mealHasWarning(meal) ? "has-warning" : ""}">${escapeHtml(mealSummary(meal))}</p>
-    <div class="meal-open-buttons">
-      ${recipesForMeal.map(({ recipe }) => `
-        <button class="ghost-button" type="button" data-open="${recipe.id}">
-          ${t("openDinner")}
-        </button>
-      `).join("")}
-    </div>
-  `;
-}
-
-function bindMealControls() {
-  $$("[data-meal-context]").forEach((control) => {
-    control.addEventListener("change", async () => {
-      const [type, key] = control.dataset.mealContext.split(":");
-      const slot = control.dataset.slot;
-      const target = { ...calendarMealForDateKey(key) };
-      target[slot] = control.value;
-
-      if (type === "weekdate") {
-        const weekDate = activeWeekDateKeys().find((item) => item.dateKey === key);
-        if (!weekDate) return;
-        schedule[weekDate.key] = target;
-        delete calendarMeals[key];
-      } else {
-        calendarMeals[key] = target;
-      }
-      render();
-      await saveSharedState();
-    });
-  });
-}
-
-function renderSchedule() {
-  const grid = $("#scheduleGrid");
-  const weekDates = activeWeekDateKeys();
-  const todayKey = formatDateKey(new Date());
-  const rangeFormatter = new Intl.DateTimeFormat(lang === "es" ? "es-US" : "en-US", { month: "short", day: "numeric" });
-  $("#weekTitle").textContent = `${t("weekHeading")} · ${rangeFormatter.format(weekDates[0].date)}–${rangeFormatter.format(weekDates[6].date)}`;
-  grid.innerHTML = weekDates
-    .map((day) => {
-      const meal = calendarMealForDateKey(day.dateKey);
-      const label = `${day[lang]} · ${rangeFormatter.format(day.date)}${day.dateKey === todayKey ? ` · ${t("todayTab")}` : ""}`;
-      return `
-        <div class="day-card${day.dateKey === todayKey ? " today" : ""}">
-          ${renderMealControls(meal, `weekdate:${day.dateKey}`, label)}
-        </div>
-      `;
-    })
-    .join("");
-  bindMealControls();
-}
-
-function monthName(date) {
-  return new Intl.DateTimeFormat(lang === "es" ? "es-US" : "en-US", {
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
-
-function calendarDateRange() {
-  const start = new Date(visibleMonth);
-  const startOffset = (start.getDay() + 6) % 7;
-  start.setDate(start.getDate() - startOffset);
-
-  return Array.from({ length: 42 }, (_, index) => {
-    const date = new Date(start);
-    date.setDate(start.getDate() + index);
-    return date;
-  });
-}
-
-function renderCalendar() {
-  const todayKey = formatDateKey(new Date());
-  const activeDateKeys = new Set(activeWeekDateKeys().map((item) => item.dateKey));
-
-  $("#monthTitle").textContent = monthName(visibleMonth);
-  $("#calendarWeekdays").innerHTML = days.map((day) => `<span>${day[lang].slice(0, 3)}</span>`).join("");
-  $("#calendarGrid").innerHTML = calendarDateRange()
-    .map((date) => {
-      const dateKey = formatDateKey(date);
-      const hasOverride = Object.prototype.hasOwnProperty.call(calendarMeals, dateKey);
-      const isThisWeek = activeDateKeys.has(dateKey);
-      const meal = calendarMealForDateKey(dateKey);
-      const classes = [
-        "calendar-day",
-        date.getMonth() === visibleMonth.getMonth() ? "" : "outside-month",
-        dateKey === todayKey ? "today" : "",
-      ].filter(Boolean).join(" ");
-
-      return `
-        <div class="${classes}${hasOverride ? " custom-date" : isThisWeek ? " weekly-date" : ""}">
-          <div class="calendar-date">
-            <span class="date-number">${date.getDate()}</span>
-            ${hasOverride || isThisWeek ? `<span class="calendar-source">${t(hasOverride ? "customDate" : "weeklyPlan")}</span>` : ""}
-          </div>
-          ${renderMealControls(meal, `calendar:${dateKey}`, "")}
-          ${hasOverride ? `<button class="calendar-inherit" type="button" data-use-weekly-plan="${dateKey}">${t("useWeeklyPlan")}</button>` : ""}
-        </div>
-      `;
-    })
-    .join("");
-  bindMealControls();
-  $$('[data-use-weekly-plan]').forEach((button) => {
-    button.addEventListener("click", async () => {
-      delete calendarMeals[button.dataset.useWeeklyPlan];
-      render();
-      await saveSharedState();
-    });
-  });
-}
+const renderSchedule = () => scheduleUi.renderSchedule();
+const renderCalendar = () => scheduleUi.renderCalendar();
 
 const recipeLibraryUi = createRecipeLibraryUi({
   $,
@@ -1044,13 +941,7 @@ $$("[data-scroll-to]").forEach((button) => {
   });
 });
 
-$("#resetWeek").addEventListener("click", async () => {
-  if (!window.confirm(t("clearWeekConfirm"))) return;
-  schedule = normalizeSchedule(Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])));
-  activeWeekDateKeys().forEach(({ dateKey }) => delete calendarMeals[dateKey]);
-  render();
-  await saveSharedState();
-});
+scheduleUi.bindScheduleControls();
 
 $("#taskForm").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -1129,22 +1020,6 @@ $("#cookToday").addEventListener("click", () => {
   renderDetail();
   $("#recipeDetail").hidden = false;
   $("#recipeDetail").scrollIntoView({ behavior: "smooth", block: "start" });
-});
-
-$("#previousMonth").addEventListener("click", () => {
-  visibleMonth.setMonth(visibleMonth.getMonth() - 1);
-  render();
-});
-
-$("#todayMonth").addEventListener("click", () => {
-  visibleMonth = new Date();
-  visibleMonth.setDate(1);
-  render();
-});
-
-$("#nextMonth").addEventListener("click", () => {
-  visibleMonth.setMonth(visibleMonth.getMonth() + 1);
-  render();
 });
 
 $("#markCooked").addEventListener("click", () => {
