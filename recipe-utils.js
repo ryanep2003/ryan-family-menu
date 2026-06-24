@@ -73,3 +73,29 @@ export function recipeToEditableUpload(recipe, lang, localize) {
     updatedAt: new Date().toISOString(),
   };
 }
+
+export function visibleRecipes({
+  seedRecipes,
+  sharedRecipes,
+  drafts,
+  recipeEdits,
+  deletedRecipeIds,
+  localize,
+}) {
+  const deletedIds = new Set(deletedRecipeIds || []);
+  return [
+    ...(seedRecipes || []),
+    ...(sharedRecipes || []).map((recipe) => uploadToRecipe(recipe, "Shared upload", "Receta compartida")),
+    ...(drafts || []).map((draft) => uploadToRecipe(draft, "Local draft", "Borrador local")),
+  ]
+    .filter((recipe) => !deletedIds.has(recipe.id))
+    .map((recipe) => {
+      const edit = recipeEdits?.[recipe.id];
+      if (!edit) return recipe;
+      return uploadToRecipe(edit, recipe.meta?.en || localize(recipe.meta), recipe.meta?.es || localize(recipe.meta));
+    });
+}
+
+export function recipeById(recipes, id, fallbackRecipes = []) {
+  return recipes.find((recipe) => recipe.id === id) || recipes[0] || fallbackRecipes[0] || null;
+}

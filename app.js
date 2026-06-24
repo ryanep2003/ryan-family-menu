@@ -31,8 +31,10 @@ import {
 import {
   categoryFor,
   categoryLabel as localizedCategoryLabel,
+  recipeById as findRecipeById,
   recipeToEditableUpload as recipeToEditable,
   uploadToRecipe,
+  visibleRecipes,
 } from "./recipe-utils.js";
 import {
   activeWeekDateKeys as dateKeysForWeek,
@@ -87,21 +89,18 @@ function t(key) {
 }
 
 function allRecipes() {
-  return [
-    ...recipes,
-    ...sharedRecipes.map((recipe) => uploadToRecipe(recipe, "Shared upload", "Receta compartida")),
-    ...drafts.map((draft) => uploadToRecipe(draft, "Local draft", "Borrador local")),
-  ]
-    .filter((recipe) => !deletedRecipeIds.includes(recipe.id))
-    .map((recipe) => {
-      const edit = recipeEdits[recipe.id];
-      if (!edit) return recipe;
-      return uploadToRecipe(edit, recipe.meta?.en || localize(recipe.meta), recipe.meta?.es || localize(recipe.meta));
-    });
+  return visibleRecipes({
+    seedRecipes: recipes,
+    sharedRecipes,
+    drafts,
+    recipeEdits,
+    deletedRecipeIds,
+    localize,
+  });
 }
 
 function recipeById(id) {
-  return allRecipes().find((recipe) => recipe.id === id) || allRecipes()[0] || recipes[0];
+  return findRecipeById(allRecipes(), id, recipes);
 }
 
 function draftById(id) {
