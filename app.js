@@ -5,6 +5,11 @@ import {
   inventoryMatchFor as findInventoryMatch,
   mergeGroceries,
 } from "./grocery-logic.js";
+import {
+  normalizeSharedState,
+  persistSharedState,
+  sharedStateSnapshot as familyStateSnapshot,
+} from "./family-state.js";
 import { inventoryItem, mergeInventory } from "./inventory-logic.js";
 import { getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
@@ -168,18 +173,25 @@ function calendarMealForDateKey(dateKey) {
 }
 
 function sharedStateSnapshot() {
-  return { weekStart: weekStartKey, schedule, calendarMeals, favorites, tasks, recipeEdits, deletedRecipeIds };
+  return familyStateSnapshot({ weekStartKey, schedule, calendarMeals, favorites, tasks, recipeEdits, deletedRecipeIds });
+}
+
+function currentSharedState() {
+  return { weekStartKey, schedule, calendarMeals, favorites, tasks, recipeEdits, deletedRecipeIds };
+}
+
+function applySharedState(nextState) {
+  schedule = nextState.schedule;
+  calendarMeals = nextState.calendarMeals;
+  weekStartKey = nextState.weekStartKey || weekStartKey;
+  favorites = nextState.favorites;
+  tasks = nextState.tasks;
+  recipeEdits = nextState.recipeEdits;
+  deletedRecipeIds = nextState.deletedRecipeIds;
 }
 
 function saveSharedStateLocally() {
-  localStorage.setItem("dinner-schedule", JSON.stringify(schedule));
-  localStorage.setItem("dinner-calendar", JSON.stringify(calendarMeals));
-  localStorage.setItem("dinner-week-start", weekStartKey);
-  localStorage.setItem("dinner-state-version", `${sharedStateVersion}`);
-  localStorage.setItem("dinner-favorites", JSON.stringify(favorites));
-  localStorage.setItem("dinner-tasks", JSON.stringify(tasks));
-  localStorage.setItem("dinner-recipe-edits", JSON.stringify(recipeEdits));
-  localStorage.setItem("dinner-deleted-recipes", JSON.stringify(deletedRecipeIds));
+  persistSharedState(localStorage, currentSharedState(), sharedStateVersion);
 }
 
 async function saveSharedState() {
@@ -193,13 +205,7 @@ async function saveSharedState() {
     );
     sharedStateVersion = Number(data.version) || sharedStateVersion;
     if (data.state) {
-      schedule = normalizeSchedule(data.state.schedule);
-      calendarMeals = normalizeCalendar(data.state.calendarMeals);
-      weekStartKey = data.state.weekStart || weekStartKey;
-      favorites = Array.isArray(data.state.favorites) ? data.state.favorites : favorites;
-      tasks = Array.isArray(data.state.tasks) ? data.state.tasks : tasks;
-      recipeEdits = data.state.recipeEdits && typeof data.state.recipeEdits === "object" ? data.state.recipeEdits : recipeEdits;
-      deletedRecipeIds = Array.isArray(data.state.deletedRecipeIds) ? data.state.deletedRecipeIds : deletedRecipeIds;
+      applySharedState(normalizeSharedState(data.state, currentSharedState()));
       saveSharedStateLocally();
     }
     const status = $("#sharedStateStatus");
@@ -209,13 +215,7 @@ async function saveSharedState() {
     const status = $("#sharedStateStatus");
     if (error.status === 409 && error.data?.state) {
       sharedStateVersion = Number(error.data.version) || sharedStateVersion;
-      schedule = normalizeSchedule(error.data.state.schedule);
-      calendarMeals = normalizeCalendar(error.data.state.calendarMeals);
-      weekStartKey = error.data.state.weekStart || weekStartKey;
-      favorites = Array.isArray(error.data.state.favorites) ? error.data.state.favorites : favorites;
-      tasks = Array.isArray(error.data.state.tasks) ? error.data.state.tasks : tasks;
-      recipeEdits = error.data.state.recipeEdits && typeof error.data.state.recipeEdits === "object" ? error.data.state.recipeEdits : recipeEdits;
-      deletedRecipeIds = Array.isArray(error.data.state.deletedRecipeIds) ? error.data.state.deletedRecipeIds : deletedRecipeIds;
+      applySharedState(normalizeSharedState(error.data.state, currentSharedState()));
       saveSharedStateLocally();
       render();
       if (status) status.textContent = t("sharedStateConflict");
@@ -238,13 +238,13 @@ async function loadSharedState() {
     }
 
     const missingWeekStart = !data.state.weekStart;
-    schedule = normalizeSchedule(data.state.schedule);
-    calendarMeals = normalizeCalendar(data.state.calendarMeals);
-    weekStartKey = data.state.weekStart || currentWeekStartKey();
-    favorites = Array.isArray(data.state.favorites) ? data.state.favorites : [];
-    tasks = Array.isArray(data.state.tasks) ? data.state.tasks : [];
-    recipeEdits = data.state.recipeEdits && typeof data.state.recipeEdits === "object" ? data.state.recipeEdits : {};
-    deletedRecipeIds = Array.isArray(data.state.deletedRecipeIds) ? data.state.deletedRecipeIds : [];
+    applySharedState(normalizeSharedState(data.state, {
+      weekStartKey: currentWeekStartKey(),
+      favorites: [],
+      tasks: [],
+      recipeEdits: {},
+      deletedRecipeIds: [],
+    }));
     const rolledForward = rollWeekForwardIfNeeded();
     saveSharedStateLocally();
     render();
