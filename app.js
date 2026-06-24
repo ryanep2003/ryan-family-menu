@@ -7,6 +7,12 @@ import {
 } from "./grocery-logic.js";
 import { getJson, postJson, putJson } from "./api.js";
 import { readFilesAsDataUrls } from "./images.js";
+import {
+  categoryFor,
+  categoryLabel as localizedCategoryLabel,
+  recipeToEditableUpload as recipeToEditable,
+  uploadToRecipe,
+} from "./recipe-utils.js";
 
 const recipes = [
   {
@@ -1288,29 +1294,6 @@ const days = [
   { key: "sun", en: "Sunday", es: "Domingo" },
 ];
 
-const categoryLabels = {
-  main: { en: "Main", es: "Principal" },
-  side: { en: "Side", es: "Guarnicion" },
-  salad: { en: "Salad", es: "Ensalada" },
-  sauce: { en: "Sauce", es: "Salsa" },
-  draft: { en: "Draft", es: "Borrador" },
-};
-
-const recipeCategories = {
-  meatballs: "main",
-  "chicken-milanese": "main",
-  "halibut-summer-vegetables": "main",
-  "lemon-chicken": "main",
-  "zaatar-parmesan-potatoes": "side",
-  "lemon-bucatini-pasta": "main",
-  "pasta-with-meat-sauce": "main",
-  "strawberry-crunch-salad": "salad",
-  "roasted-brussels-sprouts-salad": "salad",
-  "chicken-noodle-soup": "main",
-  "ina-garten-pot-roast": "main",
-  "basil-pesto-pasta": "main",
-};
-
 const mealSlots = [
   { key: "main", label: "mainSlot", choose: "chooseMain", categories: ["main"] },
   { key: "side", label: "sideSlot", choose: "chooseSide", categories: ["side", "sauce"] },
@@ -1375,46 +1358,12 @@ function allRecipes() {
     });
 }
 
-function uploadToRecipe(upload, enMeta, esMeta) {
-  return {
-    ...upload,
-    name: { en: upload.name, es: upload.name },
-    meta: { en: enMeta, es: esMeta },
-    short: { en: upload.notes || "Needs review", es: upload.notes || "Necesita revision" },
-    tags: { en: enMeta, es: esMeta },
-    category: upload.category || "draft",
-    allergyWarning: upload.allergyWarning
-      ? { en: upload.allergyWarning, es: upload.allergyWarning }
-      : undefined,
-    ingredients: {
-      en: splitLines(upload.ingredientsText, "Add ingredients after review."),
-      es: splitLines(upload.ingredientsText, "Agrega ingredientes despues de revisar."),
-    },
-    steps: {
-      en: splitLines(upload.stepsText, "Add cooking steps after review."),
-      es: splitLines(upload.stepsText, "Agrega los pasos despues de revisar."),
-    },
-    notes: { en: upload.notes || "No notes yet.", es: upload.notes || "Sin notas todavia." },
-    photos: upload.photos?.length ? upload.photos : ["assets/meatballs-2.jpg"],
-  };
-}
-
 function recipeById(id) {
   return allRecipes().find((recipe) => recipe.id === id) || allRecipes()[0] || recipes[0];
 }
 
 function recipeToEditableUpload(recipe) {
-  return {
-    id: recipe.id,
-    name: localize(recipe.name),
-    category: categoryFor(recipe),
-    ingredientsText: (recipe.ingredients?.[lang] || recipe.ingredients?.en || []).join("\n"),
-    stepsText: (recipe.steps?.[lang] || recipe.steps?.en || []).join("\n"),
-    allergyWarning: recipe.allergyWarning ? localize(recipe.allergyWarning) : "",
-    notes: localize(recipe.notes),
-    photos: recipe.photos || ["assets/meatballs-2.jpg"],
-    updatedAt: new Date().toISOString(),
-  };
+  return recipeToEditable(recipe, lang, localize);
 }
 
 function updateMealsAfterRecipeDelete(recipeId) {
@@ -1444,17 +1393,8 @@ function escapeHtml(value) {
   }[character]));
 }
 
-function splitLines(text, fallback) {
-  const lines = (text || "").split("\n").map((line) => line.trim()).filter(Boolean);
-  return lines.length ? lines : [fallback];
-}
-
-function categoryFor(recipe) {
-  return recipe.category || recipeCategories[recipe.id] || "main";
-}
-
 function categoryLabel(category) {
-  return localize(categoryLabels[category] || categoryLabels.main);
+  return localizedCategoryLabel(category, localize);
 }
 
 function normalizeMealPlan(value) {
