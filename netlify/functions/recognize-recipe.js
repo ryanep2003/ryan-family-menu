@@ -27,12 +27,12 @@ export default async (request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
+  const authError = requireWriteAuth(request);
+  if (authError) return authError;
+
   if (!process.env.OPENAI_API_KEY) {
     return jsonResponse({ error: "Missing OPENAI_API_KEY in Netlify environment variables." }, 500);
   }
-
-  const authError = requireWriteAuth(request);
-  if (authError) return authError;
 
   let payload;
   try {
