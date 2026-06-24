@@ -1,9 +1,10 @@
 import { requireWriteAuth } from "./_auth.js";
-import { jsonResponse } from "./_http.js";
+import { jsonResponse, readJsonRequest } from "./_http.js";
 import { outputTextFromResponse, parseJsonObject } from "./_openai.js";
 
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
-const MAX_HTML_CHARS = 900000;
+const MAX_REQUEST_BYTES = 4000;
+const MAX_HTML_BYTES = 900000;
 const MAX_TEXT_CHARS = 16000;
 const MAX_PHOTO_BYTES = 420000;
 
@@ -30,7 +31,7 @@ function isBlockedHost(hostname) {
   return /^(0\.|10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(host);
 }
 
-function safeUrl(value) {
+export function safeUrl(value) {
   try {
     const url = new URL(value);
     if (!["http:", "https:"].includes(url.protocol)) return null;
@@ -39,6 +40,40 @@ function safeUrl(value) {
   } catch {
     return null;
   }
+}
+
+export async function readLimitedText(response, maxBytes) {
+  const contentLength = Number(response.headers.get("content-length") || 0);
+  if (contentLength > maxBytes) return null;
+
+  if (!response.body?.getReader) {
+    const text = await response.text();
+    return new TextEncoder().encode(text).length > maxBytes ? null : text;
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    totalBytes += value.byteLength;
+    if (totalBytes > maxBytes) {
+      await reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new TextDecoder().decode(bytes);
 }
 
 function htmlEntityDecode(value = "") {
@@ -250,12 +285,8 @@ export default async (request) => {
   const authError = requireWriteAuth(request);
   if (authError) return authError;
 
-  let payload;
-  try {
-    payload = await request.json();
-  } catch {
-    return jsonResponse({ error: "Invalid JSON" }, 400);
-  }
+  const { payload, error } = await readJsonRequest(request, { maxBytes: MAX_REQUEST_BYTES });
+  if (error) return error;
 
   const url = safeUrl(payload.url);
   if (!url) return jsonResponse({ error: "Enter a valid public recipe URL." }, 400);
@@ -276,7 +307,9 @@ export default async (request) => {
     return jsonResponse({ error: "That URL does not look like a recipe webpage." }, 400);
   }
 
-  const html = (await page.text()).slice(0, MAX_HTML_CHARS);
+  const html = await readLimitedText(page, MAX_HTML_BYTES);
+  if (!html) return jsonResponse({ error: "That recipe page is too large to import." }, 413);
+
   const jsonLd = jsonLdRecipe(html);
   const recipe = jsonLd
     ? recipeFromJsonLd(jsonLd, html, url.href)
