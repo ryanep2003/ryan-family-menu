@@ -482,7 +482,7 @@ const dashboardUi = createDashboardUi({
   allRecipes,
   saveSharedState,
   render,
-  renderDetail,
+  renderDetail: () => renderDetail(),
   getLang: () => lang,
   getFavorites: () => favorites,
   getTasks: () => tasks,
