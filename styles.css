@@ -418,6 +418,20 @@ h3 {
   flex-wrap: wrap;
 }
 
+.edit-photo-preview {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.edit-photo-preview img {
+  width: 82px;
+  height: 82px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+}
+
 .danger-action {
   color: #8f2a1f;
 }

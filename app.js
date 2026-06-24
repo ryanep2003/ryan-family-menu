@@ -967,6 +967,7 @@ const translations = {
     selectedRecipe: "Selected recipe",
     editRecipe: "Edit recipe",
     saveRecipeChanges: "Save changes",
+    editPhotoLabel: "Replace recipe photos",
     cancel: "Cancel",
     deleteRecipe: "Delete recipe",
     deleteRecipeConfirm: "Delete this recipe from the family menu?",
@@ -1148,6 +1149,7 @@ const translations = {
     selectedRecipe: "Receta seleccionada",
     editRecipe: "Editar receta",
     saveRecipeChanges: "Guardar cambios",
+    editPhotoLabel: "Reemplazar fotos de receta",
     cancel: "Cancelar",
     deleteRecipe: "Borrar receta",
     deleteRecipeConfirm: "Borrar esta receta del menu familiar?",
@@ -2468,6 +2470,14 @@ function populateEditRecipeForm(recipe) {
   $("#editStepsInput").value = editable.stepsText;
   $("#editAllergyInput").value = editable.allergyWarning;
   $("#editNoteInput").value = editable.notes;
+  $("#editPhotoInput").value = "";
+  renderEditPhotoPreview(editable.photos);
+}
+
+function renderEditPhotoPreview(photos) {
+  $("#editPhotoPreview").innerHTML = photos
+    .map((src) => `<img src="${escapeHtml(src)}" alt="" />`)
+    .join("");
 }
 
 function render() {
@@ -2839,7 +2849,18 @@ $("#editRecipe").addEventListener("click", () => {
 
 $("#cancelRecipeEdit").addEventListener("click", () => {
   $("#editRecipeForm").hidden = true;
+  $("#editPhotoInput").value = "";
   setDetailStatus("");
+});
+
+$("#editPhotoInput").addEventListener("change", () => {
+  const files = [...$("#editPhotoInput").files].slice(0, 3);
+  if (!files.length) {
+    renderEditPhotoPreview(recipeToEditableUpload(recipeById(selectedRecipeId)).photos);
+    return;
+  }
+
+  renderEditPhotoPreview(files.map((file) => URL.createObjectURL(file)));
 });
 
 $("#editRecipeForm").addEventListener("submit", async (event) => {
@@ -2847,25 +2868,42 @@ $("#editRecipeForm").addEventListener("submit", async (event) => {
   const current = recipeById(selectedRecipeId);
   const name = $("#editNameInput").value.trim();
   if (!current || !name) return;
+  const submitButton = $("#editRecipeForm .primary-action");
+  submitButton.disabled = true;
 
-  recipeEdits[selectedRecipeId] = {
-    id: selectedRecipeId,
-    name,
-    category: $("#editCategoryInput").value,
-    ingredientsText: $("#editIngredientsInput").value.trim(),
-    stepsText: $("#editStepsInput").value.trim(),
-    allergyWarning: $("#editAllergyInput").value.trim(),
-    notes: $("#editNoteInput").value.trim(),
-    photos: current.photos?.length ? current.photos : ["assets/meatballs-2.jpg"],
-    updatedAt: new Date().toISOString(),
-  };
-  deletedRecipeIds = deletedRecipeIds.filter((id) => id !== selectedRecipeId);
-  $("#editRecipeForm").hidden = true;
-  render();
-  $("#recipeDetail").hidden = false;
-  setDetailStatus(t("recipeUpdated"));
-  await saveSharedState();
-  setDetailStatus(t("recipeUpdated"));
+  try {
+    const replacementPhotos = await readFilesAsDataUrls($("#editPhotoInput").files, 3, {
+      maxSide: 700,
+      quality: 0.68,
+      maxBytes: 420000,
+    });
+
+    recipeEdits[selectedRecipeId] = {
+      id: selectedRecipeId,
+      name,
+      category: $("#editCategoryInput").value,
+      ingredientsText: $("#editIngredientsInput").value.trim(),
+      stepsText: $("#editStepsInput").value.trim(),
+      allergyWarning: $("#editAllergyInput").value.trim(),
+      notes: $("#editNoteInput").value.trim(),
+      photos: replacementPhotos.length
+        ? replacementPhotos
+        : current.photos?.length ? current.photos : ["assets/meatballs-2.jpg"],
+      updatedAt: new Date().toISOString(),
+    };
+    deletedRecipeIds = deletedRecipeIds.filter((id) => id !== selectedRecipeId);
+    $("#editRecipeForm").hidden = true;
+    render();
+    $("#recipeDetail").hidden = false;
+    setDetailStatus(t("recipeUpdated"));
+    await saveSharedState();
+    setDetailStatus(t("recipeUpdated"));
+  } catch (error) {
+    console.warn(error);
+    setDetailStatus(t("sharedRecipeError"), true);
+  } finally {
+    submitButton.disabled = false;
+  }
 });
 
 $("#deleteRecipe").addEventListener("click", async () => {

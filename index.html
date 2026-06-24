@@ -343,6 +343,11 @@
             <span data-i18n="noteLabel">Family notes</span>
             <textarea id="editNoteInput" rows="4"></textarea>
           </label>
+          <label>
+            <span data-i18n="editPhotoLabel">Replace recipe photos</span>
+            <input type="file" id="editPhotoInput" accept="image/*" multiple />
+          </label>
+          <div class="edit-photo-preview" id="editPhotoPreview"></div>
           <div class="edit-recipe-actions">
             <button class="primary-action" type="submit" data-i18n="saveRecipeChanges">Save changes</button>
             <button class="ghost-button" id="cancelRecipeEdit" type="button" data-i18n="cancel">Cancel</button>
