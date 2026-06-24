@@ -958,6 +958,13 @@ const translations = {
     noteLabel: "Family notes",
     saveDraft: "Save to family site",
     selectedRecipe: "Selected recipe",
+    editRecipe: "Edit recipe",
+    saveRecipeChanges: "Save changes",
+    cancel: "Cancel",
+    deleteRecipe: "Delete recipe",
+    deleteRecipeConfirm: "Delete this recipe from the family menu?",
+    recipeUpdated: "Recipe updated.",
+    recipeDeleted: "Recipe deleted.",
     markCooked: "Mark cooked",
     ingredients: "Ingredients",
     steps: "Steps",
@@ -1125,6 +1132,13 @@ const translations = {
     noteLabel: "Notas de la familia",
     saveDraft: "Guardar en el sitio familiar",
     selectedRecipe: "Receta seleccionada",
+    editRecipe: "Editar receta",
+    saveRecipeChanges: "Guardar cambios",
+    cancel: "Cancelar",
+    deleteRecipe: "Borrar receta",
+    deleteRecipeConfirm: "Borrar esta receta del menu familiar?",
+    recipeUpdated: "Receta actualizada.",
+    recipeDeleted: "Receta borrada.",
     markCooked: "Marcar hecha",
     ingredients: "Ingredientes",
     steps: "Pasos",
@@ -1308,6 +1322,8 @@ let favorites = JSON.parse(localStorage.getItem("dinner-favorites") || "[]");
 let tasks = JSON.parse(localStorage.getItem("dinner-tasks") || "[]");
 let drafts = JSON.parse(localStorage.getItem("dinner-drafts") || "[]");
 let sharedRecipes = [];
+let recipeEdits = JSON.parse(localStorage.getItem("dinner-recipe-edits") || "{}");
+let deletedRecipeIds = JSON.parse(localStorage.getItem("dinner-deleted-recipes") || "[]");
 let groceries = [];
 let inventory = [];
 let inventorySuggestions = [];
@@ -1333,7 +1349,13 @@ function allRecipes() {
     ...recipes,
     ...sharedRecipes.map((recipe) => uploadToRecipe(recipe, "Shared upload", "Receta compartida")),
     ...drafts.map((draft) => uploadToRecipe(draft, "Local draft", "Borrador local")),
-  ];
+  ]
+    .filter((recipe) => !deletedRecipeIds.includes(recipe.id))
+    .map((recipe) => {
+      const edit = recipeEdits[recipe.id];
+      if (!edit) return recipe;
+      return uploadToRecipe(edit, recipe.meta?.en || localize(recipe.meta), recipe.meta?.es || localize(recipe.meta));
+    });
 }
 
 function uploadToRecipe(upload, enMeta, esMeta) {
@@ -1361,7 +1383,33 @@ function uploadToRecipe(upload, enMeta, esMeta) {
 }
 
 function recipeById(id) {
-  return allRecipes().find((recipe) => recipe.id === id) || recipes[0];
+  return allRecipes().find((recipe) => recipe.id === id) || allRecipes()[0] || recipes[0];
+}
+
+function recipeToEditableUpload(recipe) {
+  return {
+    id: recipe.id,
+    name: localize(recipe.name),
+    category: categoryFor(recipe),
+    ingredientsText: (recipe.ingredients?.[lang] || recipe.ingredients?.en || []).join("\n"),
+    stepsText: (recipe.steps?.[lang] || recipe.steps?.en || []).join("\n"),
+    allergyWarning: recipe.allergyWarning ? localize(recipe.allergyWarning) : "",
+    notes: localize(recipe.notes),
+    photos: recipe.photos || ["assets/meatballs-2.jpg"],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function updateMealsAfterRecipeDelete(recipeId) {
+  const clearMeal = (meal) => Object.fromEntries(
+    Object.entries(normalizeMealPlan(meal)).map(([key, value]) =>
+      mealSlots.some((slot) => slot.key === key) && value === recipeId ? [key, ""] : [key, value])
+  );
+
+  schedule = normalizeSchedule(Object.fromEntries(days.map((day) => [day.key, clearMeal(schedule[day.key])])));
+  calendarMeals = Object.fromEntries(
+    Object.entries(calendarMeals).map(([dateKey, meal]) => [dateKey, clearMeal(meal)])
+  );
 }
 
 function localize(value) {
@@ -1471,7 +1519,7 @@ function calendarMealForDateKey(dateKey) {
 }
 
 function sharedStateSnapshot() {
-  return { weekStart: weekStartKey, schedule, calendarMeals, favorites, tasks };
+  return { weekStart: weekStartKey, schedule, calendarMeals, favorites, tasks, recipeEdits, deletedRecipeIds };
 }
 
 function saveSharedStateLocally() {
@@ -1480,6 +1528,8 @@ function saveSharedStateLocally() {
   localStorage.setItem("dinner-week-start", weekStartKey);
   localStorage.setItem("dinner-favorites", JSON.stringify(favorites));
   localStorage.setItem("dinner-tasks", JSON.stringify(tasks));
+  localStorage.setItem("dinner-recipe-edits", JSON.stringify(recipeEdits));
+  localStorage.setItem("dinner-deleted-recipes", JSON.stringify(deletedRecipeIds));
 }
 
 async function saveSharedState() {
@@ -1499,6 +1549,8 @@ async function saveSharedState() {
       weekStartKey = data.state.weekStart || weekStartKey;
       favorites = Array.isArray(data.state.favorites) ? data.state.favorites : favorites;
       tasks = Array.isArray(data.state.tasks) ? data.state.tasks : tasks;
+      recipeEdits = data.state.recipeEdits && typeof data.state.recipeEdits === "object" ? data.state.recipeEdits : recipeEdits;
+      deletedRecipeIds = Array.isArray(data.state.deletedRecipeIds) ? data.state.deletedRecipeIds : deletedRecipeIds;
       saveSharedStateLocally();
     }
     const status = $("#sharedStateStatus");
@@ -1531,6 +1583,8 @@ async function loadSharedState() {
     weekStartKey = data.state.weekStart || currentWeekStartKey();
     favorites = Array.isArray(data.state.favorites) ? data.state.favorites : [];
     tasks = Array.isArray(data.state.tasks) ? data.state.tasks : [];
+    recipeEdits = data.state.recipeEdits && typeof data.state.recipeEdits === "object" ? data.state.recipeEdits : {};
+    deletedRecipeIds = Array.isArray(data.state.deletedRecipeIds) ? data.state.deletedRecipeIds : [];
     const rolledForward = rollWeekForwardIfNeeded();
     saveSharedStateLocally();
     render();
@@ -2375,6 +2429,7 @@ function renderRecipes() {
 function renderDetail() {
   const recipe = recipeById(selectedRecipeId);
   const warning = recipe.allergyWarning ? localize(recipe.allergyWarning) : "";
+  $("#editRecipeForm").hidden = true;
   $("#detailName").textContent = localize(recipe.name);
   $("#detailMeta").textContent = localize(recipe.meta);
   $("#allergyWarning").hidden = !warning;
@@ -2388,6 +2443,16 @@ function renderDetail() {
   $("#favoriteRecipe").setAttribute("aria-pressed", `${isFavorite}`);
   $("#addRecipeGroceries").textContent = t("addRecipeToGroceries");
   setDetailStatus("");
+}
+
+function populateEditRecipeForm(recipe) {
+  const editable = recipeToEditableUpload(recipe);
+  $("#editNameInput").value = editable.name;
+  $("#editCategoryInput").value = editable.category;
+  $("#editIngredientsInput").value = editable.ingredientsText;
+  $("#editStepsInput").value = editable.stepsText;
+  $("#editAllergyInput").value = editable.allergyWarning;
+  $("#editNoteInput").value = editable.notes;
 }
 
 function render() {
@@ -2722,6 +2787,64 @@ $("#addRecipeGroceries").addEventListener("click", async () => {
   setDetailStatus(detailGroceriesMessage(addedCount, atHomeCount));
   const saved = await saveGroceries();
   if (!saved) setDetailStatus(t("recipeGroceriesError"), true);
+});
+
+$("#editRecipe").addEventListener("click", () => {
+  const recipe = recipeById(selectedRecipeId);
+  if (!recipe) return;
+  populateEditRecipeForm(recipe);
+  $("#editRecipeForm").hidden = false;
+  setDetailStatus("");
+  $("#editRecipeForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
+});
+
+$("#cancelRecipeEdit").addEventListener("click", () => {
+  $("#editRecipeForm").hidden = true;
+  setDetailStatus("");
+});
+
+$("#editRecipeForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const current = recipeById(selectedRecipeId);
+  const name = $("#editNameInput").value.trim();
+  if (!current || !name) return;
+
+  recipeEdits[selectedRecipeId] = {
+    id: selectedRecipeId,
+    name,
+    category: $("#editCategoryInput").value,
+    ingredientsText: $("#editIngredientsInput").value.trim(),
+    stepsText: $("#editStepsInput").value.trim(),
+    allergyWarning: $("#editAllergyInput").value.trim(),
+    notes: $("#editNoteInput").value.trim(),
+    photos: current.photos?.length ? current.photos : ["assets/meatballs-2.jpg"],
+    updatedAt: new Date().toISOString(),
+  };
+  deletedRecipeIds = deletedRecipeIds.filter((id) => id !== selectedRecipeId);
+  $("#editRecipeForm").hidden = true;
+  render();
+  $("#recipeDetail").hidden = false;
+  setDetailStatus(t("recipeUpdated"));
+  await saveSharedState();
+  setDetailStatus(t("recipeUpdated"));
+});
+
+$("#deleteRecipe").addEventListener("click", async () => {
+  const current = recipeById(selectedRecipeId);
+  if (!current || !window.confirm(t("deleteRecipeConfirm"))) return;
+
+  deletedRecipeIds = [...new Set([selectedRecipeId, ...deletedRecipeIds])];
+  delete recipeEdits[selectedRecipeId];
+  favorites = favorites.filter((id) => id !== selectedRecipeId);
+  updateMealsAfterRecipeDelete(selectedRecipeId);
+  selectedRecipeId = allRecipes()[0]?.id || recipes[0].id;
+  $("#editRecipeForm").hidden = true;
+  render();
+  $("#recipeDetail").hidden = true;
+  const status = $("#sharedStateStatus");
+  if (status) status.textContent = t("recipeDeleted");
+  await saveSharedState();
+  if (status) status.textContent = t("recipeDeleted");
 });
 
 $("#cookToday").addEventListener("click", () => {

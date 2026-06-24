@@ -407,6 +407,21 @@ h3 {
   flex-wrap: wrap;
 }
 
+.edit-recipe-panel {
+  margin: 14px 0 20px;
+}
+
+.edit-recipe-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.danger-action {
+  color: #8f2a1f;
+}
+
 .favorite-button[aria-pressed="true"] {
   border-color: var(--gold);
   color: #72500e;
@@ -1433,6 +1448,11 @@ li {
     display: grid;
     grid-template-columns: 1fr;
     width: 100%;
+  }
+
+  .edit-recipe-actions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .calendar-actions .ghost-button {

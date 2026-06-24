@@ -7,6 +7,8 @@ const MEAL_KEYS = ["main", "side", "salad", "notes"];
 const MAX_CALENDAR_DAYS = 730;
 const MAX_FAVORITES = 100;
 const MAX_TASKS = 300;
+const MAX_RECIPE_EDITS = 300;
+const MAX_DELETED_RECIPES = 300;
 const TASK_ASSIGNEES = ["alyson", "eric", "nelly", "theo", "pierce", "other"];
 
 const jsonHeaders = {
@@ -73,6 +75,44 @@ function cleanTasks(value) {
   return value.map(cleanTask).filter(Boolean).slice(0, MAX_TASKS);
 }
 
+function cleanRecipeEdit(edit) {
+  const name = cleanText(edit?.name, 120);
+  if (!name) return null;
+  const category = ["main", "side", "salad", "sauce", "draft"].includes(edit.category)
+    ? edit.category
+    : "main";
+
+  return {
+    id: cleanText(edit.id, 160),
+    name,
+    category,
+    ingredientsText: cleanText(edit.ingredientsText, 12000),
+    stepsText: cleanText(edit.stepsText, 12000),
+    allergyWarning: cleanText(edit.allergyWarning, 600),
+    notes: cleanText(edit.notes, 2000),
+    photos: Array.isArray(edit.photos)
+      ? edit.photos.filter((photo) => typeof photo === "string").slice(0, 3)
+      : [],
+    updatedAt: edit.updatedAt || new Date().toISOString(),
+  };
+}
+
+function cleanRecipeEdits(value) {
+  if (!value || typeof value !== "object") return {};
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .slice(0, MAX_RECIPE_EDITS)
+      .map(([id, edit]) => [cleanText(id, 160), cleanRecipeEdit({ ...edit, id })])
+      .filter(([id, edit]) => id && edit)
+  );
+}
+
+function cleanDeletedRecipeIds(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((id) => cleanText(id, 160)).filter(Boolean))].slice(0, MAX_DELETED_RECIPES);
+}
+
 export function cleanState(value) {
   return {
     weekStart: /^\d{4}-\d{2}-\d{2}$/.test(value?.weekStart) ? value.weekStart : "",
@@ -80,6 +120,8 @@ export function cleanState(value) {
     calendarMeals: cleanCalendar(value?.calendarMeals),
     favorites: cleanFavorites(value?.favorites),
     tasks: cleanTasks(value?.tasks),
+    recipeEdits: cleanRecipeEdits(value?.recipeEdits),
+    deletedRecipeIds: cleanDeletedRecipeIds(value?.deletedRecipeIds),
     updatedAt: new Date().toISOString(),
   };
 }
