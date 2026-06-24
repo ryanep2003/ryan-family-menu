@@ -127,7 +127,7 @@ export function createGroceryUi({
           const atHomeNote = groceryAtHomeNote(item);
           return `
             <label class="grocery-item">
-              <input type="checkbox" data-grocery-id="${item.id}" ${item.checked ? "checked" : ""} />
+              <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" ${item.checked ? "checked" : ""} />
               <span>
                 <strong>${escapeHtml(item.text)}</strong>
                 ${translation ? `<em class="translation-note">${escapeHtml(translation)}</em>` : ""}

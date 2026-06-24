@@ -4,6 +4,16 @@ import test from "node:test";
 import { cleanIngredientForGrocery, inventoryMatchFor } from "../grocery-logic.js";
 import { createGroceryUi } from "../grocery-ui.js";
 
+function escapeHtml(value) {
+  return `${value || ""}`.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }[character]));
+}
+
 function element() {
   const listeners = new Map();
   return {
@@ -83,7 +93,7 @@ function harness(overrides = {}) {
       alreadyAtHomeLabel: "At home",
       onShoppingList: "On shopping list",
     }[key] || key),
-    escapeHtml: (value) => `${value || ""}`,
+    escapeHtml,
     cleanIngredientForGrocery,
     findInventoryMatch: inventoryMatchFor,
     getLang: () => state.lang,
@@ -150,4 +160,26 @@ test("check section marks every item in that grocery section", async () => {
 
   assert.equal(state.groceries.every((item) => item.checked), true);
   assert.equal(state.saveCalls, 1);
+});
+
+test("renderGroceries escapes grocery ids in checkbox attributes", () => {
+  const { elements, state, ui } = harness({
+    state: {
+      groceries: [
+        {
+          id: `grocery-1" autofocus="true`,
+          text: "milk",
+          checked: false,
+          store: "any",
+          source: "manual",
+        },
+      ],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /grocery-1&quot; autofocus=&quot;true/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /autofocus="true/);
+  assert.equal(state.saveCalls, 0);
 });

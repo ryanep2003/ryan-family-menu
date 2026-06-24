@@ -35,7 +35,7 @@ export function createScheduleUi({
       : allowed;
 
     return recipesForOptions
-      .map((recipe) => `<option value="${recipe.id}"${recipe.id === selectedId ? " selected" : ""}>${escapeHtml(localize(recipe.name))}</option>`)
+      .map((recipe) => `<option value="${escapeHtml(recipe.id)}"${recipe.id === selectedId ? " selected" : ""}>${escapeHtml(localize(recipe.name))}</option>`)
       .join("");
   }
 
@@ -61,7 +61,7 @@ export function createScheduleUi({
       <p class="${mealHasWarning(meal) ? "has-warning" : ""}">${escapeHtml(mealSummary(meal))}</p>
       <div class="meal-open-buttons">
         ${recipesForMeal.map(({ recipe }) => `
-          <button class="ghost-button" type="button" data-open="${recipe.id}">
+          <button class="ghost-button" type="button" data-open="${escapeHtml(recipe.id)}">
             ${t("openDinner")}
           </button>
         `).join("")}

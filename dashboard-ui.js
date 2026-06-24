@@ -40,7 +40,7 @@ export function createDashboardUi({
       : t("noMealSet");
     $("#todayMealList").innerHTML = recipesForMeal
       .map(({ key, recipe }) => `
-        <button type="button" data-open="${recipe.id}">
+        <button type="button" data-open="${escapeHtml(recipe.id)}">
           <span>${t(`${key}Slot`)}</span>
           <strong>${escapeHtml(localize(recipe.name))}</strong>
           ${recipe.allergyWarning ? `<em>${t("allergyBadge")}</em>` : ""}
@@ -129,14 +129,14 @@ export function createDashboardUi({
     $("#favoriteList").innerHTML = favoriteRecipes.length
       ? favoriteRecipes.map((recipe) => `
           <div class="favorite-item">
-            <button class="favorite-open" type="button" data-open="${recipe.id}">
-              <img src="${recipe.photos[0]}" alt="" />
+            <button class="favorite-open" type="button" data-open="${escapeHtml(recipe.id)}">
+              <img src="${escapeHtml(recipe.photos[0])}" alt="" />
               <span>
                 <strong>${escapeHtml(localize(recipe.name))}</strong>
                 <small>${escapeHtml(categoryLabel(categoryFor(recipe)))}</small>
               </span>
             </button>
-            <button class="ghost-button compact-button" type="button" data-plan-favorite="${recipe.id}">${t("planNextOpen")}</button>
+            <button class="ghost-button compact-button" type="button" data-plan-favorite="${escapeHtml(recipe.id)}">${t("planNextOpen")}</button>
           </div>
         `).join("")
       : `<p class="empty-state compact">${t("favoritesEmpty")}</p>`;
