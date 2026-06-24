@@ -946,6 +946,10 @@ const translations = {
     addHeading: "Add a recipe",
     sharedUploadNote: "Recipes added here save to the live family site for everyone.",
     photoLabel: "Recipe photos",
+    scanRecipePhotos: "Scan recipe photos",
+    recipeScanWorking: "Reading recipe photos...",
+    recipeScanSaved: "Recipe photos scanned. Review before saving.",
+    recipeScanError: "Could not read the recipe photos. You can still type the recipe manually.",
     nameLabel: "Recipe name",
     categoryLabel: "Category",
     ingredientsLabel: "Ingredients",
@@ -1098,6 +1102,10 @@ const translations = {
     addHeading: "Agregar receta",
     sharedUploadNote: "Las recetas agregadas aqui se guardan en el sitio familiar para todos.",
     photoLabel: "Fotos de la receta",
+    scanRecipePhotos: "Escanear fotos de receta",
+    recipeScanWorking: "Leyendo fotos de receta...",
+    recipeScanSaved: "Fotos escaneadas. Revisa antes de guardar.",
+    recipeScanError: "No se pudieron leer las fotos. Puedes escribir la receta manualmente.",
     nameLabel: "Nombre de la receta",
     categoryLabel: "Categoria",
     ingredientsLabel: "Ingredientes",
@@ -2495,6 +2503,21 @@ async function recognizeInventory(images, location) {
   return Array.isArray(data.items) ? data.items : [];
 }
 
+async function recognizeRecipe(images) {
+  const response = await fetch("/.netlify/functions/recognize-recipe", {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ images }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || t("recipeScanError"));
+  }
+
+  return data.recipe || {};
+}
+
 $$("[data-lang]").forEach((button) => {
   button.addEventListener("click", () => {
     lang = button.dataset.lang;
@@ -2743,6 +2766,34 @@ $("#inventoryScanForm").addEventListener("submit", async (event) => {
     status.classList.add("error");
   } finally {
     submitButton.disabled = false;
+  }
+});
+
+$("#photoInput").addEventListener("change", async () => {
+  const files = $("#photoInput").files;
+  if (!files.length) return;
+
+  const status = $("#uploadStatus");
+  status.textContent = t("recipeScanWorking");
+  status.classList.remove("error");
+
+  try {
+    const images = await readFilesAsDataUrls(files, 3, {
+      maxSide: 1100,
+      quality: 0.74,
+      maxBytes: 650000,
+    });
+    const recipe = await recognizeRecipe(images);
+    if (!$("#nameInput").value.trim() && recipe.name) $("#nameInput").value = recipe.name;
+    if (recipe.category) $("#categoryInput").value = recipe.category;
+    if (!$("#ingredientsInput").value.trim() && recipe.ingredientsText) $("#ingredientsInput").value = recipe.ingredientsText;
+    if (!$("#stepsInput").value.trim() && recipe.stepsText) $("#stepsInput").value = recipe.stepsText;
+    if (!$("#noteInput").value.trim() && recipe.notes) $("#noteInput").value = recipe.notes;
+    status.textContent = t("recipeScanSaved");
+  } catch (error) {
+    console.warn(error);
+    status.textContent = error.message || t("recipeScanError");
+    status.classList.add("error");
   }
 });
 
