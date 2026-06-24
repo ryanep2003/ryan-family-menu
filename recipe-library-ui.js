@@ -38,8 +38,8 @@ export function createRecipeLibraryUi({
     $("#recipeCount").textContent = `${filtered.length}/${recipes.length}`;
     $("#recipeList").innerHTML = filtered
       .map((recipe) => `
-        <button class="recipe-card" type="button" data-open="${recipe.id}">
-          <img src="${recipe.photos[0]}" alt="" />
+        <button class="recipe-card" type="button" data-open="${escapeHtml(recipe.id)}">
+          <img src="${escapeHtml(recipe.photos[0])}" alt="" />
           <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
           ${getFavorites().includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}
           ${recipe.allergyWarning ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
@@ -66,7 +66,7 @@ export function createRecipeLibraryUi({
     $("#ingredientList").innerHTML = (recipe.ingredients[getLang()] || recipe.ingredients.en).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
     $("#stepList").innerHTML = (recipe.steps[getLang()] || recipe.steps.en).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
     $("#familyNotes").textContent = localize(recipe.notes);
-    $("#photoStrip").innerHTML = recipe.photos.map((src) => `<img src="${src}" alt="" />`).join("");
+    $("#photoStrip").innerHTML = recipe.photos.map((src) => `<img src="${escapeHtml(src)}" alt="" />`).join("");
     const isFavorite = getFavorites().includes(recipe.id);
     $("#favoriteRecipe").textContent = t(isFavorite ? "removeFavorite" : "addFavorite");
     $("#favoriteRecipe").setAttribute("aria-pressed", `${isFavorite}`);

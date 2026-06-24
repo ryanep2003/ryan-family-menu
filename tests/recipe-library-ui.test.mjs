@@ -1,0 +1,108 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { createRecipeLibraryUi } from "../recipe-library-ui.js";
+
+function element(initial = {}) {
+  const listeners = new Map();
+  return {
+    hidden: false,
+    innerHTML: "",
+    textContent: "",
+    attributes: {},
+    addEventListener(type, listener) {
+      listeners.set(type, listener);
+    },
+    scrollIntoView() {},
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+    ...initial,
+  };
+}
+
+function escapeHtml(value) {
+  return `${value || ""}`.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  }[character]));
+}
+
+function harness(overrides = {}) {
+  const unsafePhoto = `photo.jpg" onerror="alert(1)`;
+  const recipe = {
+    id: `recipe-1" autofocus="true`,
+    name: { en: "Recipe" },
+    meta: { en: "Meta" },
+    short: { en: "Short" },
+    tags: { en: "Tag" },
+    category: "main",
+    ingredients: { en: ["one"] },
+    steps: { en: ["cook"] },
+    notes: { en: "note" },
+    photos: [unsafePhoto],
+    ...overrides.recipe,
+  };
+  const elements = {
+    "#recipeCount": element(),
+    "#recipeList": element(),
+    "#editRecipeForm": element(),
+    "#detailName": element(),
+    "#detailMeta": element(),
+    "#allergyWarning": element(),
+    "#ingredientList": element(),
+    "#stepList": element(),
+    "#familyNotes": element(),
+    "#photoStrip": element(),
+    "#favoriteRecipe": element(),
+    "#publishDraftRecipe": element(),
+    "#addRecipeGroceries": element(),
+    "#recipeDetail": element(),
+  };
+
+  const ui = createRecipeLibraryUi({
+    $: (selector) => elements[selector],
+    $$: () => [],
+    t: (key) => key,
+    escapeHtml,
+    localize: (value) => typeof value === "string" ? value : value?.en || "",
+    categoryFor: () => "main",
+    categoryLabel: () => "Main",
+    getLang: () => "en",
+    getFavorites: () => [],
+    allRecipes: () => [recipe],
+    recipeById: () => recipe,
+    draftById: () => null,
+    getSelectedRecipeId: () => recipe.id,
+    setSelectedRecipeId: () => {},
+    getRecipeSearch: () => "",
+    setRecipeSearch: () => {},
+    getCategoryFilter: () => "all",
+    setCategoryFilter: () => {},
+    setDetailStatus: () => {},
+  });
+
+  return { elements, ui };
+}
+
+test("renderRecipes escapes recipe ids and photo URLs in card markup", () => {
+  const { elements, ui } = harness();
+
+  ui.renderRecipes();
+
+  assert.match(elements["#recipeList"].innerHTML, /photo\.jpg&quot; onerror=&quot;alert\(1\)/);
+  assert.match(elements["#recipeList"].innerHTML, /recipe-1&quot; autofocus=&quot;true/);
+  assert.doesNotMatch(elements["#recipeList"].innerHTML, /onerror="alert/);
+});
+
+test("renderDetail escapes photo URLs in detail markup", () => {
+  const { elements, ui } = harness();
+
+  ui.renderDetail();
+
+  assert.match(elements["#photoStrip"].innerHTML, /photo\.jpg&quot; onerror=&quot;alert\(1\)/);
+  assert.doesNotMatch(elements["#photoStrip"].innerHTML, /onerror="alert/);
+});
