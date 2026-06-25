@@ -53,6 +53,9 @@ function harness(overrides = {}) {
     "#deleteRecipe": element(),
     "#photoInput": element(),
     "#photoCameraInput": element(),
+    "#scanRecipePhotos": element(),
+    "#clearRecipePhotos": element(),
+    "#selectedRecipePhotoStatus": element(),
     "#importRecipeUrl": element(),
     "#uploadForm": element(),
     "#uploadForm .primary-action": element(),
@@ -111,6 +114,10 @@ function harness(overrides = {}) {
       recipeScanWorking: "Reading...",
       recipeScanSaved: "Scanned.",
       recipeScanError: "Scan failed.",
+      scanRecipePhotos: "Read selected photos",
+      clearRecipePhotos: "Clear photos",
+      noRecipePhotosSelected: "No recipe photos selected.",
+      recipePhotosSelected: "{count} selected.",
       recipeUrlRequired: "Paste a URL.",
       recipeUrlWorking: "Reading URL...",
       recipeUrlSaved: "URL imported.",
@@ -267,6 +274,36 @@ test("URL import fills the add form and stores imported photos", async () => {
   assert.deepEqual(state.importedRecipePhotos, ["url-photo.jpg"]);
 });
 
+test("recipe photos are queued and scanned together on demand", async () => {
+  const scannedBatches = [];
+  const { elements } = harness({
+    readFilesAsDataUrls: async (files) => files.map((file) => `data:${file.name}`),
+    recognizeRecipe: async (images) => {
+      scannedBatches.push(images);
+      return {
+        name: "Queued recipe",
+        ingredientsText: "oil",
+        stepsText: "cook",
+      };
+    },
+  });
+
+  elements["#photoInput"].files = [{ name: "page-1.jpg", size: 10, lastModified: 1 }];
+  await elements["#photoInput"].dispatch("change");
+  elements["#photoCameraInput"].files = [{ name: "page-2.jpg", size: 20, lastModified: 2 }];
+  await elements["#photoCameraInput"].dispatch("change");
+
+  assert.deepEqual(scannedBatches, []);
+  assert.equal(elements["#selectedRecipePhotoStatus"].textContent, "2 selected.");
+  assert.equal(elements["#scanRecipePhotos"].disabled, false);
+
+  await elements["#scanRecipePhotos"].dispatch("click");
+
+  assert.deepEqual(scannedBatches, [["data:page-1.jpg", "data:page-2.jpg"]]);
+  assert.equal(elements["#nameInput"].value, "Queued recipe");
+  assert.equal(elements["#stepsInput"].value, "cook");
+});
+
 test("failed live recipe save creates a local draft with imported photos", async () => {
   const originalWarn = console.warn;
   console.warn = () => {};
@@ -289,6 +326,30 @@ test("failed live recipe save creates a local draft with imported photos", async
     assert.deepEqual(state.drafts[0].photos, ["url-photo.jpg"]);
     assert.equal(state.persistedDrafts, true);
     assert.equal(state.renderRecipesCalls, 1);
+  } finally {
+    console.warn = originalWarn;
+  }
+});
+
+test("failed live recipe save keeps selected queued photos in local draft", async () => {
+  const originalWarn = console.warn;
+  console.warn = () => {};
+  const { elements, state } = harness({
+    readFilesAsDataUrls: async (files) => files.map((file) => `data:${file.name}`),
+    saveSharedRecipe: async () => {
+      throw new Error("offline");
+    },
+  });
+  elements["#nameInput"].value = "Draft pasta";
+  elements["#categoryInput"].value = "main";
+  elements["#photoInput"].files = [{ name: "page-1.jpg", size: 10, lastModified: 1 }];
+
+  try {
+    await elements["#photoInput"].dispatch("change");
+    await elements["#uploadForm"].dispatch("submit");
+
+    assert.equal(state.drafts[0].name, "Draft pasta");
+    assert.deepEqual(state.drafts[0].photos, ["data:page-1.jpg"]);
   } finally {
     console.warn = originalWarn;
   }

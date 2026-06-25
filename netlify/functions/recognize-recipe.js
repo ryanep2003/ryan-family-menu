@@ -53,6 +53,7 @@ export default async (request) => {
     "You transcribe recipe photos for a private family meal-planning app.",
     "Return only JSON in this shape: {\"name\":\"Recipe name\",\"category\":\"side\",\"ingredients\":[\"1 lb carrots\"],\"steps\":[\"Heat oven to 425 F.\"],\"notes\":\"Short useful family note\"}",
     "Use the recipe text visible in the photos. Do not invent missing ingredients or steps.",
+    "Treat the photos as pages of one recipe. Combine all visible ingredients and every visible numbered step across every photo in order.",
     "If the recipe name is not visible, use an empty string.",
     "Valid categories are main, side, salad, sauce. Choose the best category, or use an empty string if unclear.",
     "Keep ingredients and steps concise, one item per array entry.",

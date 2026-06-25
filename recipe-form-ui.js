@@ -1,4 +1,5 @@
 const FALLBACK_PHOTO = "assets/meatballs-2.jpg";
+const MAX_UPLOAD_PHOTOS = 3;
 
 export function createRecipeFormUi({
   $,
@@ -32,6 +33,8 @@ export function createRecipeFormUi({
   renderRecipes,
   setDetailStatus,
 }) {
+  let uploadPhotoFiles = [];
+
   function fillUploadFormFromRecipe(recipe, { overwrite = false } = {}) {
     if ((overwrite || !$("#nameInput").value.trim()) && recipe.name) $("#nameInput").value = recipe.name;
     if (recipe.category) $("#categoryInput").value = recipe.category;
@@ -48,7 +51,7 @@ export function createRecipeFormUi({
   }
 
   function selectedUploadPhotoFiles() {
-    return [...$("#photoInput").files, ...$("#photoCameraInput").files];
+    return uploadPhotoFiles;
   }
 
   function selectedEditPhotoFiles() {
@@ -66,6 +69,38 @@ export function createRecipeFormUi({
     $("#editPhotoInput").value = "";
     $("#editPhotoCameraInput").value = "";
     renderEditPhotoPreview(editable.photos);
+  }
+
+  function formatRecipePhotoStatus(count) {
+    if (!count) return t("noRecipePhotosSelected");
+    return t("recipePhotosSelected").replace("{count}", count);
+  }
+
+  function renderUploadPhotoQueue() {
+    const count = uploadPhotoFiles.length;
+    $("#selectedRecipePhotoStatus").textContent = formatRecipePhotoStatus(count);
+    $("#scanRecipePhotos").disabled = count === 0;
+    $("#clearRecipePhotos").disabled = count === 0;
+  }
+
+  function fileKey(file) {
+    return [file.name, file.size, file.lastModified].join(":");
+  }
+
+  function appendUploadPhotoFiles(files) {
+    const existing = new Set(uploadPhotoFiles.map(fileKey));
+    const incoming = [...files].filter((file) => !existing.has(fileKey(file)));
+    uploadPhotoFiles = [...uploadPhotoFiles, ...incoming].slice(0, MAX_UPLOAD_PHOTOS);
+    $("#photoInput").value = "";
+    $("#photoCameraInput").value = "";
+    renderUploadPhotoQueue();
+  }
+
+  function clearUploadPhotoFiles() {
+    uploadPhotoFiles = [];
+    $("#photoInput").value = "";
+    $("#photoCameraInput").value = "";
+    renderUploadPhotoQueue();
   }
 
   async function submitRecipeEdit(event) {
@@ -140,7 +175,7 @@ export function createRecipeFormUi({
     status.classList.remove("error");
 
     try {
-      const images = await readFilesAsDataUrls(files, 3, {
+      const images = await readFilesAsDataUrls(files, MAX_UPLOAD_PHOTOS, {
         maxSide: 1100,
         quality: 0.74,
         maxBytes: 650000,
@@ -194,13 +229,15 @@ export function createRecipeFormUi({
     status.textContent = t("savingRecipeLive");
     status.classList.remove("error");
 
+    let recipePhotos = [];
+
     try {
-      const photos = await readFilesAsDataUrls(selectedUploadPhotoFiles(), 3, {
+      const photos = await readFilesAsDataUrls(selectedUploadPhotoFiles(), MAX_UPLOAD_PHOTOS, {
         maxSide: 700,
         quality: 0.68,
         maxBytes: 420000,
       });
-      const recipePhotos = photos.length ? photos : getImportedRecipePhotos();
+      recipePhotos = photos.length ? photos : getImportedRecipePhotos();
       const recipe = {
         name,
         category: $("#categoryInput").value,
@@ -213,7 +250,7 @@ export function createRecipeFormUi({
       const saved = await saveSharedRecipe(recipe);
       prependSharedRecipe(saved.recipe);
       $("#uploadForm").reset();
-      $("#photoCameraInput").value = "";
+      clearUploadPhotoFiles();
       setImportedRecipePhotos([]);
       status.textContent = t("sharedRecipeSaved");
       setView("recipes");
@@ -228,7 +265,7 @@ export function createRecipeFormUi({
         stepsText: $("#stepsInput").value.trim(),
         allergyWarning: $("#allergyInput").value.trim(),
         notes: $("#noteInput").value.trim(),
-        photos: getImportedRecipePhotos().length ? getImportedRecipePhotos() : [FALLBACK_PHOTO],
+        photos: recipePhotos.length ? recipePhotos : [FALLBACK_PHOTO],
         createdAt: new Date().toISOString(),
       };
       prependDraft(fallbackDraft);
@@ -275,10 +312,13 @@ export function createRecipeFormUi({
 
     $("#editRecipeForm").addEventListener("submit", submitRecipeEdit);
     $("#deleteRecipe").addEventListener("click", deleteSelectedRecipe);
-    $("#photoInput").addEventListener("change", scanRecipePhotos);
-    $("#photoCameraInput").addEventListener("change", scanRecipePhotos);
+    $("#photoInput").addEventListener("change", () => appendUploadPhotoFiles($("#photoInput").files));
+    $("#photoCameraInput").addEventListener("change", () => appendUploadPhotoFiles($("#photoCameraInput").files));
+    $("#scanRecipePhotos").addEventListener("click", scanRecipePhotos);
+    $("#clearRecipePhotos").addEventListener("click", clearUploadPhotoFiles);
     $("#importRecipeUrl").addEventListener("click", importRecipeFromUrl);
     $("#uploadForm").addEventListener("submit", submitUploadForm);
+    renderUploadPhotoQueue();
   }
 
   return {

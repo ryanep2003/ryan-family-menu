@@ -1253,6 +1253,17 @@ h3 {
   gap: 8px;
 }
 
+.photo-queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.compact-note {
+  margin-top: -4px;
+}
+
 .recipe-detail {
   margin: 24px 0 36px;
   padding: 18px;
