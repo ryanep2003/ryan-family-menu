@@ -27,6 +27,8 @@ import { translations } from "./translations.js";
 import {
   applyVersionConflict,
   loadVersionedCollection,
+  persistVersionedCollection,
+  readVersionedCollectionStorage,
   saveVersionedCollection,
 } from "./versioned-collection-client.js";
 import {
@@ -73,10 +75,14 @@ let sharedRecipes = [];
 let recipeEdits = readJsonStorage(localStorage, "dinner-recipe-edits", {});
 let deletedRecipeIds = readJsonStorage(localStorage, "dinner-deleted-recipes", []);
 let importedRecipePhotos = [];
-let groceries = [];
-let groceryVersion = 0;
-let inventory = [];
-let inventoryVersion = 0;
+const groceryStorageKeys = { itemsKey: "dinner-groceries", versionKey: "dinner-grocery-version" };
+const inventoryStorageKeys = { itemsKey: "dinner-inventory", versionKey: "dinner-inventory-version" };
+const storedGroceries = readVersionedCollectionStorage(localStorage, groceryStorageKeys);
+const storedInventory = readVersionedCollectionStorage(localStorage, inventoryStorageKeys);
+let groceries = storedGroceries.items;
+let groceryVersion = storedGroceries.version;
+let inventory = storedInventory.items;
+let inventoryVersion = storedInventory.version;
 let inventorySuggestions = [];
 let receiptSuggestions = [];
 let inventoryMode = "shopping";
@@ -116,6 +122,14 @@ function draftById(id) {
 
 function persistDrafts() {
   localStorage.setItem("dinner-drafts", JSON.stringify(drafts));
+}
+
+function persistGroceriesLocally(items = groceries, version = groceryVersion) {
+  persistVersionedCollection(localStorage, groceryStorageKeys, items, version);
+}
+
+function persistInventoryLocally(items = inventory, version = inventoryVersion) {
+  persistVersionedCollection(localStorage, inventoryStorageKeys, items, version);
 }
 
 function recipeToEditableUpload(recipe) {
@@ -627,6 +641,7 @@ async function loadGroceries() {
       setVersion: (version) => {
         groceryVersion = version;
       },
+      persist: (items, version) => persistGroceriesLocally(items, version),
       render,
     });
   } catch (error) {
@@ -650,6 +665,7 @@ async function saveGroceries() {
       setVersion: (version) => {
         groceryVersion = version;
       },
+      persist: (items, version) => persistGroceriesLocally(items, version),
     });
     $("#groceryStatus").textContent = t("grocerySaved");
     $("#groceryStatus").classList.remove("error");
@@ -664,6 +680,7 @@ async function saveGroceries() {
         groceryVersion = version;
       },
       currentVersion: groceryVersion,
+      persist: (items, version) => persistGroceriesLocally(items, version),
     })) {
       renderGroceries();
       bindGroceryControls();
@@ -689,6 +706,7 @@ async function loadInventory() {
       setVersion: (version) => {
         inventoryVersion = version;
       },
+      persist: (items, version) => persistInventoryLocally(items, version),
       render,
     });
   } catch (error) {
@@ -712,6 +730,7 @@ async function saveInventory() {
       setVersion: (version) => {
         inventoryVersion = version;
       },
+      persist: (items, version) => persistInventoryLocally(items, version),
     });
     $("#inventoryStatus").textContent = t("inventorySaved");
     $("#inventoryStatus").classList.remove("error");
@@ -725,6 +744,7 @@ async function saveInventory() {
         inventoryVersion = version;
       },
       currentVersion: inventoryVersion,
+      persist: (items, version) => persistInventoryLocally(items, version),
     })) {
       renderInventory();
       bindInventoryControls();
