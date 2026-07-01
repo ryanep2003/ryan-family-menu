@@ -38,6 +38,11 @@ export function createRecipeFormUi({
 }) {
   let uploadPhotoFiles = [];
 
+  function setEditMode(editing) {
+    $("#recipeDetail").classList.toggle("editing", editing);
+    $("#editRecipeForm").hidden = !editing;
+  }
+
   function fillUploadFormFromRecipe(recipe, { overwrite = false } = {}) {
     if ((overwrite || !$("#nameInput").value.trim()) && recipe.name) $("#nameInput").value = recipe.name;
     if (recipe.category) $("#categoryInput").value = recipe.category;
@@ -142,7 +147,7 @@ export function createRecipeFormUi({
         updatedAt: new Date().toISOString(),
       });
       removeDeletedRecipeId(selectedRecipeId);
-      $("#editRecipeForm").hidden = true;
+      setEditMode(false);
       render();
       $("#recipeDetail").hidden = false;
       setDetailStatus(t("recipeUpdated"));
@@ -166,7 +171,7 @@ export function createRecipeFormUi({
     setFavorites(getFavorites().filter((id) => id !== selectedRecipeId));
     updateMealsAfterRecipeDelete(selectedRecipeId);
     setSelectedRecipeId(allRecipes()[0]?.id || "meatballs");
-    $("#editRecipeForm").hidden = true;
+    setEditMode(false);
     render();
     $("#recipeDetail").hidden = true;
     const status = $("#sharedStateStatus");
@@ -294,13 +299,13 @@ export function createRecipeFormUi({
       const recipe = recipeById(getSelectedRecipeId());
       if (!recipe) return;
       populateEditRecipeForm(recipe);
-      $("#editRecipeForm").hidden = false;
+      setEditMode(true);
       setDetailStatus("");
       $("#editRecipeForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
 
     $("#cancelRecipeEdit").addEventListener("click", () => {
-      $("#editRecipeForm").hidden = true;
+      setEditMode(false);
       $("#editPhotoInput").value = "";
       $("#editPhotoCameraInput").value = "";
       setDetailStatus("");
@@ -332,5 +337,6 @@ export function createRecipeFormUi({
 
   return {
     bind,
+    setEditMode,
   };
 }

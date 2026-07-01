@@ -58,6 +58,7 @@ export function createRecipeLibraryUi({
     const recipe = recipeById(getSelectedRecipeId());
     const isLocalDraft = Boolean(draftById(recipe.id));
     const warning = recipe.allergyWarning ? localize(recipe.allergyWarning) : "";
+    $("#recipeDetail").classList.remove("editing");
     $("#editRecipeForm").hidden = true;
     $("#detailName").textContent = localize(recipe.name);
     $("#detailMeta").textContent = localize(recipe.meta);

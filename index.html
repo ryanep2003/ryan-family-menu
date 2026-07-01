@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#fbf7ef" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=23" />
+    <link rel="stylesheet" href="styles.css?v=24" />
   </head>
   <body>
     <header class="app-header">
@@ -231,6 +231,95 @@
           <h2 data-i18n="libraryHeading">Recipe library</h2>
           <span id="recipeCount"></span>
         </div>
+        <section class="recipe-detail" id="recipeDetail" hidden>
+          <div class="detail-top">
+            <div>
+              <p class="section-label" data-i18n="selectedRecipe">Selected recipe</p>
+              <h2 id="detailName">A 100% Chance of Meatballs</h2>
+              <p id="detailMeta">Makes 18 meatballs · 1 hour · Mess 2/4</p>
+            </div>
+            <div class="detail-top-side">
+              <div class="segmented detail-language-toggle" aria-label="Language">
+                <button type="button" data-lang="en">EN</button>
+                <button type="button" data-lang="es">ES</button>
+              </div>
+              <div class="detail-actions">
+                <button class="primary-action" id="publishDraftRecipe" type="button" data-i18n="publishDraftRecipe" hidden>Publish draft</button>
+                <button class="primary-action" id="addRecipeGroceries" type="button" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
+                <button class="ghost-button" id="editRecipe" type="button" data-i18n="editRecipe">Edit recipe</button>
+                <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
+                <button class="ghost-button" id="markCooked" type="button" data-i18n="markCooked">Mark cooked</button>
+              </div>
+            </div>
+          </div>
+          <p class="upload-status detail-status" id="detailStatus" role="status"></p>
+
+          <form class="upload-panel edit-recipe-panel" id="editRecipeForm" hidden>
+            <label>
+              <span data-i18n="nameLabel">Recipe name</span>
+              <input type="text" id="editNameInput" />
+            </label>
+            <label>
+              <span data-i18n="categoryLabel">Category</span>
+              <select id="editCategoryInput">
+                <option value="main" data-i18n="categoryMain">Mains</option>
+                <option value="side" data-i18n="categorySide">Sides</option>
+                <option value="salad" data-i18n="categorySalad">Salads</option>
+                <option value="sauce" data-i18n="categorySauce">Sauces</option>
+              </select>
+            </label>
+            <label>
+              <span data-i18n="ingredientsLabel">Ingredients</span>
+              <textarea id="editIngredientsInput" rows="5"></textarea>
+            </label>
+            <label>
+              <span data-i18n="stepsLabel">Steps</span>
+              <textarea id="editStepsInput" rows="6"></textarea>
+            </label>
+            <label>
+              <span data-i18n="allergyLabel">Allergy or safety warning</span>
+              <textarea id="editAllergyInput" rows="3"></textarea>
+            </label>
+            <label>
+              <span data-i18n="noteLabel">Family notes</span>
+              <textarea id="editNoteInput" rows="4"></textarea>
+            </label>
+            <label>
+              <span data-i18n="editPhotoLabel">Replace recipe photos</span>
+              <input type="file" id="editPhotoInput" accept="image/*" multiple />
+            </label>
+            <label>
+              <span data-i18n="editPhotoCameraLabel">Take replacement photo</span>
+              <input type="file" id="editPhotoCameraInput" accept="image/*" capture="environment" />
+            </label>
+            <div class="edit-photo-preview" id="editPhotoPreview"></div>
+            <div class="edit-recipe-actions">
+              <button class="primary-action" type="submit" data-i18n="saveRecipeChanges">Save changes</button>
+              <button class="ghost-button" id="cancelRecipeEdit" type="button" data-i18n="cancel">Cancel</button>
+              <button class="text-button danger-action" id="deleteRecipe" type="button" data-i18n="deleteRecipe">Delete recipe</button>
+            </div>
+          </form>
+
+          <div class="detail-layout">
+            <article>
+              <div class="allergy-warning" id="allergyWarning" hidden></div>
+
+              <h3 data-i18n="ingredients">Ingredients</h3>
+              <ul id="ingredientList"></ul>
+
+              <h3 data-i18n="steps">Steps</h3>
+              <ol id="stepList"></ol>
+
+              <h3 data-i18n="notes">Family notes</h3>
+              <p id="familyNotes"></p>
+            </article>
+
+            <aside>
+              <h3 data-i18n="sourcePhotos">Source photos</h3>
+              <div class="photo-strip" id="photoStrip"></div>
+            </aside>
+          </div>
+        </section>
         <div class="library-tools">
           <label>
             <span data-i18n="searchLabel">Search recipes</span>
@@ -311,91 +400,8 @@
         </form>
       </section>
 
-      <section class="recipe-detail" id="recipeDetail" hidden>
-        <div class="detail-top">
-          <div>
-            <p class="section-label" data-i18n="selectedRecipe">Selected recipe</p>
-            <h2 id="detailName">A 100% Chance of Meatballs</h2>
-            <p id="detailMeta">Makes 18 meatballs · 1 hour · Mess 2/4</p>
-          </div>
-          <div class="detail-actions">
-            <button class="primary-action" id="publishDraftRecipe" type="button" data-i18n="publishDraftRecipe" hidden>Publish draft</button>
-            <button class="primary-action" id="addRecipeGroceries" type="button" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
-            <button class="ghost-button" id="editRecipe" type="button" data-i18n="editRecipe">Edit recipe</button>
-            <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
-            <button class="ghost-button" id="markCooked" type="button" data-i18n="markCooked">Mark cooked</button>
-          </div>
-        </div>
-        <p class="upload-status detail-status" id="detailStatus" role="status"></p>
-
-        <form class="upload-panel edit-recipe-panel" id="editRecipeForm" hidden>
-          <label>
-            <span data-i18n="nameLabel">Recipe name</span>
-            <input type="text" id="editNameInput" />
-          </label>
-          <label>
-            <span data-i18n="categoryLabel">Category</span>
-            <select id="editCategoryInput">
-              <option value="main" data-i18n="categoryMain">Mains</option>
-              <option value="side" data-i18n="categorySide">Sides</option>
-              <option value="salad" data-i18n="categorySalad">Salads</option>
-              <option value="sauce" data-i18n="categorySauce">Sauces</option>
-            </select>
-          </label>
-          <label>
-            <span data-i18n="ingredientsLabel">Ingredients</span>
-            <textarea id="editIngredientsInput" rows="5"></textarea>
-          </label>
-          <label>
-            <span data-i18n="stepsLabel">Steps</span>
-            <textarea id="editStepsInput" rows="6"></textarea>
-          </label>
-          <label>
-            <span data-i18n="allergyLabel">Allergy or safety warning</span>
-            <textarea id="editAllergyInput" rows="3"></textarea>
-          </label>
-          <label>
-            <span data-i18n="noteLabel">Family notes</span>
-            <textarea id="editNoteInput" rows="4"></textarea>
-          </label>
-          <label>
-            <span data-i18n="editPhotoLabel">Replace recipe photos</span>
-            <input type="file" id="editPhotoInput" accept="image/*" multiple />
-          </label>
-          <label>
-            <span data-i18n="editPhotoCameraLabel">Take replacement photo</span>
-            <input type="file" id="editPhotoCameraInput" accept="image/*" capture="environment" />
-          </label>
-          <div class="edit-photo-preview" id="editPhotoPreview"></div>
-          <div class="edit-recipe-actions">
-            <button class="primary-action" type="submit" data-i18n="saveRecipeChanges">Save changes</button>
-            <button class="ghost-button" id="cancelRecipeEdit" type="button" data-i18n="cancel">Cancel</button>
-            <button class="text-button danger-action" id="deleteRecipe" type="button" data-i18n="deleteRecipe">Delete recipe</button>
-          </div>
-        </form>
-
-        <div class="detail-layout">
-          <article>
-            <div class="allergy-warning" id="allergyWarning" hidden></div>
-
-            <h3 data-i18n="ingredients">Ingredients</h3>
-            <ul id="ingredientList"></ul>
-
-            <h3 data-i18n="steps">Steps</h3>
-            <ol id="stepList"></ol>
-
-            <h3 data-i18n="notes">Family notes</h3>
-            <p id="familyNotes"></p>
-          </article>
-
-          <aside>
-            <h3 data-i18n="sourcePhotos">Source photos</h3>
-            <div class="photo-strip" id="photoStrip"></div>
-          </aside>
-        </div>
-      </section>
     </main>
 
-    <script type="module" src="app.js?v=47"></script>
+    <script type="module" src="app.js?v=48"></script>
   </body>
 </html>

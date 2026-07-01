@@ -10,6 +10,24 @@ function element(initial = {}) {
     innerHTML: "",
     textContent: "",
     attributes: {},
+    classList: {
+      values: new Set(),
+      add(name) {
+        this.values.add(name);
+      },
+      remove(name) {
+        this.values.delete(name);
+      },
+      toggle(name, force) {
+        const shouldHave = force ?? !this.values.has(name);
+        if (shouldHave) {
+          this.add(name);
+          return true;
+        }
+        this.remove(name);
+        return false;
+      },
+    },
     addEventListener(type, listener) {
       listeners.set(type, listener);
     },
@@ -105,4 +123,15 @@ test("renderDetail escapes photo URLs in detail markup", () => {
 
   assert.match(elements["#photoStrip"].innerHTML, /photo\.jpg&quot; onerror=&quot;alert\(1\)/);
   assert.doesNotMatch(elements["#photoStrip"].innerHTML, /onerror="alert/);
+});
+
+test("renderDetail resets recipe edit mode when switching recipes or languages", () => {
+  const { elements, ui } = harness();
+  elements["#recipeDetail"].classList.add("editing");
+  elements["#editRecipeForm"].hidden = false;
+
+  ui.renderDetail();
+
+  assert.equal(elements["#recipeDetail"].classList.values.has("editing"), false);
+  assert.equal(elements["#editRecipeForm"].hidden, true);
 });

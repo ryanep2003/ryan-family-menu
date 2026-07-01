@@ -13,13 +13,25 @@ function element(initial = {}) {
     textContent: "",
     innerHTML: "",
     classList: {
+      values: new Set(),
       added: [],
       removed: [],
       add(name) {
+        this.values.add(name);
         this.added.push(name);
       },
       remove(name) {
+        this.values.delete(name);
         this.removed.push(name);
+      },
+      toggle(name, force) {
+        const shouldHave = force ?? !this.values.has(name);
+        if (shouldHave) {
+          this.add(name);
+          return true;
+        }
+        this.remove(name);
+        return false;
       },
     },
     addEventListener(type, listener) {
@@ -219,6 +231,7 @@ test("recipe edit keeps existing photos when no replacement is selected", async 
   assert.deepEqual(state.edits["recipe-1"].name, { en: "Updated recipe" });
   assert.deepEqual(state.edits["recipe-1"].photos, ["existing.jpg"]);
   assert.equal(state.saveSharedStateCalls, 1);
+  assert.equal(elements["#editRecipeForm"].hidden, true);
 });
 
 test("recipe edit uses replacement photos when selected", async () => {
@@ -231,6 +244,19 @@ test("recipe edit uses replacement photos when selected", async () => {
   await elements["#editRecipeForm"].dispatch("submit");
 
   assert.deepEqual(state.edits["recipe-1"].photos, ["new-photo.jpg"]);
+});
+
+test("edit recipe only shows the edit panel while editing", async () => {
+  const { elements } = harness();
+
+  await elements["#editRecipe"].dispatch("click");
+  assert.equal(elements["#editRecipeForm"].hidden, false);
+  assert.equal(elements["#recipeDetail"].classList.values.has("editing"), true);
+  assert.equal(elements["#editRecipeForm"].scrolled, true);
+
+  await elements["#cancelRecipeEdit"].dispatch("click");
+  assert.equal(elements["#editRecipeForm"].hidden, true);
+  assert.equal(elements["#recipeDetail"].classList.values.has("editing"), false);
 });
 
 test("delete recipe clears related local state and meal references", async () => {
