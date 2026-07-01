@@ -15,6 +15,12 @@ export function localizedText(value, preferredLang = "en") {
   return value[preferredLang] || value[fallbackLang] || "";
 }
 
+export function localizedTextExact(value, preferredLang = "en") {
+  if (typeof value === "string") return preferredLang === "en" ? value : "";
+  if (!isLocalizedValue(value)) return "";
+  return value[preferredLang] || "";
+}
+
 export function allLocalizedText(value) {
   if (typeof value === "string") return value.trim() ? [value.trim()] : [];
   if (!isLocalizedValue(value)) return [];

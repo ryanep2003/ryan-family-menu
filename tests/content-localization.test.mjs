@@ -25,9 +25,14 @@ test("recipe writes and AI scan endpoints carry language-aware content", async (
   const recipes = await readFile(new URL("../netlify/functions/recipes.js", import.meta.url), "utf8");
   const inventoryScan = await readFile(new URL("../netlify/functions/recognize-inventory.js", import.meta.url), "utf8");
   const receiptScan = await readFile(new URL("../netlify/functions/recognize-receipt.js", import.meta.url), "utf8");
+  const translateRecipe = await readFile(new URL("../netlify/functions/translate-recipe.js", import.meta.url), "utf8");
+  const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 
   assert.match(recipes, /const name = cleanLocalizedText\(input\.name, 120\)/);
   assert.match(recipes, /ingredientsText: cleanLocalizedText\(input\.ingredientsText, MAX_TEXT_LENGTH\)/);
   assert.match(inventoryScan, /const outputLanguage = cleanLanguage\(payload\.lang\)/);
   assert.match(receiptScan, /const outputLanguage = cleanLanguage\(payload\.lang\)/);
+  assert.match(translateRecipe, /Translate this family recipe from/);
+  assert.match(app, /"\/\.netlify\/functions\/translate-recipe"/);
+  assert.match(app, /queueRecipeBackfillForCurrentLanguage\(\)/);
 });

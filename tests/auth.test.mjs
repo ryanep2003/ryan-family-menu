@@ -4,6 +4,7 @@ import { requireWriteAuth } from "../netlify/functions/_auth.js";
 import recognizeInventory from "../netlify/functions/recognize-inventory.js";
 import recognizeReceipt from "../netlify/functions/recognize-receipt.js";
 import recognizeRecipe from "../netlify/functions/recognize-recipe.js";
+import translateRecipe from "../netlify/functions/translate-recipe.js";
 
 test("write auth is disabled unless FAMILY_WRITE_TOKEN is configured", () => {
   const original = process.env.FAMILY_WRITE_TOKEN;
@@ -58,11 +59,11 @@ test("AI scan endpoints check family write auth before OpenAI configuration", as
   delete process.env.OPENAI_API_KEY;
 
   try {
-    for (const handler of [recognizeInventory, recognizeReceipt, recognizeRecipe]) {
+    for (const handler of [recognizeInventory, recognizeReceipt, recognizeRecipe, translateRecipe]) {
       const response = await handler(new Request("https://example.com", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ images: ["data:image/jpeg;base64,abcd"] }),
+        body: JSON.stringify({ images: ["data:image/jpeg;base64,abcd"], recipe: { name: "Soup" } }),
       }));
 
       assert.equal(response.status, 401);

@@ -17,7 +17,7 @@ import { getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
 import { createInventoryUi } from "./inventory-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
-import { localizedText } from "./localized-data.js";
+import { localizedText, localizedTextExact, updateLocalizedText } from "./localized-data.js";
 import { createRecipeFormUi } from "./recipe-form-ui.js";
 import { createRecipeLibraryUi } from "./recipe-library-ui.js";
 import { createReceiptUi } from "./receipt-ui.js";
@@ -93,6 +93,9 @@ visibleMonth.setDate(1);
 let recipeSearch = "";
 let categoryFilter = "all";
 let appUpdateNoticeShown = false;
+const recipeTranslationInFlight = new Set();
+const recipeTranslationFailed = new Set();
+let recipeTranslationQueue = Promise.resolve();
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -135,6 +138,112 @@ function persistInventoryLocally(items = inventory, version = inventoryVersion) 
 
 function recipeToEditableUpload(recipe) {
   return recipeToEditable(recipe, lang, localize);
+}
+
+function rawRecipeById(id) {
+  return draftById(id)
+    || recipeEdits[id]
+    || sharedRecipes.find((recipe) => recipe.id === id)
+    || null;
+}
+
+function rawRecipeText(value, locale) {
+  return localizedTextExact(value, locale).trim();
+}
+
+function rawRecipeLines(value, locale) {
+  return rawRecipeText(value, locale)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function rawRecipeHasLocale(recipe, locale) {
+  if (!recipe) return false;
+
+  return Boolean(
+    rawRecipeText(recipe.name, locale)
+    && rawRecipeLines(recipe.ingredientsText, locale).length
+    && rawRecipeLines(recipe.stepsText, locale).length
+  );
+}
+
+function rawRecipeNeedsLocale(recipe, locale) {
+  if (!recipe) return false;
+  return !rawRecipeHasLocale(recipe, locale);
+}
+
+function recipeTranslationSourceLang(recipe, targetLang) {
+  const opposite = targetLang === "es" ? "en" : "es";
+  if (rawRecipeHasLocale(recipe, opposite)) return opposite;
+  if (rawRecipeHasLocale(recipe, targetLang)) return targetLang;
+  return "";
+}
+
+function recipeToTranslationInput(recipe, sourceLang) {
+  return {
+    name: rawRecipeText(recipe?.name, sourceLang),
+    category: recipe?.category || "draft",
+    ingredientsText: rawRecipeText(recipe?.ingredientsText, sourceLang),
+    stepsText: rawRecipeText(recipe?.stepsText, sourceLang),
+    allergyWarning: rawRecipeText(recipe?.allergyWarning, sourceLang),
+    notes: rawRecipeText(recipe?.notes, sourceLang),
+  };
+}
+
+function recipeToLocalizedEdit(recipe) {
+  const name = {};
+  const ingredientsText = {};
+  const stepsText = {};
+  const allergyWarning = {};
+  const notes = {};
+
+  const enName = rawRecipeText(recipe?.name, "en");
+  const esName = rawRecipeText(recipe?.name, "es");
+  const enIngredients = rawRecipeText(recipe?.ingredientsText, "en");
+  const esIngredients = rawRecipeText(recipe?.ingredientsText, "es");
+  const enSteps = rawRecipeText(recipe?.stepsText, "en");
+  const esSteps = rawRecipeText(recipe?.stepsText, "es");
+  const enWarning = rawRecipeText(recipe?.allergyWarning, "en");
+  const esWarning = rawRecipeText(recipe?.allergyWarning, "es");
+  const enNotes = rawRecipeText(recipe?.notes, "en");
+  const esNotes = rawRecipeText(recipe?.notes, "es");
+
+  if (enName) name.en = enName;
+  if (esName) name.es = esName;
+  if (enIngredients) ingredientsText.en = enIngredients;
+  if (esIngredients) ingredientsText.es = esIngredients;
+  if (enSteps) stepsText.en = enSteps;
+  if (esSteps) stepsText.es = esSteps;
+  if (enWarning) allergyWarning.en = enWarning;
+  if (esWarning) allergyWarning.es = esWarning;
+  if (enNotes) notes.en = enNotes;
+  if (esNotes) notes.es = esNotes;
+
+  return {
+    id: recipe.id,
+    name,
+    category: recipe.category || "draft",
+    ingredientsText,
+    stepsText,
+    allergyWarning,
+    notes,
+    photos: recipe.photos?.length ? recipe.photos : ["assets/meatballs-2.jpg"],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function mergeTranslatedRecipeEdit(recipe, translated, targetLang) {
+  const base = recipeToLocalizedEdit(recipe);
+  return {
+    ...base,
+    name: updateLocalizedText(base.name, translated.name, targetLang),
+    ingredientsText: updateLocalizedText(base.ingredientsText, translated.ingredientsText, targetLang),
+    stepsText: updateLocalizedText(base.stepsText, translated.stepsText, targetLang),
+    allergyWarning: updateLocalizedText(base.allergyWarning, translated.allergyWarning, targetLang),
+    notes: updateLocalizedText(base.notes, translated.notes, targetLang),
+    updatedAt: new Date().toISOString(),
+  };
 }
 
 function updateMealsAfterRecipeDelete(recipeId) {
@@ -610,6 +719,7 @@ function render() {
   bindOpenButtons();
   bindGroceryControls();
   bindInventoryControls();
+  queueRecipeBackfillForCurrentLanguage();
 }
 
 function setView(viewName) {
@@ -777,6 +887,66 @@ async function recognizeRecipe(images) {
 async function importRecipeUrl(url) {
   const data = await postJson("/.netlify/functions/import-recipe-url", { url }, t("recipeUrlError"));
   return data.recipe || {};
+}
+
+async function translateRecipeContent(recipe, sourceLang, targetLang) {
+  const data = await postJson(
+    "/.netlify/functions/translate-recipe",
+    {
+      recipe: recipeToTranslationInput(recipe, sourceLang),
+      sourceLang,
+      targetLang,
+    },
+    "Could not translate recipe."
+  );
+  return data.recipe || {};
+}
+
+async function backfillRecipeLocale(recipeId, targetLang) {
+  const recipe = rawRecipeById(recipeId);
+  if (!recipe || !rawRecipeNeedsLocale(recipe, targetLang)) return;
+
+  const sourceLang = recipeTranslationSourceLang(recipe, targetLang);
+  if (!sourceLang || sourceLang === targetLang) return;
+
+  const translated = await translateRecipeContent(recipe, sourceLang, targetLang);
+  const nextEdit = mergeTranslatedRecipeEdit(recipe, translated, targetLang);
+  const draftIndex = drafts.findIndex((draft) => draft.id === recipeId);
+
+  if (draftIndex >= 0) {
+    drafts = drafts.map((draft, index) => (index === draftIndex ? { ...draft, ...nextEdit } : draft));
+    persistDrafts();
+    render();
+    return;
+  }
+
+  recipeEdits[recipeId] = nextEdit;
+  saveSharedStateLocally();
+  render();
+  await saveSharedState();
+}
+
+function queueRecipeBackfillForCurrentLanguage() {
+  const targetLang = lang;
+  if (!["en", "es"].includes(targetLang)) return;
+
+  allRecipes()
+    .filter((recipe) => rawRecipeNeedsLocale(rawRecipeById(recipe.id), targetLang))
+    .forEach((recipe) => {
+      const key = `${recipe.id}:${targetLang}`;
+      if (recipeTranslationInFlight.has(key) || recipeTranslationFailed.has(key)) return;
+
+      recipeTranslationInFlight.add(key);
+      recipeTranslationQueue = recipeTranslationQueue
+        .then(() => backfillRecipeLocale(recipe.id, targetLang))
+        .catch((error) => {
+          console.warn(error);
+          recipeTranslationFailed.add(key);
+        })
+        .finally(() => {
+          recipeTranslationInFlight.delete(key);
+        });
+    });
 }
 
 const recipeFormUi = createRecipeFormUi({
