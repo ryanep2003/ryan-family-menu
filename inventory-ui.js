@@ -1,3 +1,5 @@
+import { canonicalText, localizedText } from "./localized-data.js";
+
 export function createInventoryUi({
   $,
   $$,
@@ -18,6 +20,7 @@ export function createInventoryUi({
   getInventoryMode,
   setInventoryMode,
   getInventoryFilter,
+  getLang,
   getInventorySuggestions,
   setInventorySuggestions,
 }) {
@@ -73,11 +76,11 @@ export function createInventoryUi({
           <div class="inventory-item">
             ${item.photos?.[0] ? `<img src="${escapeHtml(item.photos[0])}" alt="" />` : ""}
             <span class="inventory-item-copy">
-              <strong>${escapeHtml(item.text)}</strong>
-              <em>${escapeHtml(item.quantity || inventoryLocationLabel(item.location))}</em>
+              <strong>${escapeHtml(localizedText(item.text, getLang()))}</strong>
+              <em>${escapeHtml(localizedText(item.quantity, getLang()) || inventoryLocationLabel(item.location))}</em>
               ${inventoryShoppingNote(item) ? `<em class="shopping-overlap">${escapeHtml(inventoryShoppingNote(item))}</em>` : ""}
             </span>
-            <select class="stock-select stock-${escapeHtml(item.stockState || "some")}" data-stock-state="${escapeHtml(item.id)}" aria-label="${escapeHtml(item.text)} stock">
+            <select class="stock-select stock-${escapeHtml(item.stockState || "some")}" data-stock-state="${escapeHtml(item.id)}" aria-label="${escapeHtml(localizedText(item.text, getLang()))} stock">
               ${["full", "some", "low", "out"].map((state) => `<option value="${state}" ${state === (item.stockState || "some") ? "selected" : ""}>${inventoryStockLabel(state)}</option>`).join("")}
             </select>
             <div class="inventory-item-actions">
@@ -110,7 +113,7 @@ export function createInventoryUi({
         item.stockState = "out";
         item.updatedAt = new Date().toISOString();
         const groceries = getGroceries();
-        const matchingGrocery = groceries.find((entry) => entry.text.toLowerCase() === item.text.toLowerCase());
+        const matchingGrocery = groceries.find((entry) => canonicalText(entry.text).toLowerCase() === canonicalText(item.text).toLowerCase());
         if (matchingGrocery) {
           matchingGrocery.checked = false;
           matchingGrocery.inInventory = false;
@@ -158,8 +161,8 @@ export function createInventoryUi({
           <label class="suggestion-item">
             <input type="checkbox" data-inventory-suggestion="${index}" checked />
             <span>
-              <strong>${escapeHtml(item.text)}</strong>
-              <em>${escapeHtml([item.quantity, inventoryLocationLabel(item.location)].filter(Boolean).join(" · "))}</em>
+              <strong>${escapeHtml(localizedText(item.text, getLang()))}</strong>
+              <em>${escapeHtml([localizedText(item.quantity, getLang()), inventoryLocationLabel(item.location)].filter(Boolean).join(" · "))}</em>
             </span>
           </label>
         `).join("")}
@@ -179,7 +182,9 @@ export function createInventoryUi({
         item.text,
         item.quantity,
         item.location,
-        []
+        [],
+        "some",
+        getLang()
       ))));
       setInventorySuggestions([]);
       renderInventorySuggestions();

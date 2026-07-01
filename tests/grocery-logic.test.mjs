@@ -36,9 +36,10 @@ test("groceryItemsFromRecipe tags items already at home and keeps recipe context
 
   assert.equal(items.length, 2);
   assert.equal(items[0].recipeId, "lemon-chicken");
-  assert.equal(items[0].recipeName, "Lemon Chicken");
+  assert.deepEqual(items[0].recipeName, { en: "Lemon Chicken", es: "Pollo al limon" });
   assert.equal(items[0].inInventory, true);
   assert.equal(items[0].checked, true);
+  assert.deepEqual(items[0].text, { en: "4 lemons", es: "4 limones" });
   assert.equal(items[1].inInventory, false);
 });
 
@@ -54,6 +55,6 @@ test("mergeGroceries avoids duplicate ingredient rows", () => {
   const merged = mergeGroceries(existing, incoming);
 
   assert.equal(merged.length, 2);
-  assert.equal(merged[0].text, "4 lemons");
-  assert.equal(merged[1].text, "1 cup olive oil");
+  assert.deepEqual(merged[0].text, { en: "4 lemons" });
+  assert.deepEqual(merged[1].text, { en: "1 cup olive oil" });
 });

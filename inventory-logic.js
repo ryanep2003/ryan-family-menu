@@ -1,10 +1,15 @@
 import { cleanIngredientForGrocery } from "./grocery-logic.js";
+import { canonicalText, updateLocalizedText } from "./localized-data.js";
 
-export function inventoryItem(text, quantity = "", location = "pantry", photos = [], stockState = "some") {
+export function inventoryItem(text, quantity = "", location = "pantry", photos = [], stockState = "some", lang = "en") {
   return {
     id: `inventory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    text: cleanIngredientForGrocery(text),
-    quantity: cleanIngredientForGrocery(quantity),
+    text: typeof text === "string"
+      ? updateLocalizedText("", cleanIngredientForGrocery(text), lang)
+      : text,
+    quantity: typeof quantity === "string"
+      ? updateLocalizedText("", cleanIngredientForGrocery(quantity), lang)
+      : quantity,
     location,
     photos,
     stockState,
@@ -13,7 +18,7 @@ export function inventoryItem(text, quantity = "", location = "pantry", photos =
 }
 
 function inventoryKey(item) {
-  return `${(item.location || "pantry").toLowerCase()}::${(item.text || "").trim().toLowerCase()}`;
+  return `${(item.location || "pantry").toLowerCase()}::${canonicalText(item.text).trim().toLowerCase()}`;
 }
 
 export function mergeInventory(existingItems, newItems) {

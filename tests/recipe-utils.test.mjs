@@ -14,17 +14,19 @@ const localizeEn = (value) => typeof value === "string" ? value : value.en;
 test("uploadToRecipe normalizes shared uploads into display recipes", () => {
   const recipe = uploadToRecipe({
     id: "shared-1",
-    name: "Roasted carrots",
+    name: { en: "Roasted carrots", es: "Zanahorias rostizadas" },
     category: "side",
-    ingredientsText: "1 lb carrots\nOlive oil",
-    stepsText: "Roast until browned.",
-    notes: "Good warm.",
+    ingredientsText: { en: "1 lb carrots\nOlive oil", es: "1 libra de zanahorias\nAceite de oliva" },
+    stepsText: { en: "Roast until browned.", es: "Hornear hasta dorar." },
+    notes: { en: "Good warm.", es: "Buena tibia." },
     photos: [],
   }, "Shared upload", "Receta compartida");
 
   assert.equal(recipe.name.en, "Roasted carrots");
+  assert.equal(recipe.name.es, "Zanahorias rostizadas");
   assert.equal(recipe.category, "side");
   assert.deepEqual(recipe.ingredients.en, ["1 lb carrots", "Olive oil"]);
+  assert.deepEqual(recipe.ingredients.es, ["1 libra de zanahorias", "Aceite de oliva"]);
   assert.deepEqual(recipe.photos, ["assets/meatballs-2.jpg"]);
 });
 

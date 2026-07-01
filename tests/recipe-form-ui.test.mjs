@@ -145,6 +145,7 @@ function harness(overrides = {}) {
     saveSharedState: async () => {
       state.saveSharedStateCalls += 1;
     },
+    getLang: () => "en",
     recipeById: (id) => recipes.find((recipe) => recipe.id === id) || null,
     allRecipes: () => recipes.filter((recipe) => !state.deleted.includes(recipe.id)),
     getSelectedRecipeId: () => state.selectedRecipeId,
@@ -215,7 +216,7 @@ test("recipe edit keeps existing photos when no replacement is selected", async 
 
   await elements["#editRecipeForm"].dispatch("submit");
 
-  assert.equal(state.edits["recipe-1"].name, "Updated recipe");
+  assert.deepEqual(state.edits["recipe-1"].name, { en: "Updated recipe" });
   assert.deepEqual(state.edits["recipe-1"].photos, ["existing.jpg"]);
   assert.equal(state.saveSharedStateCalls, 1);
 });
@@ -322,7 +323,7 @@ test("failed live recipe save creates a local draft with imported photos", async
   try {
     await elements["#uploadForm"].dispatch("submit");
 
-    assert.equal(state.drafts[0].name, "Draft soup");
+    assert.deepEqual(state.drafts[0].name, { en: "Draft soup" });
     assert.deepEqual(state.drafts[0].photos, ["url-photo.jpg"]);
     assert.equal(state.persistedDrafts, true);
     assert.equal(state.renderRecipesCalls, 1);
@@ -348,7 +349,7 @@ test("failed live recipe save keeps selected queued photos in local draft", asyn
     await elements["#photoInput"].dispatch("change");
     await elements["#uploadForm"].dispatch("submit");
 
-    assert.equal(state.drafts[0].name, "Draft pasta");
+    assert.deepEqual(state.drafts[0].name, { en: "Draft pasta" });
     assert.deepEqual(state.drafts[0].photos, ["data:page-1.jpg"]);
   } finally {
     console.warn = originalWarn;

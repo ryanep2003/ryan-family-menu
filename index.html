@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#fbf7ef" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=22" />
+    <link rel="stylesheet" href="styles.css?v=23" />
   </head>
   <body>
     <header class="app-header">
@@ -234,7 +234,7 @@
         <div class="library-tools">
           <label>
             <span data-i18n="searchLabel">Search recipes</span>
-            <input type="search" id="recipeSearch" placeholder="chicken, salad, pasta" />
+            <input type="search" id="recipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" placeholder="chicken, salad, pasta" />
           </label>
           <label>
             <span data-i18n="categoryFilterLabel">Category</span>
@@ -279,7 +279,7 @@
           </label>
           <label>
             <span data-i18n="nameLabel">Recipe name</span>
-            <input type="text" id="nameInput" placeholder="Grandma's chicken tacos" />
+            <input type="text" id="nameInput" data-i18n-placeholder="recipeNamePlaceholder" placeholder="Grandma's chicken tacos" />
           </label>
           <label>
             <span data-i18n="categoryLabel">Category</span>
@@ -292,19 +292,19 @@
           </label>
           <label>
             <span data-i18n="ingredientsLabel">Ingredients</span>
-            <textarea id="ingredientsInput" rows="5" placeholder="One ingredient per line"></textarea>
+            <textarea id="ingredientsInput" rows="5" data-i18n-placeholder="ingredientsPlaceholder" placeholder="One ingredient per line"></textarea>
           </label>
           <label>
             <span data-i18n="stepsLabel">Steps</span>
-            <textarea id="stepsInput" rows="6" placeholder="One step per line"></textarea>
+            <textarea id="stepsInput" rows="6" data-i18n-placeholder="stepsPlaceholder" placeholder="One step per line"></textarea>
           </label>
           <label>
             <span data-i18n="allergyLabel">Allergy or safety warning</span>
-            <textarea id="allergyInput" rows="3" placeholder="Example: do not serve to Grace until ingredient is confirmed"></textarea>
+            <textarea id="allergyInput" rows="3" data-i18n-placeholder="allergyPlaceholder" placeholder="Example: do not serve to Grace until ingredient is confirmed"></textarea>
           </label>
           <label>
             <span data-i18n="noteLabel">Family notes</span>
-            <textarea id="noteInput" rows="4" placeholder="Kid notes, where ingredients are, serving ideas"></textarea>
+            <textarea id="noteInput" rows="4" data-i18n-placeholder="familyNotesPlaceholder" placeholder="Kid notes, where ingredients are, serving ideas"></textarea>
           </label>
           <button class="primary-action" type="submit" data-i18n="saveDraft">Save draft</button>
           <p class="upload-status" id="uploadStatus" role="status"></p>
@@ -396,6 +396,6 @@
       </section>
     </main>
 
-    <script type="module" src="app.js?v=46"></script>
+    <script type="module" src="app.js?v=47"></script>
   </body>
 </html>

@@ -2,6 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { requireWriteAuth } from "./_auth.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
+import { cleanLocalizedText, hasLocalizedContent } from "../../localized-data.js";
 
 const STORE_NAME = "family-menu-state";
 const STATE_KEY = "shared-state";
@@ -29,7 +30,12 @@ function cleanPhoto(value) {
 
 function cleanMeal(value) {
   const source = value && typeof value === "object" ? value : {};
-  return Object.fromEntries(MEAL_KEYS.map((key) => [key, cleanText(source[key], key === "notes" ? 500 : 120)]));
+  return {
+    main: cleanText(source.main, 120),
+    side: cleanText(source.side, 120),
+    salad: cleanText(source.salad, 120),
+    notes: cleanLocalizedText(source.notes, 500),
+  };
 }
 
 function cleanSchedule(value) {
@@ -54,8 +60,8 @@ function cleanFavorites(value) {
 }
 
 function cleanTask(task) {
-  const text = cleanText(task?.text, 220);
-  if (!text) return null;
+  const text = cleanLocalizedText(task?.text, 220);
+  if (!hasLocalizedContent(text)) return null;
   const assignee = TASK_ASSIGNEES.includes(task.assignee)
     ? task.assignee
     : "other";
@@ -76,8 +82,8 @@ function cleanTasks(value) {
 }
 
 function cleanRecipeEdit(edit) {
-  const name = cleanText(edit?.name, 120);
-  if (!name) return null;
+  const name = cleanLocalizedText(edit?.name, 120);
+  if (!hasLocalizedContent(name)) return null;
   const category = ["main", "side", "salad", "sauce", "draft"].includes(edit.category)
     ? edit.category
     : "main";
@@ -86,10 +92,10 @@ function cleanRecipeEdit(edit) {
     id: cleanText(edit.id, 160),
     name,
     category,
-    ingredientsText: cleanText(edit.ingredientsText, 12000),
-    stepsText: cleanText(edit.stepsText, 12000),
-    allergyWarning: cleanText(edit.allergyWarning, 600),
-    notes: cleanText(edit.notes, 2000),
+    ingredientsText: cleanLocalizedText(edit.ingredientsText, 12000),
+    stepsText: cleanLocalizedText(edit.stepsText, 12000),
+    allergyWarning: cleanLocalizedText(edit.allergyWarning, 600),
+    notes: cleanLocalizedText(edit.notes, 2000),
     photos: Array.isArray(edit.photos)
       ? edit.photos.map(cleanPhoto).filter(Boolean).slice(0, 3)
       : [],

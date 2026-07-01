@@ -1,7 +1,9 @@
-function localizeRecipeField(value, lang) {
-  if (typeof value === "string") return value;
-  return value?.[lang] || value?.en || "";
-}
+import {
+  allLocalizedText,
+  canonicalText,
+  localizedTextMap,
+  updateLocalizedText,
+} from "./localized-data.js";
 
 export function cleanIngredientForGrocery(item) {
   return `${item || ""}`.replace(/\s+/g, " ").trim();
@@ -16,10 +18,11 @@ export function normalizedWords(value) {
     "for", "and", "with", "the", "of", "or", "to", "in",
   ]);
 
-  return `${value || ""}`
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, " ")
-    .split(/\s+/)
+  return allLocalizedText(value)
+    .flatMap((entry) => `${entry || ""}`
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, " ")
+      .split(/\s+/))
     .map((word) => word.replace(/s$/, ""))
     .filter((word) => word.length > 2 && !stopWords.has(word) && !/^\d+$/.test(word));
 }
@@ -37,7 +40,7 @@ export function inventoryMatchFor(inventory, text, includeDepleted = false) {
 }
 
 function itemKey(item) {
-  return `${item.store || "any"}::${item.text.toLowerCase()}`;
+  return `${item.store || "any"}::${canonicalText(item.text).toLowerCase()}`;
 }
 
 export function groceryItem(text, {
@@ -46,15 +49,18 @@ export function groceryItem(text, {
   recipeId = "",
   recipeName = "",
   inventoryItem = null,
+  lang = "en",
 } = {}) {
   return {
     id: `grocery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    text: cleanIngredientForGrocery(text),
+    text: typeof text === "string"
+      ? updateLocalizedText("", cleanIngredientForGrocery(text), lang)
+      : text,
     checked: Boolean(inventoryItem),
     store,
     source,
     recipeId,
-    recipeName,
+    recipeName: typeof recipeName === "string" ? localizedTextMap(recipeName) : recipeName,
     inInventory: Boolean(inventoryItem),
     createdAt: new Date().toISOString(),
   };
@@ -71,16 +77,23 @@ export function mergeGroceries(existing, incoming) {
 }
 
 export function groceryItemsFromRecipe(recipe, lang, inventory) {
-  const recipeName = localizeRecipeField(recipe.name, lang);
-  const ingredients = recipe.ingredients?.[lang] || recipe.ingredients?.en || [];
+  const ingredientsEn = recipe.ingredients?.en || [];
+  const ingredientsEs = recipe.ingredients?.es || [];
+  const ingredientCount = Math.max(ingredientsEn.length, ingredientsEs.length);
 
-  return ingredients
-    .map((ingredient) => cleanIngredientForGrocery(ingredient))
-    .filter(Boolean)
-    .map((text) => groceryItem(text, {
+  return Array.from({ length: ingredientCount }, (_, index) => {
+    const text = {};
+    const en = cleanIngredientForGrocery(ingredientsEn[index]);
+    const es = cleanIngredientForGrocery(ingredientsEs[index]);
+    if (en) text.en = en;
+    if (es) text.es = es;
+    if (!en && !es) return null;
+    return groceryItem(text, {
       source: "recipe-detail",
       recipeId: recipe.id,
-      recipeName,
+      recipeName: recipe.name,
       inventoryItem: inventoryMatchFor(inventory, text),
-    }));
+      lang,
+    });
+  }).filter(Boolean);
 }

@@ -1,3 +1,5 @@
+import { localizedText, updateLocalizedText } from "./localized-data.js";
+
 export function createScheduleUi({
   $,
   $$,
@@ -55,7 +57,7 @@ export function createScheduleUi({
         `).join("")}
         <label class="meal-notes">
           <span>${t("notesSlot")}</span>
-          <textarea data-meal-context="${context}" data-slot="notes" rows="2">${escapeHtml(meal.notes || "")}</textarea>
+          <textarea data-meal-context="${context}" data-slot="notes" rows="2">${escapeHtml(localizedText(meal.notes, getLang()))}</textarea>
         </label>
       </div>
       <p class="${mealHasWarning(meal) ? "has-warning" : ""}">${escapeHtml(mealSummary(meal))}</p>
@@ -75,7 +77,9 @@ export function createScheduleUi({
         const [type, key] = control.dataset.mealContext.split(":");
         const slot = control.dataset.slot;
         const target = { ...calendarMealForDateKey(key) };
-        target[slot] = control.value;
+        target[slot] = slot === "notes"
+          ? updateLocalizedText(target.notes, control.value, getLang())
+          : control.value;
 
         const schedule = getSchedule();
         const calendarMeals = getCalendarMeals();

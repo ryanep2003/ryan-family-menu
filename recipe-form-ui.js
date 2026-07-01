@@ -1,3 +1,5 @@
+import { updateLocalizedText } from "./localized-data.js";
+
 const FALLBACK_PHOTO = "assets/meatballs-2.jpg";
 const MAX_UPLOAD_PHOTOS = 3;
 
@@ -12,6 +14,7 @@ export function createRecipeFormUi({
   importRecipeUrl,
   saveSharedRecipe,
   saveSharedState,
+  getLang,
   recipeById,
   allRecipes,
   getSelectedRecipeId,
@@ -121,12 +124,18 @@ export function createRecipeFormUi({
 
       setRecipeEdit(selectedRecipeId, {
         id: selectedRecipeId,
-        name,
+        name: updateLocalizedText(current.name, name, getLang()),
         category: $("#editCategoryInput").value,
-        ingredientsText: $("#editIngredientsInput").value.trim(),
-        stepsText: $("#editStepsInput").value.trim(),
-        allergyWarning: $("#editAllergyInput").value.trim(),
-        notes: $("#editNoteInput").value.trim(),
+        ingredientsText: updateLocalizedText({
+          en: (current.ingredients?.en || []).join("\n"),
+          es: (current.ingredients?.es || []).join("\n"),
+        }, $("#editIngredientsInput").value.trim(), getLang()),
+        stepsText: updateLocalizedText({
+          en: (current.steps?.en || []).join("\n"),
+          es: (current.steps?.es || []).join("\n"),
+        }, $("#editStepsInput").value.trim(), getLang()),
+        allergyWarning: updateLocalizedText(current.allergyWarning, $("#editAllergyInput").value.trim(), getLang()),
+        notes: updateLocalizedText(current.notes, $("#editNoteInput").value.trim(), getLang()),
         photos: replacementPhotos.length
           ? replacementPhotos
           : current.photos?.length ? current.photos : [FALLBACK_PHOTO],
@@ -239,12 +248,12 @@ export function createRecipeFormUi({
       });
       recipePhotos = photos.length ? photos : getImportedRecipePhotos();
       const recipe = {
-        name,
+        name: updateLocalizedText("", name, getLang()),
         category: $("#categoryInput").value,
-        ingredientsText: $("#ingredientsInput").value.trim(),
-        stepsText: $("#stepsInput").value.trim(),
-        allergyWarning: $("#allergyInput").value.trim(),
-        notes: $("#noteInput").value.trim(),
+        ingredientsText: updateLocalizedText("", $("#ingredientsInput").value.trim(), getLang()),
+        stepsText: updateLocalizedText("", $("#stepsInput").value.trim(), getLang()),
+        allergyWarning: updateLocalizedText("", $("#allergyInput").value.trim(), getLang()),
+        notes: updateLocalizedText("", $("#noteInput").value.trim(), getLang()),
         photos: recipePhotos.length ? recipePhotos : [FALLBACK_PHOTO],
       };
       const saved = await saveSharedRecipe(recipe);
@@ -259,12 +268,12 @@ export function createRecipeFormUi({
       console.warn(error);
       const fallbackDraft = {
         id: `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name,
+        name: updateLocalizedText("", name, getLang()),
         category: $("#categoryInput").value,
-        ingredientsText: $("#ingredientsInput").value.trim(),
-        stepsText: $("#stepsInput").value.trim(),
-        allergyWarning: $("#allergyInput").value.trim(),
-        notes: $("#noteInput").value.trim(),
+        ingredientsText: updateLocalizedText("", $("#ingredientsInput").value.trim(), getLang()),
+        stepsText: updateLocalizedText("", $("#stepsInput").value.trim(), getLang()),
+        allergyWarning: updateLocalizedText("", $("#allergyInput").value.trim(), getLang()),
+        notes: updateLocalizedText("", $("#noteInput").value.trim(), getLang()),
         photos: recipePhotos.length ? recipePhotos : [FALLBACK_PHOTO],
         createdAt: new Date().toISOString(),
       };

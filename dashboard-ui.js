@@ -1,3 +1,5 @@
+import { localizedText, updateLocalizedText } from "./localized-data.js";
+
 export function createDashboardUi({
   $,
   $$,
@@ -81,7 +83,7 @@ export function createDashboardUi({
             <label>
               <input type="checkbox" data-task-id="${escapeHtml(task.id)}" ${task.completed ? "checked" : ""} />
               <span>
-                <strong>${escapeHtml(task.text)}</strong>
+                <strong>${escapeHtml(localizedText(task.text, getLang()))}</strong>
                 <small>${escapeHtml(taskAssigneeLabel(task.assignee))}</small>
               </span>
             </label>
@@ -159,7 +161,7 @@ export function createDashboardUi({
 
       setTasks([{
         id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        text,
+        text: updateLocalizedText("", text, getLang()),
         assignee: $("#taskAssigneeInput").value,
         date: formatDateKey(new Date()),
         completed: false,

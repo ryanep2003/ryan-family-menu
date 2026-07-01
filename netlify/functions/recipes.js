@@ -1,6 +1,7 @@
 import { getStore } from "@netlify/blobs";
 import { requireWriteAuth } from "./_auth.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
+import { cleanLocalizedText, hasLocalizedContent, localizedText } from "../../localized-data.js";
 
 const STORE_NAME = "family-menu-recipes";
 const RECIPES_KEY = "recipes";
@@ -12,10 +13,6 @@ const MAX_REQUEST_BYTES = 2000000;
 const MAX_TEXT_LENGTH = 12000;
 const MAX_RECIPES = 200;
 
-function cleanText(value, limit = MAX_TEXT_LENGTH) {
-  return `${value || ""}`.trim().slice(0, limit);
-}
-
 function cleanPhotos(photos) {
   if (!Array.isArray(photos)) return [];
   return photos
@@ -25,9 +22,9 @@ function cleanPhotos(photos) {
     .slice(0, MAX_PHOTOS);
 }
 
-function cleanRecipe(input) {
-  const name = cleanText(input.name, 120);
-  if (!name) return null;
+export function cleanRecipe(input) {
+  const name = cleanLocalizedText(input.name, 120);
+  if (!hasLocalizedContent(name)) return null;
 
   const id = typeof input.id === "string" && input.id.startsWith("shared-")
     ? input.id
@@ -41,10 +38,10 @@ function cleanRecipe(input) {
     id,
     name,
     category,
-    ingredientsText: cleanText(input.ingredientsText),
-    stepsText: cleanText(input.stepsText),
-    allergyWarning: cleanText(input.allergyWarning, 600),
-    notes: cleanText(input.notes, 2000),
+    ingredientsText: cleanLocalizedText(input.ingredientsText, MAX_TEXT_LENGTH),
+    stepsText: cleanLocalizedText(input.stepsText, MAX_TEXT_LENGTH),
+    allergyWarning: cleanLocalizedText(input.allergyWarning, 600),
+    notes: cleanLocalizedText(input.notes, 2000),
     photos: cleanPhotos(input.photos),
     createdAt: new Date().toISOString(),
   };
@@ -67,12 +64,12 @@ async function readRecipes(store) {
 async function writeRecipe(store, recipe) {
   const index = (await store.get(INDEX_KEY, { type: "json" }).catch(() => [])) || [];
   const nextIndex = [
-    {
-      id: recipe.id,
-      name: recipe.name,
-      category: recipe.category,
-      createdAt: recipe.createdAt,
-    },
+      {
+        id: recipe.id,
+        name: localizedText(recipe.name, "en") || localizedText(recipe.name, "es"),
+        category: recipe.category,
+        createdAt: recipe.createdAt,
+      },
     ...index.filter((entry) => entry?.id && entry.id !== recipe.id),
   ].slice(0, MAX_RECIPES);
 

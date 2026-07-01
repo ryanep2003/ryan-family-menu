@@ -50,7 +50,7 @@ export function createRecipeLibraryUi({
       `)
       .join("");
     if (!filtered.length) {
-      $("#recipeList").innerHTML = `<p class="empty-state">${getLang() === "en" ? "No matching recipes." : "No hay recetas que coincidan."}</p>`;
+      $("#recipeList").innerHTML = `<p class="empty-state">${t("noMatchingRecipes")}</p>`;
     }
   }
 

@@ -2,6 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { requireWriteAuth } from "./_auth.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
+import { cleanLocalizedText, hasLocalizedContent } from "../../localized-data.js";
 
 const STORE_NAME = "family-menu-inventory";
 const INVENTORY_KEY = "items";
@@ -15,9 +16,9 @@ function cleanPhoto(value) {
   return "";
 }
 
-function cleanItem(item) {
-  const text = `${item.text || ""}`.trim().slice(0, 220);
-  if (!text) return null;
+export function cleanItem(item) {
+  const text = cleanLocalizedText(item.text, 220);
+  if (!hasLocalizedContent(text)) return null;
   const location = ["pantry", "fridge", "freezer", "household"].includes(item.location)
     ? item.location
     : "pantry";
@@ -28,7 +29,7 @@ function cleanItem(item) {
   return {
     id: `${item.id || `inventory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}`,
     text,
-    quantity: `${item.quantity || ""}`.trim().slice(0, 80),
+    quantity: cleanLocalizedText(item.quantity, 80),
     location,
     stockState,
     photos: Array.isArray(item.photos)
@@ -39,7 +40,7 @@ function cleanItem(item) {
   };
 }
 
-function cleanItems(items) {
+export function cleanItems(items) {
   if (!Array.isArray(items)) return [];
   return items.map(cleanItem).filter(Boolean).slice(0, MAX_ITEMS);
 }

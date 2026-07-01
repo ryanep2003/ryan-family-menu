@@ -17,6 +17,7 @@ import { getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
 import { createInventoryUi } from "./inventory-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
+import { localizedText } from "./localized-data.js";
 import { createRecipeFormUi } from "./recipe-form-ui.js";
 import { createRecipeLibraryUi } from "./recipe-library-ui.js";
 import { createReceiptUi } from "./receipt-ui.js";
@@ -143,8 +144,7 @@ function updateMealsAfterRecipeDelete(recipeId) {
 }
 
 function localize(value) {
-  if (typeof value === "string") return value;
-  return value[lang] || value.en || "";
+  return localizedText(value, lang);
 }
 
 function escapeHtml(value) {
@@ -356,6 +356,7 @@ function manualGroceryItemsFromText(text, store) {
     .map((item) => groceryItem(item, {
       store,
       source: "manual",
+      lang,
     }));
 }
 
@@ -416,6 +417,7 @@ inventoryUi = createInventoryUi({
     inventoryMode = mode;
   },
   getInventoryFilter: () => inventoryFilter,
+  getLang: () => lang,
   getInventorySuggestions: () => inventorySuggestions,
   setInventorySuggestions: (items) => {
     inventorySuggestions = items;
@@ -447,6 +449,7 @@ const receiptUi = createReceiptUi({
   setReceiptSuggestions: (items) => {
     receiptSuggestions = items;
   },
+  getLang: () => lang,
   getInventory: () => inventory,
   setInventory: (items) => {
     inventory = items;
@@ -760,7 +763,7 @@ async function saveInventory() {
 async function recognizeInventory(images, location) {
   const data = await postJson(
     "/.netlify/functions/recognize-inventory",
-    { images, location },
+    { images, location, lang },
     "Could not scan inventory photos."
   );
   return Array.isArray(data.items) ? data.items : [];
@@ -787,6 +790,7 @@ const recipeFormUi = createRecipeFormUi({
   importRecipeUrl,
   saveSharedRecipe,
   saveSharedState,
+  getLang: () => lang,
   recipeById,
   allRecipes,
   getSelectedRecipeId: () => selectedRecipeId,
@@ -828,7 +832,7 @@ const recipeFormUi = createRecipeFormUi({
 });
 
 async function recognizeReceipt(images) {
-  const data = await postJson("/.netlify/functions/recognize-receipt", { images }, t("receiptScanError"));
+  const data = await postJson("/.netlify/functions/recognize-receipt", { images, lang }, t("receiptScanError"));
   return Array.isArray(data.items) ? data.items : [];
 }
 
@@ -915,8 +919,7 @@ $("#publishDraftRecipe").addEventListener("click", async () => {
   setDetailStatus(t("publishingDraftRecipe"));
 
   try {
-    const recipe = recipeToEditableUpload(recipeById(selectedRecipeId));
-    const saved = await saveSharedRecipe(recipe);
+    const saved = await saveSharedRecipe(draft);
     drafts = drafts.filter((item) => item.id !== draft.id);
     delete recipeEdits[draft.id];
     persistDrafts();
@@ -949,7 +952,7 @@ $("#addRecipeGroceries").addEventListener("click", async () => {
 recipeFormUi.bind();
 
 $("#markCooked").addEventListener("click", () => {
-  $("#markCooked").textContent = lang === "en" ? "Cooked today" : "Hecha hoy";
+  $("#markCooked").textContent = t("cookedToday");
 });
 
 recipeLibraryUi.bindLibraryControls();
@@ -1020,7 +1023,9 @@ $("#inventoryForm").addEventListener("submit", async (event) => {
     text,
     $("#inventoryQuantityInput").value.trim(),
     $("#inventoryLocationInput").value,
-    photos
+    photos,
+    "some",
+    lang
   ));
   $("#inventoryInput").value = "";
   $("#inventoryQuantityInput").value = "";

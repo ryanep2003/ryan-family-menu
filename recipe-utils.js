@@ -1,3 +1,5 @@
+import { localizedText } from "./localized-data.js";
+
 const FALLBACK_PHOTO = "assets/meatballs-2.jpg";
 
 const categoryLabels = {
@@ -28,6 +30,13 @@ function splitLines(text, fallback) {
   return lines.length ? lines : [fallback];
 }
 
+function localizedPair(value, enFallback = "", esFallback = "") {
+  return {
+    en: localizedText(value, "en") || enFallback,
+    es: localizedText(value, "es") || esFallback,
+  };
+}
+
 export function categoryFor(recipe) {
   return recipe.category || recipeCategories[recipe.id] || "main";
 }
@@ -39,23 +48,23 @@ export function categoryLabel(category, localize) {
 export function uploadToRecipe(upload, enMeta, esMeta) {
   return {
     ...upload,
-    name: { en: upload.name, es: upload.name },
+    name: localizedPair(upload.name),
     meta: { en: enMeta, es: esMeta },
-    short: { en: upload.notes || "Needs review", es: upload.notes || "Necesita revision" },
+    short: localizedPair(upload.notes, "Needs review", "Necesita revision"),
     tags: { en: enMeta, es: esMeta },
     category: upload.category || "draft",
     allergyWarning: upload.allergyWarning
-      ? { en: upload.allergyWarning, es: upload.allergyWarning }
+      ? localizedPair(upload.allergyWarning)
       : undefined,
     ingredients: {
-      en: splitLines(upload.ingredientsText, "Add ingredients after review."),
-      es: splitLines(upload.ingredientsText, "Agrega ingredientes despues de revisar."),
+      en: splitLines(localizedText(upload.ingredientsText, "en"), "Add ingredients after review."),
+      es: splitLines(localizedText(upload.ingredientsText, "es"), "Agrega ingredientes despues de revisar."),
     },
     steps: {
-      en: splitLines(upload.stepsText, "Add cooking steps after review."),
-      es: splitLines(upload.stepsText, "Agrega los pasos despues de revisar."),
+      en: splitLines(localizedText(upload.stepsText, "en"), "Add cooking steps after review."),
+      es: splitLines(localizedText(upload.stepsText, "es"), "Agrega los pasos despues de revisar."),
     },
-    notes: { en: upload.notes || "No notes yet.", es: upload.notes || "Sin notas todavia." },
+    notes: localizedPair(upload.notes, "No notes yet.", "Sin notas todavia."),
     photos: upload.photos?.length ? upload.photos : [FALLBACK_PHOTO],
   };
 }

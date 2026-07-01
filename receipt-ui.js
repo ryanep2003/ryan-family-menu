@@ -1,3 +1,5 @@
+import { localizedText } from "./localized-data.js";
+
 export function createReceiptUi({
   $,
   $$,
@@ -16,6 +18,7 @@ export function createReceiptUi({
   saveInventory,
   getReceiptSuggestions,
   setReceiptSuggestions,
+  getLang,
   getInventory,
   setInventory,
   getGroceries,
@@ -40,8 +43,11 @@ export function createReceiptUi({
           <label class="suggestion-item">
             <input type="checkbox" data-receipt-suggestion="${index}" checked />
             <span>
-              <strong>${escapeHtml(item.text)}</strong>
-              <em>${escapeHtml([item.quantity, item.matchText ? `${t("receiptMatch")}: ${item.matchText}` : t("receiptNewItem")].filter(Boolean).join(" · "))}</em>
+              <strong>${escapeHtml(localizedText(item.text, getLang()))}</strong>
+              <em>${escapeHtml([
+                localizedText(item.quantity, getLang()),
+                item.matchText ? `${t("receiptMatch")}: ${localizedText(item.matchText, getLang())}` : t("receiptNewItem"),
+              ].filter(Boolean).join(" · "))}</em>
             </span>
           </label>
         `).join("")}
@@ -63,7 +69,8 @@ export function createReceiptUi({
         item.quantity,
         $("#receiptScanLocationInput").value,
         [],
-        "full"
+        "full",
+        getLang()
       ))));
       setGroceries(getGroceries().filter((item) => !matchedIds.has(item.id)));
       setReceiptSuggestions([]);

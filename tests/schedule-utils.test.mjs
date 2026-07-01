@@ -50,6 +50,7 @@ test("schedule and calendar normalization keep expected shape", () => {
 test("mealHasContent checks any planned slot or notes", () => {
   assert.equal(mealHasContent({ ...emptyMeal }), false);
   assert.equal(mealHasContent({ ...emptyMeal, notes: "pizza night" }), true);
+  assert.equal(mealHasContent({ ...emptyMeal, notes: { es: "noche de pizza" } }), true);
 });
 
 test("removeRecipeFromPlans clears deleted recipes from weekly and calendar meals", () => {

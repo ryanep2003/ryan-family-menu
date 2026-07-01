@@ -1,3 +1,5 @@
+import { hasLocalizedContent, isLocalizedValue } from "./localized-data.js";
+
 export const days = [
   { key: "mon", en: "Monday", es: "Lunes" },
   { key: "tue", en: "Tuesday", es: "Martes" },
@@ -23,7 +25,11 @@ const defaultSchedule = {
 export function normalizeMealPlan(value) {
   if (!value) return { ...emptyMeal };
   if (typeof value === "string") return { ...emptyMeal, main: value };
-  return { ...emptyMeal, ...value };
+  const normalized = { ...emptyMeal, ...value };
+  if (typeof normalized.notes !== "string" && !isLocalizedValue(normalized.notes)) {
+    normalized.notes = "";
+  }
+  return normalized;
 }
 
 export function normalizeSchedule(raw) {
@@ -68,7 +74,7 @@ export function activeWeekDateKeys(weekStartKey) {
 }
 
 export function mealHasContent(meal) {
-  return Boolean(meal.main || meal.side || meal.salad || meal.notes);
+  return Boolean(meal.main || meal.side || meal.salad || hasLocalizedContent(meal.notes));
 }
 
 export function removeRecipeFromPlans(schedule, calendarMeals, recipeId, slotKeys = ["main", "side", "salad"]) {

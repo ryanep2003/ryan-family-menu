@@ -12,6 +12,10 @@ function cleanLocation(location, fallback = "fridge") {
   return ALLOWED_LOCATIONS.has(location) ? location : fallback;
 }
 
+function cleanLanguage(value) {
+  return value === "es" ? "es" : "en";
+}
+
 function cleanSuggestion(item, fallbackLocation) {
   const text = `${item?.text || ""}`.trim().slice(0, 120);
   if (!text) return null;
@@ -40,6 +44,7 @@ export default async (request) => {
   if (error) return error;
 
   const fallbackLocation = cleanLocation(payload.location, "fridge");
+  const outputLanguage = cleanLanguage(payload.lang);
   const images = Array.isArray(payload.images)
     ? payload.images
         .map((image) => cleanImageDataUrl(image, MAX_IMAGE_BYTES))
@@ -58,6 +63,9 @@ export default async (request) => {
     "Be conservative. Include only visible items you can identify. Do not guess hidden items.",
     "Merge duplicates across photos. Estimate quantities with words like 'about 4', '1 jar', 'multiple cartons', or 'several'.",
     "Valid locations are pantry, fridge, freezer, household. Use the provided default location unless the image clearly shows another location.",
+    outputLanguage === "es"
+      ? "Write item names and quantities in Spanish."
+      : "Write item names and quantities in English.",
   ].join(" ");
 
   const response = await fetch("https://api.openai.com/v1/responses", {

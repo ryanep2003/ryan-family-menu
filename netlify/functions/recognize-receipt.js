@@ -7,6 +7,10 @@ const MAX_IMAGE_BYTES = 700000;
 const MAX_REQUEST_BYTES = 4000000;
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 
+function cleanLanguage(value) {
+  return value === "es" ? "es" : "en";
+}
+
 function cleanText(value, limit = 160) {
   return `${value || ""}`.trim().slice(0, limit);
 }
@@ -48,6 +52,8 @@ export default async (request) => {
     return jsonResponse({ error: "No images provided." }, 400);
   }
 
+  const outputLanguage = cleanLanguage(payload.lang);
+
   const prompt = [
     "You read grocery receipts for a family meal-planning app.",
     "Return only JSON in this shape: {\"items\":[{\"text\":\"Milk\",\"quantity\":\"1 gallon\",\"confidence\":0.9}]}",
@@ -56,6 +62,9 @@ export default async (request) => {
     "Ignore taxes, totals, payment lines, discounts, store messages, bag fees, and non-item receipt text.",
     "Merge duplicate items and include quantities when clear.",
     "Be conservative; include only purchased items visible in the receipt.",
+    outputLanguage === "es"
+      ? "Write item names and quantities in Spanish."
+      : "Write item names and quantities in English.",
   ].join(" ");
 
   const response = await fetch("https://api.openai.com/v1/responses", {

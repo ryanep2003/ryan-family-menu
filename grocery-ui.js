@@ -1,3 +1,5 @@
+import { canonicalText, localizedText } from "./localized-data.js";
+
 export function createGroceryUi({
   $,
   t,
@@ -27,13 +29,13 @@ export function createGroceryUi({
       localize(recipe.name),
       recipe.name?.en,
       recipe.name?.es,
-    ].includes(item.recipeName)) || null;
+    ].includes(localizedText(item.recipeName, getLang()))) || null;
   }
 
   function grocerySourceLabel(item) {
     const recipe = recipeForGroceryItem(item);
     if (recipe) return localize(recipe.name);
-    if (item.recipeName) return item.recipeName;
+    if (item.recipeName) return localizedText(item.recipeName, getLang());
     if (item.source === "inventory-restock") return t("restockSource");
     return t("addOnsSection");
   }
@@ -46,7 +48,7 @@ export function createGroceryUi({
     const englishIngredients = recipe.ingredients?.en || [];
     const spanishIngredients = recipe.ingredients?.es || [];
     const currentIngredients = recipe.ingredients?.[lang] || englishIngredients;
-    const itemText = cleanIngredientForGrocery(item.text).toLowerCase();
+    const itemText = cleanIngredientForGrocery(canonicalText(item.text)).toLowerCase();
     const ingredientIndex = [...englishIngredients, ...spanishIngredients, ...currentIngredients]
       .findIndex((ingredient) => cleanIngredientForGrocery(ingredient).toLowerCase() === itemText);
     const index = ingredientIndex >= englishIngredients.length + spanishIngredients.length
@@ -92,12 +94,12 @@ export function createGroceryUi({
     if (item.inInventory) return "";
     const match = findInventoryMatch(getInventory(), item.text);
     if (!match) return "";
-    return `${t("alreadyAtHomeLabel")}: ${match.quantity || inventoryLocationLabel(match.location)}`;
+    return `${t("alreadyAtHomeLabel")}: ${localizedText(match.quantity, getLang()) || inventoryLocationLabel(match.location)}`;
   }
 
   function inventoryShoppingNote(item) {
     const overlap = shoppingOverlapFor(item.text);
-    return overlap ? `${t("onShoppingList")}: ${overlap.text}` : "";
+    return overlap ? `${t("onShoppingList")}: ${localizedText(overlap.text, getLang())}` : "";
   }
 
   function purchasedGroceries() {
@@ -129,7 +131,7 @@ export function createGroceryUi({
             <label class="grocery-item">
               <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" ${item.checked ? "checked" : ""} />
               <span>
-                <strong>${escapeHtml(item.text)}</strong>
+                <strong>${escapeHtml(localizedText(item.text, getLang()))}</strong>
                 ${translation ? `<em class="translation-note">${escapeHtml(translation)}</em>` : ""}
                 <em>${escapeHtml(groceryItemNote(item))}</em>
                 ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
