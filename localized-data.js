@@ -1,3 +1,9 @@
+function sanitizedText(value) {
+  const text = `${value || ""}`.trim();
+  if (!text) return "";
+  return /^\[object [^\]]+\]$/.test(text) ? "" : text;
+}
+
 export function isLocalizedValue(value) {
   return Boolean(
     value
@@ -8,24 +14,24 @@ export function isLocalizedValue(value) {
 }
 
 export function localizedText(value, preferredLang = "en") {
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return sanitizedText(value);
   if (!isLocalizedValue(value)) return "";
 
   const fallbackLang = preferredLang === "es" ? "en" : "es";
-  return value[preferredLang] || value[fallbackLang] || "";
+  return sanitizedText(value[preferredLang]) || sanitizedText(value[fallbackLang]) || "";
 }
 
 export function localizedTextExact(value, preferredLang = "en") {
-  if (typeof value === "string") return preferredLang === "en" ? value : "";
+  if (typeof value === "string") return preferredLang === "en" ? sanitizedText(value) : "";
   if (!isLocalizedValue(value)) return "";
-  return value[preferredLang] || "";
+  return sanitizedText(value[preferredLang]) || "";
 }
 
 export function allLocalizedText(value) {
-  if (typeof value === "string") return value.trim() ? [value.trim()] : [];
+  if (typeof value === "string") return sanitizedText(value) ? [sanitizedText(value)] : [];
   if (!isLocalizedValue(value)) return [];
 
-  return [...new Set([value.en, value.es].map((item) => `${item || ""}`.trim()).filter(Boolean))];
+  return [...new Set([value.en, value.es].map(sanitizedText).filter(Boolean))];
 }
 
 export function hasLocalizedContent(value) {
@@ -35,12 +41,14 @@ export function hasLocalizedContent(value) {
 export function localizedTextMap(value) {
   if (isLocalizedValue(value)) {
     const result = {};
-    if (`${value.en || ""}`.trim()) result.en = `${value.en}`.trim();
-    if (`${value.es || ""}`.trim()) result.es = `${value.es}`.trim();
+    const en = sanitizedText(value.en);
+    const es = sanitizedText(value.es);
+    if (en) result.en = en;
+    if (es) result.es = es;
     return result;
   }
 
-  const text = `${value || ""}`.trim();
+  const text = sanitizedText(value);
   return text ? { en: text, es: text } : {};
 }
 
@@ -62,7 +70,7 @@ export function canonicalText(value) {
 }
 
 export function cleanLocalizedText(value, limit) {
-  const trim = (entry) => `${entry || ""}`.trim().slice(0, limit);
+  const trim = (entry) => sanitizedText(entry).slice(0, limit);
 
   if (isLocalizedValue(value)) {
     const result = {};

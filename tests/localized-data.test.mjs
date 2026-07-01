@@ -25,9 +25,19 @@ test("localizedTextExact does not treat fallback text as translated content", ()
   assert.equal(localizedTextExact({ en: "Milk" }, "es"), "");
 });
 
+test("localized helpers ignore legacy object-string corruption", () => {
+  assert.equal(localizedText("[object Object]", "en"), "");
+  assert.equal(localizedText({ en: "[object Object]", es: "Aviso" }, "en"), "Aviso");
+  assert.deepEqual(cleanLocalizedText({ en: "[object Object]", es: "Aviso" }, 120), { es: "Aviso" });
+});
+
 test("updateLocalizedText preserves the opposite language when editing", () => {
   assert.deepEqual(
     updateLocalizedText("Chicken tacos", "Tacos de pollo", "es"),
     { en: "Chicken tacos", es: "Tacos de pollo" }
   );
+});
+
+test("updateLocalizedText clears legacy object-string corruption fully", () => {
+  assert.equal(updateLocalizedText("[object Object]", "", "en"), "");
 });
