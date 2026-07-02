@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { readLimitedText, safeUrl } from "../netlify/functions/import-recipe-url.js";
+import { readLimitedText, recipeFromJsonLd, safeUrl } from "../netlify/functions/import-recipe-url.js";
 
 test("safeUrl allows public http and https URLs", () => {
   assert.equal(safeUrl("https://example.com/recipe")?.href, "https://example.com/recipe");
@@ -43,4 +43,25 @@ test("readLimitedText rejects oversized streamed bodies", async () => {
   const text = await readLimitedText(new Response("this body is too large"), 10);
 
   assert.equal(text, null);
+});
+
+test("recipeFromJsonLd preserves long instruction sentences", () => {
+  const longStep = [
+    "Make sure your stand mixer bowl is super clean.",
+    "Whisk eggs whites on low speed for 2 minutes.",
+    "Increase speed to low-medium and add vinegar and whisk for 3 more minutes.",
+    "Increase speed to medium high and add 1 teaspoon vanilla and the salt.",
+    "Whisk until soft peaks form.",
+    "Slowly add sugar and continue to whisk on high until you see stiff glossy peaks and the sugar is dissolved.",
+  ].join(" ");
+
+  const recipe = recipeFromJsonLd({
+    "@type": "Recipe",
+    name: "Long Step Torte",
+    recipeIngredient: ["8 egg whites"],
+    recipeInstructions: [{ text: longStep }],
+  }, "<title>Long Step Torte</title>", "https://example.com/recipe");
+
+  assert.equal(recipe.stepsText, longStep);
+  assert.match(recipe.stepsText, /sugar is dissolved\.$/);
 });

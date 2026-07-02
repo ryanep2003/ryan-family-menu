@@ -7,15 +7,17 @@ const MAX_REQUEST_BYTES = 4000;
 const MAX_HTML_BYTES = 900000;
 const MAX_TEXT_CHARS = 16000;
 const MAX_PHOTO_BYTES = 420000;
+const MAX_INGREDIENT_CHARS = 500;
+const MAX_STEP_CHARS = 1200;
 
 function cleanText(value, limit) {
   return `${value || ""}`.replace(/\s+/g, " ").trim().slice(0, limit);
 }
 
-function cleanLines(value, limit = 80) {
+function cleanLines(value, { limit = 80, lineLength = 240 } = {}) {
   if (!Array.isArray(value)) return [];
   return value
-    .map((line) => cleanText(line, 240))
+    .map((line) => cleanText(line, lineLength))
     .filter(Boolean)
     .slice(0, limit);
 }
@@ -193,12 +195,13 @@ function categoryFromText(recipe) {
   return "";
 }
 
-function recipeFromJsonLd(recipe, html, url) {
-  const ingredients = cleanLines(recipe?.recipeIngredient);
+export function recipeFromJsonLd(recipe, html, url) {
+  const ingredients = cleanLines(recipe?.recipeIngredient, { lineLength: MAX_INGREDIENT_CHARS });
   const steps = cleanLines(
     Array.isArray(recipe?.recipeInstructions)
       ? recipe.recipeInstructions.flatMap((step) => instructionText(step).split("\n"))
-      : instructionText(recipe?.recipeInstructions).split("\n")
+      : instructionText(recipe?.recipeInstructions).split("\n"),
+    { lineLength: MAX_STEP_CHARS }
   );
   const notes = cleanText(recipe?.description || "", 900);
 
@@ -245,8 +248,8 @@ async function recipeFromTextWithAi(text, url, html) {
   return {
     name: cleanText(parsed.name || titleFromHtml(html), 120),
     category: cleanCategory(parsed.category),
-    ingredientsText: cleanLines(parsed.ingredients).join("\n"),
-    stepsText: cleanLines(parsed.steps).join("\n"),
+    ingredientsText: cleanLines(parsed.ingredients, { lineLength: MAX_INGREDIENT_CHARS }).join("\n"),
+    stepsText: cleanLines(parsed.steps, { lineLength: MAX_STEP_CHARS }).join("\n"),
     allergyWarning: "",
     notes: cleanText(parsed.notes, 900),
     imageUrl: openGraphImage(html, url),
