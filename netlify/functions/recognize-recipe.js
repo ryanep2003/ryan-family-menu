@@ -22,7 +22,7 @@ export function cleanLines(value, { limit = 80, lineLength = 220 } = {}) {
 }
 
 function cleanCategory(value) {
-  return ["main", "side", "salad", "sauce"].includes(value) ? value : "";
+  return ["main", "side", "salad", "sauce", "dessert"].includes(value) ? value : "";
 }
 
 export default async (request) => {
@@ -57,7 +57,7 @@ export default async (request) => {
     "Use the recipe text visible in the photos. Do not invent missing ingredients or steps.",
     "Treat the photos as pages of one recipe. Combine all visible ingredients and every visible numbered step across every photo in order.",
     "If the recipe name is not visible, use an empty string.",
-    "Valid categories are main, side, salad, sauce. Choose the best category, or use an empty string if unclear.",
+    "Valid categories are main, side, salad, sauce, dessert. Choose the best category, or use an empty string if unclear.",
     "Keep ingredients and steps concise, one item per array entry.",
     "Preserve temperatures, times, quantities, and safety notes exactly when visible.",
   ].join(" ");

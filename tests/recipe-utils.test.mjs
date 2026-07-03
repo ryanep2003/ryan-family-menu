@@ -50,6 +50,7 @@ test("recipeToEditableUpload converts display recipes back to edit form values",
 test("category helpers preserve seeded categories and labels", () => {
   assert.equal(categoryFor({ id: "zaatar-parmesan-potatoes" }), "side");
   assert.equal(categoryLabel("salad", localizeEn), "Salad");
+  assert.equal(categoryLabel("dessert", localizeEn), "Dessert");
 });
 
 test("visibleRecipes combines shared uploads, drafts, edits, and deletions", () => {

@@ -30,7 +30,7 @@ export function cleanRecipe(input) {
     ? input.id
     : `shared-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  const category = ["main", "side", "salad", "sauce"].includes(input.category)
+  const category = ["main", "side", "salad", "sauce", "dessert"].includes(input.category)
     ? input.category
     : "main";
 

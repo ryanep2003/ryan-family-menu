@@ -23,7 +23,7 @@ function cleanLines(value, { limit = 80, lineLength = 240 } = {}) {
 }
 
 function cleanCategory(value) {
-  return ["main", "side", "salad", "sauce"].includes(value) ? value : "";
+  return ["main", "side", "salad", "sauce", "dessert"].includes(value) ? value : "";
 }
 
 function isBlockedHost(hostname) {
@@ -190,6 +190,7 @@ function titleFromHtml(html) {
 function categoryFromText(recipe) {
   const text = [recipe.recipeCategory, recipe.recipeCuisine, recipe.name].flat().join(" ").toLowerCase();
   if (/salad/.test(text)) return "salad";
+  if (/dessert|cake|cookie|pie|tart|torte|brownie|ice cream|pudding|custard|meringue|sweet/.test(text)) return "dessert";
   if (/sauce|dressing|dip|marinade|vinaigrette|aioli/.test(text)) return "sauce";
   if (/side|vegetable|potato|rice|beans|bread|roll/.test(text)) return "side";
   return "";
@@ -223,7 +224,7 @@ async function recipeFromTextWithAi(text, url, html) {
     "Extract one recipe from this webpage text for a private family meal-planning app.",
     "Return only JSON in this shape: {\"name\":\"Recipe name\",\"category\":\"side\",\"ingredients\":[\"1 lb carrots\"],\"steps\":[\"Heat oven to 425 F.\"],\"notes\":\"Short useful family note\"}",
     "Use only information in the page text. Do not invent missing ingredients or steps.",
-    "Valid categories are main, side, salad, sauce. Use an empty string if unclear.",
+    "Valid categories are main, side, salad, sauce, dessert. Use an empty string if unclear.",
     `Source URL: ${url}`,
     `Page title: ${cleanText(titleFromHtml(html), 160)}`,
     `Page text: ${text}`,

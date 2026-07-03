@@ -22,7 +22,7 @@ function cleanLines(value, limit = 120) {
 }
 
 function cleanRecipe(recipe) {
-  const category = ["main", "side", "salad", "sauce", "draft"].includes(recipe?.category)
+  const category = ["main", "side", "salad", "sauce", "dessert", "draft"].includes(recipe?.category)
     ? recipe.category
     : "main";
 

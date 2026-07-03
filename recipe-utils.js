@@ -7,6 +7,7 @@ const categoryLabels = {
   side: { en: "Side", es: "Guarnicion" },
   salad: { en: "Salad", es: "Ensalada" },
   sauce: { en: "Sauce", es: "Salsa" },
+  dessert: { en: "Dessert", es: "Postre" },
   draft: { en: "Draft", es: "Borrador" },
 };
 

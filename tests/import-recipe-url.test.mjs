@@ -65,3 +65,14 @@ test("recipeFromJsonLd preserves long instruction sentences", () => {
   assert.equal(recipe.stepsText, longStep);
   assert.match(recipe.stepsText, /sugar is dissolved\.$/);
 });
+
+test("recipeFromJsonLd classifies tortes as desserts", () => {
+  const recipe = recipeFromJsonLd({
+    "@type": "Recipe",
+    name: "Strawberry Schaum Torte",
+    recipeIngredient: ["strawberries"],
+    recipeInstructions: [{ text: "Chill and serve." }],
+  }, "<title>Strawberry Schaum Torte</title>", "https://example.com/recipe");
+
+  assert.equal(recipe.category, "dessert");
+});

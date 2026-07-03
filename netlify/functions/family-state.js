@@ -84,7 +84,7 @@ function cleanTasks(value) {
 function cleanRecipeEdit(edit) {
   const name = cleanLocalizedText(edit?.name, 120);
   if (!hasLocalizedContent(name)) return null;
-  const category = ["main", "side", "salad", "sauce", "draft"].includes(edit.category)
+  const category = ["main", "side", "salad", "sauce", "dessert", "draft"].includes(edit.category)
     ? edit.category
     : "main";
 
