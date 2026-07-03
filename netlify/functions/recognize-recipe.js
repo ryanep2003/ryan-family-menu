@@ -6,15 +6,17 @@ const MAX_IMAGES = 3;
 const MAX_IMAGE_BYTES = 700000;
 const MAX_REQUEST_BYTES = 3000000;
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
+const MAX_INGREDIENT_CHARS = 500;
+const MAX_STEP_CHARS = 1200;
 
 function cleanText(value, limit) {
   return `${value || ""}`.trim().slice(0, limit);
 }
 
-function cleanLines(value, limit = 80) {
+export function cleanLines(value, { limit = 80, lineLength = 220 } = {}) {
   if (!Array.isArray(value)) return [];
   return value
-    .map((line) => cleanText(line, 220))
+    .map((line) => cleanText(line, lineLength))
     .filter(Boolean)
     .slice(0, limit);
 }
@@ -98,8 +100,8 @@ export default async (request) => {
     recipe: {
       name: cleanText(parsed.name, 120),
       category: cleanCategory(parsed.category),
-      ingredientsText: cleanLines(parsed.ingredients).join("\n"),
-      stepsText: cleanLines(parsed.steps).join("\n"),
+      ingredientsText: cleanLines(parsed.ingredients, { lineLength: MAX_INGREDIENT_CHARS }).join("\n"),
+      stepsText: cleanLines(parsed.steps, { lineLength: MAX_STEP_CHARS }).join("\n"),
       notes: cleanText(parsed.notes, 1200),
     },
   });
