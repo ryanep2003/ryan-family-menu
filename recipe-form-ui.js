@@ -43,6 +43,16 @@ export function createRecipeFormUi({
     $("#editRecipeForm").hidden = !editing;
   }
 
+  function focusRecipeDetail() {
+    $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
+    $("#detailName").focus({ preventScroll: true });
+  }
+
+  function focusRecipeEdit() {
+    $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
+    $("#editNameInput").focus({ preventScroll: true });
+  }
+
   function fillUploadFormFromRecipe(recipe, { overwrite = false } = {}) {
     if ((overwrite || !$("#nameInput").value.trim()) && recipe.name) $("#nameInput").value = recipe.name;
     if (recipe.category) $("#categoryInput").value = recipe.category;
@@ -54,7 +64,7 @@ export function createRecipeFormUi({
 
   function renderEditPhotoPreview(photos) {
     $("#editPhotoPreview").innerHTML = photos
-      .map((src) => `<img src="${escapeHtml(src)}" alt="" />`)
+      .map((src) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(t("recipePhotoPreview"))}" loading="lazy" decoding="async" />`)
       .join("");
   }
 
@@ -151,6 +161,7 @@ export function createRecipeFormUi({
       render();
       $("#recipeDetail").hidden = false;
       setDetailStatus(t("recipeUpdated"));
+      focusRecipeDetail();
       await saveSharedState();
       setDetailStatus(t("recipeUpdated"));
     } catch (error) {
@@ -301,7 +312,7 @@ export function createRecipeFormUi({
       populateEditRecipeForm(recipe);
       setEditMode(true);
       setDetailStatus("");
-      $("#editRecipeForm").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      focusRecipeEdit();
     });
 
     $("#cancelRecipeEdit").addEventListener("click", () => {
@@ -309,6 +320,8 @@ export function createRecipeFormUi({
       $("#editPhotoInput").value = "";
       $("#editPhotoCameraInput").value = "";
       setDetailStatus("");
+      $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
+      $("#editRecipe").focus({ preventScroll: true });
     });
 
     const previewEditPhotos = () => {

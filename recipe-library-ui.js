@@ -18,7 +18,10 @@ export function createRecipeLibraryUi({
   getCategoryFilter,
   setCategoryFilter,
   setDetailStatus,
+  setView,
 }) {
+  let lastLibraryButton = null;
+
   function renderRecipes() {
     const search = getRecipeSearch().trim().toLowerCase();
     const categoryFilter = getCategoryFilter();
@@ -39,7 +42,7 @@ export function createRecipeLibraryUi({
     $("#recipeList").innerHTML = filtered
       .map((recipe) => `
         <button class="recipe-card" type="button" data-open="${escapeHtml(recipe.id)}">
-          <img src="${escapeHtml(recipe.photos[0])}" alt="" />
+          <img src="${escapeHtml(recipe.photos[0])}" alt="${escapeHtml(localize(recipe.name))}" loading="lazy" decoding="async" />
           <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
           ${getFavorites().includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}
           ${recipe.allergyWarning ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
@@ -67,7 +70,9 @@ export function createRecipeLibraryUi({
     $("#ingredientList").innerHTML = (recipe.ingredients[getLang()] || recipe.ingredients.en).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
     $("#stepList").innerHTML = (recipe.steps[getLang()] || recipe.steps.en).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
     $("#familyNotes").textContent = localize(recipe.notes);
-    $("#photoStrip").innerHTML = recipe.photos.map((src) => `<img src="${escapeHtml(src)}" alt="" />`).join("");
+    $("#photoStrip").innerHTML = recipe.photos
+      .map((src, index) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(`${localize(recipe.name)} ${t("sourcePhoto")} ${index + 1}`)}" loading="lazy" decoding="async" />`)
+      .join("");
     const isFavorite = getFavorites().includes(recipe.id);
     $("#favoriteRecipe").textContent = t(isFavorite ? "removeFavorite" : "addFavorite");
     $("#favoriteRecipe").setAttribute("aria-pressed", `${isFavorite}`);
@@ -79,15 +84,30 @@ export function createRecipeLibraryUi({
   function bindOpenButtons() {
     $$("[data-open]").forEach((button) => {
       button.addEventListener("click", () => {
+        lastLibraryButton = button.closest?.("#recipeList") ? button : null;
+        setView("recipes");
         setSelectedRecipeId(button.dataset.open);
         renderDetail();
         $("#recipeDetail").hidden = false;
-        $("#recipeDetail").scrollIntoView({ behavior: "smooth", block: "start" });
+        $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
+        $("#detailName").focus({ preventScroll: true });
       });
     });
   }
 
   function bindLibraryControls() {
+    $("#closeRecipeDetail").addEventListener("click", () => {
+      $("#recipeDetail").hidden = true;
+      $("#recipeDetail").classList.remove("editing");
+      $("#editRecipeForm").hidden = true;
+      setDetailStatus("");
+      if (lastLibraryButton) {
+        lastLibraryButton.focus();
+        return;
+      }
+      $("#recipeSearch").focus();
+    });
+
     $("#recipeSearch").addEventListener("input", (event) => {
       setRecipeSearch(event.target.value);
       renderRecipes();

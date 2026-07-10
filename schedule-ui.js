@@ -14,6 +14,7 @@ export function createScheduleUi({
   categoryFor,
   activeWeekDateKeys,
   calendarMealForDateKey,
+  mealHasContent,
   mealRecipes,
   mealHasWarning,
   mealSummary,
@@ -29,6 +30,9 @@ export function createScheduleUi({
   getVisibleMonth,
   setVisibleMonth,
 }) {
+  let selectedWeekDateKey = "";
+  let selectedCalendarDateKey = "";
+
   function optionsForSlot(slot, selectedId = "") {
     const selectedRecipe = selectedId ? recipeById(selectedId) : null;
     const allowed = allRecipes().filter((recipe) => slot.categories.includes(categoryFor(recipe)) || recipe.id === selectedId);
@@ -43,6 +47,11 @@ export function createScheduleUi({
 
   function renderMealControls(meal, context, label) {
     const recipesForMeal = mealRecipes(meal);
+    const openLabelBySlot = {
+      main: "openMain",
+      side: "openSide",
+      salad: "openSalad",
+    };
     return `
       ${label ? `<strong>${escapeHtml(label)}</strong>` : ""}
       <div class="meal-picker">
@@ -62,17 +71,17 @@ export function createScheduleUi({
       </div>
       <p class="${mealHasWarning(meal) ? "has-warning" : ""}">${escapeHtml(mealSummary(meal))}</p>
       <div class="meal-open-buttons">
-        ${recipesForMeal.map(({ recipe }) => `
+        ${recipesForMeal.map(({ key, recipe }) => `
           <button class="ghost-button" type="button" data-open="${escapeHtml(recipe.id)}">
-            ${t("openDinner")}
+            ${t(openLabelBySlot[key] || "openDinner")}: ${escapeHtml(localize(recipe.name))}
           </button>
         `).join("")}
       </div>
     `;
   }
 
-  function bindMealControls() {
-    $$("[data-meal-context]").forEach((control) => {
+  function bindMealControls(contextType) {
+    $$(`[data-meal-context^="${contextType}:"]`).forEach((control) => {
       control.addEventListener("change", async () => {
         const [type, key] = control.dataset.mealContext.split(":");
         const slot = control.dataset.slot;
@@ -105,19 +114,49 @@ export function createScheduleUi({
     const lang = getLang();
     const todayKey = formatDateKey(new Date());
     const rangeFormatter = new Intl.DateTimeFormat(lang === "es" ? "es-US" : "en-US", { month: "short", day: "numeric" });
+    const activeDateKeys = new Set(weekDates.map((day) => day.dateKey));
+    if (!activeDateKeys.has(selectedWeekDateKey)) {
+      selectedWeekDateKey = activeDateKeys.has(todayKey) ? todayKey : weekDates[0].dateKey;
+    }
     $("#weekTitle").textContent = `${t("weekHeading")} · ${rangeFormatter.format(weekDates[0].date)}-${rangeFormatter.format(weekDates[6].date)}`;
     grid.innerHTML = weekDates
       .map((day) => {
         const meal = calendarMealForDateKey(day.dateKey);
         const label = `${day[lang]} · ${rangeFormatter.format(day.date)}${day.dateKey === todayKey ? ` · ${t("todayTab")}` : ""}`;
         return `
-          <div class="day-card${day.dateKey === todayKey ? " today" : ""}">
-            ${renderMealControls(meal, `weekdate:${day.dateKey}`, label)}
-          </div>
+          <button
+            class="week-day-summary${day.dateKey === todayKey ? " today" : ""}${day.dateKey === selectedWeekDateKey ? " selected" : ""}"
+            type="button"
+            data-edit-week-date="${day.dateKey}"
+            aria-pressed="${day.dateKey === selectedWeekDateKey}"
+          >
+            <span>${escapeHtml(label)}</span>
+            <strong class="${mealHasWarning(meal) ? "has-warning" : ""}">${escapeHtml(mealSummary(meal))}</strong>
+            <small>${t("editDay")}</small>
+          </button>
         `;
       })
       .join("");
-    bindMealControls();
+
+    const selectedDay = weekDates.find((day) => day.dateKey === selectedWeekDateKey);
+    const editor = $("#weekDateEditor");
+    const editorLabel = `${selectedDay[lang]} · ${rangeFormatter.format(selectedDay.date)}`;
+    editor.innerHTML = `
+      <div class="schedule-editor-heading">
+        <span>${t("editDay")}</span>
+        <h3>${escapeHtml(editorLabel)}</h3>
+      </div>
+      ${renderMealControls(calendarMealForDateKey(selectedWeekDateKey), `weekdate:${selectedWeekDateKey}`, "")}
+    `;
+
+    bindMealControls("weekdate");
+    $$("[data-edit-week-date]").forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedWeekDateKey = button.dataset.editWeekDate;
+        renderSchedule();
+        $("#weekDateEditor").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
   }
 
   function monthName(date) {
@@ -145,6 +184,11 @@ export function createScheduleUi({
     const todayKey = formatDateKey(new Date());
     const activeDateKeys = new Set(activeWeekDateKeys().map((item) => item.dateKey));
     const calendarMeals = getCalendarMeals();
+    const dateFormatter = new Intl.DateTimeFormat(lang === "es" ? "es-US" : "en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
 
     $("#monthTitle").textContent = monthName(visibleMonth);
     $("#calendarWeekdays").innerHTML = days.map((day) => `<span>${day[lang].slice(0, 3)}</span>`).join("");
@@ -154,25 +198,60 @@ export function createScheduleUi({
         const hasOverride = Object.prototype.hasOwnProperty.call(calendarMeals, dateKey);
         const isThisWeek = activeDateKeys.has(dateKey);
         const meal = calendarMealForDateKey(dateKey);
+        const summary = mealSummary(meal);
         const classes = [
           "calendar-day",
           date.getMonth() === visibleMonth.getMonth() ? "" : "outside-month",
           dateKey === todayKey ? "today" : "",
+          dateKey === selectedCalendarDateKey ? "selected" : "",
+          mealHasContent(meal) ? "has-meal" : "",
         ].filter(Boolean).join(" ");
 
         return `
-          <div class="${classes}${hasOverride ? " custom-date" : isThisWeek ? " weekly-date" : ""}">
+          <button
+            class="${classes}${hasOverride ? " custom-date" : isThisWeek ? " weekly-date" : ""}"
+            type="button"
+            data-edit-calendar-date="${dateKey}"
+            aria-pressed="${dateKey === selectedCalendarDateKey}"
+            aria-label="${escapeHtml(`${dateFormatter.format(date)}: ${summary}`)}"
+          >
             <div class="calendar-date">
               <span class="date-number">${date.getDate()}</span>
               ${hasOverride || isThisWeek ? `<span class="calendar-source">${t(hasOverride ? "customDate" : "weeklyPlan")}</span>` : ""}
             </div>
-            ${renderMealControls(meal, `calendar:${dateKey}`, "")}
-            ${hasOverride ? `<button class="calendar-inherit" type="button" data-use-weekly-plan="${dateKey}">${t("useWeeklyPlan")}</button>` : ""}
-          </div>
+            <span class="calendar-meal-summary">${escapeHtml(summary)}</span>
+          </button>
         `;
       })
       .join("");
-    bindMealControls();
+
+    const editor = $("#calendarDateEditor");
+    if (!selectedCalendarDateKey) {
+      editor.hidden = true;
+      editor.innerHTML = "";
+    } else {
+      const selectedDate = new Date(`${selectedCalendarDateKey}T12:00:00`);
+      const selectedMeal = calendarMealForDateKey(selectedCalendarDateKey);
+      const hasOverride = Object.prototype.hasOwnProperty.call(calendarMeals, selectedCalendarDateKey);
+      editor.hidden = false;
+      editor.innerHTML = `
+        <div class="schedule-editor-heading">
+          <span>${t("editDate")}</span>
+          <h3>${escapeHtml(dateFormatter.format(selectedDate))}</h3>
+        </div>
+        ${renderMealControls(selectedMeal, `calendar:${selectedCalendarDateKey}`, "")}
+        ${hasOverride ? `<button class="text-action calendar-inherit" type="button" data-use-weekly-plan="${selectedCalendarDateKey}">${t("useWeeklyPlan")}</button>` : ""}
+      `;
+      bindMealControls("calendar");
+    }
+
+    $$("[data-edit-calendar-date]").forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedCalendarDateKey = button.dataset.editCalendarDate;
+        renderCalendar();
+        $("#calendarDateEditor").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
     $$('[data-use-weekly-plan]').forEach((button) => {
       button.addEventListener("click", async () => {
         const nextCalendarMeals = { ...getCalendarMeals() };
@@ -199,6 +278,7 @@ export function createScheduleUi({
       const nextMonth = new Date(getVisibleMonth());
       nextMonth.setMonth(nextMonth.getMonth() - 1);
       setVisibleMonth(nextMonth);
+      selectedCalendarDateKey = "";
       render();
     });
 
@@ -206,6 +286,7 @@ export function createScheduleUi({
       const nextMonth = new Date();
       nextMonth.setDate(1);
       setVisibleMonth(nextMonth);
+      selectedCalendarDateKey = "";
       render();
     });
 
@@ -213,6 +294,7 @@ export function createScheduleUi({
       const nextMonth = new Date(getVisibleMonth());
       nextMonth.setMonth(nextMonth.getMonth() + 1);
       setVisibleMonth(nextMonth);
+      selectedCalendarDateKey = "";
       render();
     });
   }

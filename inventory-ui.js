@@ -74,13 +74,13 @@ export function createInventoryUi({
         <h3>${escapeHtml(group.label)}</h3>
         ${group.items.map((item) => `
           <div class="inventory-item">
-            ${item.photos?.[0] ? `<img src="${escapeHtml(item.photos[0])}" alt="" />` : ""}
+            ${item.photos?.[0] ? `<img src="${escapeHtml(item.photos[0])}" alt="${escapeHtml(localizedText(item.text, getLang()))}" loading="lazy" decoding="async" />` : ""}
             <span class="inventory-item-copy">
               <strong>${escapeHtml(localizedText(item.text, getLang()))}</strong>
               <em>${escapeHtml(localizedText(item.quantity, getLang()) || inventoryLocationLabel(item.location))}</em>
               ${inventoryShoppingNote(item) ? `<em class="shopping-overlap">${escapeHtml(inventoryShoppingNote(item))}</em>` : ""}
             </span>
-            <select class="stock-select stock-${escapeHtml(item.stockState || "some")}" data-stock-state="${escapeHtml(item.id)}" aria-label="${escapeHtml(localizedText(item.text, getLang()))} stock">
+            <select class="stock-select stock-${escapeHtml(item.stockState || "some")}" data-stock-state="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("stockControlLabel").replace("{item}", localizedText(item.text, getLang())))}">
               ${["full", "some", "low", "out"].map((state) => `<option value="${state}" ${state === (item.stockState || "some") ? "selected" : ""}>${inventoryStockLabel(state)}</option>`).join("")}
             </select>
             <div class="inventory-item-actions">

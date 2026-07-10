@@ -31,7 +31,15 @@ function element(initial = {}) {
     addEventListener(type, listener) {
       listeners.set(type, listener);
     },
-    scrollIntoView() {},
+    async dispatch(type) {
+      await listeners.get(type)?.();
+    },
+    focus() {
+      this.focused = true;
+    },
+    scrollIntoView() {
+      this.scrolled = true;
+    },
     setAttribute(name, value) {
       this.attributes[name] = value;
     },
@@ -67,6 +75,9 @@ function harness(overrides = {}) {
   const elements = {
     "#recipeCount": element(),
     "#recipeList": element(),
+    "#recipeSearch": element(),
+    "#categoryFilter": element(),
+    "#closeRecipeDetail": element(),
     "#editRecipeForm": element(),
     "#detailName": element(),
     "#detailMeta": element(),
@@ -83,7 +94,7 @@ function harness(overrides = {}) {
 
   const ui = createRecipeLibraryUi({
     $: (selector) => elements[selector],
-    $$: () => [],
+    $$: (selector) => selector === "[data-open]" ? overrides.openButtons || [] : [],
     t: (key) => key,
     escapeHtml,
     localize: (value) => typeof value === "string" ? value : value?.en || "",
@@ -101,6 +112,7 @@ function harness(overrides = {}) {
     getCategoryFilter: () => "all",
     setCategoryFilter: () => {},
     setDetailStatus: () => {},
+    setView: () => {},
   });
 
   return { elements, ui };
@@ -134,4 +146,24 @@ test("renderDetail resets recipe edit mode when switching recipes or languages",
 
   assert.equal(elements["#recipeDetail"].classList.values.has("editing"), false);
   assert.equal(elements["#editRecipeForm"].hidden, true);
+});
+
+test("opening and closing a recipe preserves predictable focus", async () => {
+  const card = element({
+    dataset: { open: "recipe-1" },
+    closest(selector) {
+      return selector === "#recipeList" ? this : null;
+    },
+  });
+  const { elements, ui } = harness({ openButtons: [card] });
+  ui.bindLibraryControls();
+  ui.bindOpenButtons();
+
+  await card.dispatch("click");
+  assert.equal(elements["#recipeDetail"].scrolled, true);
+  assert.equal(elements["#detailName"].focused, true);
+
+  await elements["#closeRecipeDetail"].dispatch("click");
+  assert.equal(elements["#recipeDetail"].hidden, true);
+  assert.equal(card.focused, true);
 });

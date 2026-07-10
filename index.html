@@ -2,11 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#fbf7ef" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=24" />
+    <link rel="stylesheet" href="styles.css?v=27" />
   </head>
   <body>
     <header class="app-header">
@@ -15,10 +15,11 @@
         <h1 data-i18n="title">Tonight, made simple.</h1>
       </div>
       <div class="header-actions">
-        <button class="icon-button" id="installButton" type="button" title="Install / Add to Home Screen">
+        <button class="install-button" id="installButton" type="button" title="Install / Add to Home Screen" aria-label="Install / Add to Home Screen" data-i18n-title="installApp" data-i18n-aria-label="installApp">
           <span aria-hidden="true">+</span>
+          <span data-i18n="installShort">Install</span>
         </button>
-        <div class="segmented" aria-label="Language">
+        <div class="segmented" aria-label="Language" data-i18n-aria-label="languageLabel">
           <button type="button" class="active" data-lang="en">EN</button>
           <button type="button" data-lang="es">ES</button>
         </div>
@@ -31,7 +32,7 @@
     </div>
 
     <main>
-      <nav class="tabs" aria-label="Views">
+      <nav class="tabs" aria-label="Views" data-i18n-aria-label="viewsLabel">
         <button type="button" class="active" data-view="today" data-i18n="todayTab">Today</button>
         <button type="button" data-view="schedule" data-i18n="scheduleTab">Week</button>
         <button type="button" data-view="grocery" data-i18n="groceryTab">Groceries</button>
@@ -71,8 +72,8 @@
               <span id="taskProgress"></span>
             </div>
             <form class="task-add" id="taskForm">
-              <input type="text" id="taskInput" data-i18n-placeholder="taskPlaceholder" placeholder="Prep chicken, make rice..." required />
-              <select id="taskAssigneeInput" aria-label="Assigned to">
+              <input type="text" id="taskInput" data-i18n-placeholder="taskPlaceholder" data-i18n-aria-label="taskInputLabel" aria-label="Cooking task" placeholder="Prep chicken, make rice..." required />
+              <select id="taskAssigneeInput" aria-label="Assigned to" data-i18n-aria-label="assignedToLabel">
                 <option value="alyson" data-i18n="assigneeAlyson">Alyson</option>
                 <option value="eric" data-i18n="assigneeEric">Eric</option>
                 <option value="nelly" data-i18n="assigneeNelly">Nelly</option>
@@ -96,23 +97,28 @@
             <button class="text-action" type="button" data-view-target="recipes" data-i18n="chooseFavorites">Choose favorites in Recipes</button>
           </section>
         </div>
-        <p class="upload-status error" id="sharedStateStatus" role="status"></p>
+        <div class="sync-status-row">
+          <p class="upload-status" id="sharedStateStatus" role="status"></p>
+          <button class="ghost-button sync-retry" id="retrySharedState" type="button" data-i18n="retrySync" hidden>Retry sync</button>
+        </div>
       </section>
 
       <section class="view" id="scheduleView">
         <div class="section-heading">
           <div>
             <h2 id="weekTitle" data-i18n="weekHeading">This week</h2>
-            <p class="section-note" data-i18n="weekRepeatsNote">These meals apply only to this week's dates and appear in the calendar below.</p>
+            <p class="section-note" data-i18n="weekRepeatsNote">Select a day to edit. The month below is a quick overview.</p>
           </div>
           <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Clear week</button>
         </div>
+        <section class="schedule-editor" id="weekDateEditor"></section>
         <div class="schedule-grid" id="scheduleGrid"></div>
 
         <div class="section-heading calendar-heading">
           <div>
             <p class="section-label" data-i18n="monthLabel">Recipe calendar</p>
             <h2 id="monthTitle">June 2026</h2>
+            <p class="section-note" data-i18n="calendarInstructions">Choose a date to review its plan or make a one-day change.</p>
           </div>
           <div class="calendar-actions">
             <button class="ghost-button" id="previousMonth" type="button" data-i18n="previousMonth">Previous</button>
@@ -120,6 +126,7 @@
             <button class="ghost-button" id="nextMonth" type="button" data-i18n="nextMonth">Next</button>
           </div>
         </div>
+        <section class="schedule-editor" id="calendarDateEditor" hidden></section>
         <div class="calendar-scroll">
           <div class="calendar-weekdays" id="calendarWeekdays"></div>
           <div class="calendar-grid" id="calendarGrid"></div>
@@ -127,7 +134,7 @@
       </section>
 
       <section class="view" id="groceryView">
-        <div class="inventory-mode-switch" role="tablist" aria-label="Shopping and home inventory">
+        <div class="inventory-mode-switch" role="tablist" aria-label="Shopping and home inventory" data-i18n-aria-label="inventoryModeLabel">
           <button class="active" type="button" role="tab" data-inventory-mode="shopping" data-i18n="shoppingMode">Shopping</button>
           <button type="button" role="tab" data-inventory-mode="home" data-i18n="atHomeMode">At Home</button>
         </div>
@@ -146,8 +153,8 @@
             </div>
           </div>
           <form class="grocery-add" id="groceryForm">
-            <textarea id="groceryInput" data-i18n-placeholder="groceryPlaceholder" placeholder="Add milk, lemons, pasta..." rows="1"></textarea>
-            <select id="groceryStoreInput" aria-label="Store">
+            <textarea id="groceryInput" data-i18n-placeholder="groceryPlaceholder" data-i18n-aria-label="groceryInputLabel" aria-label="Grocery items" placeholder="Add milk, lemons, pasta..." rows="1"></textarea>
+            <select id="groceryStoreInput" aria-label="Store" data-i18n-aria-label="storeLabel">
               <option value="any" data-i18n="storeAny">Either store</option>
               <option value="publix">Publix</option>
               <option value="whole-foods">Whole Foods</option>
@@ -158,8 +165,8 @@
           <div class="inventory-scan-panel receipt-scan-panel" id="receiptScanPanel" hidden>
             <p data-i18n="receiptScanNote">Upload a receipt photo. Review matches before moving items home.</p>
             <form class="inventory-scan" id="receiptScanForm">
-              <input type="file" id="receiptScanPhotoInput" accept="image/*" capture="environment" multiple />
-              <select id="receiptScanLocationInput" aria-label="Default location">
+              <input type="file" id="receiptScanPhotoInput" accept="image/*" capture="environment" multiple aria-label="Receipt photos" data-i18n-aria-label="receiptPhotoLabel" />
+              <select id="receiptScanLocationInput" aria-label="Default location" data-i18n-aria-label="defaultLocationLabel">
                 <option value="pantry" data-i18n="locationPantry">Pantry</option>
                 <option value="fridge" data-i18n="locationFridge">Fridge</option>
                 <option value="freezer" data-i18n="locationFreezer">Freezer</option>
@@ -169,7 +176,10 @@
             </form>
             <div class="inventory-suggestions" id="receiptSuggestions" hidden></div>
           </div>
-          <p class="upload-status" id="groceryStatus" role="status"></p>
+          <div class="sync-status-row">
+            <p class="upload-status" id="groceryStatus" role="status"></p>
+            <button class="ghost-button sync-retry" id="retryGroceries" type="button" data-i18n="retrySync" hidden>Retry sync</button>
+          </div>
           <div class="grocery-list" id="groceryList"></div>
         </div>
 
@@ -183,10 +193,10 @@
               <details>
                 <summary data-i18n="addInventoryItem">Add item</summary>
                 <form class="inventory-add" id="inventoryForm">
-                  <input type="text" id="inventoryInput" data-i18n-placeholder="inventoryPlaceholder" placeholder="Add eggs, milk, paper towels..." />
-                  <input type="text" id="inventoryQuantityInput" data-i18n-placeholder="inventoryQuantityPlaceholder" placeholder="Amount, optional" />
-                  <input type="file" id="inventoryPhotoInput" accept="image/*" capture="environment" />
-                  <select id="inventoryLocationInput" aria-label="Location">
+                  <input type="text" id="inventoryInput" data-i18n-placeholder="inventoryPlaceholder" data-i18n-aria-label="inventoryItemLabel" aria-label="Inventory item" placeholder="Add eggs, milk, paper towels..." />
+                  <input type="text" id="inventoryQuantityInput" data-i18n-placeholder="inventoryQuantityPlaceholder" data-i18n-aria-label="inventoryAmountLabel" aria-label="Inventory amount" placeholder="Amount, optional" />
+                  <input type="file" id="inventoryPhotoInput" accept="image/*" capture="environment" aria-label="Inventory photo" data-i18n-aria-label="inventoryPhotoLabel" />
+                  <select id="inventoryLocationInput" aria-label="Location" data-i18n-aria-label="locationLabel">
                     <option value="pantry" data-i18n="locationPantry">Pantry</option>
                     <option value="fridge" data-i18n="locationFridge">Fridge</option>
                     <option value="freezer" data-i18n="locationFreezer">Freezer</option>
@@ -200,8 +210,8 @@
                 <div class="inventory-scan-panel">
                   <p data-i18n="inventoryScanNote">Upload fridge, freezer, pantry, or receipt photos. Review the suggestions before adding them.</p>
                   <form class="inventory-scan" id="inventoryScanForm">
-                    <input type="file" id="inventoryScanPhotoInput" accept="image/*" capture="environment" multiple />
-                    <select id="inventoryScanLocationInput" aria-label="Default location">
+                    <input type="file" id="inventoryScanPhotoInput" accept="image/*" capture="environment" multiple aria-label="Inventory photos" data-i18n-aria-label="inventoryScanPhotoLabel" />
+                    <select id="inventoryScanLocationInput" aria-label="Default location" data-i18n-aria-label="defaultLocationLabel">
                       <option value="fridge" data-i18n="locationFridge">Fridge</option>
                       <option value="pantry" data-i18n="locationPantry">Pantry</option>
                       <option value="freezer" data-i18n="locationFreezer">Freezer</option>
@@ -214,14 +224,17 @@
               </details>
             </div>
           </div>
-          <div class="inventory-filters" role="group" aria-label="Inventory location">
+          <div class="inventory-filters" role="group" aria-label="Inventory location" data-i18n-aria-label="inventoryFiltersLabel">
             <button class="active" type="button" data-inventory-filter="all" data-i18n="locationAll">All</button>
             <button type="button" data-inventory-filter="fridge" data-i18n="locationFridge">Fridge</button>
             <button type="button" data-inventory-filter="freezer" data-i18n="locationFreezer">Freezer</button>
             <button type="button" data-inventory-filter="pantry" data-i18n="locationPantry">Pantry</button>
             <button type="button" data-inventory-filter="household" data-i18n="locationHousehold">Household</button>
           </div>
-          <p class="upload-status" id="inventoryStatus" role="status"></p>
+          <div class="sync-status-row">
+            <p class="upload-status" id="inventoryStatus" role="status"></p>
+            <button class="ghost-button sync-retry" id="retryInventory" type="button" data-i18n="retrySync" hidden>Retry sync</button>
+          </div>
           <div class="inventory-list" id="inventoryList"></div>
         </div>
       </section>
@@ -232,25 +245,26 @@
           <span id="recipeCount"></span>
         </div>
         <section class="recipe-detail" id="recipeDetail" hidden>
-          <div class="detail-top">
-            <div>
+          <div class="detail-context-bar">
+            <div class="detail-title-group">
+              <button class="text-action detail-back" id="closeRecipeDetail" type="button" data-i18n="backToRecipes">Back to recipes</button>
+              <div>
               <p class="section-label" data-i18n="selectedRecipe">Selected recipe</p>
-              <h2 id="detailName">A 100% Chance of Meatballs</h2>
-              <p id="detailMeta">Makes 18 meatballs · 1 hour · Mess 2/4</p>
-            </div>
-            <div class="detail-top-side">
-              <div class="segmented detail-language-toggle" aria-label="Language">
-                <button type="button" data-lang="en">EN</button>
-                <button type="button" data-lang="es">ES</button>
-              </div>
-              <div class="detail-actions">
-                <button class="primary-action" id="publishDraftRecipe" type="button" data-i18n="publishDraftRecipe" hidden>Publish draft</button>
-                <button class="primary-action" id="addRecipeGroceries" type="button" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
-                <button class="ghost-button" id="editRecipe" type="button" data-i18n="editRecipe">Edit recipe</button>
-                <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
-                <button class="ghost-button" id="markCooked" type="button" data-i18n="markCooked">Mark cooked</button>
+                <h2 id="detailName" tabindex="-1">A 100% Chance of Meatballs</h2>
+                <p id="detailMeta">Makes 18 meatballs · 1 hour · Mess 2/4</p>
               </div>
             </div>
+            <div class="segmented detail-language-toggle" aria-label="Language" data-i18n-aria-label="languageLabel">
+              <button type="button" data-lang="en">EN</button>
+              <button type="button" data-lang="es">ES</button>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="primary-action" id="publishDraftRecipe" type="button" data-i18n="publishDraftRecipe" hidden>Publish draft</button>
+            <button class="primary-action" id="addRecipeGroceries" type="button" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
+            <button class="ghost-button" id="editRecipe" type="button" data-i18n="editRecipe">Edit recipe</button>
+            <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
+            <button class="ghost-button" id="markCooked" type="button" data-i18n="markCooked">Mark cooked</button>
           </div>
           <p class="upload-status detail-status" id="detailStatus" role="status"></p>
 
@@ -297,8 +311,8 @@
             <div class="edit-recipe-actions">
               <button class="primary-action" type="submit" data-i18n="saveRecipeChanges">Save changes</button>
               <button class="ghost-button" id="cancelRecipeEdit" type="button" data-i18n="cancel">Cancel</button>
-              <button class="text-button danger-action" id="deleteRecipe" type="button" data-i18n="deleteRecipe">Delete recipe</button>
             </div>
+            <button class="text-button danger-action" id="deleteRecipe" type="button" data-i18n="deleteRecipe">Delete recipe</button>
           </form>
 
           <div class="detail-layout">
@@ -405,6 +419,6 @@
 
     </main>
 
-    <script type="module" src="app.js?v=50"></script>
+    <script type="module" src="app.js?v=52"></script>
   </body>
 </html>
