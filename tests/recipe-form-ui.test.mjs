@@ -50,6 +50,9 @@ function element(initial = {}) {
     scrollIntoView() {
       this.scrolled = true;
     },
+    focus() {
+      this.focused = true;
+    },
     ...initial,
   };
 }
@@ -87,6 +90,7 @@ function harness(overrides = {}) {
     "#editNoteInput": element(),
     "#editPhotoPreview": element(),
     "#recipeDetail": element(),
+    "#detailName": element(),
     "#sharedStateStatus": element(),
   };
   const state = {
@@ -252,11 +256,13 @@ test("edit recipe only shows the edit panel while editing", async () => {
   await elements["#editRecipe"].dispatch("click");
   assert.equal(elements["#editRecipeForm"].hidden, false);
   assert.equal(elements["#recipeDetail"].classList.values.has("editing"), true);
-  assert.equal(elements["#editRecipeForm"].scrolled, true);
+  assert.equal(elements["#recipeDetail"].scrolled, true);
+  assert.equal(elements["#editNameInput"].focused, true);
 
   await elements["#cancelRecipeEdit"].dispatch("click");
   assert.equal(elements["#editRecipeForm"].hidden, true);
   assert.equal(elements["#recipeDetail"].classList.values.has("editing"), false);
+  assert.equal(elements["#editRecipe"].focused, true);
 });
 
 test("delete recipe clears related local state and meal references", async () => {

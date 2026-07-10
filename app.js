@@ -24,6 +24,7 @@ import { createReceiptUi } from "./receipt-ui.js";
 import { recipes } from "./recipes-data.js";
 import { createScheduleUi } from "./schedule-ui.js";
 import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage-utils.js";
+import { formatSyncTime, renderSyncStatus } from "./sync-status.js";
 import { translations } from "./translations.js";
 import {
   applyVersionConflict,
@@ -103,6 +104,67 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 function t(key) {
   const messages = translations[lang] || translations.en;
   return messages[key] || translations.en[key] || key;
+}
+
+const syncAreas = {
+  shared: { status: "#sharedStateStatus", retry: "#retrySharedState" },
+  groceries: { status: "#groceryStatus", retry: "#retryGroceries" },
+  inventory: { status: "#inventoryStatus", retry: "#retryInventory" },
+};
+
+function syncMessage(key, time = "") {
+  const localizedTime = key === "syncedAt" && time
+    ? formatSyncTime(lang, new Date(time))
+    : time;
+  return t(key).replace("{time}", localizedTime);
+}
+
+function setSyncStatus(area, key, { state = "success", canRetry = false, syncedAt = "" } = {}) {
+  const elements = syncAreas[area];
+  if (!elements) return;
+  const status = $(elements.status);
+  const retryButton = $(elements.retry);
+  if (!status) return;
+  status.dataset.syncKey = key;
+  status.dataset.syncTime = syncedAt;
+  status.dataset.syncState = state;
+  status.dataset.syncRetry = canRetry ? "true" : "false";
+  renderSyncStatus({
+    status,
+    retryButton,
+    message: syncMessage(key, syncedAt),
+    state,
+    canRetry,
+  });
+}
+
+function clearAreaStatus(area) {
+  const elements = syncAreas[area];
+  if (!elements) return;
+  const status = $(elements.status);
+  if (status) {
+    delete status.dataset.syncKey;
+    delete status.dataset.syncTime;
+    delete status.dataset.syncState;
+    delete status.dataset.syncRetry;
+  }
+  renderSyncStatus({ status, retryButton: $(elements.retry), message: "" });
+}
+
+function refreshSyncStatuses() {
+  Object.entries(syncAreas).forEach(([area, elements]) => {
+    const status = $(elements.status);
+    if (!status?.dataset.syncKey) return;
+    setSyncStatus(area, status.dataset.syncKey, {
+      state: status.dataset.syncState,
+      canRetry: status.dataset.syncRetry === "true",
+      syncedAt: status.dataset.syncTime,
+    });
+  });
+}
+
+function markSynced(area) {
+  setSyncStatus(area, "syncedAt", { syncedAt: new Date().toISOString() });
 }
 
 function allRecipes() {
@@ -325,6 +387,7 @@ function saveSharedStateLocally() {
 
 async function saveSharedState() {
   saveSharedStateLocally();
+  setSyncStatus("shared", "savedLocallySyncing", { state: "pending" });
 
   try {
     const data = await putJson(
@@ -337,20 +400,18 @@ async function saveSharedState() {
       applySharedState(normalizeSharedState(data.state, currentSharedState()));
       saveSharedStateLocally();
     }
-    const status = $("#sharedStateStatus");
-    if (status) status.textContent = "";
+    markSynced("shared");
   } catch (error) {
     console.warn(error);
-    const status = $("#sharedStateStatus");
     if (error.status === 409 && error.data?.state) {
       sharedStateVersion = Number(error.data.version) || sharedStateVersion;
       applySharedState(normalizeSharedState(error.data.state, currentSharedState()));
       saveSharedStateLocally();
       render();
-      if (status) status.textContent = t("sharedStateConflict");
+      setSyncStatus("shared", "sharedStateConflict", { state: "error" });
       return;
     }
-    if (status) status.textContent = t("sharedStateError");
+    setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
   }
 }
 
@@ -377,9 +438,14 @@ async function loadSharedState() {
     const rolledForward = rollWeekForwardIfNeeded();
     saveSharedStateLocally();
     render();
-    if (rolledForward || missingWeekStart) await saveSharedState();
+    if (rolledForward || missingWeekStart) {
+      await saveSharedState();
+    } else {
+      markSynced("shared");
+    }
   } catch (error) {
     console.warn(error);
+    setSyncStatus("shared", "usingSavedCopy", { state: "pending", canRetry: true });
   }
 }
 
@@ -554,6 +620,8 @@ const receiptUi = createReceiptUi({
   bindInventoryControls,
   saveGroceries,
   saveInventory,
+  setGroceryStatus: (key, options) => setSyncStatus("groceries", key, options),
+  clearGroceryStatus: () => clearAreaStatus("groceries"),
   getReceiptSuggestions: () => receiptSuggestions,
   setReceiptSuggestions: (items) => {
     receiptSuggestions = items;
@@ -579,9 +647,16 @@ function renderTranslations() {
   $$("[data-i18n-placeholder]").forEach((node) => {
     node.placeholder = t(node.dataset.i18nPlaceholder);
   });
+  $$("[data-i18n-aria-label]").forEach((node) => {
+    node.setAttribute("aria-label", t(node.dataset.i18nAriaLabel));
+  });
+  $$("[data-i18n-title]").forEach((node) => {
+    node.title = t(node.dataset.i18nTitle);
+  });
   $$("[data-lang]").forEach((button) => {
     button.classList.toggle("active", button.dataset.lang === lang);
   });
+  refreshSyncStatuses();
 }
 
 function showAppUpdateNotice() {
@@ -609,6 +684,7 @@ const dashboardUi = createDashboardUi({
   saveSharedState,
   render,
   renderDetail: () => renderDetail(),
+  setView,
   getLang: () => lang,
   getFavorites: () => favorites,
   getTasks: () => tasks,
@@ -646,6 +722,7 @@ const scheduleUi = createScheduleUi({
   categoryFor,
   activeWeekDateKeys,
   calendarMealForDateKey,
+  mealHasContent,
   mealRecipes,
   mealHasWarning,
   mealSummary,
@@ -697,6 +774,7 @@ const recipeLibraryUi = createRecipeLibraryUi({
     categoryFilter = filter;
   },
   setDetailStatus,
+  setView,
 });
 
 const renderRecipes = () => recipeLibraryUi.renderRecipes();
@@ -757,14 +835,15 @@ async function loadGroceries() {
       persist: (items, version) => persistGroceriesLocally(items, version),
       render,
     });
+    markSynced("groceries");
   } catch (error) {
     console.warn(error);
-    $("#groceryStatus").textContent = t("groceryError");
-    $("#groceryStatus").classList.add("error");
+    setSyncStatus("groceries", "usingSavedCopy", { state: "pending", canRetry: true });
   }
 }
 
 async function saveGroceries() {
+  setSyncStatus("groceries", "savedLocallySyncing", { state: "pending" });
   try {
     await saveVersionedCollection({
       putJson,
@@ -780,8 +859,7 @@ async function saveGroceries() {
       },
       persist: (items, version) => persistGroceriesLocally(items, version),
     });
-    $("#groceryStatus").textContent = t("grocerySaved");
-    $("#groceryStatus").classList.remove("error");
+    markSynced("groceries");
     return true;
   } catch (error) {
     console.warn(error);
@@ -797,12 +875,10 @@ async function saveGroceries() {
     })) {
       renderGroceries();
       bindGroceryControls();
-      $("#groceryStatus").textContent = t("groceryConflict");
-      $("#groceryStatus").classList.add("error");
+      setSyncStatus("groceries", "groceryConflict", { state: "error" });
       return false;
     }
-    $("#groceryStatus").textContent = t("groceryError");
-    $("#groceryStatus").classList.add("error");
+    setSyncStatus("groceries", "savedLocallyPending", { state: "pending", canRetry: true });
     return false;
   }
 }
@@ -822,14 +898,15 @@ async function loadInventory() {
       persist: (items, version) => persistInventoryLocally(items, version),
       render,
     });
+    markSynced("inventory");
   } catch (error) {
     console.warn(error);
-    $("#inventoryStatus").textContent = t("inventoryError");
-    $("#inventoryStatus").classList.add("error");
+    setSyncStatus("inventory", "usingSavedCopy", { state: "pending", canRetry: true });
   }
 }
 
 async function saveInventory() {
+  setSyncStatus("inventory", "savedLocallySyncing", { state: "pending" });
   try {
     await saveVersionedCollection({
       putJson,
@@ -845,8 +922,8 @@ async function saveInventory() {
       },
       persist: (items, version) => persistInventoryLocally(items, version),
     });
-    $("#inventoryStatus").textContent = t("inventorySaved");
-    $("#inventoryStatus").classList.remove("error");
+    markSynced("inventory");
+    return true;
   } catch (error) {
     console.warn(error);
     if (applyVersionConflict(error, {
@@ -861,12 +938,11 @@ async function saveInventory() {
     })) {
       renderInventory();
       bindInventoryControls();
-      $("#inventoryStatus").textContent = t("inventoryConflict");
-      $("#inventoryStatus").classList.add("error");
-      return;
+      setSyncStatus("inventory", "inventoryConflict", { state: "error" });
+      return false;
     }
-    $("#inventoryStatus").textContent = t("inventoryError");
-    $("#inventoryStatus").classList.add("error");
+    setSyncStatus("inventory", "savedLocallyPending", { state: "pending", canRetry: true });
+    return false;
   }
 }
 
@@ -1211,26 +1287,36 @@ $("#inventoryScanForm").addEventListener("submit", async (event) => {
   if (!files.length) return;
 
   const submitButton = $("#inventoryScanForm .primary-action");
-  const status = $("#inventoryStatus");
   submitButton.disabled = true;
-  status.textContent = t("inventoryScanWorking");
-  status.classList.remove("error");
+  setSyncStatus("inventory", "inventoryScanWorking");
 
   try {
     const images = await readFilesAsDataUrls(files, 6);
     inventorySuggestions = await recognizeInventory(images, $("#inventoryScanLocationInput").value);
     $("#inventoryScanPhotoInput").value = "";
     renderInventorySuggestions();
-    status.textContent = inventorySuggestions.length ? "" : t("inventoryScanEmpty");
+    if (inventorySuggestions.length) clearAreaStatus("inventory");
+    else setSyncStatus("inventory", "inventoryScanEmpty");
   } catch (error) {
     console.warn(error);
     inventorySuggestions = [];
     renderInventorySuggestions();
-    status.textContent = error.message || t("inventoryScanError");
-    status.classList.add("error");
+    setSyncStatus("inventory", "inventoryScanError", { state: "error" });
   } finally {
     submitButton.disabled = false;
   }
+});
+
+$("#retrySharedState").addEventListener("click", saveSharedState);
+$("#retryGroceries").addEventListener("click", saveGroceries);
+$("#retryInventory").addEventListener("click", saveInventory);
+
+window.addEventListener("online", () => {
+  const retries = [];
+  if (!$("#retrySharedState").hidden) retries.push(saveSharedState());
+  if (!$("#retryGroceries").hidden) retries.push(saveGroceries());
+  if (!$("#retryInventory").hidden) retries.push(saveInventory());
+  Promise.allSettled(retries);
 });
 
 bindInstallPrompt({ $, t });

@@ -17,6 +17,7 @@ export function createDashboardUi({
   saveSharedState,
   render,
   renderDetail,
+  setView,
   getLang,
   getFavorites,
   getTasks,
@@ -38,7 +39,7 @@ export function createDashboardUi({
     const recipesForMeal = mealRecipes(meal);
     $("#todayRecipeName").textContent = mainRecipe ? localize(mainRecipe.name) : t("noMealSet");
     $("#todayMeta").textContent = recipesForMeal.length
-      ? `${recipesForMeal.length} ${getLang() === "en" ? "planned item(s)" : "receta(s) planeadas"}${mealHasWarning(meal) ? ` · ${t("allergyBadge")}` : ""}`
+      ? `${t(recipesForMeal.length === 1 ? "plannedRecipeOne" : "plannedRecipeMany").replace("{count}", recipesForMeal.length)}${mealHasWarning(meal) ? ` · ${t("allergyBadge")}` : ""}`
       : t("noMealSet");
     $("#todayMealList").innerHTML = recipesForMeal
       .map(({ key, recipe }) => `
@@ -132,7 +133,7 @@ export function createDashboardUi({
       ? favoriteRecipes.map((recipe) => `
           <div class="favorite-item">
             <button class="favorite-open" type="button" data-open="${escapeHtml(recipe.id)}">
-              <img src="${escapeHtml(recipe.photos[0])}" alt="" />
+              <img src="${escapeHtml(recipe.photos[0])}" alt="${escapeHtml(localize(recipe.name))}" loading="lazy" decoding="async" />
               <span>
                 <strong>${escapeHtml(localize(recipe.name))}</strong>
                 <small>${escapeHtml(categoryLabel(categoryFor(recipe)))}</small>
@@ -176,9 +177,11 @@ export function createDashboardUi({
       const mainRecipe = todaysMealPlan().main;
       if (!mainRecipe) return;
       setSelectedRecipeId(mainRecipe);
+      setView("recipes");
       renderDetail();
       $("#recipeDetail").hidden = false;
-      $("#recipeDetail").scrollIntoView({ behavior: "smooth", block: "start" });
+      $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
+      $("#detailName").focus({ preventScroll: true });
     });
   }
 

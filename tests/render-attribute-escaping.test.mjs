@@ -10,9 +10,12 @@ test("dashboard and schedule modules escape dynamic recipe attributes", async ()
   assert.match(dashboard, /data-open="\$\{escapeHtml\(recipe\.id\)\}"/);
   assert.match(dashboard, /data-plan-favorite="\$\{escapeHtml\(recipe\.id\)\}"/);
   assert.match(dashboard, /src="\$\{escapeHtml\(recipe\.photos\[0\]\)\}"/);
+  assert.match(dashboard, /alt="\$\{escapeHtml\(localize\(recipe\.name\)\)\}"/);
   assert.match(schedule, /value="\$\{escapeHtml\(recipe\.id\)\}"/);
   assert.match(schedule, /data-open="\$\{escapeHtml\(recipe\.id\)\}"/);
   assert.match(inventory, /src="\$\{escapeHtml\(item\.photos\[0\]\)\}"/);
+  assert.match(inventory, /alt="\$\{escapeHtml\(localizedText\(item\.text, getLang\(\)\)\)\}"/);
+  assert.match(inventory, /t\("stockControlLabel"\)/);
   assert.match(inventory, /data-stock-state="\$\{escapeHtml\(item\.id\)\}"/);
   assert.match(inventory, /data-add-inventory-to-shopping="\$\{escapeHtml\(item\.id\)\}"/);
   assert.match(inventory, /data-remove-inventory="\$\{escapeHtml\(item\.id\)\}"/);

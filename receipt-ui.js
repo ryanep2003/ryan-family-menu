@@ -16,6 +16,8 @@ export function createReceiptUi({
   bindInventoryControls,
   saveGroceries,
   saveInventory,
+  setGroceryStatus,
+  clearGroceryStatus,
   getReceiptSuggestions,
   setReceiptSuggestions,
   getLang,
@@ -74,7 +76,7 @@ export function createReceiptUi({
       ))));
       setGroceries(getGroceries().filter((item) => !matchedIds.has(item.id)));
       setReceiptSuggestions([]);
-      $("#groceryStatus").textContent = t("receiptItemsMoved");
+      setGroceryStatus("receiptItemsMoved");
       renderReceiptSuggestions();
       renderGroceries();
       renderInventory();
@@ -94,10 +96,8 @@ export function createReceiptUi({
       if (!files.length) return;
 
       const submitButton = $("#receiptScanForm .primary-action");
-      const status = $("#groceryStatus");
       submitButton.disabled = true;
-      status.textContent = t("receiptScanWorking");
-      status.classList.remove("error");
+      setGroceryStatus("receiptScanWorking");
 
       try {
         const images = await readFilesAsDataUrls(files, 4, {
@@ -116,13 +116,13 @@ export function createReceiptUi({
         }));
         $("#receiptScanPhotoInput").value = "";
         renderReceiptSuggestions();
-        status.textContent = getReceiptSuggestions().length ? "" : t("receiptScanEmpty");
+        if (getReceiptSuggestions().length) clearGroceryStatus();
+        else setGroceryStatus("receiptScanEmpty");
       } catch (error) {
         console.warn(error);
         setReceiptSuggestions([]);
         renderReceiptSuggestions();
-        status.textContent = error.message || t("receiptScanError");
-        status.classList.add("error");
+        setGroceryStatus("receiptScanError", { state: "error" });
       } finally {
         submitButton.disabled = false;
       }
