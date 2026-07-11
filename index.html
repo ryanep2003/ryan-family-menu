@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4ecdf" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=30" />
+    <link rel="stylesheet" href="styles.css?v=31" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -18,6 +18,7 @@
         </div>
       </div>
       <div class="header-actions">
+        <button class="guide-button" id="quickGuideToggle" type="button" aria-controls="quickGuide" aria-expanded="false" data-i18n="quickGuide">Quick guide</button>
         <button class="install-button" id="installButton" type="button" title="Install / Add to Home Screen" aria-label="Install / Add to Home Screen" data-i18n-title="installApp" data-i18n-aria-label="installApp">
           <span aria-hidden="true">+</span>
           <span data-i18n="installShort">Install</span>
@@ -44,6 +45,30 @@
       </nav>
 
       <section class="view active" id="todayView">
+        <section class="quick-guide" id="quickGuide" aria-labelledby="quickGuideHeading" hidden>
+          <div class="quick-guide-intro">
+            <div>
+              <p class="section-label" data-i18n="quickGuideLabel">Start here</p>
+              <h2 id="quickGuideHeading" data-i18n="quickGuideHeading">Run the kitchen together</h2>
+              <p data-i18n="quickGuideIntro">Choose one place to begin. Every update is shared with the family.</p>
+            </div>
+            <button class="text-button" id="dismissQuickGuide" type="button" data-i18n="hideGuide">Hide guide</button>
+          </div>
+          <div class="quick-guide-actions">
+            <button type="button" data-guide-view="schedule">
+              <strong data-i18n="guidePlanHeading">Plan the week</strong>
+              <span data-i18n="guidePlanCopy">Pick a day, then choose dinner.</span>
+            </button>
+            <button type="button" data-guide-view="grocery" data-guide-inventory="home">
+              <strong data-i18n="guideInventoryHeading">Check food at home</strong>
+              <span data-i18n="guideInventoryCopy">Start with low and out-of-stock items.</span>
+            </button>
+            <button type="button" data-guide-view="add">
+              <strong data-i18n="guideRecipeHeading">Save a recipe</strong>
+              <span data-i18n="guideRecipeCopy">Use photos, a link, or type it yourself.</span>
+            </button>
+          </div>
+        </section>
         <section class="today-band" id="todayBand">
           <img class="today-backdrop" id="todayBackdrop" src="assets/meatballs-2.jpg" alt="" />
           <div class="today-band-copy">
@@ -473,6 +498,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=55"></script>
+    <script type="module" src="app.js?v=56"></script>
   </body>
 </html>

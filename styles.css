@@ -214,6 +214,76 @@ h3 {
   font-weight: 850;
 }
 
+.guide-button {
+  min-height: 48px;
+  padding: 0 13px;
+  border: 1px solid var(--sage);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sage-dark);
+  font-weight: 850;
+}
+
+.quick-guide {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #eef5eb;
+}
+
+.quick-guide[hidden] {
+  display: none;
+}
+
+.quick-guide-intro {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.quick-guide-intro h2 {
+  font-size: 1.65rem;
+}
+
+.quick-guide-intro p:last-child {
+  max-width: 65ch;
+  margin: 7px 0 0;
+  color: var(--muted);
+}
+
+.quick-guide-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.quick-guide-actions button {
+  display: grid;
+  gap: 3px;
+  min-height: 66px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+}
+
+.quick-guide-actions button:hover {
+  border-color: var(--sage);
+  background: #fff;
+}
+
+.quick-guide-actions span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .install-button [aria-hidden="true"] {
   font-size: 1.4rem;
   line-height: 1;
@@ -2024,6 +2094,24 @@ li {
   .header-actions {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .guide-button {
+    padding: 0 10px;
+  }
+
+  .quick-guide-intro,
+  .quick-guide-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-guide-intro {
+    display: grid;
+  }
+
+  .quick-guide-intro .text-button {
+    justify-self: start;
+    min-height: 44px;
   }
 
   .today-band,

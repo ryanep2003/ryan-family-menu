@@ -18,6 +18,7 @@ import { createGroceryUi } from "./grocery-ui.js";
 import { createInventoryUi } from "./inventory-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
 import { localizedText, localizedTextExact, updateLocalizedText } from "./localized-data.js";
+import { createOnboardingUi } from "./onboarding-ui.js";
 import { createRecipeFormUi } from "./recipe-form-ui.js";
 import { createRecipeLibraryUi } from "./recipe-library-ui.js";
 import { createReceiptUi } from "./receipt-ui.js";
@@ -809,6 +810,17 @@ const renderRecipes = () => recipeLibraryUi.renderRecipes();
 const renderDetail = () => recipeLibraryUi.renderDetail();
 const bindOpenButtons = () => recipeLibraryUi.bindOpenButtons();
 
+const onboardingUi = createOnboardingUi({
+  $,
+  $$,
+  storage: localStorage,
+  setView,
+  openInventory: () => {
+    inventoryMode = "home";
+    renderInventoryMode();
+  },
+});
+
 function render() {
   renderTranslations();
   renderInventoryMode();
@@ -1230,6 +1242,7 @@ $("#addRecipeGroceries").addEventListener("click", async () => {
 });
 
 recipeFormUi.bind();
+onboardingUi.bind();
 
 $("#markCooked").addEventListener("click", () => {
   $("#markCooked").textContent = t("cookedToday");
