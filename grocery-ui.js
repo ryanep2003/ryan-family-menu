@@ -42,10 +42,12 @@ export function createGroceryUi({
 
   function groceryDisplayText(item) {
     const direct = localizedTextExact(item.text, getLang());
-    if (direct && textMatchesLanguage(direct, getLang())) return direct;
-
     const recipe = recipeForGroceryItem(item);
+    const recipeIngredients = recipe?.ingredients?.[getLang()] || [];
+    const recipeLanguageReady = textMatchesLanguage(recipeIngredients.join("\n"), getLang());
+    if (direct && textMatchesLanguage(direct, getLang()) && recipeLanguageReady) return direct;
     if (!recipe) return t("translationPendingShort");
+    if (!recipeLanguageReady) return t("translationPendingShort");
 
     const lang = getLang();
     const englishIngredients = recipe.ingredients?.en || [];

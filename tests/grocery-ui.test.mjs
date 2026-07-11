@@ -179,6 +179,41 @@ test("grocery recipe matching works from localized recipe names", () => {
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
 });
 
+test("mixed-language Spanish recipe lists stay pending", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{
+        id: "mixed",
+        text: { es: "2 tablespoons chili powder" },
+        checked: false,
+        source: "week-plan",
+        recipeId: "mixed-recipe",
+        store: "any",
+      }],
+      recipes: [{
+        id: "mixed-recipe",
+        name: { en: "Carnitas", es: "Carnitas" },
+        ingredients: {
+          en: ["salt", "oranges", "chili powder", "pork shoulder", "lard", "dark lager"],
+          es: [
+            "3 cucharadas de sal",
+            "2 naranjas grandes",
+            "2 tablespoons chili powder",
+            "5 pounds boneless pork shoulder cut into large chunks",
+            "1 cup lard",
+            "2 bottles other dark lager",
+          ],
+        },
+      }],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /Translation pending/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /chili powder/);
+});
+
 test("delete section removes every item in that grocery section", async () => {
   const { elements, state } = harness();
 
