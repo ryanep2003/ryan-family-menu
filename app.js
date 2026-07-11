@@ -850,6 +850,10 @@ function setView(viewName) {
   });
   document.body.dataset.view = viewName;
   $("#recipeDetail").hidden = true;
+  if (viewName !== "today" && $("#quickGuide") && $("#quickGuideToggle")) {
+    $("#quickGuide").hidden = true;
+    $("#quickGuideToggle").setAttribute("aria-expanded", "false");
+  }
 }
 
 async function loadSharedRecipes() {

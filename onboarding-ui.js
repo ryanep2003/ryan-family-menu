@@ -24,7 +24,9 @@ export function createOnboardingUi({ $, $$, storage, setView, openInventory }) {
 
   function bind() {
     $("#quickGuideToggle").addEventListener("click", () => {
-      setOpen($("#quickGuide").hidden);
+      const opening = $("#quickGuide").hidden;
+      if (opening) setView("today");
+      setOpen(opening);
     });
 
     $("#dismissQuickGuide").addEventListener("click", () => {

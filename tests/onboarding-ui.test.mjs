@@ -74,3 +74,13 @@ test("quick guide actions enter real workflows and can open inventory", async ()
   assert.equal(state.view, "grocery");
   assert.equal(state.inventoryOpened, true);
 });
+
+test("replaying the quick guide returns to Today", async () => {
+  const { elements, state } = harness(true);
+
+  await elements["#quickGuideToggle"].click();
+
+  assert.equal(state.view, "today");
+  assert.equal(elements["#quickGuide"].hidden, false);
+  assert.equal(elements["#quickGuideToggle"].attributes["aria-expanded"], "true");
+});
