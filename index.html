@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4ecdf" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=29" />
+    <link rel="stylesheet" href="styles.css?v=30" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -116,8 +116,8 @@
           </div>
           <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Clear week</button>
         </div>
-        <section class="schedule-editor" id="weekDateEditor"></section>
         <div class="schedule-grid" id="scheduleGrid"></div>
+        <section class="schedule-editor" id="weekDateEditor"></section>
 
         <details class="calendar-disclosure">
           <summary>
@@ -148,11 +148,11 @@
 
       <section class="view" id="groceryView">
         <div class="inventory-mode-switch" role="tablist" aria-label="Shopping and home inventory" data-i18n-aria-label="inventoryModeLabel">
-          <button class="active" type="button" role="tab" data-inventory-mode="shopping" data-i18n="shoppingMode">Shopping</button>
-          <button type="button" role="tab" data-inventory-mode="home" data-i18n="atHomeMode">At Home</button>
+          <button class="active" id="shoppingModeTab" type="button" role="tab" aria-controls="shoppingPanel" data-inventory-mode="shopping" data-i18n="shoppingMode">Shopping</button>
+          <button id="homeModeTab" type="button" role="tab" aria-controls="homePanel" data-inventory-mode="home" data-i18n="atHomeMode">At Home</button>
         </div>
 
-        <div id="shoppingPanel">
+        <div id="shoppingPanel" role="tabpanel" aria-labelledby="shoppingModeTab">
           <div class="section-heading grocery-heading view-banner grocery-banner">
             <div>
               <p class="view-kicker" data-i18n="groceryLabel">Shared grocery list</p>
@@ -196,7 +196,7 @@
           <div class="grocery-list" id="groceryList"></div>
         </div>
 
-        <div id="homePanel" hidden>
+        <div id="homePanel" role="tabpanel" aria-labelledby="homeModeTab" hidden>
           <div class="section-heading inventory-heading view-banner inventory-banner" id="inventoryHeading">
             <div>
               <p class="view-kicker" data-i18n="inventoryLabel">Home inventory</p>
@@ -238,7 +238,8 @@
             </div>
           </div>
           <div class="inventory-filters" role="group" aria-label="Inventory location" data-i18n-aria-label="inventoryFiltersLabel">
-            <button class="active" type="button" data-inventory-filter="all" data-i18n="locationAll">All</button>
+            <button class="active attention-filter" type="button" data-inventory-filter="attention" data-i18n="inventoryAttention">Needs attention</button>
+            <button type="button" data-inventory-filter="all" data-i18n="locationAll">All</button>
             <button type="button" data-inventory-filter="fridge" data-i18n="locationFridge">Fridge</button>
             <button type="button" data-inventory-filter="freezer" data-i18n="locationFreezer">Freezer</button>
             <button type="button" data-inventory-filter="pantry" data-i18n="locationPantry">Pantry</button>
@@ -383,9 +384,13 @@
           <p class="upload-note" data-i18n="sharedUploadNote">Recipes added here save to the live family site for everyone.</p>
           <fieldset class="recipe-source-fieldset">
             <legend data-i18n="recipeSourceLegend">Start with what you have</legend>
-            <div class="recipe-source-grid">
-              <section class="recipe-source-card">
-                <span class="source-number" aria-hidden="true">01</span>
+            <div class="recipe-source-choice" role="group" aria-label="Recipe source" data-i18n-aria-label="recipeSourceMethodLabel">
+              <button class="active" id="usePhotoSource" type="button" aria-pressed="true" data-i18n="usePhotos">Use photos</button>
+              <button id="useUrlSource" type="button" aria-pressed="false" data-i18n="useRecipeLink">Import a link</button>
+              <button id="useManualSource" type="button" aria-pressed="false" data-i18n="typeManually">Type manually</button>
+            </div>
+            <div class="recipe-source-panels">
+              <section class="recipe-source-card" id="photoSourcePanel">
                 <h3 data-i18n="photoSourceHeading">Photos or camera</h3>
                 <label>
                   <span data-i18n="photoLabel">Recipe photos</span>
@@ -401,8 +406,7 @@
                 </div>
                 <p class="upload-note compact-note" id="selectedRecipePhotoStatus" data-i18n="noRecipePhotosSelected">No recipe photos selected yet.</p>
               </section>
-              <section class="recipe-source-card url-source-card">
-                <span class="source-number" aria-hidden="true">02</span>
+              <section class="recipe-source-card url-source-card" id="urlSourcePanel" hidden>
                 <h3 data-i18n="urlSourceHeading">Recipe website</h3>
                 <label>
                   <span data-i18n="recipeUrlLabel">Recipe URL</span>
@@ -464,6 +468,11 @@
 
     </main>
 
-    <script type="module" src="app.js?v=54"></script>
+    <div class="undo-toast" id="undoToast" role="status" hidden>
+      <span id="undoMessage"></span>
+      <button type="button" id="undoAction" data-i18n="undo">Undo</button>
+    </div>
+
+    <script type="module" src="app.js?v=55"></script>
   </body>
 </html>

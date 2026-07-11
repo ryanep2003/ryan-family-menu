@@ -67,6 +67,25 @@ export function createRecipeFormUi({
     if (disclosure) disclosure.open = true;
   }
 
+  function setRecipeSourceMode(mode) {
+    const sources = [
+      { mode: "photos", button: $("#usePhotoSource"), panel: $("#photoSourcePanel") },
+      { mode: "url", button: $("#useUrlSource"), panel: $("#urlSourcePanel") },
+      { mode: "manual", button: $("#useManualSource") },
+    ];
+
+    sources.forEach((source) => {
+      const active = source.mode === mode;
+      source.button.classList.toggle("active", active);
+      source.button.setAttribute("aria-pressed", `${active}`);
+      if (source.panel) source.panel.hidden = !active;
+    });
+
+    const disclosure = $("#recipeDetailsDisclosure");
+    if (mode === "manual") openRecipeDetails();
+    else if (disclosure) disclosure.open = false;
+  }
+
   function renderEditPhotoPreview(photos) {
     $("#editPhotoPreview").innerHTML = photos
       .map((src) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(t("recipePhotoPreview"))}" loading="lazy" decoding="async" />`)
@@ -313,6 +332,10 @@ export function createRecipeFormUi({
   }
 
   function bind() {
+    $("#usePhotoSource").addEventListener("click", () => setRecipeSourceMode("photos"));
+    $("#useUrlSource").addEventListener("click", () => setRecipeSourceMode("url"));
+    $("#useManualSource").addEventListener("click", () => setRecipeSourceMode("manual"));
+
     $("#editRecipe").addEventListener("click", () => {
       const recipe = recipeById(getSelectedRecipeId());
       if (!recipe) return;

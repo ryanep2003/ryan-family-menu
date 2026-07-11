@@ -15,6 +15,7 @@ export function createDashboardUi({
   recipeById,
   allRecipes,
   saveSharedState,
+  offerUndo,
   render,
   renderDetail,
   setView,
@@ -113,9 +114,15 @@ export function createDashboardUi({
 
     $$('[data-remove-task]').forEach((button) => {
       button.addEventListener("click", async () => {
+        const removed = getTasks().find((task) => task.id === button.dataset.removeTask);
         setTasks(getTasks().filter((task) => task.id !== button.dataset.removeTask));
         renderTasks();
         await saveSharedState();
+        if (removed) offerUndo?.(t("taskRemoved"), async () => {
+          setTasks([removed, ...getTasks()]);
+          renderTasks();
+          await saveSharedState();
+        });
       });
     });
   }

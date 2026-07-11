@@ -42,6 +42,7 @@ function harness(overrides = {}) {
   const state = {
     lang: "es",
     saveCalls: 0,
+    undo: null,
     groceries: [
       {
         id: "grocery-1",
@@ -110,6 +111,9 @@ function harness(overrides = {}) {
       state.saveCalls += 1;
       return true;
     },
+    offerUndo: (message, undo) => {
+      state.undo = { message, undo };
+    },
   });
 
   ui.bindGroceryControls();
@@ -148,6 +152,19 @@ test("delete section removes every item in that grocery section", async () => {
 
   assert.deepEqual(state.groceries, []);
   assert.equal(state.saveCalls, 1);
+});
+
+test("deleted grocery section can be restored", async () => {
+  const { elements, state } = harness();
+
+  await elements["#groceryList"].dispatch(
+    "click",
+    actionTarget("[data-delete-grocery-section]", "grocery-1|grocery-2")
+  );
+  await state.undo.undo();
+
+  assert.equal(state.groceries.length, 2);
+  assert.equal(state.saveCalls, 2);
 });
 
 test("check section marks every item in that grocery section", async () => {

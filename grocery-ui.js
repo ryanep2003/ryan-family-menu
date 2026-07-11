@@ -15,6 +15,7 @@ export function createGroceryUi({
   groceryStoreLabel,
   inventoryLocationLabel,
   saveGroceries,
+  offerUndo,
 }) {
   let controlsBound = false;
 
@@ -199,9 +200,15 @@ export function createGroceryUi({
       if (deleteButton) {
         event.preventDefault();
         const ids = new Set(deleteButton.dataset.deleteGrocerySection.split("|").filter(Boolean));
+        const removed = getGroceries().filter((item) => ids.has(item.id));
         setGroceries(getGroceries().filter((item) => !ids.has(item.id)));
         renderGroceries();
         await saveGroceries();
+        offerUndo?.(t("grocerySectionRemoved"), async () => {
+          setGroceries([...removed, ...getGroceries()]);
+          renderGroceries();
+          await saveGroceries();
+        });
       }
     });
   }

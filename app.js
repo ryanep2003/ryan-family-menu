@@ -88,7 +88,7 @@ let inventoryVersion = storedInventory.version;
 let inventorySuggestions = [];
 let receiptSuggestions = [];
 let inventoryMode = "shopping";
-let inventoryFilter = "all";
+let inventoryFilter = "attention";
 let visibleMonth = new Date();
 visibleMonth.setDate(1);
 let recipeSearch = "";
@@ -165,6 +165,25 @@ function refreshSyncStatuses() {
 
 function markSynced(area) {
   setSyncStatus(area, "syncedAt", { syncedAt: new Date().toISOString() });
+}
+
+let undoTimer = 0;
+
+function offerUndo(message, undo) {
+  const toast = $("#undoToast");
+  const action = $("#undoAction");
+  if (!toast || !action) return;
+  window.clearTimeout(undoTimer);
+  $("#undoMessage").textContent = message;
+  toast.hidden = false;
+  action.onclick = async () => {
+    window.clearTimeout(undoTimer);
+    toast.hidden = true;
+    await undo();
+  };
+  undoTimer = window.setTimeout(() => {
+    toast.hidden = true;
+  }, 7000);
 }
 
 function allRecipes() {
@@ -558,6 +577,7 @@ const groceryUi = createGroceryUi({
   groceryStoreLabel,
   inventoryLocationLabel,
   saveGroceries,
+  offerUndo,
 });
 
 const renderGroceries = () => groceryUi.renderGroceries();
@@ -579,6 +599,7 @@ inventoryUi = createInventoryUi({
   bindGroceryControls,
   saveGroceries,
   saveInventory,
+  offerUndo,
   getInventory: () => inventory,
   setInventory: (items) => {
     inventory = items;
@@ -688,6 +709,7 @@ const dashboardUi = createDashboardUi({
   recipeById,
   allRecipes,
   saveSharedState,
+  offerUndo,
   render,
   renderDetail: () => renderDetail(),
   setView,

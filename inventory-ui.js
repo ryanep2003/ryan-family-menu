@@ -13,6 +13,7 @@ export function createInventoryUi({
   bindGroceryControls,
   saveGroceries,
   saveInventory,
+  offerUndo,
   getInventory,
   setInventory,
   getGroceries,
@@ -56,7 +57,9 @@ export function createInventoryUi({
     ].map((group) => ({
       ...group,
       items: inventory.filter((item) => (item.location || "pantry") === group.key
-        && (inventoryFilter === "all" || group.key === inventoryFilter)),
+        && (inventoryFilter === "all"
+          || (inventoryFilter === "attention" && ["low", "out"].includes(item.stockState))
+          || group.key === inventoryFilter)),
     })).filter((group) => group.items.length);
 
     if (!inventory.length) {
@@ -65,7 +68,7 @@ export function createInventoryUi({
     }
 
     if (!groups.length) {
-      $("#inventoryList").innerHTML = `<p class="empty-state">${t("noInventoryMatches")}</p>`;
+      $("#inventoryList").innerHTML = `<p class="empty-state">${t(inventoryFilter === "attention" ? "inventoryAttentionEmpty" : "noInventoryMatches")}</p>`;
       return;
     }
 
@@ -137,10 +140,21 @@ export function createInventoryUi({
 
     $$("[data-remove-inventory]").forEach((button) => {
       button.addEventListener("click", async () => {
-        setInventory(getInventory().filter((item) => item.id !== button.dataset.removeInventory));
+        const current = getInventory();
+        const index = current.findIndex((item) => item.id === button.dataset.removeInventory);
+        const removed = current[index];
+        setInventory(current.filter((item) => item.id !== button.dataset.removeInventory));
         renderInventory();
         bindInventoryControls();
         await saveInventory();
+        if (removed) offerUndo?.(t("inventoryItemRemoved"), async () => {
+          const restored = [...getInventory()];
+          restored.splice(Math.max(index, 0), 0, removed);
+          setInventory(restored);
+          renderInventory();
+          bindInventoryControls();
+          await saveInventory();
+        });
       });
     });
   }
