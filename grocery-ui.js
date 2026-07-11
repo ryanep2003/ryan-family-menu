@@ -1,5 +1,5 @@
 import { allLocalizedText, canonicalText, localizedTextExact } from "./localized-data.js";
-import { textMatchesLanguage } from "./language-quality.js";
+import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
 
 export function createGroceryUi({
   $,
@@ -44,7 +44,7 @@ export function createGroceryUi({
     const direct = localizedTextExact(item.text, getLang());
     const recipe = recipeForGroceryItem(item);
     const recipeIngredients = recipe?.ingredients?.[getLang()] || [];
-    const recipeLanguageReady = textMatchesLanguage(recipeIngredients.join("\n"), getLang());
+    const recipeLanguageReady = linesMatchLanguage(recipeIngredients, getLang());
     if (direct && textMatchesLanguage(direct, getLang()) && recipeLanguageReady) return direct;
     if (!recipe) return t("translationPendingShort");
     if (!recipeLanguageReady) return t("translationPendingShort");

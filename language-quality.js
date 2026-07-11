@@ -1,10 +1,11 @@
 const englishMarkers = new Set([
-  "add", "and", "bake", "beans", "before", "butter", "chicken", "chopped", "cook",
-  "cup", "cups", "family", "fresh", "good", "heat", "leaves", "lemony", "minutes",
-  "large", "like", "note", "notes", "oil", "other", "oven", "packed", "pepper", "pork",
-  "recipe", "roast", "roasted", "salt", "says", "serve", "simmer", "stir", "storage",
-  "tablespoon", "tablespoons", "teaspoon", "teaspoons", "then", "the", "until", "used",
-  "vegetables", "white", "with",
+  "add", "and", "bake", "beans", "before", "boneless", "bottles", "butter", "chicken",
+  "chopped", "chunks", "cook", "corn", "cup", "cups", "cut", "dark", "diced", "family",
+  "fresh", "good", "heat", "lager", "lard", "large", "leaves", "lemony", "like", "minutes",
+  "note", "notes", "oil", "onion", "other", "ounces", "oven", "packed", "pepper", "pork",
+  "pounds", "powder", "recipe", "roast", "roasted", "salt", "says", "serve", "shoulder",
+  "simmer", "stir", "storage", "tablespoon", "tablespoons", "teaspoon", "teaspoons", "then",
+  "the", "until", "used", "vegetables", "warmed", "white", "with",
 ]);
 
 const spanishMarkers = new Set([
@@ -34,4 +35,8 @@ export function appearsEnglish(value) {
 
 export function textMatchesLanguage(value, lang) {
   return lang !== "es" || !appearsEnglish(value);
+}
+
+export function linesMatchLanguage(values, lang) {
+  return (values || []).every((value) => textMatchesLanguage(value, lang));
 }

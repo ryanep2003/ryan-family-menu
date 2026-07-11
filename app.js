@@ -18,7 +18,7 @@ import { createGroceryUi } from "./grocery-ui.js";
 import { createInventoryUi } from "./inventory-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
 import { localizedText, localizedTextExact, updateLocalizedText } from "./localized-data.js";
-import { textMatchesLanguage } from "./language-quality.js";
+import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
 import { createOnboardingUi } from "./onboarding-ui.js";
 import { createRecipeFormUi } from "./recipe-form-ui.js";
 import { createRecipeLibraryUi } from "./recipe-library-ui.js";
@@ -263,12 +263,12 @@ function rawRecipeLines(value, locale) {
 
 function rawRecipeHasLocale(recipe, locale) {
   if (!recipe) return false;
-  const required = [
-    rawRecipeText(recipe.name, locale),
-    rawRecipeLines(recipe.ingredientsText, locale).join("\n"),
-    rawRecipeLines(recipe.stepsText, locale).join("\n"),
-  ];
-  if (required.some((value) => !value || !textMatchesLanguage(value, locale))) return false;
+  const name = rawRecipeText(recipe.name, locale);
+  const ingredients = rawRecipeLines(recipe.ingredientsText, locale);
+  const steps = rawRecipeLines(recipe.stepsText, locale);
+  if (!name || !textMatchesLanguage(name, locale)) return false;
+  if (!ingredients.length || !linesMatchLanguage(ingredients, locale)) return false;
+  if (!steps.length || !linesMatchLanguage(steps, locale)) return false;
   if (locale !== "es") return true;
 
   const opposite = "en";

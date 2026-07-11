@@ -1,5 +1,5 @@
 import { hasLocalizedContent } from "./localized-data.js";
-import { textMatchesLanguage } from "./language-quality.js";
+import { linesMatchLanguage } from "./language-quality.js";
 
 export function createRecipeLibraryUi({
   $,
@@ -32,7 +32,7 @@ export function createRecipeLibraryUi({
 
   function localizedLines(value) {
     const lines = value?.[getLang()] || [];
-    return textMatchesLanguage(lines.join("\n"), getLang()) ? lines : [];
+    return linesMatchLanguage(lines, getLang()) ? lines : [];
   }
 
   function renderRecipes() {
