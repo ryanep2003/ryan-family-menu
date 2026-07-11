@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4ecdf" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=34" />
+    <link rel="stylesheet" href="styles.css?v=35" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -200,6 +200,11 @@
             </select>
             <button class="primary-action" type="submit" data-i18n="addGroceryItem">Add item</button>
           </form>
+          <div class="sync-status-row">
+            <p class="upload-status" id="groceryStatus" role="status"></p>
+            <button class="ghost-button sync-retry" id="retryGroceries" type="button" data-i18n="retrySync" hidden>Retry sync</button>
+          </div>
+          <div class="grocery-list" id="groceryList"></div>
           <details class="grocery-tools-menu">
             <summary data-i18n="listTools">List tools</summary>
             <div>
@@ -222,11 +227,6 @@
             </form>
             <div class="inventory-suggestions" id="receiptSuggestions" hidden></div>
           </div>
-          <div class="sync-status-row">
-            <p class="upload-status" id="groceryStatus" role="status"></p>
-            <button class="ghost-button sync-retry" id="retryGroceries" type="button" data-i18n="retrySync" hidden>Retry sync</button>
-          </div>
-          <div class="grocery-list" id="groceryList"></div>
         </div>
 
         <div id="homePanel" role="tabpanel" aria-labelledby="homeModeTab" hidden>
@@ -235,6 +235,9 @@
               <p class="view-kicker" data-i18n="inventoryLabel">Home inventory</p>
               <h2 data-i18n="inventoryHeading">What is in the house</h2>
             </div>
+          </div>
+          <details class="inventory-tools-menu">
+            <summary data-i18n="manageInventory">Manage inventory</summary>
             <div class="inventory-tools">
               <details>
                 <summary data-i18n="addInventoryItem">Add item</summary>
@@ -269,14 +272,26 @@
                 </div>
               </details>
             </div>
-          </div>
-          <div class="inventory-filters" role="group" aria-label="Inventory location" data-i18n-aria-label="inventoryFiltersLabel">
-            <button class="active attention-filter" type="button" data-inventory-filter="attention" data-i18n="inventoryAttention">Needs attention</button>
-            <button type="button" data-inventory-filter="all" data-i18n="locationAll">All</button>
-            <button type="button" data-inventory-filter="fridge" data-i18n="locationFridge">Fridge</button>
-            <button type="button" data-inventory-filter="freezer" data-i18n="locationFreezer">Freezer</button>
-            <button type="button" data-inventory-filter="pantry" data-i18n="locationPantry">Pantry</button>
-            <button type="button" data-inventory-filter="household" data-i18n="locationHousehold">Household</button>
+          </details>
+          <div class="inventory-filter-bar">
+            <div class="inventory-filters" role="group" aria-label="Inventory status and location" data-i18n-aria-label="inventoryFiltersLabel">
+              <button class="active attention-filter" type="button" data-inventory-filter="attention" data-i18n="inventoryAttention">Needs attention</button>
+              <button type="button" data-inventory-filter="all" data-i18n="locationAll">All</button>
+              <button class="location-filter" type="button" data-inventory-filter="fridge" data-i18n="locationFridge">Fridge</button>
+              <button class="location-filter" type="button" data-inventory-filter="freezer" data-i18n="locationFreezer">Freezer</button>
+              <button class="location-filter" type="button" data-inventory-filter="pantry" data-i18n="locationPantry">Pantry</button>
+              <button class="location-filter" type="button" data-inventory-filter="household" data-i18n="locationHousehold">Household</button>
+            </div>
+            <label class="inventory-location-filter" for="inventoryLocationFilter">
+              <span data-i18n="inventoryLocationFilter">Filter by location</span>
+              <select id="inventoryLocationFilter" aria-label="Filter inventory by location" data-i18n-aria-label="inventoryLocationFilter">
+                <option value="" data-i18n="chooseLocation">Choose location</option>
+                <option value="fridge" data-i18n="locationFridge">Fridge</option>
+                <option value="freezer" data-i18n="locationFreezer">Freezer</option>
+                <option value="pantry" data-i18n="locationPantry">Pantry</option>
+                <option value="household" data-i18n="locationHousehold">Household</option>
+              </select>
+            </label>
           </div>
           <div class="sync-status-row">
             <p class="upload-status" id="inventoryStatus" role="status"></p>
@@ -512,6 +527,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=65"></script>
+    <script type="module" src="app.js?v=66"></script>
   </body>
 </html>

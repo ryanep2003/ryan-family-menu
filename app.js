@@ -1196,15 +1196,30 @@ $$(".inventory-tools details").forEach((details) => {
   });
 });
 
+function renderInventoryFilterControls() {
+  $$("[data-inventory-filter]").forEach((filterButton) => {
+    filterButton.classList.toggle("active", filterButton.dataset.inventoryFilter === inventoryFilter);
+  });
+  $("#inventoryLocationFilter").value = ["fridge", "freezer", "pantry", "household"].includes(inventoryFilter)
+    ? inventoryFilter
+    : "";
+}
+
 $$("[data-inventory-filter]").forEach((button) => {
   button.addEventListener("click", () => {
     inventoryFilter = button.dataset.inventoryFilter;
-    $$("[data-inventory-filter]").forEach((filterButton) => {
-      filterButton.classList.toggle("active", filterButton.dataset.inventoryFilter === inventoryFilter);
-    });
+    renderInventoryFilterControls();
     renderInventory();
     bindInventoryControls();
   });
+});
+
+$("#inventoryLocationFilter").addEventListener("change", (event) => {
+  if (!event.target.value) return;
+  inventoryFilter = event.target.value;
+  renderInventoryFilterControls();
+  renderInventory();
+  bindInventoryControls();
 });
 
 $$(".tabs button").forEach((button) => {

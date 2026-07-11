@@ -652,14 +652,16 @@ h3 {
 }
 
 .detail-more-actions,
-.grocery-tools-menu {
+.grocery-tools-menu,
+.inventory-tools-menu {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
 }
 
 .detail-more-actions > summary,
-.grocery-tools-menu > summary {
+.grocery-tools-menu > summary,
+.inventory-tools-menu > summary {
   display: flex;
   align-items: center;
   min-height: 44px;
@@ -672,19 +674,22 @@ h3 {
 
 .detail-more-actions > summary::-webkit-details-marker,
 .grocery-tools-menu > summary::-webkit-details-marker,
+.inventory-tools-menu > summary::-webkit-details-marker,
 .grocery-archive > summary::-webkit-details-marker {
   display: none;
 }
 
 .detail-more-actions > summary::after,
-.grocery-tools-menu > summary::after {
+.grocery-tools-menu > summary::after,
+.inventory-tools-menu > summary::after {
   margin-left: 10px;
   color: var(--tomato);
   content: "+";
 }
 
 .detail-more-actions[open] > summary::after,
-.grocery-tools-menu[open] > summary::after {
+.grocery-tools-menu[open] > summary::after,
+.inventory-tools-menu[open] > summary::after {
   content: "−";
 }
 
@@ -1105,7 +1110,16 @@ h3 {
 
 .grocery-tools-menu {
   width: fit-content;
-  margin: 0 0 10px auto;
+  margin: 14px 0 0 auto;
+}
+
+.inventory-tools-menu {
+  width: fit-content;
+  margin: 0 0 12px auto;
+}
+
+.inventory-tools-menu > .inventory-tools {
+  padding: 0 8px 8px;
 }
 
 .inventory-mode-switch {
@@ -1306,6 +1320,14 @@ h3 {
   margin: 12px 0 18px;
   overflow-x: auto;
   padding-bottom: 2px;
+}
+
+.inventory-filter-bar {
+  max-width: 100%;
+}
+
+.inventory-location-filter {
+  display: none;
 }
 
 .inventory-filters button {
@@ -2373,6 +2395,7 @@ li {
   }
 
   .grocery-tools-menu > div,
+  .inventory-tools-menu > .inventory-tools,
   .detail-more-actions > div {
     display: grid;
     grid-template-columns: 1fr;
@@ -2411,6 +2434,15 @@ li {
     grid-column: auto;
   }
 
+  .inventory-tools-menu {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .inventory-tools-menu > summary {
+    justify-content: space-between;
+  }
+
   .inventory-tools {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2430,6 +2462,60 @@ li {
     position: static;
     width: 100%;
     margin-top: 8px;
+  }
+
+  .grocery-banner,
+  .inventory-banner {
+    min-height: 126px;
+    padding: 20px;
+  }
+
+  .inventory-filter-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(132px, 0.72fr);
+    gap: 8px;
+    margin: 12px 0 18px;
+  }
+
+  .inventory-filters {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 58px;
+    gap: 6px;
+    margin: 0;
+    overflow: visible;
+    padding: 0;
+  }
+
+  .inventory-filters .location-filter {
+    display: none;
+  }
+
+  .inventory-filters button {
+    width: 100%;
+    padding: 0 10px;
+  }
+
+  .inventory-location-filter {
+    display: grid;
+  }
+
+  .inventory-location-filter > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .inventory-location-filter select {
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 30px 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 750;
   }
 
   .library-tools {
