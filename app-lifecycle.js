@@ -6,23 +6,69 @@ export function installInstructions(userAgent, t) {
   return t("installInstructions");
 }
 
-export function bindInstallPrompt({ $, t }) {
-  let deferredPrompt = null;
+const INSTALL_DISMISSED_KEY = "dinner-install-prompt-dismissed";
 
-  window.addEventListener("beforeinstallprompt", (event) => {
+export function bindInstallPrompt({
+  $,
+  t,
+  windowObject = window,
+  navigatorObject = navigator,
+  storage = localStorage,
+}) {
+  let deferredPrompt = null;
+  const prompt = $("#installPrompt");
+
+  function isDismissed() {
+    try {
+      return storage.getItem(INSTALL_DISMISSED_KEY) === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  function isStandalone() {
+    return Boolean(
+      navigatorObject.standalone
+      || windowObject.matchMedia?.("(display-mode: standalone)").matches
+    );
+  }
+
+  function dismiss() {
+    prompt.hidden = true;
+    canSuggest = false;
+    try {
+      storage.setItem(INSTALL_DISMISSED_KEY, "true");
+    } catch {
+      // Installation remains optional when browser storage is unavailable.
+    }
+  }
+
+  let canSuggest = !isDismissed() && !isStandalone();
+  const isIos = /iPhone|iPad|iPod/i.test(navigatorObject.userAgent || "");
+  prompt.hidden = !(canSuggest && isIos);
+
+  windowObject.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
+    if (!canSuggest) return;
     deferredPrompt = event;
+    prompt.hidden = false;
   });
 
   $("#installButton").addEventListener("click", async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
+      await deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
       deferredPrompt = null;
+      if (choice?.outcome === "accepted") dismiss();
       return;
     }
 
-    window.alert(installInstructions(navigator.userAgent, t));
+    windowObject.alert(installInstructions(navigatorObject.userAgent, t));
+    dismiss();
   });
+
+  $("#dismissInstall").addEventListener("click", dismiss);
+  windowObject.addEventListener("appinstalled", dismiss);
 }
 
 export function registerServiceWorker({ $, onUpdateAvailable }) {

@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4ecdf" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=32" />
+    <link rel="stylesheet" href="styles.css?v=33" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -19,10 +19,13 @@
       </div>
       <div class="header-actions">
         <button class="guide-button" id="quickGuideToggle" type="button" aria-controls="quickGuide" aria-expanded="false" data-i18n="quickGuide">Quick guide</button>
-        <button class="install-button" id="installButton" type="button" title="Install / Add to Home Screen" aria-label="Install / Add to Home Screen" data-i18n-title="installApp" data-i18n-aria-label="installApp">
-          <span aria-hidden="true">+</span>
-          <span data-i18n="installShort">Install</span>
-        </button>
+        <div class="install-prompt" id="installPrompt" role="group" aria-label="Install / Add to Home Screen" data-i18n-aria-label="installApp" hidden>
+          <button class="install-button" id="installButton" type="button" title="Install / Add to Home Screen" aria-label="Install / Add to Home Screen" data-i18n-title="installApp" data-i18n-aria-label="installApp">
+            <span aria-hidden="true">+</span>
+            <span data-i18n="installShort">Install</span>
+          </button>
+          <button class="install-dismiss" id="dismissInstall" type="button" aria-label="Hide install suggestion" data-i18n-aria-label="dismissInstall">&times;</button>
+        </div>
         <div class="segmented" aria-label="Language" data-i18n-aria-label="languageLabel">
           <button type="button" class="active" data-lang="en">EN</button>
           <button type="button" data-lang="es">ES</button>
@@ -509,6 +512,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=63"></script>
+    <script type="module" src="app.js?v=64"></script>
   </body>
 </html>
