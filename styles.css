@@ -867,19 +867,6 @@ h3 {
   border-radius: 5px 18px 18px;
 }
 
-.view-banner::after {
-  position: absolute;
-  right: -54px;
-  bottom: -76px;
-  width: 220px;
-  height: 220px;
-  border: 1px solid currentColor;
-  border-radius: 46% 54% 58% 42%;
-  content: "";
-  opacity: 0.14;
-  transform: rotate(18deg);
-}
-
 .week-banner {
   background: var(--sage-dark);
   color: #fffaf2;
