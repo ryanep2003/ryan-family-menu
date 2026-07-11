@@ -1,4 +1,4 @@
-const CACHE_NAME = "ryan-family-menu-v52";
+const CACHE_NAME = "ryan-family-menu-v63";
 const ASSETS = [
   "./",
   "./index.html",
@@ -10,6 +10,8 @@ const ASSETS = [
   "./family-state.js",
   "./images.js",
   "./localized-data.js",
+  "./language-quality.js",
+  "./onboarding-ui.js",
   "./grocery-ui.js",
   "./inventory-ui.js",
   "./recipe-form-ui.js",

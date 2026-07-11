@@ -15,6 +15,7 @@ export function createDashboardUi({
   recipeById,
   allRecipes,
   saveSharedState,
+  offerUndo,
   render,
   renderDetail,
   setView,
@@ -37,10 +38,16 @@ export function createDashboardUi({
     const meal = todaysMealPlan();
     const mainRecipe = meal.main ? recipeById(meal.main) : null;
     const recipesForMeal = mealRecipes(meal);
+    const backdrop = $("#todayBackdrop");
+    const backdropSrc = mainRecipe?.photos?.[0] || "";
+    $("#todayBand").classList.toggle("empty", !mainRecipe);
+    backdrop.hidden = !backdropSrc;
+    if (backdropSrc) backdrop.src = backdropSrc;
+    else backdrop.removeAttribute("src");
     $("#todayRecipeName").textContent = mainRecipe ? localize(mainRecipe.name) : t("noMealSet");
     $("#todayMeta").textContent = recipesForMeal.length
       ? `${t(recipesForMeal.length === 1 ? "plannedRecipeOne" : "plannedRecipeMany").replace("{count}", recipesForMeal.length)}${mealHasWarning(meal) ? ` · ${t("allergyBadge")}` : ""}`
-      : t("noMealSet");
+      : t("planTonightNote");
     $("#todayMealList").innerHTML = recipesForMeal
       .map(({ key, recipe }) => `
         <button type="button" data-open="${escapeHtml(recipe.id)}">
@@ -53,7 +60,8 @@ export function createDashboardUi({
     const toBuy = getGroceries().filter((item) => !item.checked && !item.inInventory).length;
     $("#todayGrocerySummary").textContent = `${toBuy} ${t("itemsToBuy")}`;
     $("#todayInventorySummary").textContent = `${getInventory().filter((item) => item.stockState !== "out").length} ${t("itemsAtHome")}`;
-    $("#cookToday").disabled = !mainRecipe;
+    $("#cookToday").disabled = false;
+    $("#cookToday").textContent = t(mainRecipe ? "cookButton" : "planTonight");
   }
 
   function taskAssigneeLabel(assignee) {
@@ -106,9 +114,15 @@ export function createDashboardUi({
 
     $$('[data-remove-task]').forEach((button) => {
       button.addEventListener("click", async () => {
+        const removed = getTasks().find((task) => task.id === button.dataset.removeTask);
         setTasks(getTasks().filter((task) => task.id !== button.dataset.removeTask));
         renderTasks();
         await saveSharedState();
+        if (removed) offerUndo?.(t("taskRemoved"), async () => {
+          setTasks([removed, ...getTasks()]);
+          renderTasks();
+          await saveSharedState();
+        });
       });
     });
   }
@@ -175,7 +189,10 @@ export function createDashboardUi({
 
     $("#cookToday").addEventListener("click", () => {
       const mainRecipe = todaysMealPlan().main;
-      if (!mainRecipe) return;
+      if (!mainRecipe) {
+        setView("schedule");
+        return;
+      }
       setSelectedRecipeId(mainRecipe);
       setView("recipes");
       renderDetail();

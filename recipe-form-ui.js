@@ -62,6 +62,30 @@ export function createRecipeFormUi({
     if ((overwrite || !$("#noteInput").value.trim()) && recipe.notes) $("#noteInput").value = recipe.notes;
   }
 
+  function openRecipeDetails() {
+    const disclosure = $("#recipeDetailsDisclosure");
+    if (disclosure) disclosure.open = true;
+  }
+
+  function setRecipeSourceMode(mode) {
+    const sources = [
+      { mode: "photos", button: $("#usePhotoSource"), panel: $("#photoSourcePanel") },
+      { mode: "url", button: $("#useUrlSource"), panel: $("#urlSourcePanel") },
+      { mode: "manual", button: $("#useManualSource") },
+    ];
+
+    sources.forEach((source) => {
+      const active = source.mode === mode;
+      source.button.classList.toggle("active", active);
+      source.button.setAttribute("aria-pressed", `${active}`);
+      if (source.panel) source.panel.hidden = !active;
+    });
+
+    const disclosure = $("#recipeDetailsDisclosure");
+    if (mode === "manual") openRecipeDetails();
+    else if (disclosure) disclosure.open = false;
+  }
+
   function renderEditPhotoPreview(photos) {
     $("#editPhotoPreview").innerHTML = photos
       .map((src) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(t("recipePhotoPreview"))}" loading="lazy" decoding="async" />`)
@@ -207,6 +231,7 @@ export function createRecipeFormUi({
       });
       const recipe = await recognizeRecipe(images);
       fillUploadFormFromRecipe(recipe);
+      openRecipeDetails();
       status.textContent = t("recipeScanSaved");
     } catch (error) {
       console.warn(error);
@@ -232,6 +257,7 @@ export function createRecipeFormUi({
     try {
       const recipe = await importRecipeUrl(url);
       fillUploadFormFromRecipe(recipe, { overwrite: true });
+      openRecipeDetails();
       setImportedRecipePhotos(Array.isArray(recipe.photos) ? recipe.photos : []);
       status.textContent = t("recipeUrlSaved");
     } catch (error) {
@@ -306,9 +332,14 @@ export function createRecipeFormUi({
   }
 
   function bind() {
+    $("#usePhotoSource").addEventListener("click", () => setRecipeSourceMode("photos"));
+    $("#useUrlSource").addEventListener("click", () => setRecipeSourceMode("url"));
+    $("#useManualSource").addEventListener("click", () => setRecipeSourceMode("manual"));
+
     $("#editRecipe").addEventListener("click", () => {
       const recipe = recipeById(getSelectedRecipeId());
       if (!recipe) return;
+      $("#recipeMoreActions").open = false;
       populateEditRecipeForm(recipe);
       setEditMode(true);
       setDetailStatus("");

@@ -2,39 +2,41 @@
 name: Ryan Family Menu
 description: A warm, fast shared home food system for families and caretakers.
 colors:
-  ink: "#25211d"
-  muted: "#6b6258"
-  paper: "#fbf7ef"
-  surface: "#fffdf8"
-  line: "#ddd3c4"
-  tomato: "#9f3528"
-  tomato-deep: "#7d291f"
-  sage: "#496b55"
-  gold: "#c89a3c"
+  ink: "#28221d"
+  muted: "#6d6258"
+  paper: "#f4ecdf"
+  surface: "#fffaf2"
+  line: "#d7c8b5"
+  tomato: "#aa3b2e"
+  tomato-deep: "#7f2b22"
+  sage: "#3f664f"
+  sage-deep: "#294738"
+  gold: "#d6a53c"
+  peach: "#efb59b"
   white: "#ffffff"
 typography:
   display:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    fontFamily: "Iowan Old Style, Baskerville, Times New Roman, serif"
     fontSize: "2.4rem"
     fontWeight: 700
     lineHeight: 1
     letterSpacing: "0"
   headline:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    fontFamily: "Iowan Old Style, Baskerville, Times New Roman, serif"
     fontSize: "1.65rem"
     fontWeight: 700
     lineHeight: 1.08
   title:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    fontFamily: "Iowan Old Style, Baskerville, Times New Roman, serif"
     fontSize: "1rem"
     fontWeight: 700
   body:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    fontFamily: "Avenir Next, Avenir, Segoe UI, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.48
   label:
-    fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+    fontFamily: "Avenir Next, Avenir, Segoe UI, sans-serif"
     fontSize: "0.78rem"
     fontWeight: 800
     letterSpacing: "0.08em"
@@ -130,10 +132,10 @@ The Tomato & Sage palette takes its cues from food and the home without becoming
 
 ## Typography
 
-**Display Font:** Inter with the product's system sans-serif fallback stack  
-**Body Font:** Inter with the same system sans-serif fallback stack
+**Display Font:** Iowan Old Style with Baskerville and Times fallbacks
+**Body Font:** Avenir Next with Avenir and Segoe UI fallbacks
 
-**Character:** One highly legible sans-serif family keeps the interface familiar and fast. Hierarchy comes from weight, size, and spacing rather than decorative font pairing.
+**Character:** Editorial serif headings make the interface feel like a family recipe book, while a clear humanist sans-serif keeps planning, shopping, and form controls fast. The contrast is purposeful: family memory for orientation, utility for action.
 
 ### Hierarchy
 
@@ -143,7 +145,7 @@ The Tomato & Sage palette takes its cues from food and the home without becoming
 - **Body** (`typography.body`): Recipes, list content, help text, and form values; cap prose near 70 characters when layout permits.
 - **Label** (`typography.label`): Short section labels and category cues. Uppercase is allowed only for brief navigational or organizational labels, never paragraphs.
 
-**The One-Family Rule.** Do not introduce display, script, or novelty fonts into product UI. Familiarity and bilingual readability outrank stylistic contrast.
+**The Two-Voice Rule.** Use the editorial serif only for brand, view, recipe, and grouping headings. Keep labels, controls, data, navigation, and recipe instructions in the humanist sans-serif. Never introduce script or novelty fonts.
 
 **The Translation-Fit Rule.** Never reduce type below the documented scale to force Spanish text into an English-sized control. Wrap or expand the component instead.
 

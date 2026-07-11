@@ -53,6 +53,9 @@ function element(initial = {}) {
     focus() {
       this.focused = true;
     },
+    setAttribute(name, value) {
+      this[name] = value;
+    },
     ...initial,
   };
 }
@@ -82,6 +85,12 @@ function harness(overrides = {}) {
     "#allergyInput": element(),
     "#noteInput": element(),
     "#recipeUrlInput": element(),
+    "#recipeDetailsDisclosure": element({ open: false }),
+    "#usePhotoSource": element(),
+    "#useUrlSource": element(),
+    "#useManualSource": element(),
+    "#photoSourcePanel": element(),
+    "#urlSourcePanel": element({ hidden: true }),
     "#editNameInput": element(),
     "#editCategoryInput": element(),
     "#editIngredientsInput": element(),
@@ -90,6 +99,7 @@ function harness(overrides = {}) {
     "#editNoteInput": element(),
     "#editPhotoPreview": element(),
     "#recipeDetail": element(),
+    "#recipeMoreActions": element({ open: false }),
     "#detailName": element(),
     "#sharedStateStatus": element(),
   };
@@ -304,7 +314,26 @@ test("URL import fills the add form and stores imported photos", async () => {
   assert.equal(elements["#nameInput"].value, "URL pasta");
   assert.equal(elements["#categoryInput"].value, "main");
   assert.equal(elements["#ingredientsInput"].value, "pasta");
+  assert.equal(elements["#recipeDetailsDisclosure"].open, true);
   assert.deepEqual(state.importedRecipePhotos, ["url-photo.jpg"]);
+});
+
+test("recipe source chooser shows one method and opens manual details", async () => {
+  const { elements } = harness();
+
+  await elements["#useUrlSource"].dispatch("click");
+  assert.equal(elements["#photoSourcePanel"].hidden, true);
+  assert.equal(elements["#urlSourcePanel"].hidden, false);
+  assert.equal(elements["#useUrlSource"]["aria-pressed"], "true");
+
+  await elements["#useManualSource"].dispatch("click");
+  assert.equal(elements["#photoSourcePanel"].hidden, true);
+  assert.equal(elements["#urlSourcePanel"].hidden, true);
+  assert.equal(elements["#recipeDetailsDisclosure"].open, true);
+
+  await elements["#usePhotoSource"].dispatch("click");
+  assert.equal(elements["#photoSourcePanel"].hidden, false);
+  assert.equal(elements["#recipeDetailsDisclosure"].open, false);
 });
 
 test("recipe photos are queued and scanned together on demand", async () => {
@@ -335,6 +364,7 @@ test("recipe photos are queued and scanned together on demand", async () => {
   assert.deepEqual(scannedBatches, [["data:page-1.jpg", "data:page-2.jpg"]]);
   assert.equal(elements["#nameInput"].value, "Queued recipe");
   assert.equal(elements["#stepsInput"].value, "cook");
+  assert.equal(elements["#recipeDetailsDisclosure"].open, true);
 });
 
 test("failed live recipe save creates a local draft with imported photos", async () => {

@@ -88,6 +88,8 @@ export function createReceiptUi({
   function bindReceiptControls() {
     $("#scanReceiptToggle").addEventListener("click", () => {
       $("#receiptScanPanel").hidden = !$("#receiptScanPanel").hidden;
+      const menu = $("#scanReceiptToggle").closest?.(".grocery-tools-menu");
+      if (menu) menu.open = false;
     });
 
     $("#receiptScanForm").addEventListener("submit", async (event) => {

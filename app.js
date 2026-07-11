@@ -18,6 +18,8 @@ import { createGroceryUi } from "./grocery-ui.js";
 import { createInventoryUi } from "./inventory-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
 import { localizedText, localizedTextExact, updateLocalizedText } from "./localized-data.js";
+import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
+import { createOnboardingUi } from "./onboarding-ui.js";
 import { createRecipeFormUi } from "./recipe-form-ui.js";
 import { createRecipeLibraryUi } from "./recipe-library-ui.js";
 import { createReceiptUi } from "./receipt-ui.js";
@@ -88,7 +90,7 @@ let inventoryVersion = storedInventory.version;
 let inventorySuggestions = [];
 let receiptSuggestions = [];
 let inventoryMode = "shopping";
-let inventoryFilter = "all";
+let inventoryFilter = "attention";
 let visibleMonth = new Date();
 visibleMonth.setDate(1);
 let recipeSearch = "";
@@ -167,6 +169,25 @@ function markSynced(area) {
   setSyncStatus(area, "syncedAt", { syncedAt: new Date().toISOString() });
 }
 
+let undoTimer = 0;
+
+function offerUndo(message, undo) {
+  const toast = $("#undoToast");
+  const action = $("#undoAction");
+  if (!toast || !action) return;
+  window.clearTimeout(undoTimer);
+  $("#undoMessage").textContent = message;
+  toast.hidden = false;
+  action.onclick = async () => {
+    window.clearTimeout(undoTimer);
+    toast.hidden = true;
+    await undo();
+  };
+  undoTimer = window.setTimeout(() => {
+    toast.hidden = true;
+  }, 7000);
+}
+
 function allRecipes() {
   return visibleRecipes({
     seedRecipes: recipes,
@@ -199,14 +220,34 @@ function persistInventoryLocally(items = inventory, version = inventoryVersion) 
 }
 
 function recipeToEditableUpload(recipe) {
-  return recipeToEditable(recipe, lang, localize);
+  return recipeToEditable(recipe, lang, localizeExact);
 }
 
 function rawRecipeById(id) {
-  return draftById(id)
+  const stored = draftById(id)
     || recipeEdits[id]
     || sharedRecipes.find((recipe) => recipe.id === id)
     || null;
+  if (stored) return stored;
+
+  const seeded = recipes.find((recipe) => recipe.id === id);
+  if (!seeded) return null;
+  return {
+    id: seeded.id,
+    name: seeded.name,
+    category: categoryFor(seeded),
+    ingredientsText: {
+      en: (seeded.ingredients?.en || []).join("\n"),
+      es: (seeded.ingredients?.es || []).join("\n"),
+    },
+    stepsText: {
+      en: (seeded.steps?.en || []).join("\n"),
+      es: (seeded.steps?.es || []).join("\n"),
+    },
+    allergyWarning: seeded.allergyWarning,
+    notes: seeded.notes,
+    photos: seeded.photos,
+  };
 }
 
 function rawRecipeText(value, locale) {
@@ -222,12 +263,21 @@ function rawRecipeLines(value, locale) {
 
 function rawRecipeHasLocale(recipe, locale) {
   if (!recipe) return false;
+  const name = rawRecipeText(recipe.name, locale);
+  const ingredients = rawRecipeLines(recipe.ingredientsText, locale);
+  const steps = rawRecipeLines(recipe.stepsText, locale);
+  if (!name || !textMatchesLanguage(name, locale)) return false;
+  if (!ingredients.length || !linesMatchLanguage(ingredients, locale)) return false;
+  if (!steps.length || !linesMatchLanguage(steps, locale)) return false;
+  if (locale !== "es") return true;
 
-  return Boolean(
-    rawRecipeText(recipe.name, locale)
-    && rawRecipeLines(recipe.ingredientsText, locale).length
-    && rawRecipeLines(recipe.stepsText, locale).length
-  );
+  const opposite = "en";
+  return ["allergyWarning", "notes"].every((field) => {
+    const source = rawRecipeText(recipe[field], opposite);
+    if (!source) return true;
+    const translated = rawRecipeText(recipe[field], locale);
+    return Boolean(translated && textMatchesLanguage(translated, locale));
+  });
 }
 
 function rawRecipeNeedsLocale(recipe, locale) {
@@ -316,6 +366,11 @@ function updateMealsAfterRecipeDelete(recipeId) {
 
 function localize(value) {
   return localizedText(value, lang);
+}
+
+function localizeExact(value) {
+  const text = localizedTextExact(value, lang);
+  return textMatchesLanguage(text, lang) ? text : "";
 }
 
 function escapeHtml(value) {
@@ -469,7 +524,7 @@ function mealHasWarning(meal) {
 function mealSummary(meal) {
   const items = mealRecipes(meal);
   if (!items.length) return t("noMealSet");
-  return items.map(({ recipe }) => localize(recipe.name)).join(" · ");
+  return items.map(({ recipe }) => localizeExact(recipe.name) || t("translationPendingShort")).join(" · ");
 }
 
 function groceryStoreLabel(store) {
@@ -554,10 +609,11 @@ const groceryUi = createGroceryUi({
   },
   getInventory: () => inventory,
   allRecipes,
-  localize,
+  localize: localizeExact,
   groceryStoreLabel,
   inventoryLocationLabel,
   saveGroceries,
+  offerUndo,
 });
 
 const renderGroceries = () => groceryUi.renderGroceries();
@@ -579,6 +635,7 @@ inventoryUi = createInventoryUi({
   bindGroceryControls,
   saveGroceries,
   saveInventory,
+  offerUndo,
   getInventory: () => inventory,
   setInventory: (items) => {
     inventory = items;
@@ -654,7 +711,13 @@ function renderTranslations() {
     node.title = t(node.dataset.i18nTitle);
   });
   $$("[data-lang]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.lang === lang);
+    const active = button.dataset.lang === lang;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", `${active}`);
+  });
+  $$(".tabs button").forEach((button) => {
+    if (button.classList.contains("active")) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
   });
   refreshSyncStatuses();
 }
@@ -672,7 +735,7 @@ const dashboardUi = createDashboardUi({
   $$,
   t,
   escapeHtml,
-  localize,
+  localize: (value) => localizeExact(value) || t("translationPendingShort"),
   formatDateKey,
   categoryFor,
   categoryLabel,
@@ -682,8 +745,12 @@ const dashboardUi = createDashboardUi({
   recipeById,
   allRecipes,
   saveSharedState,
+  offerUndo,
   render,
-  renderDetail: () => renderDetail(),
+  renderDetail: () => {
+    renderDetail();
+    $("#recipesView").classList.add("detail-open");
+  },
   setView,
   getLang: () => lang,
   getFavorites: () => favorites,
@@ -713,7 +780,7 @@ const scheduleUi = createScheduleUi({
   $$,
   t,
   escapeHtml,
-  localize,
+  localize: (value) => localizeExact(value) || t("translationPendingShort"),
   formatDateKey,
   normalizeMealPlan,
   mealSlots,
@@ -754,6 +821,7 @@ const recipeLibraryUi = createRecipeLibraryUi({
   t,
   escapeHtml,
   localize,
+  localizeExact,
   categoryFor,
   categoryLabel,
   getLang: () => lang,
@@ -781,6 +849,17 @@ const renderRecipes = () => recipeLibraryUi.renderRecipes();
 const renderDetail = () => recipeLibraryUi.renderDetail();
 const bindOpenButtons = () => recipeLibraryUi.bindOpenButtons();
 
+const onboardingUi = createOnboardingUi({
+  $,
+  $$,
+  storage: localStorage,
+  setView,
+  openInventory: () => {
+    inventoryMode = "home";
+    renderInventoryMode();
+  },
+});
+
 function render() {
   renderTranslations();
   renderInventoryMode();
@@ -802,8 +881,19 @@ function render() {
 
 function setView(viewName) {
   $$(".view").forEach((view) => view.classList.toggle("active", view.id === `${viewName}View`));
-  $$(".tabs button").forEach((button) => button.classList.toggle("active", button.dataset.view === viewName));
+  $$(".tabs button").forEach((button) => {
+    const active = button.dataset.view === viewName;
+    button.classList.toggle("active", active);
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
+  document.body.dataset.view = viewName;
   $("#recipeDetail").hidden = true;
+  $("#recipesView").classList.remove("detail-open");
+  if (viewName !== "today" && $("#quickGuide") && $("#quickGuideToggle")) {
+    $("#quickGuide").hidden = true;
+    $("#quickGuideToggle").setAttribute("aria-expanded", "false");
+  }
 }
 
 async function loadSharedRecipes() {
@@ -1147,6 +1237,7 @@ scheduleUi.bindScheduleControls();
 dashboardUi.bindDashboardControls();
 
 $("#favoriteRecipe").addEventListener("click", async () => {
+  $("#recipeMoreActions").open = false;
   if (favorites.includes(selectedRecipeId)) {
     favorites = favorites.filter((id) => id !== selectedRecipeId);
   } else {
@@ -1196,9 +1287,11 @@ $("#addRecipeGroceries").addEventListener("click", async () => {
 });
 
 recipeFormUi.bind();
+onboardingUi.bind();
 
 $("#markCooked").addEventListener("click", () => {
   $("#markCooked").textContent = t("cookedToday");
+  $("#recipeMoreActions").open = false;
 });
 
 recipeLibraryUi.bindLibraryControls();
@@ -1219,6 +1312,7 @@ $("#groceryForm").addEventListener("submit", async (event) => {
 });
 
 $("#generateGroceries").addEventListener("click", async () => {
+  $(".grocery-tools-menu").open = false;
   groceries = mergeGroceries(groceries, generatedGroceriesFromWeek());
   renderGroceries();
   bindGroceryControls();
@@ -1226,6 +1320,7 @@ $("#generateGroceries").addEventListener("click", async () => {
 });
 
 $("#clearCheckedGroceries").addEventListener("click", async () => {
+  $(".grocery-tools-menu").open = false;
   groceries = groceries.filter((item) => !item.checked);
   renderGroceries();
   bindGroceryControls();

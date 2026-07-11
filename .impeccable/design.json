@@ -7,55 +7,55 @@
       "ink": {
         "role": "neutral",
         "displayName": "Espresso Ink",
-        "canonical": "#25211d",
+        "canonical": "#28221d",
         "tonalRamp": ["#1b1815", "#25211d", "#3e3832", "#5b534a", "#81776d", "#aaa197", "#d5cec5", "#f5f1eb"]
       },
       "muted": {
         "role": "neutral",
         "displayName": "Pantry Muted",
-        "canonical": "#6b6258",
+        "canonical": "#6d6258",
         "tonalRamp": ["#211e1b", "#39342f", "#514a43", "#6b6258", "#8b8177", "#aca49b", "#d1cbc4", "#f4f1ed"]
       },
       "paper": {
         "role": "neutral",
         "displayName": "Pantry Paper",
-        "canonical": "#fbf7ef",
+        "canonical": "#f4ecdf",
         "tonalRamp": ["#29251f", "#49423a", "#6b6257", "#918578", "#b7aa9b", "#d8cec1", "#eee7dd", "#fbf7ef"]
       },
       "surface": {
         "role": "neutral",
         "displayName": "Counter Surface",
-        "canonical": "#fffdf8",
+        "canonical": "#fffaf2",
         "tonalRamp": ["#2a2823", "#4b4740", "#6f6960", "#958e83", "#bbb4aa", "#ddd8d0", "#f1ede7", "#fffdf8"]
       },
       "line": {
         "role": "neutral",
         "displayName": "Cupboard Line",
-        "canonical": "#ddd3c4",
+        "canonical": "#d7c8b5",
         "tonalRamp": ["#27231e", "#484138", "#685f53", "#8b8071", "#ada293", "#cabfb1", "#ddd3c4", "#f5f0e9"]
       },
       "tomato": {
         "role": "primary",
         "displayName": "Action Tomato",
-        "canonical": "#9f3528",
+        "canonical": "#aa3b2e",
         "tonalRamp": ["#2a0d09", "#521912", "#7d291f", "#9f3528", "#c65443", "#df8375", "#f1b7ae", "#fce9e5"]
       },
       "tomato-deep": {
         "role": "primary",
         "displayName": "Deep Tomato",
-        "canonical": "#7d291f",
+        "canonical": "#7f2b22",
         "tonalRamp": ["#240b08", "#42150f", "#612019", "#7d291f", "#a24437", "#ca7063", "#e8aca4", "#f9e6e2"]
       },
       "sage": {
         "role": "secondary",
         "displayName": "Organizing Sage",
-        "canonical": "#496b55",
+        "canonical": "#3f664f",
         "tonalRamp": ["#101d14", "#203a29", "#34533f", "#496b55", "#678a72", "#8eaa96", "#bdcdbf", "#edf3ee"]
       },
       "gold": {
         "role": "tertiary",
         "displayName": "Provision Gold",
-        "canonical": "#c89a3c",
+        "canonical": "#d6a53c",
         "tonalRamp": ["#2b1d05", "#563b0b", "#815d18", "#a77b29", "#c89a3c", "#ddb965", "#eed99e", "#fbf2d9"]
       },
       "white": {
@@ -140,7 +140,7 @@
   ],
   "narrative": {
     "northStar": "The Shared Kitchen Table",
-    "overview": "Ryan Family Menu should feel like the dependable center of a busy household: warm enough to feel personal, structured enough to keep everyone coordinated, and direct enough to use with one hand in a kitchen or grocery aisle. The interface is a task-focused product, so familiar controls, concise language, and immediate feedback take priority over decoration. The visual system combines practical density with food-rooted color. Tomato marks consequential actions, sage organizes categories and successful states, and pantry neutrals keep long recipes and lists readable. English and Spanish must receive equal layout consideration; controls grow or wrap instead of truncating translated text. The product must never feel corporate, stodgy, or old. It rejects enterprise SaaS dashboard styling, stiff admin-tool density, and dated family-organizer ornament.",
+    "overview": "Ryan Family Menu should feel like the dependable center of a busy household: warm enough to feel personal, structured enough to keep everyone coordinated, and direct enough to use with one hand in a kitchen or grocery aisle. Editorial serif headings evoke a family recipe book, while a humanist sans-serif keeps actions fast. Contextual sage, peach, gold, and tomato fields orient planning, shopping, recipes, and capture without turning every section into another white card. English and Spanish receive equal layout consideration; controls grow or wrap instead of truncating translated text. The product rejects enterprise SaaS density and generic meal-planner sameness.",
     "keyCharacteristics": [
       "Warm, capable, and household-centered.",
       "Fast, familiar controls with strong 44-48px touch targets.",
@@ -151,7 +151,7 @@
     "rules": [
       { "name": "The One Tomato Rule", "body": "Tomato is functional, never decorative. Use it for the primary action or the most important active state, not as ambient page color.", "section": "colors" },
       { "name": "The Semantic Pantry Rule", "body": "Sage means organization or success, gold means attention, and tomato-deep means urgency. Never swap these roles for visual variety.", "section": "colors" },
-      { "name": "The One-Family Rule", "body": "Do not introduce display, script, or novelty fonts into product UI. Familiarity and bilingual readability outrank stylistic contrast.", "section": "typography" },
+      { "name": "The Two-Voice Rule", "body": "Use the editorial serif only for brand, view, recipe, and grouping headings. Keep labels, controls, data, navigation, and recipe instructions in the humanist sans-serif. Never introduce script or novelty fonts.", "section": "typography" },
       { "name": "The Translation-Fit Rule", "body": "Never reduce type below the documented scale to force Spanish text into an English-sized control. Wrap or expand the component instead.", "section": "typography" },
       { "name": "The Purposeful Lift Rule", "body": "A resting card or form section stays flat. Add elevation only when the element is featured, selected, sticky, or temporarily overlapping other content.", "section": "elevation" }
     ],

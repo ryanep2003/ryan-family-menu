@@ -1,4 +1,5 @@
-import { canonicalText, localizedText } from "./localized-data.js";
+import { allLocalizedText, canonicalText, localizedTextExact } from "./localized-data.js";
+import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
 
 export function createGroceryUi({
   $,
@@ -15,6 +16,7 @@ export function createGroceryUi({
   groceryStoreLabel,
   inventoryLocationLabel,
   saveGroceries,
+  offerUndo,
 }) {
   let controlsBound = false;
 
@@ -25,29 +27,32 @@ export function createGroceryUi({
     }
 
     if (!item.recipeName) return null;
-    return allRecipes().find((recipe) => [
-      localize(recipe.name),
-      recipe.name?.en,
-      recipe.name?.es,
-    ].includes(localizedText(item.recipeName, getLang()))) || null;
+    const itemRecipeNames = new Set(allLocalizedText(item.recipeName));
+    return allRecipes().find((recipe) => allLocalizedText(recipe.name)
+      .some((name) => itemRecipeNames.has(name))) || null;
   }
 
   function grocerySourceLabel(item) {
     const recipe = recipeForGroceryItem(item);
-    if (recipe) return localize(recipe.name);
-    if (item.recipeName) return localizedText(item.recipeName, getLang());
+    if (recipe) return localize(recipe.name) || t("translationPendingShort");
+    if (item.recipeName) return localizedTextExact(item.recipeName, getLang()) || t("translationPendingShort");
     if (item.source === "inventory-restock") return t("restockSource");
     return t("addOnsSection");
   }
 
-  function groceryIngredientTranslation(item) {
+  function groceryDisplayText(item) {
+    const direct = localizedTextExact(item.text, getLang());
     const recipe = recipeForGroceryItem(item);
-    if (!recipe) return "";
+    const recipeIngredients = recipe?.ingredients?.[getLang()] || [];
+    const recipeLanguageReady = linesMatchLanguage(recipeIngredients, getLang());
+    if (direct && textMatchesLanguage(direct, getLang()) && recipeLanguageReady) return direct;
+    if (!recipe) return t("translationPendingShort");
+    if (!recipeLanguageReady) return t("translationPendingShort");
 
     const lang = getLang();
     const englishIngredients = recipe.ingredients?.en || [];
     const spanishIngredients = recipe.ingredients?.es || [];
-    const currentIngredients = recipe.ingredients?.[lang] || englishIngredients;
+    const currentIngredients = recipe.ingredients?.[lang] || [];
     const itemText = cleanIngredientForGrocery(canonicalText(item.text)).toLowerCase();
     const ingredientIndex = [...englishIngredients, ...spanishIngredients, ...currentIngredients]
       .findIndex((ingredient) => cleanIngredientForGrocery(ingredient).toLowerCase() === itemText);
@@ -57,15 +62,9 @@ export function createGroceryUi({
         ? ingredientIndex - englishIngredients.length
         : ingredientIndex;
     const translated = currentIngredients[index] || "";
-
-    return cleanIngredientForGrocery(translated).toLowerCase() === itemText ? "" : translated;
-  }
-
-  function groceryItemNote(item) {
-    if (item.source === "week-plan") return t("weekPlanSource");
-    if (item.source === "recipe-detail") return t("selectedRecipeSource");
-    if (item.source === "inventory-restock") return t("restockSource");
-    return t("manualSource");
+    return translated && textMatchesLanguage(translated, getLang())
+      ? translated
+      : t("translationPendingShort");
   }
 
   function groupGroceriesBySource(items) {
@@ -94,12 +93,12 @@ export function createGroceryUi({
     if (item.inInventory) return "";
     const match = findInventoryMatch(getInventory(), item.text);
     if (!match) return "";
-    return `${t("alreadyAtHomeLabel")}: ${localizedText(match.quantity, getLang()) || inventoryLocationLabel(match.location)}`;
+    return `${t("alreadyAtHomeLabel")}: ${localizedTextExact(match.quantity, getLang()) || inventoryLocationLabel(match.location)}`;
   }
 
   function inventoryShoppingNote(item) {
     const overlap = shoppingOverlapFor(item.text);
-    return overlap ? `${t("onShoppingList")}: ${localizedText(overlap.text, getLang())}` : "";
+    return overlap ? `${t("onShoppingList")}: ${localizedTextExact(overlap.text, getLang()) || t("translationPendingShort")}` : "";
   }
 
   function purchasedGroceries() {
@@ -115,33 +114,35 @@ export function createGroceryUi({
 
   function grocerySection(label, items, options = {}) {
     const sectionIds = items.map((item) => item.id).join("|");
-    return `
+    const content = `
       <section class="grocery-section${options.checkedSection ? " checked-section" : ""}">
         <div class="grocery-section-header">
-          <h3>${escapeHtml(label)}</h3>
+          ${options.collapsed ? "" : `<h3>${escapeHtml(label)}</h3>`}
           <div class="grocery-section-actions">
             ${options.checkedSection ? "" : `<button class="text-button" type="button" data-check-grocery-section="${escapeHtml(sectionIds)}">${t("checkSection")}</button>`}
             <button class="text-button" type="button" data-delete-grocery-section="${escapeHtml(sectionIds)}">${t("deleteSection")}</button>
           </div>
         </div>
         ${items.map((item) => {
-          const translation = groceryIngredientTranslation(item);
+          const displayText = groceryDisplayText(item);
           const atHomeNote = groceryAtHomeNote(item);
+          const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
           return `
             <label class="grocery-item">
               <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" ${item.checked ? "checked" : ""} />
               <span>
-                <strong>${escapeHtml(localizedText(item.text, getLang()))}</strong>
-                ${translation ? `<em class="translation-note">${escapeHtml(translation)}</em>` : ""}
-                <em>${escapeHtml(groceryItemNote(item))}</em>
+                <strong${displayText === t("translationPendingShort") ? ` class="translation-placeholder"` : ""}>${escapeHtml(displayText)}</strong>
                 ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
               </span>
-              <small>${escapeHtml(groceryStoreLabel(item.store))}</small>
+              ${store ? `<small>${escapeHtml(store)}</small>` : ""}
             </label>
           `;
         }).join("")}
       </section>
     `;
+    return options.collapsed
+      ? `<details class="grocery-archive"><summary><span>${escapeHtml(label)}</span><strong>${items.length}</strong></summary>${content}</details>`
+      : content;
   }
 
   function renderGroceries() {
@@ -159,8 +160,8 @@ export function createGroceryUi({
 
     $("#groceryList").innerHTML = [
       ...sections.map((section) => grocerySection(section.label, section.items)),
-      inventoryItems.length ? grocerySection(t("alreadyHave"), inventoryItems, { checkedSection: true }) : "",
-      checkedItems.length ? grocerySection(t("checkedOffSection"), checkedItems, { checkedSection: true }) : "",
+      inventoryItems.length ? grocerySection(t("alreadyHave"), inventoryItems, { checkedSection: true, collapsed: true }) : "",
+      checkedItems.length ? grocerySection(t("checkedOffSection"), checkedItems, { checkedSection: true, collapsed: true }) : "",
     ].join("");
     renderPurchasedAction();
   }
@@ -199,9 +200,15 @@ export function createGroceryUi({
       if (deleteButton) {
         event.preventDefault();
         const ids = new Set(deleteButton.dataset.deleteGrocerySection.split("|").filter(Boolean));
+        const removed = getGroceries().filter((item) => ids.has(item.id));
         setGroceries(getGroceries().filter((item) => !ids.has(item.id)));
         renderGroceries();
         await saveGroceries();
+        offerUndo?.(t("grocerySectionRemoved"), async () => {
+          setGroceries([...removed, ...getGroceries()]);
+          renderGroceries();
+          await saveGroceries();
+        });
       }
     });
   }

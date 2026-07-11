@@ -42,6 +42,7 @@ function harness(overrides = {}) {
   const state = {
     lang: "es",
     saveCalls: 0,
+    undo: null,
     groceries: [
       {
         id: "grocery-1",
@@ -92,6 +93,7 @@ function harness(overrides = {}) {
       manualSource: "Manual",
       alreadyAtHomeLabel: "At home",
       onShoppingList: "On shopping list",
+      translationPendingShort: "Translation pending",
     }[key] || key),
     escapeHtml,
     cleanIngredientForGrocery,
@@ -109,6 +111,9 @@ function harness(overrides = {}) {
     saveGroceries: async () => {
       state.saveCalls += 1;
       return true;
+    },
+    offerUndo: (message, undo) => {
+      state.undo = { message, undo };
     },
   });
 
@@ -136,6 +141,77 @@ test("renderGroceries shows Spanish ingredient text under grocery items", () => 
 
   assert.match(elements["#groceryList"].innerHTML, /4 limones/);
   assert.match(elements["#groceryList"].innerHTML, /1 taza de aceite de oliva/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Weekly menu/);
+});
+
+test("grocery items without the active language show a pending state", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{ id: "manual", text: { en: "milk" }, checked: false, source: "manual", store: "any" }],
+      recipes: [],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /Translation pending/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, />milk</);
+});
+
+test("grocery recipe matching works from localized recipe names", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{
+        id: "legacy",
+        text: { en: "4 lemons" },
+        checked: false,
+        source: "week-plan",
+        recipeName: { en: "Lemon Chicken" },
+        store: "any",
+      }],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /4 limones/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
+});
+
+test("mixed-language Spanish recipe lists stay pending", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{
+        id: "mixed",
+        text: { es: "2 tablespoons chili powder" },
+        checked: false,
+        source: "week-plan",
+        recipeId: "mixed-recipe",
+        store: "any",
+      }],
+      recipes: [{
+        id: "mixed-recipe",
+        name: { en: "Carnitas", es: "Carnitas" },
+        ingredients: {
+          en: ["salt", "oranges", "chili powder", "pork shoulder", "lard", "dark lager"],
+          es: [
+            "3 cucharadas de sal",
+            "2 naranjas grandes",
+            "2 tablespoons chili powder",
+            "5 pounds boneless pork shoulder cut into large chunks",
+            "1 cup lard",
+            "2 bottles other dark lager",
+          ],
+        },
+      }],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /Translation pending/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /chili powder/);
 });
 
 test("delete section removes every item in that grocery section", async () => {
@@ -148,6 +224,19 @@ test("delete section removes every item in that grocery section", async () => {
 
   assert.deepEqual(state.groceries, []);
   assert.equal(state.saveCalls, 1);
+});
+
+test("deleted grocery section can be restored", async () => {
+  const { elements, state } = harness();
+
+  await elements["#groceryList"].dispatch(
+    "click",
+    actionTarget("[data-delete-grocery-section]", "grocery-1|grocery-2")
+  );
+  await state.undo.undo();
+
+  assert.equal(state.groceries.length, 2);
+  assert.equal(state.saveCalls, 2);
 });
 
 test("check section marks every item in that grocery section", async () => {

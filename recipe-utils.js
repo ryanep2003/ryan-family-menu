@@ -1,4 +1,4 @@
-import { localizedText } from "./localized-data.js";
+import { localizedTextExact } from "./localized-data.js";
 
 const FALLBACK_PHOTO = "assets/meatballs-2.jpg";
 
@@ -28,13 +28,13 @@ const recipeCategories = {
 
 function splitLines(text, fallback) {
   const lines = (text || "").split("\n").map((line) => line.trim()).filter(Boolean);
-  return lines.length ? lines : [fallback];
+  return lines.length ? lines : fallback ? [fallback] : [];
 }
 
 function localizedPair(value, enFallback = "", esFallback = "") {
   return {
-    en: localizedText(value, "en") || enFallback,
-    es: localizedText(value, "es") || esFallback,
+    en: localizedTextExact(value, "en") || enFallback,
+    es: localizedTextExact(value, "es") || esFallback,
   };
 }
 
@@ -58,12 +58,12 @@ export function uploadToRecipe(upload, enMeta, esMeta) {
       ? localizedPair(upload.allergyWarning)
       : undefined,
     ingredients: {
-      en: splitLines(localizedText(upload.ingredientsText, "en"), "Add ingredients after review."),
-      es: splitLines(localizedText(upload.ingredientsText, "es"), "Agrega ingredientes despues de revisar."),
+      en: splitLines(localizedTextExact(upload.ingredientsText, "en"), "Add ingredients after review."),
+      es: splitLines(localizedTextExact(upload.ingredientsText, "es"), ""),
     },
     steps: {
-      en: splitLines(localizedText(upload.stepsText, "en"), "Add cooking steps after review."),
-      es: splitLines(localizedText(upload.stepsText, "es"), "Agrega los pasos despues de revisar."),
+      en: splitLines(localizedTextExact(upload.stepsText, "en"), "Add cooking steps after review."),
+      es: splitLines(localizedTextExact(upload.stepsText, "es"), ""),
     },
     notes: localizedPair(upload.notes, "No notes yet.", "Sin notas todavia."),
     photos: upload.photos?.length ? upload.photos : [FALLBACK_PHOTO],
@@ -75,8 +75,8 @@ export function recipeToEditableUpload(recipe, lang, localize) {
     id: recipe.id,
     name: localize(recipe.name),
     category: categoryFor(recipe),
-    ingredientsText: (recipe.ingredients?.[lang] || recipe.ingredients?.en || []).join("\n"),
-    stepsText: (recipe.steps?.[lang] || recipe.steps?.en || []).join("\n"),
+    ingredientsText: (recipe.ingredients?.[lang] || []).join("\n"),
+    stepsText: (recipe.steps?.[lang] || []).join("\n"),
     allergyWarning: recipe.allergyWarning ? localize(recipe.allergyWarning) : "",
     notes: localize(recipe.notes),
     photos: recipe.photos || [FALLBACK_PHOTO],

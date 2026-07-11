@@ -4,12 +4,20 @@ import test from "node:test";
 import { createDashboardUi } from "../dashboard-ui.js";
 
 function element() {
+  const classes = new Set();
   return {
     textContent: "",
     innerHTML: "",
     hidden: true,
     disabled: false,
     handlers: {},
+    classList: {
+      contains: (value) => classes.has(value),
+      toggle(value, force) {
+        if (force) classes.add(value);
+        else classes.delete(value);
+      },
+    },
     addEventListener(type, handler) {
       this.handlers[type] = handler;
     },
@@ -19,12 +27,17 @@ function element() {
     scrollIntoView() {
       this.scrolled = true;
     },
+    removeAttribute(name) {
+      delete this[name];
+    },
   };
 }
 
-function dashboardFixture() {
+function dashboardFixture({ mealOverride } = {}) {
   const elements = Object.fromEntries([
     "todayRecipeName",
+    "todayBand",
+    "todayBackdrop",
     "todayMeta",
     "todayMealList",
     "todayGrocerySummary",
@@ -36,10 +49,10 @@ function dashboardFixture() {
     "recipeDetail",
     "detailName",
   ].map((id) => [id, element()]));
-  const meal = { main: "main", side: "side", salad: "", notes: "" };
+  const meal = mealOverride || { main: "main", side: "side", salad: "", notes: "" };
   const recipes = {
-    main: { id: "main", name: "Main recipe", allergyWarning: "" },
-    side: { id: "side", name: "Side recipe", allergyWarning: "" },
+    main: { id: "main", name: "Main recipe", photos: ["main.jpg"], allergyWarning: "" },
+    side: { id: "side", name: "Side recipe", photos: ["side.jpg"], allergyWarning: "" },
   };
   const events = { view: "", selected: "", rendered: 0 };
 
@@ -50,6 +63,9 @@ function dashboardFixture() {
       plannedRecipeOne: "1 planned recipe",
       plannedRecipeMany: "{count} planned recipes",
       noMealSet: "No meal set yet.",
+      cookButton: "Cook this",
+      planTonight: "Plan tonight",
+      planTonightNote: "Choose a recipe and bring tonight into focus.",
       itemsToBuy: "items to buy",
       itemsAtHome: "items at home",
       mainSlot: "Main",
@@ -60,10 +76,9 @@ function dashboardFixture() {
     formatDateKey: () => "2026-07-10",
     categoryFor: () => "main",
     categoryLabel: () => "Mains",
-    mealRecipes: () => [
-      { key: "main", recipe: recipes.main },
-      { key: "side", recipe: recipes.side },
-    ],
+    mealRecipes: () => ["main", "side"]
+      .filter((key) => meal[key])
+      .map((key) => ({ key, recipe: recipes[meal[key]] })),
     mealHasWarning: () => false,
     calendarMealForDateKey: () => meal,
     recipeById: (id) => recipes[id],
@@ -99,6 +114,8 @@ test("Today uses natural pluralized meal copy", () => {
   ui.renderToday();
 
   assert.equal(elements.todayMeta.textContent, "2 planned recipes");
+  assert.equal(elements.todayBackdrop.src, "main.jpg");
+  assert.equal(elements.cookToday.textContent, "Cook this");
 });
 
 test("Cook this opens and focuses the selected recipe", () => {
@@ -113,4 +130,20 @@ test("Cook this opens and focuses the selected recipe", () => {
   assert.equal(elements.recipeDetail.hidden, false);
   assert.equal(elements.recipeDetail.scrolled, true);
   assert.equal(elements.detailName.focused, true);
+});
+
+test("empty Today offers a direct planning action", () => {
+  const { elements, events, ui } = dashboardFixture({
+    mealOverride: { main: "", side: "", salad: "", notes: "" },
+  });
+  ui.renderToday();
+  ui.bindDashboardControls();
+
+  assert.equal(elements.todayBand.classList.contains("empty"), true);
+  assert.equal(elements.todayBackdrop.hidden, true);
+  assert.equal(elements.todayMeta.textContent, "Choose a recipe and bring tonight into focus.");
+  assert.equal(elements.cookToday.textContent, "Plan tonight");
+
+  elements.cookToday.handlers.click();
+  assert.equal(events.view, "schedule");
 });

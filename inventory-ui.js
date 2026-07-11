@@ -13,6 +13,7 @@ export function createInventoryUi({
   bindGroceryControls,
   saveGroceries,
   saveInventory,
+  offerUndo,
   getInventory,
   setInventory,
   getGroceries,
@@ -56,7 +57,9 @@ export function createInventoryUi({
     ].map((group) => ({
       ...group,
       items: inventory.filter((item) => (item.location || "pantry") === group.key
-        && (inventoryFilter === "all" || group.key === inventoryFilter)),
+        && (inventoryFilter === "all"
+          || (inventoryFilter === "attention" && ["low", "out"].includes(item.stockState))
+          || group.key === inventoryFilter)),
     })).filter((group) => group.items.length);
 
     if (!inventory.length) {
@@ -65,7 +68,7 @@ export function createInventoryUi({
     }
 
     if (!groups.length) {
-      $("#inventoryList").innerHTML = `<p class="empty-state">${t("noInventoryMatches")}</p>`;
+      $("#inventoryList").innerHTML = `<p class="empty-state">${t(inventoryFilter === "attention" ? "inventoryAttentionEmpty" : "noInventoryMatches")}</p>`;
       return;
     }
 
@@ -83,10 +86,13 @@ export function createInventoryUi({
             <select class="stock-select stock-${escapeHtml(item.stockState || "some")}" data-stock-state="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("stockControlLabel").replace("{item}", localizedText(item.text, getLang())))}">
               ${["full", "some", "low", "out"].map((state) => `<option value="${state}" ${state === (item.stockState || "some") ? "selected" : ""}>${inventoryStockLabel(state)}</option>`).join("")}
             </select>
-            <div class="inventory-item-actions">
-              <button class="ghost-button" type="button" data-add-inventory-to-shopping="${escapeHtml(item.id)}">${t("addToShopping")}</button>
-              <button class="text-button" type="button" data-remove-inventory="${escapeHtml(item.id)}">${t("remove")}</button>
-            </div>
+            <details class="inventory-row-menu">
+              <summary aria-label="${escapeHtml(t("itemActions").replace("{item}", localizedText(item.text, getLang())))}"><span aria-hidden="true">•••</span></summary>
+              <div class="inventory-item-actions">
+                <button class="ghost-button" type="button" data-add-inventory-to-shopping="${escapeHtml(item.id)}">${t("addToShopping")}</button>
+                <button class="text-button" type="button" data-remove-inventory="${escapeHtml(item.id)}">${t("remove")}</button>
+              </div>
+            </details>
           </div>
         `).join("")}
       </section>
@@ -134,10 +140,21 @@ export function createInventoryUi({
 
     $$("[data-remove-inventory]").forEach((button) => {
       button.addEventListener("click", async () => {
-        setInventory(getInventory().filter((item) => item.id !== button.dataset.removeInventory));
+        const current = getInventory();
+        const index = current.findIndex((item) => item.id === button.dataset.removeInventory);
+        const removed = current[index];
+        setInventory(current.filter((item) => item.id !== button.dataset.removeInventory));
         renderInventory();
         bindInventoryControls();
         await saveInventory();
+        if (removed) offerUndo?.(t("inventoryItemRemoved"), async () => {
+          const restored = [...getInventory()];
+          restored.splice(Math.max(index, 0), 0, removed);
+          setInventory(restored);
+          renderInventory();
+          bindInventoryControls();
+          await saveInventory();
+        });
       });
     });
   }

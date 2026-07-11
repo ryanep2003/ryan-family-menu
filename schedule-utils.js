@@ -3,10 +3,10 @@ import { hasLocalizedContent, isLocalizedValue } from "./localized-data.js";
 export const days = [
   { key: "mon", en: "Monday", es: "Lunes" },
   { key: "tue", en: "Tuesday", es: "Martes" },
-  { key: "wed", en: "Wednesday", es: "Miercoles" },
+  { key: "wed", en: "Wednesday", es: "Miércoles" },
   { key: "thu", en: "Thursday", es: "Jueves" },
   { key: "fri", en: "Friday", es: "Viernes" },
-  { key: "sat", en: "Saturday", es: "Sabado" },
+  { key: "sat", en: "Saturday", es: "Sábado" },
   { key: "sun", en: "Sunday", es: "Domingo" },
 ];
 

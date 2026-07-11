@@ -22,7 +22,7 @@ test("translation helper falls back when current language is missing", async () 
 test("dashboard renderDetail callback is lazy to avoid startup TDZ failures", async () => {
   const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
 
-  assert.match(source, /renderDetail: \(\) => renderDetail\(\)/);
+  assert.match(source, /renderDetail: \(\) => \{\s+renderDetail\(\);/);
   assert.doesNotMatch(source, /createDashboardUi\(\{[\s\S]*?\n  renderDetail,\n/);
 });
 
