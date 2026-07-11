@@ -1,4 +1,4 @@
-import { canonicalText, localizedTextExact } from "./localized-data.js";
+import { allLocalizedText, canonicalText, localizedTextExact } from "./localized-data.js";
 
 export function createGroceryUi({
   $,
@@ -26,11 +26,9 @@ export function createGroceryUi({
     }
 
     if (!item.recipeName) return null;
-    return allRecipes().find((recipe) => [
-      localize(recipe.name),
-      recipe.name?.en,
-      recipe.name?.es,
-    ].includes(localizedText(item.recipeName, getLang()))) || null;
+    const itemRecipeNames = new Set(allLocalizedText(item.recipeName));
+    return allRecipes().find((recipe) => allLocalizedText(recipe.name)
+      .some((name) => itemRecipeNames.has(name))) || null;
   }
 
   function grocerySourceLabel(item) {

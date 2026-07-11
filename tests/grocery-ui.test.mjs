@@ -159,6 +159,26 @@ test("grocery items without the active language show a pending state", () => {
   assert.doesNotMatch(elements["#groceryList"].innerHTML, />milk</);
 });
 
+test("grocery recipe matching works from localized recipe names", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{
+        id: "legacy",
+        text: { en: "4 lemons" },
+        checked: false,
+        source: "week-plan",
+        recipeName: { en: "Lemon Chicken" },
+        store: "any",
+      }],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /4 limones/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
+});
+
 test("delete section removes every item in that grocery section", async () => {
   const { elements, state } = harness();
 
