@@ -38,10 +38,12 @@ export function createRecipeLibraryUi({
       return categoryMatch && (!search || haystack.includes(search));
     });
 
-    $("#recipeCount").textContent = `${filtered.length}/${recipes.length}`;
+    $("#recipeCount").textContent = t(filtered.length === recipes.length ? "recipeCount" : "recipeCountFiltered")
+      .replace("{count}", filtered.length)
+      .replace("{total}", recipes.length);
     $("#recipeList").innerHTML = filtered
-      .map((recipe) => `
-        <button class="recipe-card" type="button" data-open="${escapeHtml(recipe.id)}">
+      .map((recipe, index) => `
+        <button class="recipe-card" style="--card-order: ${Math.min(index, 8)}" type="button" data-open="${escapeHtml(recipe.id)}">
           <img src="${escapeHtml(recipe.photos[0])}" alt="${escapeHtml(localize(recipe.name))}" loading="lazy" decoding="async" />
           <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
           ${getFavorites().includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}

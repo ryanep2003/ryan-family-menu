@@ -3,8 +3,8 @@
   "short_name": "Ryan Menu",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#fbf7ef",
-  "theme_color": "#fbf7ef",
+  "background_color": "#f4ecdf",
+  "theme_color": "#f4ecdf",
   "icons": [
     {
       "src": "assets/meatballs-2.jpg",

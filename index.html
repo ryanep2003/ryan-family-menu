@@ -3,16 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#fbf7ef" />
+    <meta name="theme-color" content="#f4ecdf" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=27" />
+    <link rel="stylesheet" href="styles.css?v=29" />
   </head>
-  <body>
+  <body data-view="today">
     <header class="app-header">
-      <div>
-        <p class="eyebrow" data-i18n="eyebrow">Ryan Family Menu</p>
-        <h1 data-i18n="title">Tonight, made simple.</h1>
+      <div class="brand-lockup">
+        <span class="brand-mark" aria-hidden="true">R</span>
+        <div>
+          <p class="eyebrow" data-i18n="eyebrow">Ryan Family Menu</p>
+          <h1 data-i18n="title">Tonight, made simple.</h1>
+        </div>
       </div>
       <div class="header-actions">
         <button class="install-button" id="installButton" type="button" title="Install / Add to Home Screen" aria-label="Install / Add to Home Screen" data-i18n-title="installApp" data-i18n-aria-label="installApp">
@@ -41,8 +44,9 @@
       </nav>
 
       <section class="view active" id="todayView">
-        <section class="today-band">
-          <div>
+        <section class="today-band" id="todayBand">
+          <img class="today-backdrop" id="todayBackdrop" src="assets/meatballs-2.jpg" alt="" />
+          <div class="today-band-copy">
             <p class="section-label" data-i18n="tonight">Tonight</p>
             <h2 id="todayRecipeName">A 100% Chance of Meatballs</h2>
             <p id="todayMeta">1 planned item</p>
@@ -104,8 +108,9 @@
       </section>
 
       <section class="view" id="scheduleView">
-        <div class="section-heading">
+        <div class="section-heading view-banner week-banner">
           <div>
+            <p class="view-kicker" data-i18n="weekKicker">The family table</p>
             <h2 id="weekTitle" data-i18n="weekHeading">This week</h2>
             <p class="section-note" data-i18n="weekRepeatsNote">Select a day to edit. The month below is a quick overview.</p>
           </div>
@@ -114,23 +119,31 @@
         <section class="schedule-editor" id="weekDateEditor"></section>
         <div class="schedule-grid" id="scheduleGrid"></div>
 
-        <div class="section-heading calendar-heading">
-          <div>
-            <p class="section-label" data-i18n="monthLabel">Recipe calendar</p>
-            <h2 id="monthTitle">June 2026</h2>
-            <p class="section-note" data-i18n="calendarInstructions">Choose a date to review its plan or make a one-day change.</p>
+        <details class="calendar-disclosure">
+          <summary>
+            <span data-i18n="calendarToggle">Open calendar</span>
+            <small data-i18n="calendarToggleNote">Plan beyond this week</small>
+          </summary>
+          <div class="calendar-disclosure-content">
+            <div class="section-heading calendar-heading">
+              <div>
+                <p class="section-label" data-i18n="monthLabel">Recipe calendar</p>
+                <h2 id="monthTitle">June 2026</h2>
+                <p class="section-note" data-i18n="calendarInstructions">Choose a date to review its plan or make a one-day change.</p>
+              </div>
+              <div class="calendar-actions">
+                <button class="ghost-button" id="previousMonth" type="button" data-i18n="previousMonth">Previous</button>
+                <button class="ghost-button" id="todayMonth" type="button" data-i18n="thisMonth">This month</button>
+                <button class="ghost-button" id="nextMonth" type="button" data-i18n="nextMonth">Next</button>
+              </div>
+            </div>
+            <section class="schedule-editor" id="calendarDateEditor" hidden></section>
+            <div class="calendar-scroll">
+              <div class="calendar-weekdays" id="calendarWeekdays"></div>
+              <div class="calendar-grid" id="calendarGrid"></div>
+            </div>
           </div>
-          <div class="calendar-actions">
-            <button class="ghost-button" id="previousMonth" type="button" data-i18n="previousMonth">Previous</button>
-            <button class="ghost-button" id="todayMonth" type="button" data-i18n="thisMonth">This month</button>
-            <button class="ghost-button" id="nextMonth" type="button" data-i18n="nextMonth">Next</button>
-          </div>
-        </div>
-        <section class="schedule-editor" id="calendarDateEditor" hidden></section>
-        <div class="calendar-scroll">
-          <div class="calendar-weekdays" id="calendarWeekdays"></div>
-          <div class="calendar-grid" id="calendarGrid"></div>
-        </div>
+        </details>
       </section>
 
       <section class="view" id="groceryView">
@@ -140,9 +153,9 @@
         </div>
 
         <div id="shoppingPanel">
-          <div class="section-heading grocery-heading">
+          <div class="section-heading grocery-heading view-banner grocery-banner">
             <div>
-              <p class="section-label" data-i18n="groceryLabel">Shared grocery list</p>
+              <p class="view-kicker" data-i18n="groceryLabel">Shared grocery list</p>
               <h2 data-i18n="groceryHeading">Groceries for this week</h2>
             </div>
             <div class="grocery-actions">
@@ -184,9 +197,9 @@
         </div>
 
         <div id="homePanel" hidden>
-          <div class="section-heading inventory-heading" id="inventoryHeading">
+          <div class="section-heading inventory-heading view-banner inventory-banner" id="inventoryHeading">
             <div>
-              <p class="section-label" data-i18n="inventoryLabel">Home inventory</p>
+              <p class="view-kicker" data-i18n="inventoryLabel">Home inventory</p>
               <h2 data-i18n="inventoryHeading">What is in the house</h2>
             </div>
             <div class="inventory-tools">
@@ -240,9 +253,12 @@
       </section>
 
       <section class="view" id="recipesView">
-        <div class="section-heading">
-          <h2 data-i18n="libraryHeading">Recipe library</h2>
-          <span id="recipeCount"></span>
+        <div class="section-heading view-banner recipe-banner">
+          <div>
+            <p class="view-kicker" data-i18n="recipeKicker">From our kitchen</p>
+            <h2 data-i18n="libraryHeading">Recipe library</h2>
+          </div>
+          <span class="view-count" id="recipeCount"></span>
         </div>
         <section class="recipe-detail" id="recipeDetail" hidden>
           <div class="detail-context-bar">
@@ -357,68 +373,97 @@
       </section>
 
       <section class="view" id="addView">
-        <div class="section-heading">
-          <h2 data-i18n="addHeading">Add a recipe</h2>
+        <div class="section-heading view-banner add-banner">
+          <div>
+            <p class="view-kicker" data-i18n="addKicker">Keep a family favorite</p>
+            <h2 data-i18n="addHeading">Add a recipe</h2>
+          </div>
         </div>
         <form class="upload-panel" id="uploadForm">
           <p class="upload-note" data-i18n="sharedUploadNote">Recipes added here save to the live family site for everyone.</p>
-          <label>
-            <span data-i18n="photoLabel">Recipe photos</span>
-            <input type="file" id="photoInput" accept="image/*" multiple />
-          </label>
-          <label>
-            <span data-i18n="photoCameraLabel">Take recipe photo</span>
-            <input type="file" id="photoCameraInput" accept="image/*" capture="environment" />
-          </label>
-          <div class="photo-queue-actions">
-            <button class="ghost-button compact-button" id="scanRecipePhotos" type="button" data-i18n="scanRecipePhotos" disabled>Read selected photos</button>
-            <button class="text-button" id="clearRecipePhotos" type="button" data-i18n="clearRecipePhotos" disabled>Clear photos</button>
-          </div>
-          <p class="upload-note compact-note" id="selectedRecipePhotoStatus" data-i18n="noRecipePhotosSelected">No recipe photos selected yet.</p>
-          <label>
-            <span data-i18n="recipeUrlLabel">Recipe URL</span>
-            <div class="url-import-row">
-              <input type="url" id="recipeUrlInput" data-i18n-placeholder="recipeUrlPlaceholder" placeholder="https://example.com/recipe" />
-              <button class="ghost-button compact-button" id="importRecipeUrl" type="button" data-i18n="importRecipeUrl">Pull from URL</button>
+          <fieldset class="recipe-source-fieldset">
+            <legend data-i18n="recipeSourceLegend">Start with what you have</legend>
+            <div class="recipe-source-grid">
+              <section class="recipe-source-card">
+                <span class="source-number" aria-hidden="true">01</span>
+                <h3 data-i18n="photoSourceHeading">Photos or camera</h3>
+                <label>
+                  <span data-i18n="photoLabel">Recipe photos</span>
+                  <input type="file" id="photoInput" accept="image/*" multiple />
+                </label>
+                <label>
+                  <span data-i18n="photoCameraLabel">Take recipe photo</span>
+                  <input type="file" id="photoCameraInput" accept="image/*" capture="environment" />
+                </label>
+                <div class="photo-queue-actions">
+                  <button class="ghost-button compact-button" id="scanRecipePhotos" type="button" data-i18n="scanRecipePhotos" disabled>Read selected photos</button>
+                  <button class="text-button" id="clearRecipePhotos" type="button" data-i18n="clearRecipePhotos" disabled>Clear photos</button>
+                </div>
+                <p class="upload-note compact-note" id="selectedRecipePhotoStatus" data-i18n="noRecipePhotosSelected">No recipe photos selected yet.</p>
+              </section>
+              <section class="recipe-source-card url-source-card">
+                <span class="source-number" aria-hidden="true">02</span>
+                <h3 data-i18n="urlSourceHeading">Recipe website</h3>
+                <label>
+                  <span data-i18n="recipeUrlLabel">Recipe URL</span>
+                  <div class="url-import-row">
+                    <input type="url" id="recipeUrlInput" data-i18n-placeholder="recipeUrlPlaceholder" placeholder="https://example.com/recipe" />
+                    <button class="ghost-button compact-button" id="importRecipeUrl" type="button" data-i18n="importRecipeUrl">Pull from URL</button>
+                  </div>
+                </label>
+              </section>
             </div>
-          </label>
-          <label>
-            <span data-i18n="nameLabel">Recipe name</span>
-            <input type="text" id="nameInput" data-i18n-placeholder="recipeNamePlaceholder" placeholder="Grandma's chicken tacos" />
-          </label>
-          <label>
-            <span data-i18n="categoryLabel">Category</span>
-            <select id="categoryInput">
-              <option value="main" data-i18n="categoryMain">Mains</option>
-              <option value="side" data-i18n="categorySide">Sides</option>
-              <option value="salad" data-i18n="categorySalad">Salads</option>
-              <option value="sauce" data-i18n="categorySauce">Sauces</option>
-              <option value="dessert" data-i18n="categoryDessert">Desserts</option>
-            </select>
-          </label>
-          <label>
-            <span data-i18n="ingredientsLabel">Ingredients</span>
-            <textarea id="ingredientsInput" rows="5" data-i18n-placeholder="ingredientsPlaceholder" placeholder="One ingredient per line"></textarea>
-          </label>
-          <label>
-            <span data-i18n="stepsLabel">Steps</span>
-            <textarea id="stepsInput" rows="6" data-i18n-placeholder="stepsPlaceholder" placeholder="One step per line"></textarea>
-          </label>
-          <label>
-            <span data-i18n="allergyLabel">Allergy or safety warning</span>
-            <textarea id="allergyInput" rows="3" data-i18n-placeholder="allergyPlaceholder" placeholder="Example: do not serve to Grace until ingredient is confirmed"></textarea>
-          </label>
-          <label>
-            <span data-i18n="noteLabel">Family notes</span>
-            <textarea id="noteInput" rows="4" data-i18n-placeholder="familyNotesPlaceholder" placeholder="Kid notes, where ingredients are, serving ideas"></textarea>
-          </label>
-          <button class="primary-action" type="submit" data-i18n="saveDraft">Save draft</button>
+          </fieldset>
+          <details class="recipe-details-disclosure" id="recipeDetailsDisclosure">
+            <summary>
+              <span data-i18n="recipeDetailsToggle">Type or review recipe details</span>
+              <small data-i18n="recipeDetailsToggleNote">Open for manual entry or after importing</small>
+            </summary>
+            <fieldset class="recipe-details-fieldset">
+              <legend data-i18n="recipeDetailsLegend">Review the recipe</legend>
+            <div class="recipe-basics-grid">
+              <label>
+                <span data-i18n="nameLabel">Recipe name</span>
+                <input type="text" id="nameInput" data-i18n-placeholder="recipeNamePlaceholder" placeholder="Grandma's chicken tacos" />
+              </label>
+              <label>
+                <span data-i18n="categoryLabel">Category</span>
+                <select id="categoryInput">
+                  <option value="main" data-i18n="categoryMain">Mains</option>
+                  <option value="side" data-i18n="categorySide">Sides</option>
+                  <option value="salad" data-i18n="categorySalad">Salads</option>
+                  <option value="sauce" data-i18n="categorySauce">Sauces</option>
+                  <option value="dessert" data-i18n="categoryDessert">Desserts</option>
+                </select>
+              </label>
+            </div>
+            <label>
+              <span data-i18n="ingredientsLabel">Ingredients</span>
+              <textarea id="ingredientsInput" rows="5" data-i18n-placeholder="ingredientsPlaceholder" placeholder="One ingredient per line"></textarea>
+            </label>
+            <label>
+              <span data-i18n="stepsLabel">Steps</span>
+              <textarea id="stepsInput" rows="6" data-i18n-placeholder="stepsPlaceholder" placeholder="One step per line"></textarea>
+            </label>
+            <div class="recipe-family-grid">
+              <label>
+                <span data-i18n="allergyLabel">Allergy or safety warning</span>
+                <textarea id="allergyInput" rows="3" data-i18n-placeholder="allergyPlaceholder" placeholder="Example: do not serve to Grace until ingredient is confirmed"></textarea>
+              </label>
+              <label>
+                <span data-i18n="noteLabel">Family notes</span>
+                <textarea id="noteInput" rows="4" data-i18n-placeholder="familyNotesPlaceholder" placeholder="Kid notes, where ingredients are, serving ideas"></textarea>
+              </label>
+            </div>
+            </fieldset>
+            <button class="primary-action recipe-save-action" type="submit" data-i18n="saveDraft">Save draft</button>
+          </details>
           <p class="upload-status" id="uploadStatus" role="status"></p>
         </form>
       </section>
 
     </main>
 
-    <script type="module" src="app.js?v=52"></script>
+    <script type="module" src="app.js?v=54"></script>
   </body>
 </html>

@@ -83,10 +83,13 @@ export function createInventoryUi({
             <select class="stock-select stock-${escapeHtml(item.stockState || "some")}" data-stock-state="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("stockControlLabel").replace("{item}", localizedText(item.text, getLang())))}">
               ${["full", "some", "low", "out"].map((state) => `<option value="${state}" ${state === (item.stockState || "some") ? "selected" : ""}>${inventoryStockLabel(state)}</option>`).join("")}
             </select>
-            <div class="inventory-item-actions">
-              <button class="ghost-button" type="button" data-add-inventory-to-shopping="${escapeHtml(item.id)}">${t("addToShopping")}</button>
-              <button class="text-button" type="button" data-remove-inventory="${escapeHtml(item.id)}">${t("remove")}</button>
-            </div>
+            <details class="inventory-row-menu">
+              <summary aria-label="${escapeHtml(t("itemActions").replace("{item}", localizedText(item.text, getLang())))}"><span aria-hidden="true">•••</span></summary>
+              <div class="inventory-item-actions">
+                <button class="ghost-button" type="button" data-add-inventory-to-shopping="${escapeHtml(item.id)}">${t("addToShopping")}</button>
+                <button class="text-button" type="button" data-remove-inventory="${escapeHtml(item.id)}">${t("remove")}</button>
+              </div>
+            </details>
           </div>
         `).join("")}
       </section>

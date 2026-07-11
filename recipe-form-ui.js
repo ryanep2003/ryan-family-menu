@@ -62,6 +62,11 @@ export function createRecipeFormUi({
     if ((overwrite || !$("#noteInput").value.trim()) && recipe.notes) $("#noteInput").value = recipe.notes;
   }
 
+  function openRecipeDetails() {
+    const disclosure = $("#recipeDetailsDisclosure");
+    if (disclosure) disclosure.open = true;
+  }
+
   function renderEditPhotoPreview(photos) {
     $("#editPhotoPreview").innerHTML = photos
       .map((src) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(t("recipePhotoPreview"))}" loading="lazy" decoding="async" />`)
@@ -207,6 +212,7 @@ export function createRecipeFormUi({
       });
       const recipe = await recognizeRecipe(images);
       fillUploadFormFromRecipe(recipe);
+      openRecipeDetails();
       status.textContent = t("recipeScanSaved");
     } catch (error) {
       console.warn(error);
@@ -232,6 +238,7 @@ export function createRecipeFormUi({
     try {
       const recipe = await importRecipeUrl(url);
       fillUploadFormFromRecipe(recipe, { overwrite: true });
+      openRecipeDetails();
       setImportedRecipePhotos(Array.isArray(recipe.photos) ? recipe.photos : []);
       status.textContent = t("recipeUrlSaved");
     } catch (error) {

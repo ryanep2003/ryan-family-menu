@@ -82,6 +82,7 @@ function harness(overrides = {}) {
     "#allergyInput": element(),
     "#noteInput": element(),
     "#recipeUrlInput": element(),
+    "#recipeDetailsDisclosure": element({ open: false }),
     "#editNameInput": element(),
     "#editCategoryInput": element(),
     "#editIngredientsInput": element(),
@@ -304,6 +305,7 @@ test("URL import fills the add form and stores imported photos", async () => {
   assert.equal(elements["#nameInput"].value, "URL pasta");
   assert.equal(elements["#categoryInput"].value, "main");
   assert.equal(elements["#ingredientsInput"].value, "pasta");
+  assert.equal(elements["#recipeDetailsDisclosure"].open, true);
   assert.deepEqual(state.importedRecipePhotos, ["url-photo.jpg"]);
 });
 
@@ -335,6 +337,7 @@ test("recipe photos are queued and scanned together on demand", async () => {
   assert.deepEqual(scannedBatches, [["data:page-1.jpg", "data:page-2.jpg"]]);
   assert.equal(elements["#nameInput"].value, "Queued recipe");
   assert.equal(elements["#stepsInput"].value, "cook");
+  assert.equal(elements["#recipeDetailsDisclosure"].open, true);
 });
 
 test("failed live recipe save creates a local draft with imported photos", async () => {

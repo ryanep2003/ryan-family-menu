@@ -654,7 +654,13 @@ function renderTranslations() {
     node.title = t(node.dataset.i18nTitle);
   });
   $$("[data-lang]").forEach((button) => {
-    button.classList.toggle("active", button.dataset.lang === lang);
+    const active = button.dataset.lang === lang;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", `${active}`);
+  });
+  $$(".tabs button").forEach((button) => {
+    if (button.classList.contains("active")) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
   });
   refreshSyncStatuses();
 }
@@ -802,7 +808,13 @@ function render() {
 
 function setView(viewName) {
   $$(".view").forEach((view) => view.classList.toggle("active", view.id === `${viewName}View`));
-  $$(".tabs button").forEach((button) => button.classList.toggle("active", button.dataset.view === viewName));
+  $$(".tabs button").forEach((button) => {
+    const active = button.dataset.view === viewName;
+    button.classList.toggle("active", active);
+    if (active) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
+  document.body.dataset.view = viewName;
   $("#recipeDetail").hidden = true;
 }
 
