@@ -1,9 +1,10 @@
 const englishMarkers = new Set([
   "add", "and", "bake", "beans", "before", "butter", "chicken", "chopped", "cook",
   "cup", "cups", "family", "fresh", "good", "heat", "leaves", "lemony", "minutes",
-  "note", "notes", "oil", "oven", "packed", "pepper", "pork", "recipe", "roast",
-  "roasted", "salt", "serve", "simmer", "stir", "storage", "tablespoon", "tablespoons",
-  "teaspoon", "teaspoons", "then", "the", "until", "vegetables", "with",
+  "large", "like", "note", "notes", "oil", "other", "oven", "packed", "pepper", "pork",
+  "recipe", "roast", "roasted", "salt", "says", "serve", "simmer", "stir", "storage",
+  "tablespoon", "tablespoons", "teaspoon", "teaspoons", "then", "the", "until", "used",
+  "vegetables", "white", "with",
 ]);
 
 const spanishMarkers = new Set([
