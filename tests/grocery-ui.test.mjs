@@ -93,6 +93,7 @@ function harness(overrides = {}) {
       manualSource: "Manual",
       alreadyAtHomeLabel: "At home",
       onShoppingList: "On shopping list",
+      translationPendingShort: "Translation pending",
     }[key] || key),
     escapeHtml,
     cleanIngredientForGrocery,
@@ -140,6 +141,22 @@ test("renderGroceries shows Spanish ingredient text under grocery items", () => 
 
   assert.match(elements["#groceryList"].innerHTML, /4 limones/);
   assert.match(elements["#groceryList"].innerHTML, /1 taza de aceite de oliva/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Weekly menu/);
+});
+
+test("grocery items without the active language show a pending state", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{ id: "manual", text: { en: "milk" }, checked: false, source: "manual", store: "any" }],
+      recipes: [],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /Translation pending/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, />milk</);
 });
 
 test("delete section removes every item in that grocery section", async () => {

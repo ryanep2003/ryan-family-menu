@@ -82,6 +82,7 @@ function harness(overrides = {}) {
     "#detailName": element(),
     "#detailMeta": element(),
     "#allergyWarning": element(),
+    "#recipeTranslationStatus": element(),
     "#ingredientList": element(),
     "#stepList": element(),
     "#familyNotes": element(),
@@ -89,7 +90,10 @@ function harness(overrides = {}) {
     "#favoriteRecipe": element(),
     "#publishDraftRecipe": element(),
     "#addRecipeGroceries": element(),
+    "#markCooked": element(),
     "#recipeDetail": element(),
+    "#recipeMoreActions": element({ open: false }),
+    "#recipesView": element(),
   };
 
   const ui = createRecipeLibraryUi({
@@ -98,9 +102,12 @@ function harness(overrides = {}) {
     t: (key) => key,
     escapeHtml,
     localize: (value) => typeof value === "string" ? value : value?.en || "",
+    localizeExact: (value) => typeof value === "string"
+      ? (overrides.lang || "en") === "en" ? value : ""
+      : value?.[overrides.lang || "en"] || "",
     categoryFor: () => "main",
     categoryLabel: () => "Main",
-    getLang: () => "en",
+    getLang: () => overrides.lang || "en",
     getFavorites: () => [],
     allRecipes: () => [recipe],
     recipeById: () => recipe,
@@ -162,8 +169,41 @@ test("opening and closing a recipe preserves predictable focus", async () => {
   await card.dispatch("click");
   assert.equal(elements["#recipeDetail"].scrolled, true);
   assert.equal(elements["#detailName"].focused, true);
+  assert.equal(elements["#recipesView"].classList.values.has("detail-open"), true);
 
   await elements["#closeRecipeDetail"].dispatch("click");
   assert.equal(elements["#recipeDetail"].hidden, true);
   assert.equal(card.focused, true);
+  assert.equal(elements["#recipesView"].classList.values.has("detail-open"), false);
+});
+
+test("Spanish detail never falls back to English recipe content", () => {
+  const { elements, ui } = harness({ lang: "es" });
+
+  ui.renderDetail();
+
+  assert.equal(elements["#detailName"].textContent, "translationPendingShort");
+  assert.match(elements["#ingredientList"].innerHTML, /translationPendingShort/);
+  assert.doesNotMatch(elements["#ingredientList"].innerHTML, /one/);
+  assert.equal(elements["#addRecipeGroceries"].disabled, true);
+  assert.equal(elements["#markCooked"].disabled, true);
+  assert.equal(elements["#recipeTranslationStatus"].hidden, false);
+});
+
+test("missing Spanish safety warning keeps cooking actions disabled", () => {
+  const { elements, ui } = harness({
+    lang: "es",
+    recipe: {
+      name: { en: "Recipe", es: "Receta" },
+      ingredients: { en: ["one"], es: ["uno"] },
+      steps: { en: ["cook"], es: ["cocinar"] },
+      allergyWarning: { en: "Contains nuts" },
+    },
+  });
+
+  ui.renderDetail();
+
+  assert.equal(elements["#allergyWarning"].textContent, "safetyTranslationPending");
+  assert.equal(elements["#addRecipeGroceries"].disabled, true);
+  assert.equal(elements["#markCooked"].disabled, true);
 });

@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4ecdf" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=31" />
+    <link rel="stylesheet" href="styles.css?v=32" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -185,9 +185,6 @@
             </div>
             <div class="grocery-actions">
               <button class="primary-action" id="restockPurchased" type="button" hidden data-i18n="movePurchasedHome">Move purchased home</button>
-              <button class="ghost-button" id="scanReceiptToggle" type="button" data-i18n="scanReceipt">Scan receipt</button>
-              <button class="ghost-button" id="generateGroceries" type="button" data-i18n="generateGroceries">Generate from week</button>
-              <button class="ghost-button" id="clearCheckedGroceries" type="button" data-i18n="clearChecked">Clear checked</button>
             </div>
           </div>
           <form class="grocery-add" id="groceryForm">
@@ -200,6 +197,14 @@
             </select>
             <button class="primary-action" type="submit" data-i18n="addGroceryItem">Add item</button>
           </form>
+          <details class="grocery-tools-menu">
+            <summary data-i18n="listTools">List tools</summary>
+            <div>
+              <button class="ghost-button" id="scanReceiptToggle" type="button" data-i18n="useReceipt">Use receipt</button>
+              <button class="ghost-button" id="generateGroceries" type="button" data-i18n="generateGroceries">Generate from week</button>
+              <button class="text-button" id="clearCheckedGroceries" type="button" data-i18n="clearChecked">Clear checked</button>
+            </div>
+          </details>
           <div class="inventory-scan-panel receipt-scan-panel" id="receiptScanPanel" hidden>
             <p data-i18n="receiptScanNote">Upload a receipt photo. Review matches before moving items home.</p>
             <form class="inventory-scan" id="receiptScanForm">
@@ -210,7 +215,7 @@
                 <option value="freezer" data-i18n="locationFreezer">Freezer</option>
                 <option value="household" data-i18n="locationHousehold">Household</option>
               </select>
-              <button class="primary-action" type="submit" data-i18n="scanReceiptPhotos">Scan receipt</button>
+              <button class="primary-action" type="submit" data-i18n="scanReceiptPhotos">Read receipt photos</button>
             </form>
             <div class="inventory-suggestions" id="receiptSuggestions" hidden></div>
           </div>
@@ -304,11 +309,17 @@
           <div class="detail-actions">
             <button class="primary-action" id="publishDraftRecipe" type="button" data-i18n="publishDraftRecipe" hidden>Publish draft</button>
             <button class="primary-action" id="addRecipeGroceries" type="button" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
-            <button class="ghost-button" id="editRecipe" type="button" data-i18n="editRecipe">Edit recipe</button>
-            <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
-            <button class="ghost-button" id="markCooked" type="button" data-i18n="markCooked">Mark cooked</button>
+            <details class="detail-more-actions" id="recipeMoreActions">
+              <summary data-i18n="moreActions">More actions</summary>
+              <div>
+                <button class="ghost-button" id="editRecipe" type="button" data-i18n="editRecipe">Edit recipe</button>
+                <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
+                <button class="ghost-button" id="markCooked" type="button" data-i18n="markCooked">Mark cooked</button>
+              </div>
+            </details>
           </div>
           <p class="upload-status detail-status" id="detailStatus" role="status"></p>
+          <p class="translation-state" id="recipeTranslationStatus" role="status" hidden></p>
 
           <form class="upload-panel edit-recipe-panel" id="editRecipeForm" hidden>
             <label>
@@ -359,7 +370,7 @@
 
           <div class="detail-layout">
             <article>
-              <div class="allergy-warning" id="allergyWarning" hidden></div>
+              <div class="allergy-warning" id="allergyWarning" role="alert" hidden></div>
 
               <h3 data-i18n="ingredients">Ingredients</h3>
               <ul id="ingredientList"></ul>
@@ -498,6 +509,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=57"></script>
+    <script type="module" src="app.js?v=58"></script>
   </body>
 </html>

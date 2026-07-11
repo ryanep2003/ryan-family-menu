@@ -30,6 +30,19 @@ test("uploadToRecipe normalizes shared uploads into display recipes", () => {
   assert.deepEqual(recipe.photos, ["assets/meatballs-2.jpg"]);
 });
 
+test("uploadToRecipe does not copy English into missing Spanish fields", () => {
+  const recipe = uploadToRecipe({
+    id: "english-only",
+    name: "Soup",
+    ingredientsText: "beans",
+    stepsText: "simmer",
+  }, "Shared upload", "Receta compartida");
+
+  assert.equal(recipe.name.es, "");
+  assert.deepEqual(recipe.ingredients.es, []);
+  assert.deepEqual(recipe.steps.es, []);
+});
+
 test("recipeToEditableUpload converts display recipes back to edit form values", () => {
   const editable = recipeToEditableUpload({
     id: "shared-1",

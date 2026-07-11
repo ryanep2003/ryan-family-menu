@@ -99,6 +99,7 @@ function harness(overrides = {}) {
     "#editNoteInput": element(),
     "#editPhotoPreview": element(),
     "#recipeDetail": element(),
+    "#recipeMoreActions": element({ open: false }),
     "#detailName": element(),
     "#sharedStateStatus": element(),
   };

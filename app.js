@@ -219,7 +219,7 @@ function persistInventoryLocally(items = inventory, version = inventoryVersion) 
 }
 
 function recipeToEditableUpload(recipe) {
-  return recipeToEditable(recipe, lang, localize);
+  return recipeToEditable(recipe, lang, localizeExact);
 }
 
 function rawRecipeById(id) {
@@ -336,6 +336,10 @@ function updateMealsAfterRecipeDelete(recipeId) {
 
 function localize(value) {
   return localizedText(value, lang);
+}
+
+function localizeExact(value) {
+  return localizedTextExact(value, lang);
 }
 
 function escapeHtml(value) {
@@ -489,7 +493,7 @@ function mealHasWarning(meal) {
 function mealSummary(meal) {
   const items = mealRecipes(meal);
   if (!items.length) return t("noMealSet");
-  return items.map(({ recipe }) => localize(recipe.name)).join(" · ");
+  return items.map(({ recipe }) => localizeExact(recipe.name) || t("translationPendingShort")).join(" · ");
 }
 
 function groceryStoreLabel(store) {
@@ -574,7 +578,7 @@ const groceryUi = createGroceryUi({
   },
   getInventory: () => inventory,
   allRecipes,
-  localize,
+  localize: localizeExact,
   groceryStoreLabel,
   inventoryLocationLabel,
   saveGroceries,
@@ -700,7 +704,7 @@ const dashboardUi = createDashboardUi({
   $$,
   t,
   escapeHtml,
-  localize,
+  localize: (value) => localizeExact(value) || t("translationPendingShort"),
   formatDateKey,
   categoryFor,
   categoryLabel,
@@ -712,7 +716,10 @@ const dashboardUi = createDashboardUi({
   saveSharedState,
   offerUndo,
   render,
-  renderDetail: () => renderDetail(),
+  renderDetail: () => {
+    renderDetail();
+    $("#recipesView").classList.add("detail-open");
+  },
   setView,
   getLang: () => lang,
   getFavorites: () => favorites,
@@ -742,7 +749,7 @@ const scheduleUi = createScheduleUi({
   $$,
   t,
   escapeHtml,
-  localize,
+  localize: (value) => localizeExact(value) || t("translationPendingShort"),
   formatDateKey,
   normalizeMealPlan,
   mealSlots,
@@ -783,6 +790,7 @@ const recipeLibraryUi = createRecipeLibraryUi({
   t,
   escapeHtml,
   localize,
+  localizeExact,
   categoryFor,
   categoryLabel,
   getLang: () => lang,
@@ -850,6 +858,7 @@ function setView(viewName) {
   });
   document.body.dataset.view = viewName;
   $("#recipeDetail").hidden = true;
+  $("#recipesView").classList.remove("detail-open");
   if (viewName !== "today" && $("#quickGuide") && $("#quickGuideToggle")) {
     $("#quickGuide").hidden = true;
     $("#quickGuideToggle").setAttribute("aria-expanded", "false");
@@ -1197,6 +1206,7 @@ scheduleUi.bindScheduleControls();
 dashboardUi.bindDashboardControls();
 
 $("#favoriteRecipe").addEventListener("click", async () => {
+  $("#recipeMoreActions").open = false;
   if (favorites.includes(selectedRecipeId)) {
     favorites = favorites.filter((id) => id !== selectedRecipeId);
   } else {
@@ -1250,6 +1260,7 @@ onboardingUi.bind();
 
 $("#markCooked").addEventListener("click", () => {
   $("#markCooked").textContent = t("cookedToday");
+  $("#recipeMoreActions").open = false;
 });
 
 recipeLibraryUi.bindLibraryControls();
@@ -1270,6 +1281,7 @@ $("#groceryForm").addEventListener("submit", async (event) => {
 });
 
 $("#generateGroceries").addEventListener("click", async () => {
+  $(".grocery-tools-menu").open = false;
   groceries = mergeGroceries(groceries, generatedGroceriesFromWeek());
   renderGroceries();
   bindGroceryControls();
@@ -1277,6 +1289,7 @@ $("#generateGroceries").addEventListener("click", async () => {
 });
 
 $("#clearCheckedGroceries").addEventListener("click", async () => {
+  $(".grocery-tools-menu").open = false;
   groceries = groceries.filter((item) => !item.checked);
   renderGroceries();
   bindGroceryControls();

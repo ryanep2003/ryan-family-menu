@@ -1,9 +1,12 @@
+import { hasLocalizedContent } from "./localized-data.js";
+
 export function createRecipeLibraryUi({
   $,
   $$,
   t,
   escapeHtml,
   localize,
+  localizeExact,
   categoryFor,
   categoryLabel,
   getLang,
@@ -22,6 +25,10 @@ export function createRecipeLibraryUi({
 }) {
   let lastLibraryButton = null;
 
+  function requiredText(value) {
+    return localizeExact(value) || t("translationPendingShort");
+  }
+
   function renderRecipes() {
     const search = getRecipeSearch().trim().toLowerCase();
     const categoryFilter = getCategoryFilter();
@@ -29,10 +36,10 @@ export function createRecipeLibraryUi({
     const filtered = recipes.filter((recipe) => {
       const categoryMatch = categoryFilter === "all" || categoryFor(recipe) === categoryFilter;
       const haystack = [
-        localize(recipe.name),
-        localize(recipe.meta),
-        localize(recipe.short),
-        localize(recipe.tags),
+        localizeExact(recipe.name),
+        localizeExact(recipe.meta),
+        localizeExact(recipe.short),
+        localizeExact(recipe.tags),
         categoryLabel(categoryFor(recipe)),
       ].join(" ").toLowerCase();
       return categoryMatch && (!search || haystack.includes(search));
@@ -42,17 +49,22 @@ export function createRecipeLibraryUi({
       .replace("{count}", filtered.length)
       .replace("{total}", recipes.length);
     $("#recipeList").innerHTML = filtered
-      .map((recipe, index) => `
+      .map((recipe, index) => {
+        const name = requiredText(recipe.name);
+        const meta = localizeExact(recipe.meta);
+        const short = localizeExact(recipe.short);
+        return `
         <button class="recipe-card" style="--card-order: ${Math.min(index, 8)}" type="button" data-open="${escapeHtml(recipe.id)}">
-          <img src="${escapeHtml(recipe.photos[0])}" alt="${escapeHtml(localize(recipe.name))}" loading="lazy" decoding="async" />
+          <img src="${escapeHtml(recipe.photos[0])}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" />
           <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
           ${getFavorites().includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}
-          ${recipe.allergyWarning ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
-          <h3>${escapeHtml(localize(recipe.name))}</h3>
-          <p>${escapeHtml(localize(recipe.meta))}</p>
-          <p>${escapeHtml(localize(recipe.short))}</p>
+          ${hasLocalizedContent(recipe.allergyWarning) ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
+          <h3>${escapeHtml(name)}</h3>
+          ${meta ? `<p>${escapeHtml(meta)}</p>` : ""}
+          ${short ? `<p>${escapeHtml(short)}</p>` : ""}
         </button>
-      `)
+      `;
+      })
       .join("");
     if (!filtered.length) {
       $("#recipeList").innerHTML = `<p class="empty-state">${t("noMatchingRecipes")}</p>`;
@@ -62,24 +74,41 @@ export function createRecipeLibraryUi({
   function renderDetail() {
     const recipe = recipeById(getSelectedRecipeId());
     const isLocalDraft = Boolean(draftById(recipe.id));
-    const warning = recipe.allergyWarning ? localize(recipe.allergyWarning) : "";
+    const name = localizeExact(recipe.name);
+    const ingredients = recipe.ingredients?.[getLang()] || [];
+    const steps = recipe.steps?.[getLang()] || [];
+    const hasWarning = hasLocalizedContent(recipe.allergyWarning);
+    const warningReady = !hasWarning || Boolean(localizeExact(recipe.allergyWarning));
+    const contentReady = Boolean(name && ingredients.length && steps.length && warningReady);
+    const warning = hasWarning
+      ? localizeExact(recipe.allergyWarning) || t("safetyTranslationPending")
+      : "";
     $("#recipeDetail").classList.remove("editing");
+    $("#recipeMoreActions").open = false;
     $("#editRecipeForm").hidden = true;
-    $("#detailName").textContent = localize(recipe.name);
-    $("#detailMeta").textContent = localize(recipe.meta);
+    $("#detailName").textContent = name || t("translationPendingShort");
+    $("#detailMeta").textContent = localizeExact(recipe.meta);
     $("#allergyWarning").hidden = !warning;
     $("#allergyWarning").textContent = warning;
-    $("#ingredientList").innerHTML = (recipe.ingredients[getLang()] || recipe.ingredients.en).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-    $("#stepList").innerHTML = (recipe.steps[getLang()] || recipe.steps.en).map((item) => `<li>${escapeHtml(item)}</li>`).join("");
-    $("#familyNotes").textContent = localize(recipe.notes);
+    $("#recipeTranslationStatus").hidden = contentReady;
+    $("#recipeTranslationStatus").textContent = contentReady ? "" : t("translationPendingDetail");
+    $("#ingredientList").innerHTML = ingredients.length
+      ? ingredients.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+      : `<li class="translation-placeholder">${t("translationPendingShort")}</li>`;
+    $("#stepList").innerHTML = steps.length
+      ? steps.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+      : `<li class="translation-placeholder">${t("translationPendingShort")}</li>`;
+    $("#familyNotes").textContent = localizeExact(recipe.notes) || (contentReady ? "" : t("translationPendingShort"));
     $("#photoStrip").innerHTML = recipe.photos
-      .map((src, index) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(`${localize(recipe.name)} ${t("sourcePhoto")} ${index + 1}`)}" loading="lazy" decoding="async" />`)
+      .map((src, index) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(`${name || t("translationPendingShort")} ${t("sourcePhoto")} ${index + 1}`)}" loading="lazy" decoding="async" />`)
       .join("");
     const isFavorite = getFavorites().includes(recipe.id);
     $("#favoriteRecipe").textContent = t(isFavorite ? "removeFavorite" : "addFavorite");
     $("#favoriteRecipe").setAttribute("aria-pressed", `${isFavorite}`);
     $("#publishDraftRecipe").hidden = !isLocalDraft;
     $("#addRecipeGroceries").textContent = t("addRecipeToGroceries");
+    $("#addRecipeGroceries").disabled = !contentReady;
+    $("#markCooked").disabled = !contentReady;
     setDetailStatus("");
   }
 
@@ -90,6 +119,7 @@ export function createRecipeLibraryUi({
         setView("recipes");
         setSelectedRecipeId(button.dataset.open);
         renderDetail();
+        $("#recipesView").classList.add("detail-open");
         $("#recipeDetail").hidden = false;
         $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
         $("#detailName").focus({ preventScroll: true });
@@ -100,6 +130,7 @@ export function createRecipeLibraryUi({
   function bindLibraryControls() {
     $("#closeRecipeDetail").addEventListener("click", () => {
       $("#recipeDetail").hidden = true;
+      $("#recipesView").classList.remove("detail-open");
       $("#recipeDetail").classList.remove("editing");
       $("#editRecipeForm").hidden = true;
       setDetailStatus("");

@@ -339,6 +339,7 @@ export function createRecipeFormUi({
     $("#editRecipe").addEventListener("click", () => {
       const recipe = recipeById(getSelectedRecipeId());
       if (!recipe) return;
+      $("#recipeMoreActions").open = false;
       populateEditRecipeForm(recipe);
       setEditMode(true);
       setDetailStatus("");
