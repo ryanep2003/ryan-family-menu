@@ -18,6 +18,7 @@ import { createGroceryUi } from "./grocery-ui.js";
 import { createInventoryUi } from "./inventory-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
 import { localizedText, localizedTextExact, updateLocalizedText } from "./localized-data.js";
+import { textMatchesLanguage } from "./language-quality.js";
 import { createOnboardingUi } from "./onboarding-ui.js";
 import { createRecipeFormUi } from "./recipe-form-ui.js";
 import { createRecipeLibraryUi } from "./recipe-library-ui.js";
@@ -223,10 +224,30 @@ function recipeToEditableUpload(recipe) {
 }
 
 function rawRecipeById(id) {
-  return draftById(id)
+  const stored = draftById(id)
     || recipeEdits[id]
     || sharedRecipes.find((recipe) => recipe.id === id)
     || null;
+  if (stored) return stored;
+
+  const seeded = recipes.find((recipe) => recipe.id === id);
+  if (!seeded) return null;
+  return {
+    id: seeded.id,
+    name: seeded.name,
+    category: categoryFor(seeded),
+    ingredientsText: {
+      en: (seeded.ingredients?.en || []).join("\n"),
+      es: (seeded.ingredients?.es || []).join("\n"),
+    },
+    stepsText: {
+      en: (seeded.steps?.en || []).join("\n"),
+      es: (seeded.steps?.es || []).join("\n"),
+    },
+    allergyWarning: seeded.allergyWarning,
+    notes: seeded.notes,
+    photos: seeded.photos,
+  };
 }
 
 function rawRecipeText(value, locale) {
@@ -242,12 +263,21 @@ function rawRecipeLines(value, locale) {
 
 function rawRecipeHasLocale(recipe, locale) {
   if (!recipe) return false;
+  const required = [
+    rawRecipeText(recipe.name, locale),
+    rawRecipeLines(recipe.ingredientsText, locale).join("\n"),
+    rawRecipeLines(recipe.stepsText, locale).join("\n"),
+  ];
+  if (required.some((value) => !value || !textMatchesLanguage(value, locale))) return false;
+  if (locale !== "es") return true;
 
-  return Boolean(
-    rawRecipeText(recipe.name, locale)
-    && rawRecipeLines(recipe.ingredientsText, locale).length
-    && rawRecipeLines(recipe.stepsText, locale).length
-  );
+  const opposite = "en";
+  return ["allergyWarning", "notes"].every((field) => {
+    const source = rawRecipeText(recipe[field], opposite);
+    if (!source) return true;
+    const translated = rawRecipeText(recipe[field], locale);
+    return Boolean(translated && textMatchesLanguage(translated, locale));
+  });
 }
 
 function rawRecipeNeedsLocale(recipe, locale) {
@@ -339,7 +369,8 @@ function localize(value) {
 }
 
 function localizeExact(value) {
-  return localizedTextExact(value, lang);
+  const text = localizedTextExact(value, lang);
+  return textMatchesLanguage(text, lang) ? text : "";
 }
 
 function escapeHtml(value) {

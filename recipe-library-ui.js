@@ -1,4 +1,5 @@
 import { hasLocalizedContent } from "./localized-data.js";
+import { textMatchesLanguage } from "./language-quality.js";
 
 export function createRecipeLibraryUi({
   $,
@@ -27,6 +28,11 @@ export function createRecipeLibraryUi({
 
   function requiredText(value) {
     return localizeExact(value) || t("translationPendingShort");
+  }
+
+  function localizedLines(value) {
+    const lines = value?.[getLang()] || [];
+    return textMatchesLanguage(lines.join("\n"), getLang()) ? lines : [];
   }
 
   function renderRecipes() {
@@ -75,8 +81,8 @@ export function createRecipeLibraryUi({
     const recipe = recipeById(getSelectedRecipeId());
     const isLocalDraft = Boolean(draftById(recipe.id));
     const name = localizeExact(recipe.name);
-    const ingredients = recipe.ingredients?.[getLang()] || [];
-    const steps = recipe.steps?.[getLang()] || [];
+    const ingredients = localizedLines(recipe.ingredients);
+    const steps = localizedLines(recipe.steps);
     const hasWarning = hasLocalizedContent(recipe.allergyWarning);
     const warningReady = !hasWarning || Boolean(localizeExact(recipe.allergyWarning));
     const contentReady = Boolean(name && ingredients.length && steps.length && warningReady);

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createRecipeLibraryUi } from "../recipe-library-ui.js";
+import { textMatchesLanguage } from "../language-quality.js";
 
 function element(initial = {}) {
   const listeners = new Map();
@@ -102,9 +103,12 @@ function harness(overrides = {}) {
     t: (key) => key,
     escapeHtml,
     localize: (value) => typeof value === "string" ? value : value?.en || "",
-    localizeExact: (value) => typeof value === "string"
+    localizeExact: (value) => {
+      const text = typeof value === "string"
       ? (overrides.lang || "en") === "en" ? value : ""
-      : value?.[overrides.lang || "en"] || "",
+      : value?.[overrides.lang || "en"] || "";
+      return textMatchesLanguage(text, overrides.lang || "en") ? text : "";
+    },
     categoryFor: () => "main",
     categoryLabel: () => "Main",
     getLang: () => overrides.lang || "en",

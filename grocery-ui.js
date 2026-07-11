@@ -1,4 +1,5 @@
 import { allLocalizedText, canonicalText, localizedTextExact } from "./localized-data.js";
+import { textMatchesLanguage } from "./language-quality.js";
 
 export function createGroceryUi({
   $,
@@ -41,7 +42,7 @@ export function createGroceryUi({
 
   function groceryDisplayText(item) {
     const direct = localizedTextExact(item.text, getLang());
-    if (direct) return direct;
+    if (direct && textMatchesLanguage(direct, getLang())) return direct;
 
     const recipe = recipeForGroceryItem(item);
     if (!recipe) return t("translationPendingShort");
@@ -58,7 +59,10 @@ export function createGroceryUi({
       : ingredientIndex >= englishIngredients.length
         ? ingredientIndex - englishIngredients.length
         : ingredientIndex;
-    return currentIngredients[index] || t("translationPendingShort");
+    const translated = currentIngredients[index] || "";
+    return translated && textMatchesLanguage(translated, getLang())
+      ? translated
+      : t("translationPendingShort");
   }
 
   function groupGroceriesBySource(items) {
