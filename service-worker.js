@@ -1,4 +1,4 @@
-const CACHE_NAME = "ryan-family-menu-v66";
+const CACHE_NAME = "ryan-family-menu-v69";
 const ASSETS = [
   "./",
   "./index.html",
@@ -28,7 +28,10 @@ const ASSETS = [
   "./recipe-utils.js",
   "./schedule-utils.js",
   "./manifest.webmanifest",
-  "./assets/meatballs-2.jpg",
+  "./assets/app-icon.svg",
+  "./assets/app-icon-180.png",
+  "./assets/app-icon-192.png",
+  "./assets/app-icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {

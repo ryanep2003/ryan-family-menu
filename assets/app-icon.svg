@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">Ryan Family Menu</title>
+  <rect width="1024" height="1024" fill="#aa3b2e" />
+  <circle cx="512" cy="512" r="328" fill="#fff8ec" />
+  <circle cx="512" cy="512" r="292" fill="#aa3b2e" />
+  <text
+    x="512"
+    y="694"
+    fill="#fff8ec"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="520"
+    font-weight="700"
+    text-anchor="middle"
+  >R</text>
+  <path
+    d="M737 214c62 2 108 31 135 87-63 5-112-18-147-70 1-7 5-13 12-17Z"
+    fill="#3f664f"
+  />
+  <path
+    d="M731 227c43 17 79 41 108 73"
+    fill="none"
+    stroke="#fff8ec"
+    stroke-linecap="round"
+    stroke-width="13"
+  />
+</svg>

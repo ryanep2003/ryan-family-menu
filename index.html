@@ -6,7 +6,9 @@
     <meta name="theme-color" content="#f4ecdf" />
     <title>Ryan Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css?v=35" />
+    <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
+    <link rel="stylesheet" href="styles.css?v=37" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -236,43 +238,57 @@
               <h2 data-i18n="inventoryHeading">What is in the house</h2>
             </div>
           </div>
-          <details class="inventory-tools-menu">
-            <summary data-i18n="manageInventory">Manage inventory</summary>
-            <div class="inventory-tools">
-              <details>
-                <summary data-i18n="addInventoryItem">Add item</summary>
-                <form class="inventory-add" id="inventoryForm">
-                  <input type="text" id="inventoryInput" data-i18n-placeholder="inventoryPlaceholder" data-i18n-aria-label="inventoryItemLabel" aria-label="Inventory item" placeholder="Add eggs, milk, paper towels..." />
-                  <input type="text" id="inventoryQuantityInput" data-i18n-placeholder="inventoryQuantityPlaceholder" data-i18n-aria-label="inventoryAmountLabel" aria-label="Inventory amount" placeholder="Amount, optional" />
-                  <input type="file" id="inventoryPhotoInput" accept="image/*" capture="environment" aria-label="Inventory photo" data-i18n-aria-label="inventoryPhotoLabel" />
-                  <select id="inventoryLocationInput" aria-label="Location" data-i18n-aria-label="locationLabel">
-                    <option value="pantry" data-i18n="locationPantry">Pantry</option>
-                    <option value="fridge" data-i18n="locationFridge">Fridge</option>
-                    <option value="freezer" data-i18n="locationFreezer">Freezer</option>
-                    <option value="household" data-i18n="locationHousehold">Household</option>
-                  </select>
-                  <button class="primary-action" type="submit" data-i18n="addInventoryItem">Add item</button>
-                </form>
-              </details>
-              <details>
-                <summary data-i18n="scanShelf">Scan shelf</summary>
-                <div class="inventory-scan-panel">
-                  <p data-i18n="inventoryScanNote">Upload fridge, freezer, pantry, or receipt photos. Review the suggestions before adding them.</p>
-                  <form class="inventory-scan" id="inventoryScanForm">
-                    <input type="file" id="inventoryScanPhotoInput" accept="image/*" capture="environment" multiple aria-label="Inventory photos" data-i18n-aria-label="inventoryScanPhotoLabel" />
-                    <select id="inventoryScanLocationInput" aria-label="Default location" data-i18n-aria-label="defaultLocationLabel">
-                      <option value="fridge" data-i18n="locationFridge">Fridge</option>
+          <div class="inventory-utility-row">
+            <details class="inventory-tools-menu">
+              <summary data-i18n="inventoryManageShort">Manage</summary>
+              <div class="inventory-tools">
+                <details>
+                  <summary data-i18n="addInventoryItem">Add item</summary>
+                  <form class="inventory-add" id="inventoryForm">
+                    <input type="text" id="inventoryInput" data-i18n-placeholder="inventoryPlaceholder" data-i18n-aria-label="inventoryItemLabel" aria-label="Inventory item" placeholder="Add eggs, milk, paper towels..." />
+                    <input type="text" id="inventoryQuantityInput" data-i18n-placeholder="inventoryQuantityPlaceholder" data-i18n-aria-label="inventoryAmountLabel" aria-label="Inventory amount" placeholder="Amount, optional" />
+                    <input type="file" id="inventoryPhotoInput" accept="image/*" capture="environment" aria-label="Inventory photo" data-i18n-aria-label="inventoryPhotoLabel" />
+                    <select id="inventoryLocationInput" aria-label="Location" data-i18n-aria-label="locationLabel">
                       <option value="pantry" data-i18n="locationPantry">Pantry</option>
+                      <option value="fridge" data-i18n="locationFridge">Fridge</option>
                       <option value="freezer" data-i18n="locationFreezer">Freezer</option>
                       <option value="household" data-i18n="locationHousehold">Household</option>
                     </select>
-                    <button class="primary-action" type="submit" data-i18n="scanInventoryPhotos">Scan photos</button>
+                    <button class="primary-action" type="submit" data-i18n="addInventoryItem">Add item</button>
                   </form>
-                  <div class="inventory-suggestions" id="inventorySuggestions" hidden></div>
-                </div>
-              </details>
-            </div>
-          </details>
+                </details>
+                <details>
+                  <summary data-i18n="scanShelf">Scan shelf</summary>
+                  <div class="inventory-scan-panel">
+                    <p data-i18n="inventoryScanNote">Upload fridge, freezer, pantry, or receipt photos. Review the suggestions before adding them.</p>
+                    <form class="inventory-scan" id="inventoryScanForm">
+                      <input type="file" id="inventoryScanPhotoInput" accept="image/*" capture="environment" multiple aria-label="Inventory photos" data-i18n-aria-label="inventoryScanPhotoLabel" />
+                      <select id="inventoryScanLocationInput" aria-label="Default location" data-i18n-aria-label="defaultLocationLabel">
+                        <option value="fridge" data-i18n="locationFridge">Fridge</option>
+                        <option value="pantry" data-i18n="locationPantry">Pantry</option>
+                        <option value="freezer" data-i18n="locationFreezer">Freezer</option>
+                        <option value="household" data-i18n="locationHousehold">Household</option>
+                      </select>
+                      <button class="primary-action" type="submit" data-i18n="scanInventoryPhotos">Scan photos</button>
+                    </form>
+                    <div class="inventory-suggestions" id="inventorySuggestions" hidden></div>
+                  </div>
+                </details>
+              </div>
+            </details>
+            <label class="inventory-search" for="inventorySearch">
+              <span data-i18n="inventorySearchLabel">Find an inventory item</span>
+              <input
+                id="inventorySearch"
+                type="search"
+                autocomplete="off"
+                aria-label="Find an inventory item"
+                data-i18n-aria-label="inventorySearchLabel"
+                data-i18n-placeholder="inventorySearchPlaceholder"
+                placeholder="Search everything at home..."
+              />
+            </label>
+          </div>
           <div class="inventory-filter-bar">
             <div class="inventory-filters" role="group" aria-label="Inventory status and location" data-i18n-aria-label="inventoryFiltersLabel">
               <button class="active attention-filter" type="button" data-inventory-filter="attention" data-i18n="inventoryAttention">Needs attention</button>
@@ -527,6 +543,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=66"></script>
+    <script type="module" src="app.js?v=69"></script>
   </body>
 </html>

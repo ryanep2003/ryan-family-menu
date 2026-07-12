@@ -19,7 +19,6 @@ export function createInventoryUi({
   getGroceries,
   setGroceries,
   getInventoryMode,
-  setInventoryMode,
   getInventoryFilter,
   getLang,
   getInventorySuggestions,
@@ -49,6 +48,7 @@ export function createInventoryUi({
   function renderInventory() {
     const inventory = getInventory();
     const inventoryFilter = getInventoryFilter();
+    const inventoryQuery = canonicalText($("#inventorySearch")?.value || "").trim().toLowerCase();
     const groups = [
       { key: "pantry", label: t("locationPantry") },
       { key: "fridge", label: t("locationFridge") },
@@ -56,10 +56,15 @@ export function createInventoryUi({
       { key: "household", label: t("locationHousehold") },
     ].map((group) => ({
       ...group,
-      items: inventory.filter((item) => (item.location || "pantry") === group.key
-        && (inventoryFilter === "all"
+      items: inventory.filter((item) => {
+        const matchesQuery = !inventoryQuery
+          || canonicalText(localizedText(item.text, getLang())).toLowerCase().includes(inventoryQuery);
+        const matchesFilter = inventoryQuery
+          || inventoryFilter === "all"
           || (inventoryFilter === "attention" && ["low", "out"].includes(item.stockState))
-          || group.key === inventoryFilter)),
+          || group.key === inventoryFilter;
+        return (item.location || "pantry") === group.key && matchesQuery && matchesFilter;
+      }),
     })).filter((group) => group.items.length);
 
     if (!inventory.length) {
@@ -68,7 +73,10 @@ export function createInventoryUi({
     }
 
     if (!groups.length) {
-      $("#inventoryList").innerHTML = `<p class="empty-state">${t(inventoryFilter === "attention" ? "inventoryAttentionEmpty" : "noInventoryMatches")}</p>`;
+      const emptyKey = inventoryQuery
+        ? "inventorySearchEmpty"
+        : inventoryFilter === "attention" ? "inventoryAttentionEmpty" : "noInventoryMatches";
+      $("#inventoryList").innerHTML = `<p class="empty-state">${t(emptyKey)}</p>`;
       return;
     }
 
@@ -76,23 +84,33 @@ export function createInventoryUi({
       <section class="inventory-section">
         <h3>${escapeHtml(group.label)}</h3>
         ${group.items.map((item) => `
-          <div class="inventory-item">
+          <div class="inventory-item${item.photos?.[0] ? " has-photo" : ""}">
             ${item.photos?.[0] ? `<img src="${escapeHtml(item.photos[0])}" alt="${escapeHtml(localizedText(item.text, getLang()))}" loading="lazy" decoding="async" />` : ""}
-            <span class="inventory-item-copy">
-              <strong>${escapeHtml(localizedText(item.text, getLang()))}</strong>
-              <em>${escapeHtml(localizedText(item.quantity, getLang()) || inventoryLocationLabel(item.location))}</em>
-              ${inventoryShoppingNote(item) ? `<em class="shopping-overlap">${escapeHtml(inventoryShoppingNote(item))}</em>` : ""}
-            </span>
-            <select class="stock-select stock-${escapeHtml(item.stockState || "some")}" data-stock-state="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("stockControlLabel").replace("{item}", localizedText(item.text, getLang())))}">
-              ${["full", "some", "low", "out"].map((state) => `<option value="${state}" ${state === (item.stockState || "some") ? "selected" : ""}>${inventoryStockLabel(state)}</option>`).join("")}
-            </select>
-            <details class="inventory-row-menu">
-              <summary aria-label="${escapeHtml(t("itemActions").replace("{item}", localizedText(item.text, getLang())))}"><span aria-hidden="true">•••</span></summary>
-              <div class="inventory-item-actions">
-                <button class="ghost-button" type="button" data-add-inventory-to-shopping="${escapeHtml(item.id)}">${t("addToShopping")}</button>
-                <button class="text-button" type="button" data-remove-inventory="${escapeHtml(item.id)}">${t("remove")}</button>
-              </div>
-            </details>
+            <div class="inventory-item-main">
+              <span class="inventory-item-copy">
+                <strong>${escapeHtml(localizedText(item.text, getLang()))}</strong>
+                <em>${escapeHtml(localizedText(item.quantity, getLang()) || inventoryLocationLabel(item.location))}</em>
+                ${inventoryShoppingNote(item) ? `<em class="shopping-overlap">${escapeHtml(inventoryShoppingNote(item))}</em>` : ""}
+                ${["low", "out"].includes(item.stockState) && !inventoryShoppingNote(item)
+                  ? `<button class="inventory-restock-action" type="button" data-add-inventory-to-shopping="${escapeHtml(item.id)}">${t("addToShopping")}</button>`
+                  : ""}
+              </span>
+              <label class="inventory-stock-control">
+                <span>${escapeHtml(t("stockLabel"))}</span>
+                <select class="stock-select stock-${escapeHtml(item.stockState || "some")}" data-stock-state="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("stockControlLabel").replace("{item}", localizedText(item.text, getLang())))}">
+                  ${["full", "some", "low", "out"].map((state) => `<option value="${state}" ${state === (item.stockState || "some") ? "selected" : ""}>${inventoryStockLabel(state)}</option>`).join("")}
+                </select>
+              </label>
+              <details class="inventory-row-menu">
+                <summary aria-label="${escapeHtml(t("itemActions").replace("{item}", localizedText(item.text, getLang())))}"><span class="inventory-menu-icon" aria-hidden="true">&#8942;</span></summary>
+                <div class="inventory-item-actions">
+                  ${["low", "out"].includes(item.stockState)
+                    ? ""
+                    : `<button class="ghost-button" type="button" data-add-inventory-to-shopping="${escapeHtml(item.id)}">${t("addToShopping")}</button>`}
+                  <button class="text-button" type="button" data-remove-inventory="${escapeHtml(item.id)}">${t("remove")}</button>
+                </div>
+              </details>
+            </div>
           </div>
         `).join("")}
       </section>
@@ -127,11 +145,9 @@ export function createInventoryUi({
         } else {
           setGroceries([groceryItem(item.text, { source: "inventory-restock" }), ...groceries]);
         }
-        setInventoryMode("shopping");
-        $("#groceryStatus").textContent = t("addedToShopping");
+        $("#inventoryStatus").textContent = t("addedToShopping");
         renderGroceries();
         renderInventory();
-        renderInventoryMode();
         bindGroceryControls();
         bindInventoryControls();
         await Promise.all([saveInventory(), saveGroceries()]);
