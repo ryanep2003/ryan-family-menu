@@ -1114,12 +1114,20 @@ h3 {
 }
 
 .inventory-tools-menu {
+  grid-column: 2;
+  grid-row: 1;
   width: fit-content;
-  margin: 0 0 12px auto;
+  margin: 0;
 }
 
 .inventory-tools-menu > .inventory-tools {
   padding: 0 8px 8px;
+}
+
+.inventory-tools-menu[open] {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
 }
 
 .inventory-mode-switch {
@@ -1326,6 +1334,44 @@ h3 {
   max-width: 100%;
 }
 
+.inventory-search {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  margin: 0;
+}
+
+.inventory-search > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.inventory-search input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.inventory-utility-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  margin: 12px 0 8px;
+}
+
+.inventory-search input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
 .inventory-location-filter {
   display: none;
 }
@@ -1514,6 +1560,23 @@ h3 {
 .inventory-item-copy strong {
   line-height: 1.25;
   overflow-wrap: anywhere;
+}
+
+.inventory-restock-action {
+  justify-self: start;
+  min-height: 44px;
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tomato-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: left;
+}
+
+.inventory-restock-action:hover {
+  color: var(--tomato);
 }
 
 .inventory-stock-control {
@@ -2522,12 +2585,17 @@ li {
   }
 
   .inventory-tools-menu {
-    width: 100%;
-    margin-left: 0;
+    width: auto;
+    margin: 0;
   }
 
   .inventory-tools-menu > summary {
-    justify-content: space-between;
+    justify-content: center;
+    padding: 0 12px;
+  }
+
+  .inventory-tools-menu[open] {
+    width: 100%;
   }
 
   .inventory-tools {
@@ -2551,10 +2619,18 @@ li {
     margin-top: 8px;
   }
 
-  .grocery-banner,
-  .inventory-banner {
+  .grocery-banner {
     min-height: 126px;
     padding: 20px;
+  }
+
+  .inventory-banner {
+    min-height: 96px;
+    padding: 16px 20px;
+  }
+
+  .inventory-utility-row {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .inventory-filter-bar {

@@ -645,9 +645,6 @@ inventoryUi = createInventoryUi({
     groceries = items;
   },
   getInventoryMode: () => inventoryMode,
-  setInventoryMode: (mode) => {
-    inventoryMode = mode;
-  },
   getInventoryFilter: () => inventoryFilter,
   getLang: () => lang,
   getInventorySuggestions: () => inventorySuggestions,
@@ -1218,6 +1215,11 @@ $("#inventoryLocationFilter").addEventListener("change", (event) => {
   if (!event.target.value) return;
   inventoryFilter = event.target.value;
   renderInventoryFilterControls();
+  renderInventory();
+  bindInventoryControls();
+});
+
+$("#inventorySearch").addEventListener("input", () => {
   renderInventory();
   bindInventoryControls();
 });

@@ -3,10 +3,14 @@ import test from "node:test";
 
 import { createInventoryUi } from "../inventory-ui.js";
 
-function renderInventoryWith(filter, inventory) {
+function renderInventoryWith(filter, inventory, query = "") {
   const inventoryList = { innerHTML: "" };
   const ui = createInventoryUi({
-    $: (selector) => selector === "#inventoryList" ? inventoryList : { hidden: false },
+    $: (selector) => {
+      if (selector === "#inventoryList") return inventoryList;
+      if (selector === "#inventorySearch") return { value: query };
+      return { hidden: false };
+    },
     $$: () => [],
     t: (key) => ({
       locationPantry: "Pantry",
@@ -14,6 +18,7 @@ function renderInventoryWith(filter, inventory) {
       locationFreezer: "Freezer",
       locationHousehold: "Household",
       inventoryAttentionEmpty: "Everything is stocked.",
+      inventorySearchEmpty: "No search matches.",
       noInventoryMatches: "No matches.",
       stockFull: "Full",
       stockSome: "Some",
@@ -72,4 +77,33 @@ test("inventory rows keep stock states readable and secondary actions quiet", ()
   assert.match(html, /value="out" selected>Out/);
   assert.match(html, /class="inventory-menu-icon"[^>]*>&#8942;/);
   assert.doesNotMatch(html, /•••/);
+});
+
+test("inventory search finds stocked items regardless of the active attention filter", () => {
+  const html = renderInventoryWith("attention", [
+    { id: "rice", text: "Brown rice", location: "pantry", stockState: "full" },
+    { id: "beans", text: "Black beans", location: "pantry", stockState: "low" },
+  ], "rice");
+
+  assert.match(html, /Brown rice/);
+  assert.doesNotMatch(html, /Black beans/);
+});
+
+test("inventory search has a specific empty state", () => {
+  const html = renderInventoryWith("all", [
+    { id: "rice", text: "Brown rice", location: "pantry", stockState: "full" },
+  ], "milk");
+
+  assert.match(html, /No search matches/);
+});
+
+test("low and out items expose one direct grocery action", () => {
+  const html = renderInventoryWith("attention", [
+    { id: "low", text: "Beans", location: "pantry", stockState: "low" },
+    { id: "out", text: "Milk", location: "fridge", stockState: "out" },
+  ]);
+
+  assert.equal((html.match(/data-add-inventory-to-shopping="low"/g) || []).length, 1);
+  assert.equal((html.match(/data-add-inventory-to-shopping="out"/g) || []).length, 1);
+  assert.equal((html.match(/class="inventory-restock-action"/g) || []).length, 2);
 });
