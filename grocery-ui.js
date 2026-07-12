@@ -15,10 +15,17 @@ export function createGroceryUi({
   localize,
   groceryStoreLabel,
   inventoryLocationLabel,
+  getHouseholdMember = () => "Family",
+  formatItemActivity = () => "",
   saveGroceries,
   offerUndo,
 }) {
   let controlsBound = false;
+
+  function touchItem(item) {
+    item.updatedBy = getHouseholdMember();
+    item.updatedAt = new Date().toISOString();
+  }
 
   function recipeForGroceryItem(item) {
     if (item.recipeId) {
@@ -126,6 +133,7 @@ export function createGroceryUi({
         ${items.map((item) => {
           const displayText = groceryDisplayText(item);
           const atHomeNote = groceryAtHomeNote(item);
+          const activity = formatItemActivity(item);
           const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
           return `
             <label class="grocery-item">
@@ -133,6 +141,7 @@ export function createGroceryUi({
               <span>
                 <strong${displayText === t("translationPendingShort") ? ` class="translation-placeholder"` : ""}>${escapeHtml(displayText)}</strong>
                 ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
+                ${activity ? `<em class="item-activity">${escapeHtml(activity)}</em>` : ""}
               </span>
               ${store ? `<small>${escapeHtml(store)}</small>` : ""}
             </label>
@@ -178,6 +187,7 @@ export function createGroceryUi({
       const item = groceries.find((grocery) => grocery.id === checkbox.dataset.groceryId);
       if (!item) return;
       item.checked = checkbox.checked;
+      touchItem(item);
       renderGroceries();
       await saveGroceries();
     });
@@ -190,7 +200,10 @@ export function createGroceryUi({
         event.preventDefault();
         const ids = new Set(checkButton.dataset.checkGrocerySection.split("|").filter(Boolean));
         getGroceries().forEach((item) => {
-          if (ids.has(item.id)) item.checked = true;
+          if (ids.has(item.id)) {
+            item.checked = true;
+            touchItem(item);
+          }
         });
         renderGroceries();
         await saveGroceries();

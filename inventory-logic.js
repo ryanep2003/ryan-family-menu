@@ -1,7 +1,8 @@
 import { cleanIngredientForGrocery } from "./grocery-logic.js";
 import { canonicalText, updateLocalizedText } from "./localized-data.js";
 
-export function inventoryItem(text, quantity = "", location = "pantry", photos = [], stockState = "some", lang = "en") {
+export function inventoryItem(text, quantity = "", location = "pantry", photos = [], stockState = "some", lang = "en", updatedBy = "") {
+  const timestamp = new Date().toISOString();
   return {
     id: `inventory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     text: typeof text === "string"
@@ -13,7 +14,9 @@ export function inventoryItem(text, quantity = "", location = "pantry", photos =
     location,
     photos,
     stockState,
-    createdAt: new Date().toISOString(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...(updatedBy ? { updatedBy } : {}),
   };
 }
 
@@ -33,7 +36,8 @@ export function mergeInventory(existingItems, newItems) {
         quantity: item.quantity || current.quantity,
         location: item.location || current.location,
         stockState: item.stockState || current.stockState || "some",
-        updatedAt: new Date().toISOString(),
+        updatedAt: item.updatedAt || new Date().toISOString(),
+        updatedBy: item.updatedBy || current.updatedBy,
       });
     } else {
       merged.set(key, item);

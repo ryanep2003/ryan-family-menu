@@ -4,7 +4,7 @@ const FALLBACK_PHOTO = "assets/meatballs-2.jpg";
 
 const categoryLabels = {
   main: { en: "Main", es: "Principal" },
-  side: { en: "Side", es: "Guarnicion" },
+  side: { en: "Side", es: "Guarnición" },
   salad: { en: "Salad", es: "Ensalada" },
   sauce: { en: "Sauce", es: "Salsa" },
   dessert: { en: "Dessert", es: "Postre" },
@@ -51,7 +51,7 @@ export function uploadToRecipe(upload, enMeta, esMeta) {
     ...upload,
     name: localizedPair(upload.name),
     meta: { en: enMeta, es: esMeta },
-    short: localizedPair(upload.notes, "Needs review", "Necesita revision"),
+    short: localizedPair(upload.notes, "Needs review", "Necesita revisión"),
     tags: { en: enMeta, es: esMeta },
     category: upload.category || "draft",
     allergyWarning: upload.allergyWarning
@@ -65,7 +65,7 @@ export function uploadToRecipe(upload, enMeta, esMeta) {
       en: splitLines(localizedTextExact(upload.stepsText, "en"), "Add cooking steps after review."),
       es: splitLines(localizedTextExact(upload.stepsText, "es"), ""),
     },
-    notes: localizedPair(upload.notes, "No notes yet.", "Sin notas todavia."),
+    notes: localizedPair(upload.notes, "No notes yet.", "Sin notas todavía."),
     photos: upload.photos?.length ? upload.photos : [FALLBACK_PHOTO],
   };
 }

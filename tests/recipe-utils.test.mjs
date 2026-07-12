@@ -8,6 +8,7 @@ import {
   uploadToRecipe,
   visibleRecipes,
 } from "../recipe-utils.js";
+import { recipes } from "../recipes-data.js";
 
 const localizeEn = (value) => typeof value === "string" ? value : value.en;
 
@@ -99,4 +100,14 @@ test("recipeById returns selected recipe or sensible fallbacks", () => {
   assert.deepEqual(recipeById([first], "missing", [fallback]), first);
   assert.deepEqual(recipeById([], "missing", [fallback]), fallback);
   assert.equal(recipeById([], "missing", []), null);
+});
+
+test("seed recipes use polished Spanish and dedicated discovery photos", () => {
+  const meatballs = recipes.find((recipe) => recipe.id === "meatballs");
+  const soup = recipes.find((recipe) => recipe.id === "chicken-noodle-soup");
+
+  assert.match(meatballs.name.es, /albóndigas/);
+  assert.match(soup.short.es, /cúrcuma/);
+  assert.equal(meatballs.cardPhoto, "assets/meatballs-2.jpg");
+  assert.equal(meatballs.photos[0], "assets/meatballs-1.jpg");
 });

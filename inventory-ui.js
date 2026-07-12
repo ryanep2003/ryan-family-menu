@@ -20,10 +20,17 @@ export function createInventoryUi({
   setGroceries,
   getInventoryMode,
   getInventoryFilter,
+  getHouseholdMember = () => "Family",
+  formatItemActivity = () => "",
   getLang,
   getInventorySuggestions,
   setInventorySuggestions,
 }) {
+  function touchItem(item) {
+    item.updatedBy = getHouseholdMember();
+    item.updatedAt = new Date().toISOString();
+  }
+
   function inventoryLocationLabel(location) {
     if (location === "fridge") return t("locationFridge");
     if (location === "freezer") return t("locationFreezer");
@@ -90,6 +97,7 @@ export function createInventoryUi({
               <span class="inventory-item-copy">
                 <strong>${escapeHtml(localizedText(item.text, getLang()))}</strong>
                 <em>${escapeHtml(localizedText(item.quantity, getLang()) || inventoryLocationLabel(item.location))}</em>
+                ${formatItemActivity(item) ? `<em class="item-activity">${escapeHtml(formatItemActivity(item))}</em>` : ""}
                 ${inventoryShoppingNote(item) ? `<em class="shopping-overlap">${escapeHtml(inventoryShoppingNote(item))}</em>` : ""}
                 ${["low", "out"].includes(item.stockState) && !inventoryShoppingNote(item)
                   ? `<button class="inventory-restock-action" type="button" data-add-inventory-to-shopping="${escapeHtml(item.id)}">${t("addToShopping")}</button>`
@@ -123,7 +131,7 @@ export function createInventoryUi({
         const item = getInventory().find((entry) => entry.id === select.dataset.stockState);
         if (!item) return;
         item.stockState = select.value;
-        item.updatedAt = new Date().toISOString();
+        touchItem(item);
         renderInventory();
         bindInventoryControls();
         await saveInventory();
@@ -135,15 +143,19 @@ export function createInventoryUi({
         const item = getInventory().find((entry) => entry.id === button.dataset.addInventoryToShopping);
         if (!item) return;
         item.stockState = "out";
-        item.updatedAt = new Date().toISOString();
+        touchItem(item);
         const groceries = getGroceries();
         const matchingGrocery = groceries.find((entry) => canonicalText(entry.text).toLowerCase() === canonicalText(item.text).toLowerCase());
         if (matchingGrocery) {
           matchingGrocery.checked = false;
           matchingGrocery.inInventory = false;
           matchingGrocery.source = "inventory-restock";
+          touchItem(matchingGrocery);
         } else {
-          setGroceries([groceryItem(item.text, { source: "inventory-restock" }), ...groceries]);
+          setGroceries([groceryItem(item.text, {
+            source: "inventory-restock",
+            updatedBy: getHouseholdMember(),
+          }), ...groceries]);
         }
         $("#inventoryStatus").textContent = t("addedToShopping");
         renderGroceries();
@@ -217,7 +229,8 @@ export function createInventoryUi({
         item.location,
         [],
         "some",
-        getLang()
+        getLang(),
+        getHouseholdMember()
       ))));
       setInventorySuggestions([]);
       renderInventorySuggestions();

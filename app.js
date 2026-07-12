@@ -15,6 +15,7 @@ import { createDashboardUi } from "./dashboard-ui.js";
 import { inventoryItem, mergeInventory } from "./inventory-logic.js";
 import { getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
+import { cleanHouseholdMember } from "./household-attribution.js";
 import { createInventoryUi } from "./inventory-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
 import { localizedText, localizedTextExact, updateLocalizedText } from "./localized-data.js";
@@ -67,6 +68,7 @@ function supportedLang(value) {
 }
 
 let lang = supportedLang(readStringStorage(localStorage, "dinner-lang", "en"));
+let householdMember = cleanHouseholdMember(readStringStorage(localStorage, "dinner-household-member", "Family")) || "Family";
 let selectedRecipeId = "meatballs";
 let schedule = normalizeSchedule(readJsonStorage(localStorage, "dinner-schedule", null));
 let calendarMeals = normalizeCalendar(readJsonStorage(localStorage, "dinner-calendar", {}));
@@ -90,7 +92,7 @@ let inventoryVersion = storedInventory.version;
 let inventorySuggestions = [];
 let receiptSuggestions = [];
 let inventoryMode = "shopping";
-let inventoryFilter = "attention";
+let inventoryFilter = "all";
 let visibleMonth = new Date();
 visibleMonth.setDate(1);
 let recipeSearch = "";
@@ -106,6 +108,53 @@ const $$ = (selector) => [...document.querySelectorAll(selector)];
 function t(key) {
   const messages = translations[lang] || translations.en;
   return messages[key] || translations.en[key] || key;
+}
+
+function formatItemActivity(item) {
+  if (!item?.updatedBy || !item?.updatedAt) return "";
+  const date = new Date(item.updatedAt);
+  if (Number.isNaN(date.getTime())) return "";
+  const time = new Intl.DateTimeFormat(lang === "es" ? "es-US" : "en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+  return t("itemUpdatedBy").replace("{name}", item.updatedBy).replace("{time}", time);
+}
+
+function updateFileInputStatus(input) {
+  const status = input ? $(`#${input.id}FileStatus`) : null;
+  if (!status) return;
+  const count = input.files?.length || 0;
+  const key = count === 1 ? "oneFileSelected" : count > 1 ? "filesSelected" : "noFilesSelected";
+  status.textContent = t(key).replace("{count}", count);
+}
+
+function renderFileInputStatuses() {
+  $$('input[type="file"][data-file-action]').forEach(updateFileInputStatus);
+}
+
+function setupLocalizedFileInputs() {
+  $$('input[type="file"][data-file-action]').forEach((input) => {
+    if (input.closest(".localized-file-input")) return;
+    const container = document.createElement("div");
+    container.className = "localized-file-input";
+    input.insertAdjacentElement("beforebegin", container);
+    container.appendChild(input);
+    const button = document.createElement("span");
+    button.className = "file-picker-button";
+    button.dataset.i18n = input.dataset.fileAction;
+    button.textContent = t(input.dataset.fileAction);
+    input.insertAdjacentElement("afterend", button);
+    if (input.dataset.fileStatus !== "false") {
+      const status = document.createElement("small");
+      status.className = "file-picker-status";
+      status.id = `${input.id}FileStatus`;
+      button.insertAdjacentElement("afterend", status);
+    }
+    input.addEventListener("change", () => updateFileInputStatus(input));
+  });
 }
 
 const syncAreas = {
@@ -539,7 +588,7 @@ function inventoryMatchFor(text, includeDepleted = false) {
 }
 
 function recipeGroceries(recipe, source = "recipe-detail") {
-  return groceryItemsFromRecipe(recipe, lang, inventory).map((item) => ({
+  return groceryItemsFromRecipe(recipe, lang, inventory, householdMember).map((item) => ({
     ...item,
     source,
   }));
@@ -587,6 +636,7 @@ function manualGroceryItemsFromText(text, store) {
       store,
       source: "manual",
       lang,
+      updatedBy: householdMember,
     }));
 }
 
@@ -612,6 +662,8 @@ const groceryUi = createGroceryUi({
   localize: localizeExact,
   groceryStoreLabel,
   inventoryLocationLabel,
+  getHouseholdMember: () => householdMember,
+  formatItemActivity,
   saveGroceries,
   offerUndo,
 });
@@ -646,6 +698,8 @@ inventoryUi = createInventoryUi({
   },
   getInventoryMode: () => inventoryMode,
   getInventoryFilter: () => inventoryFilter,
+  getHouseholdMember: () => householdMember,
+  formatItemActivity,
   getLang: () => lang,
   getInventorySuggestions: () => inventorySuggestions,
   setInventorySuggestions: (items) => {
@@ -681,6 +735,8 @@ const receiptUi = createReceiptUi({
     receiptSuggestions = items;
   },
   getLang: () => lang,
+  getHouseholdMember: () => householdMember,
+  updateFileInputStatus,
   getInventory: () => inventory,
   setInventory: (items) => {
     inventory = items;
@@ -717,6 +773,8 @@ function renderTranslations() {
     else button.removeAttribute("aria-current");
   });
   refreshSyncStatuses();
+  if ($("#householdMemberInput")) $("#householdMemberInput").value = householdMember;
+  renderFileInputStatuses();
 }
 
 function showAppUpdateNotice() {
@@ -879,7 +937,7 @@ function render() {
 function setView(viewName) {
   $$(".view").forEach((view) => view.classList.toggle("active", view.id === `${viewName}View`));
   $$(".tabs button").forEach((button) => {
-    const active = button.dataset.view === viewName;
+    const active = button.dataset.view === (viewName === "add" ? "recipes" : viewName);
     button.classList.toggle("active", active);
     if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
@@ -1177,6 +1235,14 @@ $$("[data-lang]").forEach((button) => {
   });
 });
 
+$("#householdMemberInput").addEventListener("change", (event) => {
+  householdMember = cleanHouseholdMember(event.target.value) || "Family";
+  localStorage.setItem("dinner-household-member", householdMember);
+});
+
+$("#addRecipeFromLibrary").addEventListener("click", () => setView("add"));
+$("#backToRecipeLibrary").addEventListener("click", () => setView("recipes"));
+
 $$("[data-inventory-mode]").forEach((button) => {
   button.addEventListener("click", () => {
     inventoryMode = button.dataset.inventoryMode;
@@ -1355,8 +1421,9 @@ $("#restockPurchased").addEventListener("click", async () => {
     if (existing) {
       existing.stockState = "full";
       existing.updatedAt = new Date().toISOString();
+      existing.updatedBy = householdMember;
     } else {
-      inventory.unshift(inventoryItem(grocery.text, "", "pantry", [], "full"));
+      inventory.unshift(inventoryItem(grocery.text, "", "pantry", [], "full", lang, householdMember));
     }
   });
   const purchasedIds = new Set(purchased.map((item) => item.id));
@@ -1383,11 +1450,13 @@ $("#inventoryForm").addEventListener("submit", async (event) => {
     $("#inventoryLocationInput").value,
     photos,
     "some",
-    lang
+    lang,
+    householdMember
   ));
   $("#inventoryInput").value = "";
   $("#inventoryQuantityInput").value = "";
   $("#inventoryPhotoInput").value = "";
+  updateFileInputStatus($("#inventoryPhotoInput"));
   renderInventory();
   bindInventoryControls();
   await saveInventory();
@@ -1406,6 +1475,7 @@ $("#inventoryScanForm").addEventListener("submit", async (event) => {
     const images = await readFilesAsDataUrls(files, 6);
     inventorySuggestions = await recognizeInventory(images, $("#inventoryScanLocationInput").value);
     $("#inventoryScanPhotoInput").value = "";
+    updateFileInputStatus($("#inventoryScanPhotoInput"));
     renderInventorySuggestions();
     if (inventorySuggestions.length) clearAreaStatus("inventory");
     else setSyncStatus("inventory", "inventoryScanEmpty");
@@ -1434,6 +1504,7 @@ window.addEventListener("online", () => {
 bindInstallPrompt({ $, t });
 registerServiceWorker({ $, onUpdateAvailable: showAppUpdateNotice });
 
+setupLocalizedFileInputs();
 render();
 loadSharedState();
 loadSharedRecipes();

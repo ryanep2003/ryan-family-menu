@@ -21,6 +21,8 @@ export function createReceiptUi({
   getReceiptSuggestions,
   setReceiptSuggestions,
   getLang,
+  getHouseholdMember = () => "Family",
+  updateFileInputStatus = () => {},
   getInventory,
   setInventory,
   getGroceries,
@@ -72,7 +74,8 @@ export function createReceiptUi({
         $("#receiptScanLocationInput").value,
         [],
         "full",
-        getLang()
+        getLang(),
+        getHouseholdMember()
       ))));
       setGroceries(getGroceries().filter((item) => !matchedIds.has(item.id)));
       setReceiptSuggestions([]);
@@ -117,6 +120,7 @@ export function createReceiptUi({
           };
         }));
         $("#receiptScanPhotoInput").value = "";
+        updateFileInputStatus($("#receiptScanPhotoInput"));
         renderReceiptSuggestions();
         if (getReceiptSuggestions().length) clearGroceryStatus();
         else setGroceryStatus("receiptScanEmpty");
