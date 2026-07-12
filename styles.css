@@ -1473,12 +1473,16 @@ h3 {
 
 .inventory-item {
   display: grid;
-  grid-template-columns: auto minmax(140px, 1fr) minmax(104px, 120px) 44px;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  min-height: 50px;
-  padding: 9px 0;
+  min-height: 68px;
+  padding: 12px 0;
   border-top: 1px solid #eee5d8;
+}
+
+.inventory-item.has-photo {
+  grid-template-columns: 52px minmax(0, 1fr);
 }
 
 .inventory-item img {
@@ -1493,20 +1497,47 @@ h3 {
   border-top: 0;
 }
 
-.inventory-item span {
+.inventory-item-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(128px, 148px) 44px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.inventory-item-copy {
   display: grid;
   gap: 2px;
+  min-width: 0;
+}
+
+.inventory-item-copy strong {
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.inventory-stock-control {
+  min-width: 128px;
+}
+
+.inventory-stock-control > span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 .stock-select {
   width: 100%;
+  min-width: 128px;
   min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 6px 9px;
   background: #fff;
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .stock-low {
@@ -1530,12 +1561,22 @@ h3 {
   place-items: center;
   width: 44px;
   height: 44px;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--surface);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
   list-style: none;
+}
+
+.inventory-row-menu > summary:hover {
+  background: #eee7dc;
+  color: var(--ink);
+}
+
+.inventory-menu-icon {
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .inventory-row-menu > summary::-webkit-details-marker {
@@ -2421,7 +2462,12 @@ li {
   }
 
   .inventory-item {
-    grid-template-columns: auto minmax(0, 1fr) minmax(92px, 108px) 44px;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .inventory-item.has-photo {
+    grid-template-columns: 44px minmax(0, 1fr);
   }
 
   .inventory-item img {
@@ -2429,9 +2475,50 @@ li {
     height: 44px;
   }
 
+  .inventory-item-main {
+    grid-template-areas:
+      "copy menu"
+      "stock stock";
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 8px 10px;
+  }
+
+  .inventory-item-copy {
+    grid-area: copy;
+    align-self: center;
+  }
+
+  .inventory-stock-control {
+    grid-area: stock;
+    display: grid;
+    grid-template-columns: auto minmax(132px, 160px);
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .inventory-stock-control > span {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+
+  .stock-select {
+    min-width: 132px;
+  }
+
+  .inventory-row-menu {
+    grid-area: menu;
+  }
+
   .inventory-item-actions {
     right: 0;
-    grid-column: auto;
   }
 
   .inventory-tools-menu {

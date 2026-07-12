@@ -19,6 +19,7 @@ function renderInventoryWith(filter, inventory) {
       stockSome: "Some",
       stockLow: "Low",
       stockOut: "Out",
+      stockLabel: "Stock",
       stockControlLabel: "Stock for {item}",
       itemActions: "Actions for {item}",
       addToShopping: "Add to shopping",
@@ -53,4 +54,22 @@ test("attention inventory explains when everything is stocked", () => {
   ]);
 
   assert.match(html, /Everything is stocked/);
+});
+
+test("inventory rows keep stock states readable and secondary actions quiet", () => {
+  const html = renderInventoryWith("all", [
+    { id: "full", text: "Extra long ground cinnamon container", location: "pantry", stockState: "full" },
+    { id: "some", text: "Paprika", location: "pantry", stockState: "some" },
+    { id: "low", text: "Turmeric", location: "pantry", stockState: "low" },
+    { id: "out", text: "Ground cloves", location: "pantry", stockState: "out" },
+  ]);
+
+  assert.match(html, /class="inventory-item-main"/);
+  assert.match(html, /class="inventory-stock-control">\s*<span>Stock<\/span>/);
+  assert.match(html, /value="full" selected>Full/);
+  assert.match(html, /value="some" selected>Some/);
+  assert.match(html, /value="low" selected>Low/);
+  assert.match(html, /value="out" selected>Out/);
+  assert.match(html, /class="inventory-menu-icon"[^>]*>&#8942;/);
+  assert.doesNotMatch(html, /•••/);
 });

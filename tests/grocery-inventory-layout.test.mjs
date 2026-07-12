@@ -25,3 +25,9 @@ test("mobile inventory filtering keeps status visible and consolidates locations
   assert.match(styles, /\.inventory-filters \.location-filter\s*{\s*display: none;/);
   assert.match(styles, /\.inventory-location-filter\s*{\s*display: grid;/);
 });
+
+test("mobile inventory rows reserve a full line for readable stock controls", () => {
+  assert.match(styles, /\.inventory-item-main\s*{[\s\S]*grid-template-areas:[\s\S]*"copy menu"[\s\S]*"stock stock"/);
+  assert.match(styles, /\.inventory-stock-control\s*{[\s\S]*grid-template-columns: auto minmax\(132px, 160px\)/);
+  assert.match(styles, /\.stock-select\s*{[\s\S]*min-width: 132px;/);
+});
