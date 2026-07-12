@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   categoryFor,
   categoryLabel,
+  cardPhotoFor,
+  cardPhotoIsGenerated,
   recipeById,
   recipeToEditableUpload,
   uploadToRecipe,
@@ -52,12 +54,35 @@ test("uploadToRecipe keeps scanned source photos out of recipe cards", () => {
     name: "Carnitas",
     ingredientsText: "pork",
     stepsText: "cook",
-    photos: ["data:image/jpeg;base64,scan-page"],
+    photos: ["data:image/jpeg;base64,scan-page-1", "data:image/jpeg;base64,scan-page-2"],
   }, "Shared upload", "Receta compartida");
 
-  assert.deepEqual(recipe.photos, ["data:image/jpeg;base64,scan-page"]);
+  assert.deepEqual(recipe.photos, ["data:image/jpeg;base64,scan-page-1", "data:image/jpeg;base64,scan-page-2"]);
   assert.equal(recipe.cardPhoto, "assets/recipe-card-placeholder.jpg");
   assert.equal(recipe.cardPhotoIsPlaceholder, true);
+});
+
+test("legacy single food photos remain available for recipe cards", () => {
+  const recipe = uploadToRecipe({
+    id: "legacy-food-photo",
+    name: "Pasta",
+    ingredientsText: "pasta",
+    stepsText: "cook",
+    photos: ["data:image/jpeg;base64,food-photo"],
+  }, "Shared upload", "Receta compartida");
+
+  assert.equal(cardPhotoFor(recipe), "data:image/jpeg;base64,food-photo");
+  assert.equal(cardPhotoIsGenerated(recipe), false);
+});
+
+test("recipes without card art receive distinct generated fallbacks", () => {
+  const first = { id: "fallback-one", name: { en: "Soup" }, photos: [] };
+  const second = { id: "fallback-two", name: { en: "Beans" }, photos: [] };
+
+  assert.match(cardPhotoFor(first), /^data:image\/svg\+xml,/);
+  assert.match(cardPhotoFor(second), /^data:image\/svg\+xml,/);
+  assert.notEqual(cardPhotoFor(first), cardPhotoFor(second));
+  assert.equal(cardPhotoIsGenerated(first), true);
 });
 
 test("uploadToRecipe preserves an explicit curated card photo", () => {

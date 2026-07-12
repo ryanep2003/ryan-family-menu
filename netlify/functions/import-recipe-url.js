@@ -333,6 +333,7 @@ export default async (request) => {
       allergyWarning: recipe.allergyWarning,
       notes: recipe.notes,
       photos: photo ? [photo] : [],
+      cardPhoto: photo || "",
     },
   });
 };

@@ -108,6 +108,7 @@ function harness(overrides = {}) {
     selectedRecipeId: "recipe-1",
     favorites: ["recipe-1", "other"],
     importedRecipePhotos: [],
+    importedRecipeCardPhoto: "",
     edits: {},
     deleted: [],
     drafts: [],
@@ -210,6 +211,10 @@ function harness(overrides = {}) {
     getImportedRecipePhotos: () => state.importedRecipePhotos,
     setImportedRecipePhotos: (photos) => {
       state.importedRecipePhotos = photos;
+    },
+    getImportedRecipeCardPhoto: () => state.importedRecipeCardPhoto,
+    setImportedRecipeCardPhoto: (photo) => {
+      state.importedRecipeCardPhoto = photo;
     },
     prependSharedRecipe: (recipe) => {
       state.sharedRecipes.unshift(recipe);
@@ -320,6 +325,7 @@ test("URL import fills the add form and stores imported photos", async () => {
       stepsText: "boil",
       notes: "quick",
       photos: ["url-photo.jpg"],
+      cardPhoto: "url-photo.jpg",
     }),
   });
   elements["#recipeUrlInput"].value = "https://example.com/recipe";
@@ -331,6 +337,7 @@ test("URL import fills the add form and stores imported photos", async () => {
   assert.equal(elements["#ingredientsInput"].value, "pasta");
   assert.equal(elements["#recipeDetailsDisclosure"].open, true);
   assert.deepEqual(state.importedRecipePhotos, ["url-photo.jpg"]);
+  assert.equal(state.importedRecipeCardPhoto, "url-photo.jpg");
 });
 
 test("recipe source chooser shows one method and opens manual details", async () => {
