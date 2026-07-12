@@ -472,8 +472,8 @@ h3 {
 }
 
 .primary-action:disabled {
-  cursor: wait;
-  opacity: 0.7;
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .ghost-button {
@@ -486,6 +486,14 @@ h3 {
 .install-button:hover {
   border-color: #b8aa95;
   background: #faf4e8;
+}
+
+.ghost-button:disabled {
+  cursor: not-allowed;
+  border-color: var(--line);
+  background: #eee8df;
+  color: var(--muted);
+  opacity: 0.72;
 }
 
 .tabs {
@@ -730,6 +738,18 @@ h3 {
   gap: 8px;
   flex-wrap: wrap;
   padding: 0 8px 8px;
+}
+
+.detail-action-note {
+  flex: 1 0 100%;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid #e4c79e;
+  border-radius: 8px;
+  background: #fff8e6;
+  color: #72500e;
+  font-size: 0.84rem;
+  font-weight: 800;
 }
 
 .translation-state {
@@ -1066,8 +1086,13 @@ h3 {
 }
 
 .week-day-summary strong {
+  display: -webkit-box;
+  min-height: 2.6em;
+  overflow: hidden;
   font-size: 0.88rem;
   line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .week-day-summary small {
@@ -2229,8 +2254,19 @@ h3 {
   font-weight: 700;
 }
 
-.recipe-save-action {
+.recipe-save-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 8px;
   margin: 0 18px 18px;
+}
+
+.recipe-save-actions button {
+  width: 100%;
+}
+
+.recipe-save-action {
+  margin: 0;
 }
 
 .upload-note {
@@ -2446,8 +2482,11 @@ li {
   }
 
   .header-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: stretch;
     width: 100%;
-    justify-content: space-between;
+    gap: 8px;
   }
 
   .guide-button {
@@ -2457,6 +2496,22 @@ li {
   .shell-add-button {
     min-width: 0;
     padding: 0 10px;
+  }
+
+  .guide-button,
+  .shell-add-button {
+    width: 100%;
+  }
+
+  .segmented {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .install-prompt {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-start;
   }
 
   .quick-guide-intro,
@@ -2471,6 +2526,32 @@ li {
   .quick-guide-intro .text-button {
     justify-self: start;
     min-height: 44px;
+  }
+
+  @media (max-width: 360px) {
+    .header-actions {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .guide-button {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .shell-add-button {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .segmented {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: start;
+    }
+
+    .install-prompt {
+      grid-row: 3;
+    }
   }
 
   .today-band,
@@ -2898,6 +2979,10 @@ li {
     display: grid;
     grid-template-columns: 1fr;
     width: 100%;
+  }
+
+  .recipe-save-actions {
+    grid-template-columns: 1fr;
   }
 
   .edit-recipe-actions {

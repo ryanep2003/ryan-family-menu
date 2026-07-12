@@ -60,6 +60,12 @@ test("mobile content clears the fixed navigation with a safe bottom buffer", () 
   assert.match(html, /styles\.css\?v=40/);
 });
 
+test("mobile header reserves rows for optional install controls", () => {
+  assert.match(styles, /@media \(max-width: 780px\)[\s\S]*\.header-actions\s*\{[\s\S]*display: grid;[\s\S]*grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\) auto;/);
+  assert.match(styles, /\.install-prompt\s*\{[\s\S]*grid-column: 1 \/ -1;[\s\S]*grid-row: 2;/);
+  assert.match(styles, /@media \(max-width: 360px\)[\s\S]*\.shell-add-button\s*\{[\s\S]*grid-row: 2;/);
+});
+
 test("file inputs use localized picker controls", () => {
   assert.match(html, /id="receiptScanPhotoInput"[^>]*data-file-action="choosePhotos"/);
   assert.match(html, /id="photoCameraInput"[^>]*data-file-action="takePhoto"/);

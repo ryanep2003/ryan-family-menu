@@ -18,7 +18,12 @@ function element(initial = {}) {
     async dispatch(type) {
       await listeners.get(type)?.();
     },
-    scrollIntoView() {},
+    scrollIntoView() {
+      this.scrolled = true;
+    },
+    focus() {
+      this.focused = true;
+    },
     ...initial,
   };
 }
@@ -55,6 +60,7 @@ function harness() {
   const elements = {
     "#scheduleGrid": element(),
     "#weekDateEditor": element(),
+    "#weekEditorHeading": element(),
     "#weekTitle": element(),
     "#monthTitle": element(),
     "#calendarWeekdays": element(),
@@ -137,7 +143,7 @@ function harness() {
     setVisibleMonth: () => {},
   });
 
-  return { calendarControl, dateButtons, elements, state, ui };
+  return { calendarControl, dateButtons, elements, state, ui, weekButtons };
 }
 
 test("week planning renders seven summaries with one focused editor", () => {
@@ -149,6 +155,16 @@ test("week planning renders seven summaries with one focused editor", () => {
   assert.doesNotMatch(elements["#scheduleGrid"].innerHTML, /<select/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-context="weekdate:2026-06-22"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /openMain: Main Recipe/);
+});
+
+test("selecting a week day focuses the selected editor heading", async () => {
+  const { elements, ui, weekButtons } = harness();
+
+  ui.renderSchedule();
+  await weekButtons.find((button) => button.dataset.editWeekDate === "2026-06-24").dispatch("click");
+
+  assert.equal(elements["#weekDateEditor"].scrolled, true);
+  assert.equal(elements["#weekEditorHeading"].focused, true);
 });
 
 test("calendar stays read-only until a date opens its focused editor", async () => {

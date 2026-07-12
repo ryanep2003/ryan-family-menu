@@ -356,15 +356,16 @@
           </div>
           <div class="detail-actions">
             <button class="primary-action" id="publishDraftRecipe" type="button" data-i18n="publishDraftRecipe" hidden>Publish draft</button>
-            <button class="primary-action" id="addRecipeGroceries" type="button" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
+            <button class="primary-action" id="addRecipeGroceries" type="button" aria-describedby="recipeSafetyLockReason" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
             <details class="detail-more-actions" id="recipeMoreActions">
               <summary data-i18n="moreActions">More actions</summary>
               <div>
                 <button class="ghost-button" id="editRecipe" type="button" data-i18n="editRecipe">Edit recipe</button>
                 <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
-                <button class="ghost-button" id="markCooked" type="button" data-i18n="markCooked">Mark cooked</button>
+                <button class="ghost-button" id="markCooked" type="button" aria-describedby="recipeSafetyLockReason" data-i18n="markCooked">Mark cooked</button>
               </div>
             </details>
+            <p class="detail-action-note" id="recipeSafetyLockReason" role="status" aria-live="polite" hidden></p>
           </div>
           <p class="upload-status detail-status" id="detailStatus" role="status"></p>
           <p class="translation-state" id="recipeTranslationStatus" role="status" hidden></p>
@@ -545,7 +546,10 @@
               </label>
             </div>
             </fieldset>
-            <button class="primary-action recipe-save-action" type="submit" data-i18n="saveDraft">Save draft</button>
+            <div class="recipe-save-actions">
+              <button class="ghost-button" id="saveRecipeDraft" type="button" data-i18n="saveDraft">Save draft</button>
+              <button class="primary-action recipe-save-action" id="publishRecipeButton" type="submit" data-i18n="publishRecipe">Publish to family</button>
+            </div>
           </details>
           <p class="upload-status" id="uploadStatus" role="status"></p>
         </form>

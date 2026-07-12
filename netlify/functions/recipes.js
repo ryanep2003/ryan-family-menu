@@ -24,7 +24,9 @@ function cleanPhotos(photos) {
 
 export function cleanRecipe(input) {
   const name = cleanLocalizedText(input.name, 120);
-  if (!hasLocalizedContent(name)) return null;
+  const ingredientsText = cleanLocalizedText(input.ingredientsText, MAX_TEXT_LENGTH);
+  const stepsText = cleanLocalizedText(input.stepsText, MAX_TEXT_LENGTH);
+  if (!hasLocalizedContent(name) || !hasLocalizedContent(ingredientsText) || !hasLocalizedContent(stepsText)) return null;
 
   const id = typeof input.id === "string" && input.id.startsWith("shared-")
     ? input.id
@@ -38,8 +40,8 @@ export function cleanRecipe(input) {
     id,
     name,
     category,
-    ingredientsText: cleanLocalizedText(input.ingredientsText, MAX_TEXT_LENGTH),
-    stepsText: cleanLocalizedText(input.stepsText, MAX_TEXT_LENGTH),
+    ingredientsText,
+    stepsText,
     allergyWarning: cleanLocalizedText(input.allergyWarning, 600),
     notes: cleanLocalizedText(input.notes, 2000),
     photos: cleanPhotos(input.photos),
@@ -99,7 +101,7 @@ export default async (request) => {
 
     const recipe = cleanRecipe(payload);
     if (!recipe) {
-      return jsonResponse({ error: "Recipe name is required" }, 400);
+      return jsonResponse({ error: "Recipe name, ingredients, and steps are required" }, 400);
     }
 
     try {

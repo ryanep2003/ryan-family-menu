@@ -92,6 +92,7 @@ function harness(overrides = {}) {
     "#publishDraftRecipe": element(),
     "#addRecipeGroceries": element(),
     "#markCooked": element(),
+    "#recipeSafetyLockReason": element(),
     "#recipeDetail": element(),
     "#recipeMoreActions": element({ open: false }),
     "#recipesView": element(),
@@ -122,7 +123,7 @@ function harness(overrides = {}) {
     draftById: () => null,
     getSelectedRecipeId: () => recipe.id,
     setSelectedRecipeId: () => {},
-    getRecipeSearch: () => "",
+    getRecipeSearch: () => overrides.search || "",
     setRecipeSearch: () => {},
     getCategoryFilter: () => "all",
     setCategoryFilter: () => {},
@@ -141,6 +142,23 @@ test("renderRecipes escapes recipe ids and photo URLs in card markup", () => {
   assert.match(elements["#recipeList"].innerHTML, /photo\.jpg&quot; onerror=&quot;alert\(1\)/);
   assert.match(elements["#recipeList"].innerHTML, /recipe-1&quot; autofocus=&quot;true/);
   assert.doesNotMatch(elements["#recipeList"].innerHTML, /onerror="alert/);
+});
+
+test("Spanish recipe search includes source-language fallback text", () => {
+  const { elements, ui } = harness({
+    lang: "es",
+    search: "recipe",
+    recipe: {
+      name: { en: "Recipe" },
+      meta: { en: "English source" },
+      short: { en: "Family favorite" },
+    },
+  });
+
+  ui.renderRecipes();
+
+  assert.match(elements["#recipeList"].innerHTML, /<h3>Recipe<\/h3>/);
+  assert.doesNotMatch(elements["#recipeList"].innerHTML, /noMatchingRecipes/);
 });
 
 test("renderDetail escapes photo URLs in detail markup", () => {
@@ -233,4 +251,6 @@ test("missing Spanish safety warning keeps cooking actions disabled", () => {
   assert.equal(elements["#addRecipeGroceries"].disabled, true);
   assert.equal(elements["#markCooked"].disabled, true);
   assert.equal(elements["#recipeTranslationStatus"].hidden, false);
+  assert.equal(elements["#recipeSafetyLockReason"].hidden, false);
+  assert.match(elements["#recipeSafetyLockReason"].textContent, /safetyActionsLocked/);
 });

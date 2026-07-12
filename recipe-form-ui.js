@@ -1,6 +1,7 @@
 import { updateLocalizedText } from "./localized-data.js";
 
 const MAX_UPLOAD_PHOTOS = 3;
+const FALLBACK_PHOTO = "assets/meatballs-2.jpg";
 
 export function createRecipeFormUi({
   $,
@@ -144,6 +145,74 @@ export function createRecipeFormUi({
     renderUploadPhotoQueue();
   }
 
+  function recipeFieldHasText(value) {
+    if (typeof value === "string") return Boolean(value.trim());
+    return Object.values(value || {}).some((entry) => typeof entry === "string" && entry.trim());
+  }
+
+  function recipePayload(name, recipePhotos) {
+    return {
+      name: updateLocalizedText("", name, getLang()),
+      category: $("#categoryInput").value,
+      ingredientsText: updateLocalizedText("", $("#ingredientsInput").value.trim(), getLang()),
+      stepsText: updateLocalizedText("", $("#stepsInput").value.trim(), getLang()),
+      allergyWarning: updateLocalizedText("", $("#allergyInput").value.trim(), getLang()),
+      notes: updateLocalizedText("", $("#noteInput").value.trim(), getLang()),
+      photos: recipePhotos.length ? recipePhotos : [FALLBACK_PHOTO],
+    };
+  }
+
+  function clearUploadForm() {
+    $("#uploadForm").reset();
+    clearUploadPhotoFiles();
+    setImportedRecipePhotos([]);
+  }
+
+  async function readUploadPhotos() {
+    const photos = await readFilesAsDataUrls(selectedUploadPhotoFiles(), MAX_UPLOAD_PHOTOS, {
+      maxSide: 700,
+      quality: 0.68,
+      maxBytes: 420000,
+    });
+    return photos.length ? photos : getImportedRecipePhotos();
+  }
+
+  async function saveRecipeDraft() {
+    const name = $("#nameInput").value.trim();
+    const status = $("#uploadStatus");
+    if (!name) {
+      status.textContent = t("recipeNameRequired");
+      status.classList.add("error");
+      $("#nameInput").focus();
+      return;
+    }
+
+    const button = $("#saveRecipeDraft");
+    button.disabled = true;
+    status.textContent = t("savingDraft");
+    status.classList.remove("error");
+
+    try {
+      const draft = {
+        id: `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        ...recipePayload(name, await readUploadPhotos()),
+        createdAt: new Date().toISOString(),
+      };
+      prependDraft(draft);
+      persistDrafts();
+      clearUploadForm();
+      setView("recipes");
+      render();
+      status.textContent = t("draftSaved");
+    } catch (error) {
+      console.warn(error);
+      status.textContent = t("draftSaveError");
+      status.classList.add("error");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   async function submitRecipeEdit(event) {
     event.preventDefault();
     const selectedRecipeId = getSelectedRecipeId();
@@ -272,10 +341,25 @@ export function createRecipeFormUi({
   async function submitUploadForm(event) {
     event.preventDefault();
     const name = $("#nameInput").value.trim();
-    if (!name) return;
+    const ingredients = $("#ingredientsInput").value.trim();
+    const steps = $("#stepsInput").value.trim();
+    const status = $("#uploadStatus");
+    if (!name) {
+      status.textContent = t("recipeNameRequired");
+      status.classList.add("error");
+      $("#nameInput").focus();
+      return;
+    }
+    if (!ingredients || !steps) {
+      status.textContent = t("recipePublishNeedsDetails");
+      status.classList.add("error");
+      openRecipeDetails();
+      if (!ingredients) $("#ingredientsInput").focus();
+      else $("#stepsInput").focus();
+      return;
+    }
 
     const submitButton = $("#uploadForm .primary-action");
-    const status = $("#uploadStatus");
     submitButton.disabled = true;
     status.textContent = t("savingRecipeLive");
     status.classList.remove("error");
@@ -283,26 +367,11 @@ export function createRecipeFormUi({
     let recipePhotos = [];
 
     try {
-      const photos = await readFilesAsDataUrls(selectedUploadPhotoFiles(), MAX_UPLOAD_PHOTOS, {
-        maxSide: 700,
-        quality: 0.68,
-        maxBytes: 420000,
-      });
-      recipePhotos = photos.length ? photos : getImportedRecipePhotos();
-      const recipe = {
-        name: updateLocalizedText("", name, getLang()),
-        category: $("#categoryInput").value,
-        ingredientsText: updateLocalizedText("", $("#ingredientsInput").value.trim(), getLang()),
-        stepsText: updateLocalizedText("", $("#stepsInput").value.trim(), getLang()),
-        allergyWarning: updateLocalizedText("", $("#allergyInput").value.trim(), getLang()),
-        notes: updateLocalizedText("", $("#noteInput").value.trim(), getLang()),
-        photos: recipePhotos.length ? recipePhotos : [FALLBACK_PHOTO],
-      };
+      recipePhotos = await readUploadPhotos();
+      const recipe = recipePayload(name, recipePhotos);
       const saved = await saveSharedRecipe(recipe);
       prependSharedRecipe(saved.recipe);
-      $("#uploadForm").reset();
-      clearUploadPhotoFiles();
-      setImportedRecipePhotos([]);
+      clearUploadForm();
       status.textContent = t("sharedRecipeSaved");
       setView("recipes");
       render();
@@ -310,13 +379,7 @@ export function createRecipeFormUi({
       console.warn(error);
       const fallbackDraft = {
         id: `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: updateLocalizedText("", name, getLang()),
-        category: $("#categoryInput").value,
-        ingredientsText: updateLocalizedText("", $("#ingredientsInput").value.trim(), getLang()),
-        stepsText: updateLocalizedText("", $("#stepsInput").value.trim(), getLang()),
-        allergyWarning: updateLocalizedText("", $("#allergyInput").value.trim(), getLang()),
-        notes: updateLocalizedText("", $("#noteInput").value.trim(), getLang()),
-        photos: recipePhotos.length ? recipePhotos : [FALLBACK_PHOTO],
+        ...recipePayload(name, recipePhotos),
         createdAt: new Date().toISOString(),
       };
       prependDraft(fallbackDraft);
@@ -375,6 +438,7 @@ export function createRecipeFormUi({
     $("#scanRecipePhotos").addEventListener("click", scanRecipePhotos);
     $("#clearRecipePhotos").addEventListener("click", clearUploadPhotoFiles);
     $("#importRecipeUrl").addEventListener("click", importRecipeFromUrl);
+    $("#saveRecipeDraft").addEventListener("click", saveRecipeDraft);
     $("#uploadForm").addEventListener("submit", submitUploadForm);
     renderUploadPhotoQueue();
   }
