@@ -2407,7 +2407,7 @@ li {
 
 @media (max-width: 780px) {
   body {
-    padding-bottom: 72px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
 
   h1 {

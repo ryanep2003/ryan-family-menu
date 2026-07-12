@@ -52,6 +52,11 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
   assert.match(app, /viewName === "add" \? "recipes" : viewName/);
 });
 
+test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
+  assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(96px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(html, /styles\.css\?v=40/);
+});
+
 test("file inputs use localized picker controls", () => {
   assert.match(html, /id="receiptScanPhotoInput"[^>]*data-file-action="choosePhotos"/);
   assert.match(html, /id="photoCameraInput"[^>]*data-file-action="takePhoto"/);

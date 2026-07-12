@@ -9,6 +9,7 @@ test("shared state sanitizer accepts localized task and note fields", async () =
   assert.match(source, /notes: cleanLocalizedText\(source\.notes, 500\)/);
   assert.match(source, /const text = cleanLocalizedText\(task\?\.text, 220\)/);
   assert.match(source, /ingredientsText: cleanLocalizedText\(edit\.ingredientsText, 12000\)/);
+  assert.match(source, /cardPhoto: cleanPhoto\(edit\.cardPhoto\)/);
 });
 
 test("grocery and inventory write endpoints sanitize localized fields", async () => {

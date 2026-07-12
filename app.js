@@ -295,6 +295,7 @@ function rawRecipeById(id) {
     },
     allergyWarning: seeded.allergyWarning,
     notes: seeded.notes,
+    cardPhoto: seeded.cardPhoto,
     photos: seeded.photos,
   };
 }

@@ -148,6 +148,23 @@ test("renderDetail escapes photo URLs in detail markup", () => {
   assert.doesNotMatch(elements["#photoStrip"].innerHTML, /onerror="alert/);
 });
 
+test("photo-less recipes use a decorative food placeholder only on the card", () => {
+  const { elements, ui } = harness({
+    recipe: {
+      photos: [],
+      cardPhoto: "assets/recipe-card-placeholder.jpg",
+      cardPhotoIsPlaceholder: true,
+    },
+  });
+
+  ui.renderRecipes();
+  ui.renderDetail();
+
+  assert.match(elements["#recipeList"].innerHTML, /assets\/recipe-card-placeholder\.jpg/);
+  assert.match(elements["#recipeList"].innerHTML, /alt=""/);
+  assert.equal(elements["#photoStrip"].innerHTML, "");
+});
+
 test("renderDetail resets recipe edit mode when switching recipes or languages", () => {
   const { elements, ui } = harness();
   elements["#recipeDetail"].classList.add("editing");

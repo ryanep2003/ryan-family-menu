@@ -1,6 +1,6 @@
 import { localizedTextExact } from "./localized-data.js";
 
-const FALLBACK_PHOTO = "assets/meatballs-2.jpg";
+const DEFAULT_CARD_PHOTO = "assets/recipe-card-placeholder.jpg";
 
 const categoryLabels = {
   main: { en: "Main", es: "Principal" },
@@ -47,6 +47,7 @@ export function categoryLabel(category, localize) {
 }
 
 export function uploadToRecipe(upload, enMeta, esMeta) {
+  const photos = upload.photos?.length ? upload.photos : [];
   return {
     ...upload,
     name: localizedPair(upload.name),
@@ -66,7 +67,9 @@ export function uploadToRecipe(upload, enMeta, esMeta) {
       es: splitLines(localizedTextExact(upload.stepsText, "es"), ""),
     },
     notes: localizedPair(upload.notes, "No notes yet.", "Sin notas todavía."),
-    photos: upload.photos?.length ? upload.photos : [FALLBACK_PHOTO],
+    photos,
+    cardPhoto: upload.cardPhoto || photos[0] || DEFAULT_CARD_PHOTO,
+    cardPhotoIsPlaceholder: !upload.cardPhoto && !photos.length,
   };
 }
 
@@ -79,7 +82,8 @@ export function recipeToEditableUpload(recipe, lang, localize) {
     stepsText: (recipe.steps?.[lang] || []).join("\n"),
     allergyWarning: recipe.allergyWarning ? localize(recipe.allergyWarning) : "",
     notes: localize(recipe.notes),
-    photos: recipe.photos || [FALLBACK_PHOTO],
+    photos: recipe.photos || [],
+    cardPhoto: recipe.cardPhoto || recipe.photos?.[0] || DEFAULT_CARD_PHOTO,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -102,7 +106,14 @@ export function visibleRecipes({
     .map((recipe) => {
       const edit = recipeEdits?.[recipe.id];
       if (!edit) return recipe;
-      return uploadToRecipe(edit, recipe.meta?.en || localize(recipe.meta), recipe.meta?.es || localize(recipe.meta));
+      const normalized = uploadToRecipe(edit, recipe.meta?.en || localize(recipe.meta), recipe.meta?.es || localize(recipe.meta));
+      return {
+        ...normalized,
+        cardPhoto: edit.cardPhoto || recipe.cardPhoto || normalized.cardPhoto,
+        cardPhotoIsPlaceholder: edit.cardPhoto
+          ? false
+          : recipe.cardPhotoIsPlaceholder ?? normalized.cardPhotoIsPlaceholder,
+      };
     });
 }
 

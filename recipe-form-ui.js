@@ -1,6 +1,5 @@
 import { updateLocalizedText } from "./localized-data.js";
 
-const FALLBACK_PHOTO = "assets/meatballs-2.jpg";
 const MAX_UPLOAD_PHOTOS = 3;
 
 export function createRecipeFormUi({
@@ -175,9 +174,10 @@ export function createRecipeFormUi({
         }, $("#editStepsInput").value.trim(), getLang()),
         allergyWarning: updateLocalizedText(current.allergyWarning, $("#editAllergyInput").value.trim(), getLang()),
         notes: updateLocalizedText(current.notes, $("#editNoteInput").value.trim(), getLang()),
+        cardPhoto: replacementPhotos[0] || current.cardPhoto || current.photos?.[0] || "assets/recipe-card-placeholder.jpg",
         photos: replacementPhotos.length
           ? replacementPhotos
-          : current.photos?.length ? current.photos : [FALLBACK_PHOTO],
+          : current.photos?.length ? current.photos : [],
         updatedAt: new Date().toISOString(),
       });
       removeDeletedRecipeId(selectedRecipeId);

@@ -61,7 +61,7 @@ export function createRecipeLibraryUi({
         const short = localizeExact(recipe.short);
         return `
         <button class="recipe-card" style="--card-order: ${Math.min(index, 8)}" type="button" data-open="${escapeHtml(recipe.id)}">
-          <img src="${escapeHtml(recipe.cardPhoto || recipe.photos[0])}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" />
+          <img src="${escapeHtml(recipe.cardPhoto || recipe.photos?.[0] || "assets/recipe-card-placeholder.jpg")}" alt="${recipe.cardPhotoIsPlaceholder ? "" : escapeHtml(name)}" loading="lazy" decoding="async" />
           <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
           ${getFavorites().includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}
           ${hasLocalizedContent(recipe.allergyWarning) ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}

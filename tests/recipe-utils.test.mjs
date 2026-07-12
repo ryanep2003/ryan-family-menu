@@ -28,7 +28,9 @@ test("uploadToRecipe normalizes shared uploads into display recipes", () => {
   assert.equal(recipe.category, "side");
   assert.deepEqual(recipe.ingredients.en, ["1 lb carrots", "Olive oil"]);
   assert.deepEqual(recipe.ingredients.es, ["1 libra de zanahorias", "Aceite de oliva"]);
-  assert.deepEqual(recipe.photos, ["assets/meatballs-2.jpg"]);
+  assert.deepEqual(recipe.photos, []);
+  assert.equal(recipe.cardPhoto, "assets/recipe-card-placeholder.jpg");
+  assert.equal(recipe.cardPhotoIsPlaceholder, true);
 });
 
 test("uploadToRecipe does not copy English into missing Spanish fields", () => {
@@ -52,12 +54,14 @@ test("recipeToEditableUpload converts display recipes back to edit form values",
     ingredients: { en: ["1 lb carrots", "Olive oil"] },
     steps: { en: ["Roast until browned."] },
     notes: { en: "Good warm." },
+    cardPhoto: "card-photo.jpg",
     photos: ["photo.jpg"],
   }, "en", localizeEn);
 
   assert.equal(editable.name, "Roasted carrots");
   assert.equal(editable.category, "side");
   assert.equal(editable.ingredientsText, "1 lb carrots\nOlive oil");
+  assert.equal(editable.cardPhoto, "card-photo.jpg");
   assert.deepEqual(editable.photos, ["photo.jpg"]);
 });
 
@@ -70,7 +74,7 @@ test("category helpers preserve seeded categories and labels", () => {
 test("visibleRecipes combines shared uploads, drafts, edits, and deletions", () => {
   const recipes = visibleRecipes({
     seedRecipes: [
-      { id: "seed-1", name: { en: "Seed" }, meta: { en: "Seed meta", es: "Meta" } },
+      { id: "seed-1", name: { en: "Seed" }, meta: { en: "Seed meta", es: "Meta" }, cardPhoto: "seed-card.jpg" },
       { id: "deleted-1", name: { en: "Deleted" } },
     ],
     sharedRecipes: [
@@ -88,6 +92,7 @@ test("visibleRecipes combines shared uploads, drafts, edits, and deletions", () 
 
   assert.deepEqual(recipes.map((recipe) => recipe.id), ["seed-1", "shared-1", "draft-1"]);
   assert.equal(recipes[0].name.en, "Edited seed");
+  assert.equal(recipes[0].cardPhoto, "seed-card.jpg");
   assert.equal(recipes[1].meta.en, "Shared upload");
   assert.equal(recipes[2].meta.en, "Local draft");
 });
@@ -110,4 +115,8 @@ test("seed recipes use polished Spanish and dedicated discovery photos", () => {
   assert.match(soup.short.es, /cúrcuma/);
   assert.equal(meatballs.cardPhoto, "assets/meatballs-2.jpg");
   assert.equal(meatballs.photos[0], "assets/meatballs-1.jpg");
+  assert.equal(soup.cardPhoto, "assets/card-chicken-noodle-soup.jpg");
+  assert.equal(soup.photos[0], "assets/chicken-noodle-soup-1.jpg");
+  assert.equal(recipes.every((recipe) => recipe.cardPhoto), true);
+  assert.equal(new Set(recipes.map((recipe) => recipe.cardPhoto)).size, recipes.length);
 });
