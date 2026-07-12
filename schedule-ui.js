@@ -144,7 +144,7 @@ export function createScheduleUi({
     editor.innerHTML = `
       <div class="schedule-editor-heading">
         <span>${t("editDay")}</span>
-        <h3>${escapeHtml(editorLabel)}</h3>
+        <h3 id="weekEditorHeading" tabindex="-1">${escapeHtml(editorLabel)}</h3>
       </div>
       ${renderMealControls(calendarMealForDateKey(selectedWeekDateKey), `weekdate:${selectedWeekDateKey}`, "")}
     `;
@@ -155,6 +155,7 @@ export function createScheduleUi({
         selectedWeekDateKey = button.dataset.editWeekDate;
         renderSchedule();
         $("#weekDateEditor").scrollIntoView({ behavior: "smooth", block: "start" });
+        $("#weekEditorHeading").focus({ preventScroll: true });
       });
     });
   }

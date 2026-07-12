@@ -46,6 +46,34 @@ test("uploadToRecipe does not copy English into missing Spanish fields", () => {
   assert.deepEqual(recipe.steps.es, []);
 });
 
+test("uploadToRecipe keeps scanned source photos out of recipe cards", () => {
+  const recipe = uploadToRecipe({
+    id: "scanned-pages",
+    name: "Carnitas",
+    ingredientsText: "pork",
+    stepsText: "cook",
+    photos: ["data:image/jpeg;base64,scan-page"],
+  }, "Shared upload", "Receta compartida");
+
+  assert.deepEqual(recipe.photos, ["data:image/jpeg;base64,scan-page"]);
+  assert.equal(recipe.cardPhoto, "assets/recipe-card-placeholder.jpg");
+  assert.equal(recipe.cardPhotoIsPlaceholder, true);
+});
+
+test("uploadToRecipe preserves an explicit curated card photo", () => {
+  const recipe = uploadToRecipe({
+    id: "curated-upload",
+    name: "Carnitas",
+    ingredientsText: "pork",
+    stepsText: "cook",
+    photos: ["data:image/jpeg;base64,scan-page"],
+    cardPhoto: "assets/card-pot-roast.jpg",
+  }, "Shared upload", "Receta compartida");
+
+  assert.equal(recipe.cardPhoto, "assets/card-pot-roast.jpg");
+  assert.equal(recipe.cardPhotoIsPlaceholder, false);
+});
+
 test("recipeToEditableUpload converts display recipes back to edit form values", () => {
   const editable = recipeToEditableUpload({
     id: "shared-1",

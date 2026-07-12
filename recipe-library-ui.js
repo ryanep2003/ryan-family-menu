@@ -1,4 +1,4 @@
-import { hasLocalizedContent } from "./localized-data.js";
+import { allLocalizedText, hasLocalizedContent } from "./localized-data.js";
 import { linesMatchLanguage } from "./language-quality.js";
 
 export function createRecipeLibraryUi({
@@ -58,10 +58,7 @@ export function createRecipeLibraryUi({
     const filtered = recipes.filter((recipe) => {
       const categoryMatch = categoryFilter === "all" || categoryFor(recipe) === categoryFilter;
       const haystack = [
-        localizeExact(recipe.name),
-        localizeExact(recipe.meta),
-        localizeExact(recipe.short),
-        localizeExact(recipe.tags),
+        ...[recipe.name, recipe.meta, recipe.short, recipe.tags].flatMap(allLocalizedText),
         categoryLabel(categoryFor(recipe)),
       ].join(" ").toLowerCase();
       return categoryMatch && (!search || haystack.includes(search));
@@ -121,6 +118,9 @@ export function createRecipeLibraryUi({
     const warning = hasWarning
       ? warningTranslated || warningFallback || t("safetyTranslationPending")
       : "";
+    const actionLockReason = hasWarning && !warningTranslated
+      ? t("safetyActionsLocked")
+      : contentReady ? "" : t("recipeDetailsRequired");
     $("#recipeDetail").classList.remove("editing");
     $("#recipeMoreActions").open = false;
     $("#editRecipeForm").hidden = true;
@@ -149,6 +149,8 @@ export function createRecipeLibraryUi({
     $("#addRecipeGroceries").textContent = t("addRecipeToGroceries");
     $("#addRecipeGroceries").disabled = !contentReady;
     $("#markCooked").disabled = !contentReady;
+    $("#recipeSafetyLockReason").hidden = !actionLockReason;
+    $("#recipeSafetyLockReason").textContent = actionLockReason;
     setDetailStatus("");
   }
 

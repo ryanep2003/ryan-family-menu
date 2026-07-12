@@ -48,6 +48,9 @@ export function categoryLabel(category, localize) {
 
 export function uploadToRecipe(upload, enMeta, esMeta) {
   const photos = upload.photos?.length ? upload.photos : [];
+  const hasCardPhoto = typeof upload.cardPhoto === "string"
+    && upload.cardPhoto.trim()
+    && upload.cardPhoto !== DEFAULT_CARD_PHOTO;
   return {
     ...upload,
     name: localizedPair(upload.name),
@@ -68,8 +71,8 @@ export function uploadToRecipe(upload, enMeta, esMeta) {
     },
     notes: localizedPair(upload.notes, "No notes yet.", "Sin notas todavía."),
     photos,
-    cardPhoto: upload.cardPhoto || photos[0] || DEFAULT_CARD_PHOTO,
-    cardPhotoIsPlaceholder: !upload.cardPhoto && !photos.length,
+    cardPhoto: hasCardPhoto ? upload.cardPhoto : DEFAULT_CARD_PHOTO,
+    cardPhotoIsPlaceholder: !hasCardPhoto,
   };
 }
 
@@ -83,7 +86,8 @@ export function recipeToEditableUpload(recipe, lang, localize) {
     allergyWarning: recipe.allergyWarning ? localize(recipe.allergyWarning) : "",
     notes: localize(recipe.notes),
     photos: recipe.photos || [],
-    cardPhoto: recipe.cardPhoto || recipe.photos?.[0] || DEFAULT_CARD_PHOTO,
+    cardPhoto: recipe.cardPhoto
+      || (recipe.cardPhotoIsPlaceholder ? DEFAULT_CARD_PHOTO : recipe.photos?.[0] || DEFAULT_CARD_PHOTO),
     updatedAt: new Date().toISOString(),
   };
 }

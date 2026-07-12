@@ -311,6 +311,20 @@ function rawRecipeLines(value, locale) {
     .filter(Boolean);
 }
 
+function recipeUploadFieldHasText(value) {
+  if (typeof value === "string") return Boolean(value.trim());
+  return Object.values(value || {}).some((entry) => typeof entry === "string" && entry.trim());
+}
+
+function recipeUploadHasRequiredContent(recipe) {
+  return Boolean(
+    recipe
+    && recipeUploadFieldHasText(recipe.name)
+    && recipeUploadFieldHasText(recipe.ingredientsText)
+    && recipeUploadFieldHasText(recipe.stepsText)
+  );
+}
+
 function rawRecipeHasLocale(recipe, locale) {
   if (!recipe) return false;
   const name = rawRecipeText(recipe.name, locale);
@@ -1342,6 +1356,11 @@ $("#favoriteRecipe").addEventListener("click", async () => {
 $("#publishDraftRecipe").addEventListener("click", async () => {
   const draft = draftById(selectedRecipeId);
   if (!draft) return;
+
+  if (!recipeUploadHasRequiredContent(draft)) {
+    setDetailStatus(t("recipePublishNeedsDetails"), true);
+    return;
+  }
 
   const button = $("#publishDraftRecipe");
   button.disabled = true;

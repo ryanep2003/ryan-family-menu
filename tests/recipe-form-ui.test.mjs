@@ -75,6 +75,7 @@ function harness(overrides = {}) {
     "#clearRecipePhotos": element(),
     "#selectedRecipePhotoStatus": element(),
     "#importRecipeUrl": element(),
+    "#saveRecipeDraft": element(),
     "#uploadForm": element(),
     "#uploadForm .primary-action": element(),
     "#uploadStatus": element(),
@@ -114,6 +115,7 @@ function harness(overrides = {}) {
     saveSharedStateCalls: 0,
     renderCalls: 0,
     renderRecipesCalls: 0,
+    sharedSaveCalls: 0,
     updatedMealsFor: [],
     view: "",
     statuses: [],
@@ -152,6 +154,12 @@ function harness(overrides = {}) {
       savingRecipeLive: "Saving...",
       sharedRecipeSaved: "Saved.",
       localDraftSaved: "Draft saved.",
+      draftSaved: "Draft saved.",
+      savingDraft: "Saving draft...",
+      draftSaveError: "Draft save failed.",
+      recipeNameRequired: "Name required.",
+      recipePublishNeedsDetails: "Ingredients and steps required.",
+      publishRecipe: "Publish.",
     }[key] || key),
     escapeHtml: (value) => `${value}`,
     localize: (value) => typeof value === "string" ? value : value?.en || "",
@@ -169,7 +177,10 @@ function harness(overrides = {}) {
     readFilesAsDataUrls: overrides.readFilesAsDataUrls || (async (files) => files.length ? ["replacement.jpg"] : []),
     recognizeRecipe: overrides.recognizeRecipe || (async () => ({ name: "Scanned recipe" })),
     importRecipeUrl: overrides.importRecipeUrl || (async () => ({ name: "Imported recipe", photos: ["url.jpg"] })),
-    saveSharedRecipe: overrides.saveSharedRecipe || (async (recipe) => ({ recipe: { id: "shared-1", ...recipe } })),
+    saveSharedRecipe: overrides.saveSharedRecipe || (async (recipe) => {
+      state.sharedSaveCalls += 1;
+      return { recipe: { id: "shared-1", ...recipe } };
+    }),
     saveSharedState: async () => {
       state.saveSharedStateCalls += 1;
     },
@@ -409,6 +420,8 @@ test("failed live recipe save keeps selected queued photos in local draft", asyn
   });
   elements["#nameInput"].value = "Draft pasta";
   elements["#categoryInput"].value = "main";
+  elements["#ingredientsInput"].value = "pasta";
+  elements["#stepsInput"].value = "boil";
   elements["#photoInput"].files = [{ name: "page-1.jpg", size: 10, lastModified: 1 }];
 
   try {
@@ -420,4 +433,28 @@ test("failed live recipe save keeps selected queued photos in local draft", asyn
   } finally {
     console.warn = originalWarn;
   }
+});
+
+test("saving a draft keeps incomplete work local without publishing", async () => {
+  const { elements, state } = harness();
+  elements["#nameInput"].value = "Unfinished soup";
+  elements["#categoryInput"].value = "main";
+
+  await elements["#saveRecipeDraft"].dispatch("click");
+
+  assert.equal(state.drafts.length, 1);
+  assert.deepEqual(state.drafts[0].name, { en: "Unfinished soup" });
+  assert.equal(state.drafts[0].ingredientsText, "");
+  assert.equal(state.view, "recipes");
+});
+
+test("publishing requires ingredients and steps before contacting the shared site", async () => {
+  const { elements, state } = harness();
+  elements["#nameInput"].value = "Incomplete shared recipe";
+
+  await elements["#uploadForm"].dispatch("submit");
+
+  assert.equal(state.sharedSaveCalls, 0);
+  assert.equal(elements["#recipeDetailsDisclosure"].open, true);
+  assert.equal(elements["#uploadStatus"].textContent, "Ingredients and steps required.");
 });

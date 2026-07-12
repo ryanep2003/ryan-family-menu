@@ -33,7 +33,9 @@ test("recipe writes and AI scan endpoints carry language-aware content", async (
   const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 
   assert.match(recipes, /const name = cleanLocalizedText\(input\.name, 120\)/);
-  assert.match(recipes, /ingredientsText: cleanLocalizedText\(input\.ingredientsText, MAX_TEXT_LENGTH\)/);
+  assert.match(recipes, /if \(!hasLocalizedContent\(name\) \|\| !hasLocalizedContent\(ingredientsText\) \|\| !hasLocalizedContent\(stepsText\)\)/);
+  assert.match(recipes, /const ingredientsText = cleanLocalizedText\(input\.ingredientsText, MAX_TEXT_LENGTH\)/);
+  assert.match(recipes, /ingredientsText,\s*stepsText,/);
   assert.match(recipes, /\["main", "side", "salad", "sauce", "dessert"\]\.includes\(input\.category\)/);
   assert.match(familyState, /\["main", "side", "salad", "sauce", "dessert", "draft"\]\.includes\(edit\.category\)/);
   assert.match(inventoryScan, /const outputLanguage = cleanLanguage\(payload\.lang\)/);
