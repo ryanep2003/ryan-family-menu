@@ -58,3 +58,10 @@ test("mergeGroceries avoids duplicate ingredient rows", () => {
   assert.deepEqual(merged[0].text, { en: "4 lemons" });
   assert.deepEqual(merged[1].text, { en: "1 cup olive oil" });
 });
+
+test("groceryItem records optional household attribution", () => {
+  const item = groceryItem("Milk", { updatedBy: "Eric" });
+
+  assert.equal(item.updatedBy, "Eric");
+  assert.ok(item.updatedAt);
+});

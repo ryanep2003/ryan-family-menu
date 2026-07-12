@@ -313,6 +313,21 @@ h3 {
   line-height: 1.35;
 }
 
+.household-member-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.household-member-picker select {
+  min-height: 44px;
+  margin-left: auto;
+}
+
 .install-button [aria-hidden="true"] {
   font-size: 1.4rem;
   line-height: 1;
@@ -459,7 +474,7 @@ h3 {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 3px;
   margin: 16px 0 22px;
   padding: 5px;
@@ -929,6 +944,75 @@ h3 {
   z-index: 1;
   align-self: flex-end;
   font-weight: 850;
+}
+
+.recipe-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.recipe-banner-actions .ghost-button,
+.add-banner .ghost-button {
+  width: auto;
+}
+
+.recipe-banner-actions .ghost-button {
+  border-color: rgba(63, 43, 12, 0.35);
+  background: rgba(255, 250, 242, 0.82);
+}
+
+.add-banner .ghost-button {
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.localized-file-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.localized-file-input input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.file-picker-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.localized-file-input input[type="file"]:focus-visible + .file-picker-button {
+  outline: 3px solid rgba(63, 102, 79, 0.35);
+  outline-offset: 2px;
+}
+
+.file-picker-status {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.item-activity {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-style: normal;
 }
 
 .section-note {
@@ -2445,7 +2529,7 @@ li {
     right: 0;
     bottom: 0;
     left: 0;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 2px;
     width: 100%;
     margin: 0;
@@ -2620,13 +2704,37 @@ li {
   }
 
   .grocery-banner {
-    min-height: 126px;
-    padding: 20px;
+    min-height: 96px;
+    padding: 16px 20px;
   }
 
   .inventory-banner {
     min-height: 96px;
     padding: 16px 20px;
+  }
+
+  .view-banner {
+    min-height: 104px;
+    padding: 16px 20px;
+  }
+
+  .recipe-banner-actions {
+    justify-content: space-between;
+  }
+
+  .recipe-banner-actions .ghost-button,
+  .add-banner .ghost-button {
+    width: 100%;
+  }
+
+  .household-member-picker {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .household-member-picker select {
+    width: 100%;
+    margin-left: 0;
   }
 
   .inventory-utility-row {

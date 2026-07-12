@@ -17,8 +17,10 @@ test("grocery and inventory write endpoints sanitize localized fields", async ()
 
   assert.match(groceries, /const text = cleanLocalizedText\(item\.text, 220\)/);
   assert.match(groceries, /recipeName: cleanLocalizedText\(item\.recipeName, 160\)/);
+  assert.match(groceries, /updatedBy: cleanHouseholdMember\(item\.updatedBy\)/);
   assert.match(inventory, /const text = cleanLocalizedText\(item\.text, 220\)/);
   assert.match(inventory, /quantity: cleanLocalizedText\(item\.quantity, 80\)/);
+  assert.match(inventory, /updatedBy: cleanHouseholdMember\(item\.updatedBy\)/);
 });
 
 test("recipe writes and AI scan endpoints carry language-aware content", async () => {

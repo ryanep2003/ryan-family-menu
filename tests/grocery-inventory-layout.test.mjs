@@ -43,3 +43,18 @@ test("inventory search and restock actions preserve the maintenance context", ()
   assert.match(inventoryUi, /#inventoryStatus.+addedToShopping/);
   assert.doesNotMatch(inventoryUi, /setInventoryMode\("shopping"\)/);
 });
+
+test("mobile navigation keeps recipe creation inside Recipes", () => {
+  assert.doesNotMatch(html, /data-view="add"/);
+  assert.match(html, /id="addRecipeFromLibrary"/);
+  assert.match(html, /id="backToRecipeLibrary"/);
+  assert.match(styles, /\.tabs\s*{[\s\S]*grid-template-columns: repeat\(4, 1fr\)/);
+  assert.match(app, /viewName === "add" \? "recipes" : viewName/);
+});
+
+test("file inputs use localized picker controls", () => {
+  assert.match(html, /id="receiptScanPhotoInput"[^>]*data-file-action="choosePhotos"/);
+  assert.match(html, /id="photoCameraInput"[^>]*data-file-action="takePhoto"/);
+  assert.match(app, /function setupLocalizedFileInputs\(\)/);
+  assert.match(styles, /\.localized-file-input input\[type="file"\]/);
+});

@@ -13,6 +13,13 @@ test("inventoryItem cleans text and defaults stock metadata", () => {
   assert.ok(item.createdAt);
 });
 
+test("inventoryItem records optional household attribution", () => {
+  const item = inventoryItem("Milk", "1 gallon", "fridge", [], "full", "en", "Nelly");
+
+  assert.equal(item.updatedBy, "Nelly");
+  assert.ok(item.updatedAt);
+});
+
 test("mergeInventory updates matching location and text without duplicating", () => {
   const existing = [{
     ...inventoryItem("Milk", "half gallon", "fridge"),

@@ -1,4 +1,4 @@
-export const recipes = [
+const rawRecipes = [
   {
     id: "meatballs",
     name: {
@@ -71,6 +71,7 @@ export const recipes = [
       en: "Good family task: kids can help shape meatballs with clean, oiled hands. For freezing, freeze cooked meatballs without sauce in a single layer first, then bag them.",
       es: "Buena tarea familiar: los ninos pueden ayudar a formar albondigas con manos limpias y engrasadas. Para congelar, congela las albondigas cocidas sin salsa en una sola capa y despues guardalas en una bolsa.",
     },
+    cardPhoto: "assets/meatballs-2.jpg",
     photos: [
       "assets/meatballs-1.jpg",
       "assets/meatballs-2.jpg",
@@ -147,6 +148,7 @@ export const recipes = [
       en: "Best eaten right away while crisp. Good with a simple salad or vegetables. Pounding the chicken is helpful but a little messy, so set up the plastic wrap first.",
       es: "Es mejor comerla de inmediato mientras esta crujiente. Va bien con ensalada sencilla o verduras. Aplastar el pollo ayuda mucho, pero ensucia un poco; prepara el plastico primero.",
     },
+    cardPhoto: "assets/milanese-2.jpg",
     photos: [
       "assets/milanese-1.jpg",
       "assets/milanese-2.jpg",
@@ -220,6 +222,7 @@ export const recipes = [
       en: "Very low-mess dinner and a gentle way to serve fish to kids. Pea prep can be a kid helper task. Works with halibut, cod, hake, or another meaty white fish.",
       es: "Cena con muy poco desorden y una forma suave de servir pescado a los ninos. Sacar los chicharos puede ser tarea para ninos. Funciona con halibut, bacalao, merluza u otro pescado blanco firme.",
     },
+    cardPhoto: "assets/halibut-summer-2.jpg",
     photos: [
       "assets/halibut-summer-1.jpg",
       "assets/halibut-summer-2.jpg",
@@ -902,3 +905,53 @@ export const recipes = [
     ],
   },
 ];
+
+const spanishAccents = {
+  albondigas: "albóndigas",
+  curcuma: "cúrcuma",
+  guarnicion: "guarnición",
+  limon: "limón",
+  oregano: "orégano",
+  pequena: "pequeña",
+  pequenas: "pequeñas",
+  pequenos: "pequeños",
+  podria: "podría",
+  reaccion: "reacción",
+  revision: "revisión",
+  todavia: "todavía",
+  tazon: "tazón",
+};
+
+function accentSpanishText(value) {
+  return `${value || ""}`.replace(
+    /\b(albondigas|curcuma|guarnicion|limon|oregano|pequena|pequenas|pequenos|podria|reaccion|revision|todavia|tazon)\b/gi,
+    (word) => {
+      const replacement = spanishAccents[word.toLowerCase()] || word;
+      return word[0] === word[0].toUpperCase()
+        ? `${replacement[0].toUpperCase()}${replacement.slice(1)}`
+        : replacement;
+    }
+  );
+}
+
+function polishLocalizedField(value) {
+  if (!value?.es) return value;
+  return {
+    ...value,
+    es: Array.isArray(value.es)
+      ? value.es.map(accentSpanishText)
+      : accentSpanishText(value.es),
+  };
+}
+
+export const recipes = rawRecipes.map((recipe) => ({
+  ...recipe,
+  name: polishLocalizedField(recipe.name),
+  meta: polishLocalizedField(recipe.meta),
+  short: polishLocalizedField(recipe.short),
+  tags: polishLocalizedField(recipe.tags),
+  allergyWarning: polishLocalizedField(recipe.allergyWarning),
+  ingredients: polishLocalizedField(recipe.ingredients),
+  steps: polishLocalizedField(recipe.steps),
+  notes: polishLocalizedField(recipe.notes),
+}));

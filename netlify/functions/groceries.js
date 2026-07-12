@@ -3,6 +3,7 @@ import { requireWriteAuth } from "./_auth.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 import { cleanLocalizedText, hasLocalizedContent } from "../../localized-data.js";
+import { cleanHouseholdMember } from "../../household-attribution.js";
 
 const STORE_NAME = "family-menu-groceries";
 const GROCERIES_KEY = "items";
@@ -24,6 +25,8 @@ export function cleanItem(item) {
     recipeName: cleanLocalizedText(item.recipeName, 160),
     inInventory: Boolean(item.inInventory),
     createdAt: item.createdAt || new Date().toISOString(),
+    updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
+    updatedBy: cleanHouseholdMember(item.updatedBy),
   };
 }
 

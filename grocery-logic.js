@@ -50,7 +50,9 @@ export function groceryItem(text, {
   recipeName = "",
   inventoryItem = null,
   lang = "en",
+  updatedBy = "",
 } = {}) {
+  const timestamp = new Date().toISOString();
   return {
     id: `grocery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     text: typeof text === "string"
@@ -62,7 +64,9 @@ export function groceryItem(text, {
     recipeId,
     recipeName: typeof recipeName === "string" ? localizedTextMap(recipeName) : recipeName,
     inInventory: Boolean(inventoryItem),
-    createdAt: new Date().toISOString(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    ...(updatedBy ? { updatedBy } : {}),
   };
 }
 
@@ -76,7 +80,7 @@ export function mergeGroceries(existing, incoming) {
   return [...byKey.values()];
 }
 
-export function groceryItemsFromRecipe(recipe, lang, inventory) {
+export function groceryItemsFromRecipe(recipe, lang, inventory, updatedBy = "") {
   const ingredientsEn = recipe.ingredients?.en || [];
   const ingredientsEs = recipe.ingredients?.es || [];
   const ingredientCount = Math.max(ingredientsEn.length, ingredientsEs.length);
@@ -94,6 +98,7 @@ export function groceryItemsFromRecipe(recipe, lang, inventory) {
       recipeName: recipe.name,
       inventoryItem: inventoryMatchFor(inventory, text),
       lang,
+      updatedBy,
     });
   }).filter(Boolean);
 }
