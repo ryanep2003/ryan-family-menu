@@ -47,9 +47,12 @@ test("inventory search and restock actions preserve the maintenance context", ()
 test("mobile navigation keeps recipe creation inside Recipes", () => {
   assert.doesNotMatch(html, /data-view="add"/);
   assert.match(html, /id="addRecipeFromLibrary"/);
+  assert.match(html, /id="globalAddRecipe"[^>]*data-i18n="addTab"[^>]*data-i18n-aria-label="addRecipe"/);
   assert.match(html, /id="backToRecipeLibrary"/);
   assert.match(styles, /\.tabs\s*{[\s\S]*grid-template-columns: repeat\(4, 1fr\)/);
   assert.match(app, /viewName === "add" \? "recipes" : viewName/);
+  assert.match(app, /#globalAddRecipe/);
+  assert.match(app, /addButton\.classList\.toggle\("active", active\)/);
 });
 
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {

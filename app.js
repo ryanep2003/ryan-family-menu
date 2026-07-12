@@ -943,6 +943,13 @@ function setView(viewName) {
     if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
   });
+  const addButton = $("#globalAddRecipe");
+  if (addButton) {
+    const active = viewName === "add";
+    addButton.classList.toggle("active", active);
+    if (active) addButton.setAttribute("aria-current", "page");
+    else addButton.removeAttribute("aria-current");
+  }
   document.body.dataset.view = viewName;
   $("#recipeDetail").hidden = true;
   $("#recipesView").classList.remove("detail-open");
@@ -1242,6 +1249,7 @@ $("#householdMemberInput").addEventListener("change", (event) => {
 });
 
 $("#addRecipeFromLibrary").addEventListener("click", () => setView("add"));
+$("#globalAddRecipe").addEventListener("click", () => setView("add"));
 $("#backToRecipeLibrary").addEventListener("click", () => setView("recipes"));
 
 $$("[data-inventory-mode]").forEach((button) => {

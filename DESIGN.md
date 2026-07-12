@@ -195,8 +195,8 @@ Components should feel tactile and direct: obvious targets, compact corners, pla
 
 ### Navigation
 
-- **Desktop:** Five equal-width bordered tabs with Counter Surface backgrounds; the active tab uses Espresso Ink with Clean White text.
-- **Mobile:** The same five destinations become a fixed bottom navigation with safe-area padding and 48px minimum targets. Labels stay short in both English and Spanish.
+- **Desktop:** Four equal-width bordered tabs with Counter Surface backgrounds; the active tab uses Espresso Ink with Clean White text. Add recipe is a persistent tomato action in the app header rather than a hidden secondary route.
+- **Mobile:** The same four core destinations become a fixed bottom navigation with safe-area padding and 48px minimum targets. Add recipe remains a persistent header action, and labels stay short or wrap safely in both English and Spanish.
 - **Language:** EN/ES uses a two-option segmented control in the header and selected recipe detail. The active language uses the same Espresso Ink selected-state vocabulary as navigation.
 
 ### Recipe Card and Detail

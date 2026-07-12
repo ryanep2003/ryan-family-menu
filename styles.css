@@ -253,6 +253,22 @@ h3 {
   font-weight: 850;
 }
 
+.shell-add-button {
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--tomato);
+  border-radius: 8px;
+  background: var(--tomato);
+  color: #fff9ee;
+  font-weight: 850;
+}
+
+.shell-add-button:hover,
+.shell-add-button.active {
+  border-color: var(--tomato-dark);
+  background: var(--tomato-dark);
+}
+
 .quick-guide {
   display: grid;
   gap: 16px;
@@ -2438,6 +2454,11 @@ li {
     padding: 0 10px;
   }
 
+  .shell-add-button {
+    min-width: 0;
+    padding: 0 10px;
+  }
+
   .quick-guide-intro,
   .quick-guide-actions {
     grid-template-columns: 1fr;
@@ -2900,17 +2921,17 @@ li {
   }
 
   .schedule-grid {
-    grid-template-columns: repeat(7, minmax(148px, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    margin-right: -14px;
-    overflow-x: auto;
-    padding: 2px 14px 10px 2px;
-    scroll-snap-type: x proximity;
+    margin-right: 0;
+    overflow-x: visible;
+    padding: 2px 0 10px;
+    scroll-snap-type: none;
   }
 
   .week-day-summary {
+    min-width: 0;
     min-height: 102px;
-    scroll-snap-align: start;
   }
 
   .schedule-editor .meal-picker {
