@@ -23,8 +23,12 @@ test("inventory maintenance uses one progressive disclosure", () => {
 test("mobile inventory filtering keeps status visible and consolidates locations", () => {
   assert.match(html, /id="inventoryLocationFilter"/);
   assert.match(app, /inventoryLocationFilter.+addEventListener\("change"/s);
+  assert.match(app, /let inventoryFilter = "all"/);
+  assert.match(html, /class="active"[^>]*data-inventory-filter="all"/);
   assert.match(styles, /\.inventory-filters \.location-filter\s*{\s*display: none;/);
   assert.match(styles, /\.inventory-location-filter\s*{\s*display: grid;/);
+  assert.match(styles, /\.inventory-filter-bar\s*{[\s\S]*grid-template-columns: minmax\(0, 1fr\);/);
+  assert.match(styles, /\.inventory-filters\s*{[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
 });
 
 test("mobile inventory rows reserve a full line for readable stock controls", () => {

@@ -90,7 +90,7 @@ let inventoryVersion = storedInventory.version;
 let inventorySuggestions = [];
 let receiptSuggestions = [];
 let inventoryMode = "shopping";
-let inventoryFilter = "attention";
+let inventoryFilter = "all";
 let visibleMonth = new Date();
 visibleMonth.setDate(1);
 let recipeSearch = "";

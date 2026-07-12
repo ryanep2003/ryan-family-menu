@@ -2635,14 +2635,14 @@ li {
 
   .inventory-filter-bar {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(132px, 0.72fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     margin: 12px 0 18px;
   }
 
   .inventory-filters {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 58px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
     margin: 0;
     overflow: visible;
@@ -2656,6 +2656,8 @@ li {
   .inventory-filters button {
     width: 100%;
     padding: 0 10px;
+    line-height: 1.15;
+    white-space: normal;
   }
 
   .inventory-location-filter {
