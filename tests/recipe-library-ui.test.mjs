@@ -102,7 +102,11 @@ function harness(overrides = {}) {
     $$: (selector) => selector === "[data-open]" ? overrides.openButtons || [] : [],
     t: (key) => key,
     escapeHtml,
-    localize: (value) => typeof value === "string" ? value : value?.en || "",
+    localize: (value) => {
+      if (typeof value === "string") return value;
+      const currentLang = overrides.lang || "en";
+      return value?.[currentLang] || value?.[currentLang === "es" ? "en" : "es"] || "";
+    },
     localizeExact: (value) => {
       const text = typeof value === "string"
       ? (overrides.lang || "en") === "en" ? value : ""
@@ -148,6 +152,23 @@ test("renderDetail escapes photo URLs in detail markup", () => {
   assert.doesNotMatch(elements["#photoStrip"].innerHTML, /onerror="alert/);
 });
 
+test("photo-less recipes use a decorative food placeholder only on the card", () => {
+  const { elements, ui } = harness({
+    recipe: {
+      photos: [],
+      cardPhoto: "assets/recipe-card-placeholder.jpg",
+      cardPhotoIsPlaceholder: true,
+    },
+  });
+
+  ui.renderRecipes();
+  ui.renderDetail();
+
+  assert.match(elements["#recipeList"].innerHTML, /assets\/recipe-card-placeholder\.jpg/);
+  assert.match(elements["#recipeList"].innerHTML, /alt=""/);
+  assert.equal(elements["#photoStrip"].innerHTML, "");
+});
+
 test("renderDetail resets recipe edit mode when switching recipes or languages", () => {
   const { elements, ui } = harness();
   elements["#recipeDetail"].classList.add("editing");
@@ -181,17 +202,18 @@ test("opening and closing a recipe preserves predictable focus", async () => {
   assert.equal(elements["#recipesView"].classList.values.has("detail-open"), false);
 });
 
-test("Spanish detail never falls back to English recipe content", () => {
+test("Spanish detail uses source content while translation is pending", () => {
   const { elements, ui } = harness({ lang: "es" });
 
   ui.renderDetail();
 
-  assert.equal(elements["#detailName"].textContent, "translationPendingShort");
-  assert.match(elements["#ingredientList"].innerHTML, /translationPendingShort/);
-  assert.doesNotMatch(elements["#ingredientList"].innerHTML, /one/);
-  assert.equal(elements["#addRecipeGroceries"].disabled, true);
-  assert.equal(elements["#markCooked"].disabled, true);
+  assert.equal(elements["#detailName"].textContent, "Recipe");
+  assert.match(elements["#ingredientList"].innerHTML, />one</);
+  assert.match(elements["#stepList"].innerHTML, />cook</);
+  assert.equal(elements["#addRecipeGroceries"].disabled, false);
+  assert.equal(elements["#markCooked"].disabled, false);
   assert.equal(elements["#recipeTranslationStatus"].hidden, false);
+  assert.match(elements["#recipeTranslationStatus"].textContent, /translationFallbackDetail/);
 });
 
 test("missing Spanish safety warning keeps cooking actions disabled", () => {
@@ -207,7 +229,8 @@ test("missing Spanish safety warning keeps cooking actions disabled", () => {
 
   ui.renderDetail();
 
-  assert.equal(elements["#allergyWarning"].textContent, "safetyTranslationPending");
+  assert.equal(elements["#allergyWarning"].textContent, "Contains nuts");
   assert.equal(elements["#addRecipeGroceries"].disabled, true);
   assert.equal(elements["#markCooked"].disabled, true);
+  assert.equal(elements["#recipeTranslationStatus"].hidden, false);
 });

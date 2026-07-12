@@ -231,6 +231,7 @@ const rawRecipes = [
   },
   {
     id: "lemon-chicken",
+    cardPhoto: "assets/card-lemon-chicken.jpg",
     name: {
       en: "Lemon Chicken",
       es: "Pollo al limon",
@@ -299,6 +300,7 @@ const rawRecipes = [
   },
   {
     id: "zaatar-parmesan-potatoes",
+    cardPhoto: "assets/card-zaatar-potatoes.jpg",
     name: {
       en: "Smashed Potato Fries",
       es: "Papas aplastadas al horno",
@@ -363,6 +365,7 @@ const rawRecipes = [
   },
   {
     id: "lemon-bucatini-pasta",
+    cardPhoto: "assets/card-lemon-bucatini.jpg",
     name: {
       en: "Lemon Bucatini Pasta",
       es: "Pasta bucatini al limon",
@@ -429,6 +432,7 @@ const rawRecipes = [
   },
   {
     id: "pasta-with-meat-sauce",
+    cardPhoto: "assets/card-pasta-meat-sauce.jpg",
     name: {
       en: "Pasta with Meat Sauce",
       es: "Pasta con salsa de carne",
@@ -509,6 +513,7 @@ const rawRecipes = [
   },
   {
     id: "strawberry-crunch-salad",
+    cardPhoto: "assets/card-strawberry-crunch-salad.jpg",
     name: {
       en: "Strawberry Crunch Salad",
       es: "Ensalada crujiente de fresa",
@@ -590,6 +595,7 @@ const rawRecipes = [
   },
   {
     id: "roasted-brussels-sprouts-salad",
+    cardPhoto: "assets/card-roasted-brussels-salad.jpg",
     name: {
       en: "Roasted Brussels Sprouts Salad",
       es: "Ensalada de coles de Bruselas asadas",
@@ -663,6 +669,7 @@ const rawRecipes = [
   },
   {
     id: "chicken-noodle-soup",
+    cardPhoto: "assets/card-chicken-noodle-soup.jpg",
     name: {
       en: "Chicken Noodle Soup",
       es: "Sopa de pollo con fideos",
@@ -741,6 +748,7 @@ const rawRecipes = [
   },
   {
     id: "ina-garten-pot-roast",
+    cardPhoto: "assets/card-pot-roast.jpg",
     name: {
       en: "Ina Garten's Pot Roast",
       es: "Estofado de res estilo Ina Garten",
@@ -831,6 +839,7 @@ const rawRecipes = [
   },
   {
     id: "basil-pesto-pasta",
+    cardPhoto: "assets/card-basil-pesto.jpg",
     name: {
       en: "Basil Pesto Pasta",
       es: "Pasta con pesto de albahaca",

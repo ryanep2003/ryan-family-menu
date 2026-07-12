@@ -126,6 +126,7 @@ function harness(overrides = {}) {
     ingredients: { en: ["old ingredient"] },
     steps: { en: ["old step"] },
     notes: { en: "old notes" },
+    cardPhoto: "card-existing.jpg",
     photos: ["existing.jpg"],
   };
   const recipes = overrides.recipes || [currentRecipe, { id: "backup" }];
@@ -162,7 +163,8 @@ function harness(overrides = {}) {
       stepsText: recipe.steps?.en?.join("\n") || "",
       allergyWarning: "",
       notes: recipe.notes?.en || "",
-      photos: recipe.photos || ["assets/meatballs-2.jpg"],
+      cardPhoto: recipe.cardPhoto,
+      photos: recipe.photos || [],
     }),
     readFilesAsDataUrls: overrides.readFilesAsDataUrls || (async (files) => files.length ? ["replacement.jpg"] : []),
     recognizeRecipe: overrides.recognizeRecipe || (async () => ({ name: "Scanned recipe" })),
@@ -243,6 +245,7 @@ test("recipe edit keeps existing photos when no replacement is selected", async 
   await elements["#editRecipeForm"].dispatch("submit");
 
   assert.deepEqual(state.edits["recipe-1"].name, { en: "Updated recipe" });
+  assert.equal(state.edits["recipe-1"].cardPhoto, "card-existing.jpg");
   assert.deepEqual(state.edits["recipe-1"].photos, ["existing.jpg"]);
   assert.equal(state.saveSharedStateCalls, 1);
   assert.equal(elements["#editRecipeForm"].hidden, true);
@@ -258,6 +261,7 @@ test("recipe edit uses replacement photos when selected", async () => {
   await elements["#editRecipeForm"].dispatch("submit");
 
   assert.deepEqual(state.edits["recipe-1"].photos, ["new-photo.jpg"]);
+  assert.equal(state.edits["recipe-1"].cardPhoto, "new-photo.jpg");
 });
 
 test("edit recipe only shows the edit panel while editing", async () => {

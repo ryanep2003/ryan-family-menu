@@ -96,6 +96,7 @@ function cleanRecipeEdit(edit) {
     stepsText: cleanLocalizedText(edit.stepsText, 12000),
     allergyWarning: cleanLocalizedText(edit.allergyWarning, 600),
     notes: cleanLocalizedText(edit.notes, 2000),
+    cardPhoto: cleanPhoto(edit.cardPhoto) || (/^assets\/[a-z0-9-]+\.jpg$/.test(edit.cardPhoto || "") ? edit.cardPhoto : ""),
     photos: Array.isArray(edit.photos)
       ? edit.photos.map(cleanPhoto).filter(Boolean).slice(0, 3)
       : [],

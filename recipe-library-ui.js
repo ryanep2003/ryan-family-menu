@@ -27,12 +27,28 @@ export function createRecipeLibraryUi({
   let lastLibraryButton = null;
 
   function requiredText(value) {
-    return localizeExact(value) || t("translationPendingShort");
+    return localizeExact(value) || localize(value) || t("translationPendingShort");
   }
 
   function localizedLines(value) {
-    const lines = value?.[getLang()] || [];
-    return linesMatchLanguage(lines, getLang()) ? lines : [];
+    const lang = getLang();
+    const lines = value?.[lang] || [];
+    if (lines.length && linesMatchLanguage(lines, lang)) {
+      return { lines, fallback: false };
+    }
+    const fallbackLang = lang === "es" ? "en" : "es";
+    const fallbackLines = value?.[fallbackLang] || [];
+    return {
+      lines: fallbackLines.length && linesMatchLanguage(fallbackLines, fallbackLang) ? fallbackLines : [],
+      fallback: Boolean(fallbackLines.length),
+    };
+  }
+
+  function displayText(value) {
+    const translated = localizeExact(value);
+    if (translated) return { text: translated, fallback: false };
+    const fallback = localize(value);
+    return { text: fallback, fallback: Boolean(fallback) };
   }
 
   function renderRecipes() {
@@ -57,11 +73,11 @@ export function createRecipeLibraryUi({
     $("#recipeList").innerHTML = filtered
       .map((recipe, index) => {
         const name = requiredText(recipe.name);
-        const meta = localizeExact(recipe.meta);
-        const short = localizeExact(recipe.short);
+        const meta = displayText(recipe.meta).text;
+        const short = displayText(recipe.short).text;
         return `
         <button class="recipe-card" style="--card-order: ${Math.min(index, 8)}" type="button" data-open="${escapeHtml(recipe.id)}">
-          <img src="${escapeHtml(recipe.cardPhoto || recipe.photos[0])}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" />
+          <img src="${escapeHtml(recipe.cardPhoto || recipe.photos?.[0] || "assets/recipe-card-placeholder.jpg")}" alt="${recipe.cardPhotoIsPlaceholder ? "" : escapeHtml(name)}" loading="lazy" decoding="async" />
           <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
           ${getFavorites().includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}
           ${hasLocalizedContent(recipe.allergyWarning) ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
@@ -80,33 +96,51 @@ export function createRecipeLibraryUi({
   function renderDetail() {
     const recipe = recipeById(getSelectedRecipeId());
     const isLocalDraft = Boolean(draftById(recipe.id));
-    const name = localizeExact(recipe.name);
-    const ingredients = localizedLines(recipe.ingredients);
-    const steps = localizedLines(recipe.steps);
+    const nameDisplay = displayText(recipe.name);
+    const metaDisplay = displayText(recipe.meta);
+    const ingredientsDisplay = localizedLines(recipe.ingredients);
+    const stepsDisplay = localizedLines(recipe.steps);
     const hasWarning = hasLocalizedContent(recipe.allergyWarning);
-    const warningReady = !hasWarning || Boolean(localizeExact(recipe.allergyWarning));
-    const contentReady = Boolean(name && ingredients.length && steps.length && warningReady);
+    const warningTranslated = localizeExact(recipe.allergyWarning);
+    const warningFallback = localize(recipe.allergyWarning);
+    const warningReady = !hasWarning || Boolean(warningTranslated);
+    const contentReady = Boolean(
+      nameDisplay.text
+      && ingredientsDisplay.lines.length
+      && stepsDisplay.lines.length
+      && warningReady
+    );
+    const usingFallback = Boolean(
+      nameDisplay.fallback
+      || metaDisplay.fallback
+      || ingredientsDisplay.fallback
+      || stepsDisplay.fallback
+      || (hasWarning && !warningTranslated && warningFallback)
+      || displayText(recipe.notes).fallback
+    );
     const warning = hasWarning
-      ? localizeExact(recipe.allergyWarning) || t("safetyTranslationPending")
+      ? warningTranslated || warningFallback || t("safetyTranslationPending")
       : "";
     $("#recipeDetail").classList.remove("editing");
     $("#recipeMoreActions").open = false;
     $("#editRecipeForm").hidden = true;
-    $("#detailName").textContent = name || t("translationPendingShort");
-    $("#detailMeta").textContent = localizeExact(recipe.meta);
+    $("#detailName").textContent = nameDisplay.text || t("translationPendingShort");
+    $("#detailMeta").textContent = metaDisplay.text;
     $("#allergyWarning").hidden = !warning;
     $("#allergyWarning").textContent = warning;
-    $("#recipeTranslationStatus").hidden = contentReady;
-    $("#recipeTranslationStatus").textContent = contentReady ? "" : t("translationPendingDetail");
-    $("#ingredientList").innerHTML = ingredients.length
-      ? ingredients.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+    $("#recipeTranslationStatus").hidden = !usingFallback && contentReady;
+    $("#recipeTranslationStatus").textContent = usingFallback
+      ? t("translationFallbackDetail")
+      : contentReady ? "" : t("translationPendingDetail");
+    $("#ingredientList").innerHTML = ingredientsDisplay.lines.length
+      ? ingredientsDisplay.lines.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
       : `<li class="translation-placeholder">${t("translationPendingShort")}</li>`;
-    $("#stepList").innerHTML = steps.length
-      ? steps.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+    $("#stepList").innerHTML = stepsDisplay.lines.length
+      ? stepsDisplay.lines.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
       : `<li class="translation-placeholder">${t("translationPendingShort")}</li>`;
-    $("#familyNotes").textContent = localizeExact(recipe.notes) || (contentReady ? "" : t("translationPendingShort"));
+    $("#familyNotes").textContent = displayText(recipe.notes).text || (contentReady ? "" : t("translationPendingShort"));
     $("#photoStrip").innerHTML = recipe.photos
-      .map((src, index) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(`${name || t("translationPendingShort")} ${t("sourcePhoto")} ${index + 1}`)}" loading="lazy" decoding="async" />`)
+      .map((src, index) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(`${nameDisplay.text || t("translationPendingShort")} ${t("sourcePhoto")} ${index + 1}`)}" loading="lazy" decoding="async" />`)
       .join("");
     const isFavorite = getFavorites().includes(recipe.id);
     $("#favoriteRecipe").textContent = t(isFavorite ? "removeFavorite" : "addFavorite");

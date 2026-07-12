@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=39" />
+    <link rel="stylesheet" href="styles.css?v=40" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -21,6 +21,7 @@
       </div>
       <div class="header-actions">
         <button class="guide-button" id="quickGuideToggle" type="button" aria-controls="quickGuide" aria-expanded="false" data-i18n="quickGuide">Quick guide</button>
+        <button class="shell-add-button" id="globalAddRecipe" type="button" aria-label="Add recipe" data-i18n="addTab" data-i18n-aria-label="addRecipe">Add</button>
         <div class="install-prompt" id="installPrompt" role="group" aria-label="Install / Add to Home Screen" data-i18n-aria-label="installApp" hidden>
           <button class="install-button" id="installButton" type="button" title="Install / Add to Home Screen" aria-label="Install / Add to Home Screen" data-i18n-title="installApp" data-i18n-aria-label="installApp">
             <span aria-hidden="true">+</span>
@@ -557,6 +558,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=71"></script>
+    <script type="module" src="app.js?v=72"></script>
   </body>
 </html>
