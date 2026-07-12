@@ -22,6 +22,14 @@ function cleanPhotos(photos) {
     .slice(0, MAX_PHOTOS);
 }
 
+function cleanPhoto(value) {
+  if (typeof value !== "string") return "";
+  const photo = value.trim();
+  if (photo.startsWith("data:image/") && photo.length * 0.75 <= MAX_PHOTO_BYTES) return photo;
+  if (/^assets\/[a-z0-9-]+\.jpe?g$/i.test(photo)) return photo;
+  return "";
+}
+
 export function cleanRecipe(input) {
   const name = cleanLocalizedText(input.name, 120);
   const ingredientsText = cleanLocalizedText(input.ingredientsText, MAX_TEXT_LENGTH);
@@ -45,6 +53,7 @@ export function cleanRecipe(input) {
     allergyWarning: cleanLocalizedText(input.allergyWarning, 600),
     notes: cleanLocalizedText(input.notes, 2000),
     photos: cleanPhotos(input.photos),
+    cardPhoto: cleanPhoto(input.cardPhoto),
     createdAt: new Date().toISOString(),
   };
 }

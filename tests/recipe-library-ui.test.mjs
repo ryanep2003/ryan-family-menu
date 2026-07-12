@@ -182,7 +182,7 @@ test("photo-less recipes use a decorative food placeholder only on the card", ()
   ui.renderRecipes();
   ui.renderDetail();
 
-  assert.match(elements["#recipeList"].innerHTML, /assets\/recipe-card-placeholder\.jpg/);
+  assert.match(elements["#recipeList"].innerHTML, /data:image\/svg\+xml,/);
   assert.match(elements["#recipeList"].innerHTML, /alt=""/);
   assert.equal(elements["#photoStrip"].innerHTML, "");
 });

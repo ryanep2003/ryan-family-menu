@@ -81,6 +81,7 @@ let sharedRecipes = [];
 let recipeEdits = readJsonStorage(localStorage, "dinner-recipe-edits", {});
 let deletedRecipeIds = readJsonStorage(localStorage, "dinner-deleted-recipes", []);
 let importedRecipePhotos = [];
+let importedRecipeCardPhoto = "";
 const groceryStorageKeys = { itemsKey: "dinner-groceries", versionKey: "dinner-grocery-version" };
 const inventoryStorageKeys = { itemsKey: "dinner-inventory", versionKey: "dinner-inventory-version" };
 const storedGroceries = readVersionedCollectionStorage(localStorage, groceryStorageKeys);
@@ -364,6 +365,7 @@ function recipeToTranslationInput(recipe, sourceLang) {
     stepsText: rawRecipeText(recipe?.stepsText, sourceLang),
     allergyWarning: rawRecipeText(recipe?.allergyWarning, sourceLang),
     notes: rawRecipeText(recipe?.notes, sourceLang),
+    cardPhoto: recipe?.cardPhoto || "",
   };
 }
 
@@ -404,7 +406,8 @@ function recipeToLocalizedEdit(recipe) {
     stepsText,
     allergyWarning,
     notes,
-    photos: recipe.photos?.length ? recipe.photos : ["assets/meatballs-2.jpg"],
+    cardPhoto: recipe?.cardPhoto || "",
+    photos: recipe.photos || [],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -1229,6 +1232,10 @@ const recipeFormUi = createRecipeFormUi({
   getImportedRecipePhotos: () => importedRecipePhotos,
   setImportedRecipePhotos: (photos) => {
     importedRecipePhotos = photos;
+  },
+  getImportedRecipeCardPhoto: () => importedRecipeCardPhoto,
+  setImportedRecipeCardPhoto: (photo) => {
+    importedRecipeCardPhoto = photo;
   },
   prependSharedRecipe: (recipe) => {
     sharedRecipes.unshift(recipe);

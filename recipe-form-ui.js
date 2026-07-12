@@ -1,7 +1,6 @@
 import { updateLocalizedText } from "./localized-data.js";
 
 const MAX_UPLOAD_PHOTOS = 3;
-const FALLBACK_PHOTO = "assets/meatballs-2.jpg";
 
 export function createRecipeFormUi({
   $,
@@ -27,6 +26,8 @@ export function createRecipeFormUi({
   setFavorites,
   getImportedRecipePhotos,
   setImportedRecipePhotos,
+  getImportedRecipeCardPhoto,
+  setImportedRecipeCardPhoto,
   prependSharedRecipe,
   prependDraft,
   persistDrafts,
@@ -133,6 +134,7 @@ export function createRecipeFormUi({
     const existing = new Set(uploadPhotoFiles.map(fileKey));
     const incoming = [...files].filter((file) => !existing.has(fileKey(file)));
     uploadPhotoFiles = [...uploadPhotoFiles, ...incoming].slice(0, MAX_UPLOAD_PHOTOS);
+    setImportedRecipeCardPhoto("");
     $("#photoInput").value = "";
     $("#photoCameraInput").value = "";
     renderUploadPhotoQueue();
@@ -158,7 +160,8 @@ export function createRecipeFormUi({
       stepsText: updateLocalizedText("", $("#stepsInput").value.trim(), getLang()),
       allergyWarning: updateLocalizedText("", $("#allergyInput").value.trim(), getLang()),
       notes: updateLocalizedText("", $("#noteInput").value.trim(), getLang()),
-      photos: recipePhotos.length ? recipePhotos : [FALLBACK_PHOTO],
+      photos: recipePhotos,
+      cardPhoto: getImportedRecipeCardPhoto() || "",
     };
   }
 
@@ -166,6 +169,7 @@ export function createRecipeFormUi({
     $("#uploadForm").reset();
     clearUploadPhotoFiles();
     setImportedRecipePhotos([]);
+    setImportedRecipeCardPhoto("");
   }
 
   async function readUploadPhotos() {
@@ -328,6 +332,7 @@ export function createRecipeFormUi({
       fillUploadFormFromRecipe(recipe, { overwrite: true });
       openRecipeDetails();
       setImportedRecipePhotos(Array.isArray(recipe.photos) ? recipe.photos : []);
+      setImportedRecipeCardPhoto(recipe.cardPhoto || "");
       status.textContent = t("recipeUrlSaved");
     } catch (error) {
       console.warn(error);
