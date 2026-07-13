@@ -57,7 +57,7 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(96px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=42/);
+  assert.match(html, /styles\.css\?v=43/);
 });
 
 test("mobile header reserves rows for optional install controls", () => {

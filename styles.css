@@ -1113,6 +1113,25 @@ h3 {
   color: #fff;
 }
 
+.week-actions {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.week-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.week-navigation .ghost-button {
+  min-height: 40px;
+  padding: 0 12px;
+  font-size: 0.82rem;
+}
+
 .grocery-banner {
   background: var(--peach-light);
   color: var(--tomato-ink);
@@ -2732,6 +2751,23 @@ li {
   .section-heading {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .week-actions,
+  .week-navigation {
+    width: 100%;
+  }
+
+  .week-navigation {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .week-navigation .ghost-button,
+  .week-actions > .ghost-button {
+    width: 100%;
+    min-width: 0;
+    padding: 0 6px;
   }
 
   .today-band {

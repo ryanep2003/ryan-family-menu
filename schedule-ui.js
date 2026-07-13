@@ -28,6 +28,9 @@ export function createScheduleUi({
   setSchedule,
   getCalendarMeals,
   setCalendarMeals,
+  navigateWeek,
+  goToCurrentWeek,
+  getCurrentWeekStartKey,
   getVisibleMonth,
   setVisibleMonth,
 }) {
@@ -138,7 +141,11 @@ export function createScheduleUi({
     if (!activeDateKeys.has(selectedWeekDateKey)) {
       selectedWeekDateKey = activeDateKeys.has(todayKey) ? todayKey : weekDates[0].dateKey;
     }
-    $("#weekTitle").textContent = `${t("weekHeading")} · ${rangeFormatter.format(weekDates[0].date)}-${rangeFormatter.format(weekDates[6].date)}`;
+    const currentWeek = getCurrentWeekStartKey();
+    const weekLabel = weekDates[0].dateKey === currentWeek
+      ? t("weekHeading")
+      : weekDates[0].dateKey < currentWeek ? t("previousWeek") : t("nextWeek");
+    $("#weekTitle").textContent = `${weekLabel} · ${rangeFormatter.format(weekDates[0].date)}-${rangeFormatter.format(weekDates[6].date)}`;
     grid.innerHTML = weekDates
       .map((day) => {
         const meal = calendarMealForDateKey(day.dateKey);
@@ -285,6 +292,18 @@ export function createScheduleUi({
   }
 
   function bindScheduleControls() {
+    $("#previousWeek").addEventListener("click", async () => {
+      await navigateWeek(-1);
+    });
+
+    $("#thisWeek").addEventListener("click", async () => {
+      await goToCurrentWeek();
+    });
+
+    $("#nextWeek").addEventListener("click", async () => {
+      await navigateWeek(1);
+    });
+
     $("#resetWeek").addEventListener("click", async () => {
       if (!window.confirm(t("clearWeekConfirm"))) return;
       setSchedule(Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])));
