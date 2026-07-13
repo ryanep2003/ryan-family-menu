@@ -126,6 +126,18 @@ The Tomato & Sage palette takes its cues from food and the home without becoming
 - **Cupboard Line** (`colors.line`): Borders, dividers, and field boundaries.
 - **Clean White** (`colors.white`): Input interiors and text on saturated controls.
 
+### Semantic States
+
+The CSS token layer keeps repeated workflow states consistent. Use these roles instead of introducing new one-off colors:
+
+- `surface-success` / `line-success`: inventory and sync confirmation.
+- `surface-attention` / `line-attention` / `attention-ink`: low-stock, favorite, and review-needed states.
+- `surface-danger` / `danger-ink` / `danger-strong`: safety warnings, errors, and destructive actions.
+- `surface-notice` / `surface-muted` / `surface-elevated`: update notices, quiet controls, and elevated working surfaces.
+- `on-accent`: readable text on tomato, sage, or dark navigation surfaces.
+
+A new value should be added here only when it represents a reusable semantic role.
+
 **The One Tomato Rule.** Tomato is functional, never decorative. Use it for the primary action or the most important active state, not as ambient page color.
 
 **The Semantic Pantry Rule.** Sage means organization or success, gold means attention, and tomato-deep means urgency. Never swap these roles for visual variety.

@@ -49,6 +49,7 @@ import {
   currentWeekStartKey,
   days,
   emptyMeal,
+  handoffOptions,
   formatDateKey,
   mealHasContent,
   normalizeCalendar,
@@ -590,7 +591,11 @@ function mealHasWarning(meal) {
 
 function mealSummary(meal) {
   const items = mealRecipes(meal);
-  if (!items.length) return t("noMealSet");
+  if (!items.length) {
+    return Object.values(meal.handoff || {}).some(Boolean) || localizedText(meal.notes, lang)
+      ? t("handoffPlanned")
+      : t("noMealSet");
+  }
   return items.map(({ recipe }) => localizeExact(recipe.name) || t("translationPendingShort")).join(" · ");
 }
 
@@ -837,6 +842,7 @@ const dashboardUi = createDashboardUi({
   setCalendarMeals: (nextCalendarMeals) => {
     calendarMeals = normalizeCalendar(nextCalendarMeals);
   },
+  handoffOptions,
   getSelectedRecipeId: () => selectedRecipeId,
   setSelectedRecipeId: (id) => {
     selectedRecipeId = id;
@@ -857,6 +863,7 @@ const scheduleUi = createScheduleUi({
   formatDateKey,
   normalizeMealPlan,
   mealSlots,
+  handoffOptions,
   days,
   emptyMeal,
   categoryFor,

@@ -9,6 +9,7 @@ export function createScheduleUi({
   formatDateKey,
   normalizeMealPlan,
   mealSlots,
+  handoffOptions = [],
   days,
   emptyMeal,
   categoryFor,
@@ -68,6 +69,18 @@ export function createScheduleUi({
           <span>${t("notesSlot")}</span>
           <textarea data-meal-context="${context}" data-slot="notes" rows="2">${escapeHtml(localizedText(meal.notes, getLang()))}</textarea>
         </label>
+        <fieldset class="meal-handoff-fieldset">
+          <legend>${t("handoffLabel")}</legend>
+          <div class="meal-handoff-options">
+            ${handoffOptions.map((option) => `
+              <label class="handoff-option tone-${option.tone}">
+                <input type="checkbox" data-meal-context="${context}" data-slot="handoff" data-handoff-key="${escapeHtml(option.key)}" ${meal.handoff?.[option.key] ? "checked" : ""} />
+                <span class="handoff-marker" aria-hidden="true"></span>
+                <span>${escapeHtml(t(option.label))}</span>
+              </label>
+            `).join("")}
+          </div>
+        </fieldset>
       </div>
       <p class="${mealHasWarning(meal) ? "has-warning" : ""}">${escapeHtml(mealSummary(meal))}</p>
       <div class="meal-open-buttons">
@@ -86,9 +99,16 @@ export function createScheduleUi({
         const [type, key] = control.dataset.mealContext.split(":");
         const slot = control.dataset.slot;
         const target = { ...calendarMealForDateKey(key) };
-        target[slot] = slot === "notes"
-          ? updateLocalizedText(target.notes, control.value, getLang())
-          : control.value;
+        if (slot === "notes") {
+          target.notes = updateLocalizedText(target.notes, control.value, getLang());
+        } else if (slot === "handoff") {
+          target.handoff = {
+            ...(target.handoff || {}),
+            [control.dataset.handoffKey]: control.checked,
+          };
+        } else {
+          target[slot] = control.value;
+        }
 
         const schedule = getSchedule();
         const calendarMeals = getCalendarMeals();

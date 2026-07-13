@@ -35,6 +35,11 @@ function cleanMeal(value) {
     side: cleanText(source.side, 120),
     salad: cleanText(source.salad, 120),
     notes: cleanLocalizedText(source.notes, 500),
+    handoff: {
+      leftovers: Boolean(source.handoff?.leftovers),
+      kidsSnack: Boolean(source.handoff?.kidsSnack),
+      flexible: Boolean(source.handoff?.flexible),
+    },
   };
 }
 

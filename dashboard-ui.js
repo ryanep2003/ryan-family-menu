@@ -27,11 +27,23 @@ export function createDashboardUi({
   getInventory,
   getCalendarMeals,
   setCalendarMeals,
+  handoffOptions = [],
   getSelectedRecipeId,
   setSelectedRecipeId,
 }) {
+  function todayDateKey() {
+    return formatDateKey(new Date());
+  }
+
+  function updateTodayMeal(nextMeal) {
+    const dateKey = todayDateKey();
+    setCalendarMeals({ ...getCalendarMeals(), [dateKey]: nextMeal });
+    render();
+    return saveSharedState();
+  }
+
   function todaysMealPlan() {
-    return calendarMealForDateKey(formatDateKey(new Date()));
+    return calendarMealForDateKey(todayDateKey());
   }
 
   function renderToday() {
@@ -57,6 +69,19 @@ export function createDashboardUi({
         </button>
       `)
       .join("");
+    const handoffOptionsElement = $("#todayHandoffOptions");
+    const handoffNote = $("#todayHandoffNote");
+    if (handoffOptionsElement) {
+      const handoff = meal.handoff || {};
+      handoffOptionsElement.innerHTML = handoffOptions.map((option) => `
+        <label class="handoff-option tone-${option.tone}">
+          <input type="checkbox" data-today-handoff="${escapeHtml(option.key)}" ${handoff[option.key] ? "checked" : ""} />
+          <span class="handoff-marker" aria-hidden="true"></span>
+          <span>${escapeHtml(t(option.label))}</span>
+        </label>
+      `).join("");
+    }
+    if (handoffNote) handoffNote.value = localizedText(meal.notes, getLang());
     const toBuy = getGroceries().filter((item) => !item.checked && !item.inInventory).length;
     $("#todayGrocerySummary").textContent = `${toBuy} ${t("itemsToBuy")}`;
     $("#todayInventorySummary").textContent = `${getInventory().filter((item) => item.stockState !== "out").length} ${t("itemsAtHome")}`;
@@ -199,6 +224,27 @@ export function createDashboardUi({
       $("#recipeDetail").hidden = false;
       $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
       $("#detailName").focus({ preventScroll: true });
+    });
+
+    $("#todayHandoffOptions")?.addEventListener("change", async (event) => {
+      const checkbox = event.target.closest?.("[data-today-handoff]");
+      if (!checkbox) return;
+      const meal = todaysMealPlan();
+      await updateTodayMeal({
+        ...meal,
+        handoff: {
+          ...(meal.handoff || {}),
+          [checkbox.dataset.todayHandoff]: checkbox.checked,
+        },
+      });
+    });
+
+    $("#todayHandoffNote")?.addEventListener("change", async (event) => {
+      const meal = todaysMealPlan();
+      await updateTodayMeal({
+        ...meal,
+        notes: updateLocalizedText(meal.notes, event.target.value.trim(), getLang()),
+      });
     });
   }
 

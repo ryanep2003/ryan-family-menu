@@ -53,6 +53,16 @@ test("mealHasContent checks any planned slot or notes", () => {
   assert.equal(mealHasContent({ ...emptyMeal, notes: { es: "noche de pizza" } }), true);
 });
 
+test("meal normalization preserves optional family handoff planning", () => {
+  const meal = normalizeMealPlan({
+    main: "meatballs",
+    handoff: { leftovers: true, kidsSnack: "yes" },
+  });
+
+  assert.deepEqual(meal.handoff, { leftovers: true, kidsSnack: true, flexible: false });
+  assert.equal(mealHasContent({ ...emptyMeal, handoff: { ...emptyMeal.handoff, flexible: true } }), true);
+});
+
 test("removeRecipeFromPlans clears deleted recipes from weekly and calendar meals", () => {
   const result = removeRecipeFromPlans(
     {
