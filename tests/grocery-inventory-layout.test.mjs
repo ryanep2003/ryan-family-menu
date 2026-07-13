@@ -14,6 +14,17 @@ test("grocery list appears before occasional list tools", () => {
   );
 });
 
+test("grocery search stays near the active list instead of being buried in list tools", () => {
+  assert.match(html, /id="grocerySearch"[^>]*type="search"/);
+  assert.match(app, /grocerySearch.+addEventListener\("input"/s);
+  assert.ok(
+    html.indexOf('id="grocerySearch"') < html.indexOf('id="groceryList"'),
+    "search should sit directly above the grocery list"
+  );
+  assert.match(styles, /\.grocery-search input\s*{/);
+  assert.match(styles, /@media \(max-width: 780px\)[\s\S]*\.grocery-search\s*\{[\s\S]*max-width: none;/);
+});
+
 test("inventory maintenance uses one progressive disclosure", () => {
   assert.match(html, /class="inventory-tools-menu"/);
   assert.match(html, /data-i18n="inventoryManageShort"/);
@@ -57,7 +68,7 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(96px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=42/);
+  assert.match(html, /styles\.css\?v=43/);
 });
 
 test("mobile header reserves rows for optional install controls", () => {

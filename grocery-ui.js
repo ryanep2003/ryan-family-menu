@@ -15,6 +15,7 @@ export function createGroceryUi({
   localize,
   groceryStoreLabel,
   inventoryLocationLabel,
+  getGrocerySearch = () => "",
   getHouseholdMember = () => "Family",
   formatItemActivity = () => "",
   saveGroceries,
@@ -103,6 +104,22 @@ export function createGroceryUi({
     return `${t("alreadyAtHomeLabel")}: ${localizedTextExact(match.quantity, getLang()) || inventoryLocationLabel(match.location)}`;
   }
 
+  function groceryMatchesQuery(item, query) {
+    if (!query) return true;
+
+    const fragments = [
+      groceryDisplayText(item),
+      canonicalText(item.text),
+      grocerySourceLabel(item),
+      item.recipeName ? localizedTextExact(item.recipeName, getLang()) : "",
+      item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "",
+    ];
+
+    return fragments
+      .map((value) => canonicalText(value).toLowerCase())
+      .some((value) => value.includes(query));
+  }
+
   function inventoryShoppingNote(item) {
     const overlap = shoppingOverlapFor(item.text);
     return overlap ? `${t("onShoppingList")}: ${localizedTextExact(overlap.text, getLang()) || t("translationPendingShort")}` : "";
@@ -156,9 +173,11 @@ export function createGroceryUi({
 
   function renderGroceries() {
     const groceries = getGroceries();
-    const activeItems = groceries.filter((item) => !item.checked && !item.inInventory);
-    const inventoryItems = groceries.filter((item) => item.inInventory);
-    const checkedItems = groceries.filter((item) => item.checked && !item.inInventory);
+    const groceryQuery = canonicalText(getGrocerySearch()).trim().toLowerCase();
+    const filtered = groceries.filter((item) => groceryMatchesQuery(item, groceryQuery));
+    const activeItems = filtered.filter((item) => !item.checked && !item.inInventory);
+    const inventoryItems = filtered.filter((item) => item.inInventory);
+    const checkedItems = filtered.filter((item) => item.checked && !item.inInventory);
     const sections = groupGroceriesBySource(activeItems);
 
     if (!groceries.length) {
@@ -167,10 +186,20 @@ export function createGroceryUi({
       return;
     }
 
+    if (!filtered.length) {
+      $("#groceryList").innerHTML = `<p class="empty-state">${t("grocerySearchEmpty")}</p>`;
+      renderPurchasedAction();
+      return;
+    }
+
     $("#groceryList").innerHTML = [
       ...sections.map((section) => grocerySection(section.label, section.items)),
-      inventoryItems.length ? grocerySection(t("alreadyHave"), inventoryItems, { checkedSection: true, collapsed: true }) : "",
-      checkedItems.length ? grocerySection(t("checkedOffSection"), checkedItems, { checkedSection: true, collapsed: true }) : "",
+      inventoryItems.length
+        ? grocerySection(t("alreadyHave"), inventoryItems, { checkedSection: true, collapsed: !groceryQuery })
+        : "",
+      checkedItems.length
+        ? grocerySection(t("checkedOffSection"), checkedItems, { checkedSection: true, collapsed: !groceryQuery })
+        : "",
     ].join("");
     renderPurchasedAction();
   }

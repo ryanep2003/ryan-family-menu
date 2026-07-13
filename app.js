@@ -93,6 +93,7 @@ let inventory = storedInventory.items;
 let inventoryVersion = storedInventory.version;
 let inventorySuggestions = [];
 let receiptSuggestions = [];
+let grocerySearch = "";
 let inventoryMode = "shopping";
 let inventoryFilter = "all";
 let visibleMonth = new Date();
@@ -685,6 +686,7 @@ const groceryUi = createGroceryUi({
   localize: localizeExact,
   groceryStoreLabel,
   inventoryLocationLabel,
+  getGrocerySearch: () => grocerySearch,
   getHouseholdMember: () => householdMember,
   formatItemActivity,
   saveGroceries,
@@ -1434,6 +1436,12 @@ $("#groceryForm").addEventListener("submit", async (event) => {
   renderGroceries();
   bindGroceryControls();
   await saveGroceries();
+});
+
+$("#grocerySearch").addEventListener("input", (event) => {
+  grocerySearch = event.target.value;
+  renderGroceries();
+  bindGroceryControls();
 });
 
 $("#generateGroceries").addEventListener("click", async () => {

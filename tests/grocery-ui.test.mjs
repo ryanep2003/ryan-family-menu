@@ -37,6 +37,7 @@ function element() {
 function harness(overrides = {}) {
   const elements = {
     "#groceryList": element(),
+    "#grocerySearch": { value: "" },
     "#restockPurchased": element(),
   };
   const state = {
@@ -108,6 +109,7 @@ function harness(overrides = {}) {
     localize: (value) => typeof value === "string" ? value : value?.[state.lang] || value?.en || "",
     groceryStoreLabel: () => "Any store",
     inventoryLocationLabel: (location) => location,
+    getGrocerySearch: () => elements["#grocerySearch"].value,
     saveGroceries: async () => {
       state.saveCalls += 1;
       return true;
@@ -212,6 +214,46 @@ test("mixed-language Spanish recipe lists stay pending", () => {
 
   assert.match(elements["#groceryList"].innerHTML, /Translation pending/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /chili powder/);
+});
+
+test("grocery search finds active and archived matches without hiding them in collapsed sections", () => {
+  const { elements, ui } = harness({
+    state: {
+      lang: "en",
+      groceries: [
+        { id: "active", text: { en: "Milk" }, checked: false, source: "manual", store: "any" },
+        { id: "checked", text: { en: "Milk chocolate" }, checked: true, source: "manual", store: "any" },
+        { id: "home", text: { en: "Almond milk" }, checked: false, inInventory: true, source: "manual", store: "any" },
+        { id: "other", text: { en: "Rice" }, checked: false, source: "manual", store: "any" },
+      ],
+      recipes: [],
+    },
+  });
+
+  elements["#grocerySearch"].value = "milk";
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /Milk/);
+  assert.match(elements["#groceryList"].innerHTML, /Milk chocolate/);
+  assert.match(elements["#groceryList"].innerHTML, /Almond milk/);
+  assert.match(elements["#groceryList"].innerHTML, /Checked off/);
+  assert.match(elements["#groceryList"].innerHTML, /Already have/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /grocery-archive/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Rice/);
+});
+
+test("grocery search shows a dedicated empty state", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{ id: "active", text: { en: "Rice" }, checked: false, source: "manual", store: "any" }],
+      recipes: [],
+    },
+  });
+
+  elements["#grocerySearch"].value = "milk";
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /grocerySearchEmpty/);
 });
 
 test("delete section removes every item in that grocery section", async () => {

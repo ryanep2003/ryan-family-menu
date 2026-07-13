@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=42" />
+    <link rel="stylesheet" href="styles.css?v=43" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -232,6 +232,20 @@
           <div class="sync-status-row">
             <p class="upload-status" id="groceryStatus" role="status"></p>
             <button class="ghost-button sync-retry" id="retryGroceries" type="button" data-i18n="retrySync" hidden>Retry sync</button>
+          </div>
+          <div class="grocery-utility-row">
+            <label class="grocery-search" for="grocerySearch">
+              <span data-i18n="grocerySearchLabel">Find a grocery item</span>
+              <input
+                id="grocerySearch"
+                type="search"
+                autocomplete="off"
+                aria-label="Find a grocery item"
+                data-i18n-aria-label="grocerySearchLabel"
+                data-i18n-placeholder="grocerySearchPlaceholder"
+                placeholder="Search groceries, recipes, or stores..."
+              />
+            </label>
           </div>
           <div class="grocery-list" id="groceryList"></div>
           <details class="grocery-tools-menu">
@@ -578,6 +592,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=74"></script>
+    <script type="module" src="app.js?v=75"></script>
   </body>
 </html>
