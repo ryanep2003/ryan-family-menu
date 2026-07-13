@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createDashboardUi } from "../dashboard-ui.js";
+import { handoffOptions } from "../schedule-utils.js";
 
 function element() {
   const classes = new Set();
@@ -42,6 +43,8 @@ function dashboardFixture({ mealOverride } = {}) {
     "todayMealList",
     "todayGrocerySummary",
     "todayInventorySummary",
+    "todayHandoffOptions",
+    "todayHandoffNote",
     "cookToday",
     "taskForm",
     "taskInput",
@@ -66,6 +69,9 @@ function dashboardFixture({ mealOverride } = {}) {
       cookButton: "Cook this",
       planTonight: "Plan tonight",
       planTonightNote: "Choose a recipe and bring tonight into focus.",
+      leftoversPlanned: "Leftovers planned",
+      kidsSnack: "Kids snack",
+      flexibleMeal: "Flexible meal",
       itemsToBuy: "items to buy",
       itemsAtHome: "items at home",
       mainSlot: "Main",
@@ -99,6 +105,7 @@ function dashboardFixture({ mealOverride } = {}) {
     getInventory: () => [],
     getCalendarMeals: () => ({}),
     setCalendarMeals: () => {},
+    handoffOptions,
     getSelectedRecipeId: () => events.selected,
     setSelectedRecipeId: (id) => {
       events.selected = id;
@@ -116,6 +123,25 @@ test("Today uses natural pluralized meal copy", () => {
   assert.equal(elements.todayMeta.textContent, "2 planned recipes");
   assert.equal(elements.todayBackdrop.src, "main.jpg");
   assert.equal(elements.cookToday.textContent, "Cook this");
+});
+
+test("Today renders optional handoff planning without changing the meal list", () => {
+  const { elements, ui } = dashboardFixture({
+    mealOverride: {
+      main: "main",
+      side: "side",
+      salad: "",
+      notes: "Save two portions for tomorrow.",
+      handoff: { leftovers: true, kidsSnack: false, flexible: true },
+    },
+  });
+
+  ui.renderToday();
+
+  assert.match(elements.todayHandoffOptions.innerHTML, /data-today-handoff="leftovers"[^>]*checked/);
+  assert.match(elements.todayHandoffOptions.innerHTML, /data-today-handoff="flexible"[^>]*checked/);
+  assert.doesNotMatch(elements.todayHandoffOptions.innerHTML, /data-today-handoff="kidsSnack"[^>]*checked/);
+  assert.equal(elements.todayHandoffNote.value, "Save two portions for tomorrow.");
 });
 
 test("Cook this opens and focuses the selected recipe", () => {

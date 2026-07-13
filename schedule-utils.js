@@ -10,7 +10,19 @@ export const days = [
   { key: "sun", en: "Sunday", es: "Domingo" },
 ];
 
-export const emptyMeal = { main: "", side: "", salad: "", notes: "" };
+export const handoffOptions = [
+  { key: "leftovers", label: "leftoversPlanned", tone: "gold" },
+  { key: "kidsSnack", label: "kidsSnack", tone: "sage" },
+  { key: "flexible", label: "flexibleMeal", tone: "tomato" },
+];
+
+export const emptyHandoff = {
+  leftovers: false,
+  kidsSnack: false,
+  flexible: false,
+};
+
+export const emptyMeal = { main: "", side: "", salad: "", notes: "", handoff: emptyHandoff };
 
 const defaultSchedule = {
   mon: { ...emptyMeal, main: "meatballs", side: "zaatar-parmesan-potatoes" },
@@ -24,8 +36,14 @@ const defaultSchedule = {
 
 export function normalizeMealPlan(value) {
   if (!value) return { ...emptyMeal };
-  if (typeof value === "string") return { ...emptyMeal, main: value };
-  const normalized = { ...emptyMeal, ...value };
+  if (typeof value === "string") return { ...emptyMeal, handoff: { ...emptyHandoff }, main: value };
+  const normalized = {
+    ...emptyMeal,
+    ...value,
+    handoff: Object.fromEntries(
+      Object.keys(emptyHandoff).map((key) => [key, Boolean(value.handoff?.[key])])
+    ),
+  };
   if (typeof normalized.notes !== "string" && !isLocalizedValue(normalized.notes)) {
     normalized.notes = "";
   }
@@ -74,7 +92,13 @@ export function activeWeekDateKeys(weekStartKey) {
 }
 
 export function mealHasContent(meal) {
-  return Boolean(meal.main || meal.side || meal.salad || hasLocalizedContent(meal.notes));
+  return Boolean(
+    meal.main
+    || meal.side
+    || meal.salad
+    || hasLocalizedContent(meal.notes)
+    || Object.values(meal.handoff || {}).some(Boolean)
+  );
 }
 
 export function removeRecipeFromPlans(schedule, calendarMeals, recipeId, slotKeys = ["main", "side", "salad"]) {

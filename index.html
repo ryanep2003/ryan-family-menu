@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=40" />
+    <link rel="stylesheet" href="styles.css?v=42" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -94,6 +94,22 @@
             <div class="today-meal-list" id="todayMealList"></div>
           </div>
           <button class="primary-action" id="cookToday" type="button" data-i18n="cookButton">Cook this</button>
+        </section>
+
+        <section class="family-handoff" id="todayHandoff" aria-labelledby="todayHandoffHeading">
+          <div class="handoff-heading">
+            <div>
+              <p class="section-label" data-i18n="handoffKicker">Family handoff</p>
+              <h2 id="todayHandoffHeading" data-i18n="handoffHeading">Make the next meal easier</h2>
+            </div>
+            <button class="text-action" type="button" data-view-target="schedule" data-i18n="handoffSeeWeek">See this week</button>
+          </div>
+          <p class="handoff-helper" data-i18n="handoffHelper">Mark what the family should remember when plans change.</p>
+          <div class="handoff-options" id="todayHandoffOptions"></div>
+          <label class="handoff-note" for="todayHandoffNote">
+            <span data-i18n="handoffNoteLabel">Note for the next cook (optional)</span>
+            <textarea id="todayHandoffNote" rows="2" maxlength="500" data-i18n-placeholder="handoffNotePlaceholder" placeholder="Save two portions for tomorrow's lunch..."></textarea>
+          </label>
         </section>
 
         <div class="today-shortcuts">
@@ -562,6 +578,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=72"></script>
+    <script type="module" src="app.js?v=74"></script>
   </body>
 </html>

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createScheduleUi } from "../schedule-ui.js";
-import { days, emptyMeal, formatDateKey } from "../schedule-utils.js";
+import { days, emptyMeal, formatDateKey, handoffOptions } from "../schedule-utils.js";
 
 function element(initial = {}) {
   const listeners = new Map();
@@ -115,6 +115,7 @@ function harness() {
       { key: "side", label: "sideSlot", choose: "chooseSide", categories: ["side"] },
       { key: "salad", label: "saladSlot", choose: "chooseSalad", categories: ["salad"] },
     ],
+    handoffOptions,
     days,
     emptyMeal,
     categoryFor: (recipe) => recipe.category,
@@ -155,6 +156,7 @@ test("week planning renders seven summaries with one focused editor", () => {
   assert.doesNotMatch(elements["#scheduleGrid"].innerHTML, /<select/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-context="weekdate:2026-06-22"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /openMain: Main Recipe/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="handoff"/);
 });
 
 test("selecting a week day focuses the selected editor heading", async () => {
