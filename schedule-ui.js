@@ -51,6 +51,11 @@ export function createScheduleUi({
 
   function renderMealControls(meal, context, label) {
     const recipesForMeal = mealRecipes(meal);
+    const mainSlot = mealSlots.find((slot) => slot.key === "main") || mealSlots[0];
+    const optionalSlots = mealSlots.filter((slot) => slot.key !== mainSlot.key);
+    const hasOptionalContent = optionalSlots.some((slot) => meal[slot.key])
+      || Boolean(localizedText(meal.notes, getLang()))
+      || Object.values(meal.handoff || {}).some(Boolean);
     const openLabelBySlot = {
       main: "openMain",
       side: "openSide",
@@ -59,31 +64,47 @@ export function createScheduleUi({
     return `
       ${label ? `<strong>${escapeHtml(label)}</strong>` : ""}
       <div class="meal-picker">
-        ${mealSlots.map((slot) => `
-          <label>
-            <span>${t(slot.label)}</span>
-            <select data-meal-context="${context}" data-slot="${slot.key}">
-              <option value="">${t(slot.choose)}</option>
-              ${optionsForSlot(slot, meal[slot.key])}
-            </select>
-          </label>
-        `).join("")}
-        <label class="meal-notes">
-          <span>${t("notesSlot")}</span>
-          <textarea data-meal-context="${context}" data-slot="notes" rows="2">${escapeHtml(localizedText(meal.notes, getLang()))}</textarea>
+        <label class="meal-primary-choice">
+          <span>${t(mainSlot.label)}</span>
+          <select data-meal-context="${context}" data-slot="${mainSlot.key}">
+            <option value="">${t(mainSlot.choose)}</option>
+            ${optionsForSlot(mainSlot, meal[mainSlot.key])}
+          </select>
         </label>
-        <fieldset class="meal-handoff-fieldset">
-          <legend>${t("handoffLabel")}</legend>
-          <div class="meal-handoff-options">
-            ${handoffOptions.map((option) => `
-              <label class="handoff-option tone-${option.tone}">
-                <input type="checkbox" data-meal-context="${context}" data-slot="handoff" data-handoff-key="${escapeHtml(option.key)}" ${meal.handoff?.[option.key] ? "checked" : ""} />
-                <span class="handoff-marker" aria-hidden="true"></span>
-                <span>${escapeHtml(t(option.label))}</span>
+        ${(meal[mainSlot.key] || hasOptionalContent) ? `
+          <details class="meal-optional-fields"${hasOptionalContent ? " open" : ""}>
+            <summary>${t("moreMealOptions")}</summary>
+            <p class="meal-optional-helper">${t("moreMealOptionsNote")}</p>
+            <div class="meal-optional-grid">
+              ${optionalSlots.map((slot) => `
+                <label>
+                  <span>${t(slot.label)}</span>
+                  <select data-meal-context="${context}" data-slot="${slot.key}">
+                    <option value="">${t(slot.choose)}</option>
+                    ${optionsForSlot(slot, meal[slot.key])}
+                  </select>
+                </label>
+              `).join("")}
+              <label class="meal-notes">
+                <span>${t("notesSlot")}</span>
+                <textarea data-meal-context="${context}" data-slot="notes" rows="2">${escapeHtml(localizedText(meal.notes, getLang()))}</textarea>
               </label>
-            `).join("")}
-          </div>
-        </fieldset>
+              <fieldset class="meal-handoff-fieldset">
+                <legend>${t("handoffLabel")}</legend>
+                <p class="meal-handoff-helper">${t("handoffMealHelper")}</p>
+                <div class="meal-handoff-options">
+                  ${handoffOptions.map((option) => `
+                    <label class="handoff-option tone-${option.tone}">
+                      <input type="checkbox" data-meal-context="${context}" data-slot="handoff" data-handoff-key="${escapeHtml(option.key)}" ${meal.handoff?.[option.key] ? "checked" : ""} />
+                      <span class="handoff-marker" aria-hidden="true"></span>
+                      <span>${escapeHtml(t(option.label))}</span>
+                    </label>
+                  `).join("")}
+                </div>
+              </fieldset>
+            </div>
+          </details>
+        ` : ""}
       </div>
       <p class="${mealHasWarning(meal) ? "has-warning" : ""}">${escapeHtml(mealSummary(meal))}</p>
       <div class="meal-open-buttons">
@@ -252,6 +273,26 @@ export function createScheduleUi({
         `;
       })
       .join("");
+
+    const agenda = $("#calendarAgenda");
+    if (agenda) {
+      const plannedDates = calendarDateRange().filter((date) => (
+        date.getMonth() === visibleMonth.getMonth()
+        && mealHasContent(calendarMealForDateKey(formatDateKey(date)))
+      ));
+      agenda.innerHTML = `
+        <p class="calendar-agenda-label">${t("calendarAgendaLabel")}</p>
+        ${plannedDates.length
+          ? plannedDates.map((date) => {
+            const dateKey = formatDateKey(date);
+            return `<button class="calendar-agenda-item" type="button" data-edit-calendar-date="${dateKey}">
+              <span>${escapeHtml(dateFormatter.format(date))}</span>
+              <strong>${escapeHtml(mealSummary(calendarMealForDateKey(dateKey)))}</strong>
+            </button>`;
+          }).join("")
+          : `<p class="calendar-agenda-empty">${t("calendarAgendaEmpty")}</p>`}
+      `;
+    }
 
     const editor = $("#calendarDateEditor");
     if (!selectedCalendarDateKey) {

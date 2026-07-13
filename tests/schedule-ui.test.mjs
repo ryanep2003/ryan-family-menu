@@ -72,6 +72,7 @@ function harness() {
     "#monthTitle": element(),
     "#calendarWeekdays": element(),
     "#calendarGrid": element(),
+    "#calendarAgenda": element(),
     "#calendarDateEditor": element({ hidden: true }),
   };
   const weekButtons = weekDates().map(({ dateKey }) => element({ dataset: { editWeekDate: dateKey } }));
@@ -173,6 +174,18 @@ test("week planning renders seven summaries with one focused editor", () => {
   assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-context="weekdate:2026-06-22"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /openMain: Main Recipe/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="handoff"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /moreMealOptions/);
+});
+
+test("empty day keeps optional planning fields out of the first decision", () => {
+  const { elements, state, ui } = harness();
+
+  state.schedule.mon = { ...emptyMeal };
+  ui.renderSchedule();
+
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="main"/);
+  assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /meal-optional-fields/);
+  assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /data-slot="handoff"/);
 });
 
 test("selecting a week day focuses the selected editor heading", async () => {
@@ -193,6 +206,7 @@ test("calendar stays read-only until a date opens its focused editor", async () 
   assert.equal((elements["#calendarGrid"].innerHTML.match(/data-edit-calendar-date=/g) || []).length, 42);
   assert.doesNotMatch(elements["#calendarGrid"].innerHTML, /<select/);
   assert.equal(elements["#calendarDateEditor"].hidden, true);
+  assert.match(elements["#calendarAgenda"].innerHTML, /Main Recipe/);
 
   await dateButtons.find((button) => button.dataset.editCalendarDate === "2026-06-24").dispatch("click");
 

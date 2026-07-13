@@ -58,7 +58,6 @@ body {
   background:
     radial-gradient(circle at 8% 3%, rgba(239, 181, 155, 0.24), transparent 28rem),
     radial-gradient(circle at 92% 28%, rgba(63, 102, 79, 0.12), transparent 30rem),
-    repeating-linear-gradient(0deg, rgba(91, 67, 43, 0.025) 0 1px, transparent 1px 5px),
     var(--paper);
   color: var(--ink);
 }
@@ -615,6 +614,14 @@ h3 {
   font-weight: 800;
 }
 
+.meal-handoff-helper,
+.meal-optional-helper {
+  margin: 4px 0 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
 .meal-handoff-options {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 8px;
@@ -1127,9 +1134,20 @@ h3 {
 }
 
 .week-navigation .ghost-button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 0 12px;
   font-size: 0.82rem;
+}
+
+.week-nav-icon {
+  display: inline-block;
+  margin-right: 4px;
+  font-size: 1rem;
+}
+
+.app-sync-status {
+  width: min(1120px, calc(100% - 28px));
+  margin: 0 auto 8px;
 }
 
 .grocery-banner {
@@ -1386,6 +1404,45 @@ h3 {
 
 .schedule-editor .meal-picker {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.meal-primary-choice,
+.meal-optional-fields {
+  grid-column: 1 / -1;
+}
+
+.meal-optional-fields {
+  margin-top: 2px;
+  border-top: 1px solid var(--line);
+}
+
+.meal-optional-fields > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  color: var(--tomato-dark);
+  font-weight: 850;
+  cursor: pointer;
+  list-style: none;
+}
+
+.meal-optional-fields > summary::-webkit-details-marker {
+  display: none;
+}
+
+.meal-optional-fields > summary::after {
+  content: "+";
+  float: right;
+  font-size: 1.2rem;
+}
+
+.meal-optional-fields[open] > summary::after {
+  content: "−";
+}
+
+.meal-optional-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .schedule-editor .meal-notes {
@@ -2095,6 +2152,10 @@ h3 {
   line-height: 1.25;
 }
 
+.calendar-agenda {
+  display: none;
+}
+
 .schedule-editor p.has-warning {
   color: var(--danger-ink);
   font-weight: 850;
@@ -2760,7 +2821,10 @@ li {
 
   .week-navigation {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "previous next"
+      "current current";
   }
 
   .week-navigation .ghost-button,
@@ -2768,6 +2832,20 @@ li {
     width: 100%;
     min-width: 0;
     padding: 0 6px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+
+  .week-navigation #previousWeek {
+    grid-area: previous;
+  }
+
+  .week-navigation #thisWeek {
+    grid-area: current;
+  }
+
+  .week-navigation #nextWeek {
+    grid-area: next;
   }
 
   .today-band {
@@ -3246,6 +3324,10 @@ li {
     grid-template-columns: 1fr;
   }
 
+  .meal-optional-grid {
+    grid-template-columns: 1fr;
+  }
+
   .schedule-editor .meal-notes {
     grid-column: auto;
   }
@@ -3284,6 +3366,51 @@ li {
   .calendar-source,
   .calendar-meal-summary {
     display: none;
+  }
+
+  .calendar-agenda {
+    display: grid;
+    gap: 6px;
+    margin-top: 14px;
+  }
+
+  .calendar-agenda-label {
+    margin: 0 0 2px;
+    color: var(--sage);
+    font-size: 0.78rem;
+    font-weight: 850;
+    text-transform: uppercase;
+  }
+
+  .calendar-agenda-item {
+    display: grid;
+    grid-template-columns: minmax(82px, auto) minmax(0, 1fr);
+    gap: 10px;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    text-align: left;
+  }
+
+  .calendar-agenda-item span {
+    color: var(--sage);
+    font-weight: 800;
+  }
+
+  .calendar-agenda-item strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .calendar-agenda-empty {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.86rem;
   }
 
   .calendar-day.has-meal::after {
