@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=43" />
+    <link rel="stylesheet" href="styles.css?v=44" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -48,6 +48,11 @@
         <button type="button" data-view="grocery" data-i18n="groceryTab">Groceries</button>
         <button type="button" data-view="recipes" data-i18n="recipesTab">Recipes</button>
       </nav>
+
+      <div class="sync-status-row app-sync-status">
+        <p class="upload-status" id="sharedStateStatus" role="status"></p>
+        <button class="ghost-button sync-retry" id="retrySharedState" type="button" data-i18n="retrySync" hidden>Retry sync</button>
+      </div>
 
       <section class="view active" id="todayView">
         <section class="quick-guide" id="quickGuide" aria-labelledby="quickGuideHeading" hidden>
@@ -158,10 +163,6 @@
             <button class="text-action" type="button" data-view-target="recipes" data-i18n="chooseFavorites">Choose favorites in Recipes</button>
           </section>
         </div>
-        <div class="sync-status-row">
-          <p class="upload-status" id="sharedStateStatus" role="status"></p>
-          <button class="ghost-button sync-retry" id="retrySharedState" type="button" data-i18n="retrySync" hidden>Retry sync</button>
-        </div>
       </section>
 
       <section class="view" id="scheduleView">
@@ -173,9 +174,9 @@
           </div>
           <div class="week-actions">
             <div class="week-navigation" role="group" aria-label="Week navigation" data-i18n-aria-label="weekNavigationLabel">
-              <button class="ghost-button" id="previousWeek" type="button" data-i18n="previousWeek">Previous week</button>
-              <button class="ghost-button" id="thisWeek" type="button" data-i18n="thisWeek">This week</button>
-              <button class="ghost-button" id="nextWeek" type="button" data-i18n="nextWeek">Next week</button>
+              <button class="ghost-button" id="previousWeek" type="button"><span class="week-nav-icon" aria-hidden="true">←</span><span data-i18n="previousWeek">Previous week</span></button>
+              <button class="ghost-button" id="thisWeek" type="button"><span data-i18n="thisWeek">This week</span></button>
+              <button class="ghost-button" id="nextWeek" type="button"><span class="week-nav-icon" aria-hidden="true">→</span><span data-i18n="nextWeek">Next week</span></button>
             </div>
             <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Clear week</button>
           </div>
@@ -205,6 +206,7 @@
             <div class="calendar-scroll">
               <div class="calendar-weekdays" id="calendarWeekdays"></div>
               <div class="calendar-grid" id="calendarGrid"></div>
+              <div class="calendar-agenda" id="calendarAgenda" aria-live="polite"></div>
             </div>
           </div>
         </details>
@@ -585,6 +587,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=75"></script>
+    <script type="module" src="app.js?v=76"></script>
   </body>
 </html>
