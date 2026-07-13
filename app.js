@@ -459,6 +459,53 @@ function activeWeekDateKeys() {
   return dateKeysForWeek(weekStartKey);
 }
 
+function persistActiveWeekToCalendar() {
+  const nextCalendarMeals = { ...calendarMeals };
+  activeWeekDateKeys().forEach(({ key, dateKey }) => {
+    // Keep one-day overrides separate from the recurring weekly plan.
+    if (Object.prototype.hasOwnProperty.call(nextCalendarMeals, dateKey)) return;
+    const meal = normalizeMealPlan(schedule[key]);
+    if (mealHasContent(meal)) {
+      nextCalendarMeals[dateKey] = meal;
+    } else {
+      delete nextCalendarMeals[dateKey];
+    }
+  });
+  calendarMeals = normalizeCalendar(nextCalendarMeals);
+}
+
+function scheduleForWeek(startKey) {
+  return normalizeSchedule(Object.fromEntries(
+    dateKeysForWeek(startKey).map(({ key, dateKey }) => [
+      key,
+      calendarMeals[dateKey] || { ...emptyMeal },
+    ])
+  ));
+}
+
+async function navigateWeek(offset) {
+  persistActiveWeekToCalendar();
+  const nextStart = new Date(`${weekStartKey}T12:00:00`);
+  nextStart.setDate(nextStart.getDate() + (offset * 7));
+  weekStartKey = formatDateKey(nextStart);
+  schedule = scheduleForWeek(weekStartKey);
+  visibleMonth = new Date(`${weekStartKey}T12:00:00`);
+  visibleMonth.setDate(1);
+  render();
+  await saveSharedState();
+}
+
+async function goToCurrentWeek() {
+  if (weekStartKey === currentWeekStartKey()) return;
+  persistActiveWeekToCalendar();
+  weekStartKey = currentWeekStartKey();
+  schedule = scheduleForWeek(weekStartKey);
+  visibleMonth = new Date(`${weekStartKey}T12:00:00`);
+  visibleMonth.setDate(1);
+  render();
+  await saveSharedState();
+}
+
 function rollWeekForwardIfNeeded() {
   const currentStart = currentWeekStartKey();
   if (weekStartKey === currentStart) return false;
@@ -886,6 +933,9 @@ const scheduleUi = createScheduleUi({
   setCalendarMeals: (nextCalendarMeals) => {
     calendarMeals = normalizeCalendar(nextCalendarMeals);
   },
+  navigateWeek,
+  goToCurrentWeek,
+  getCurrentWeekStartKey: () => currentWeekStartKey(),
   getVisibleMonth: () => visibleMonth,
   setVisibleMonth: (month) => {
     visibleMonth = month;

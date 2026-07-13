@@ -62,6 +62,13 @@ function harness() {
     "#weekDateEditor": element(),
     "#weekEditorHeading": element(),
     "#weekTitle": element(),
+    "#previousWeek": element(),
+    "#thisWeek": element(),
+    "#nextWeek": element(),
+    "#resetWeek": element(),
+    "#previousMonth": element(),
+    "#todayMonth": element(),
+    "#nextMonth": element(),
     "#monthTitle": element(),
     "#calendarWeekdays": element(),
     "#calendarGrid": element(),
@@ -82,6 +89,8 @@ function harness() {
     schedule: Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])),
     calendarMeals: {},
     saveCalls: 0,
+    weekNavigation: [],
+    currentWeekCalls: 0,
   };
   state.schedule.mon.main = "main-recipe";
 
@@ -140,6 +149,13 @@ function harness() {
     setCalendarMeals: (calendarMeals) => {
       state.calendarMeals = calendarMeals;
     },
+    navigateWeek: async (offset) => {
+      state.weekNavigation.push(offset);
+    },
+    goToCurrentWeek: async () => {
+      state.currentWeekCalls += 1;
+    },
+    getCurrentWeekStartKey: () => "2026-06-22",
     getVisibleMonth: () => new Date("2026-06-01T12:00:00"),
     setVisibleMonth: () => {},
   });
@@ -193,4 +209,16 @@ test("focused calendar edits preserve date override storage", async () => {
 
   assert.equal(state.calendarMeals["2026-06-24"].main, "main-recipe");
   assert.equal(state.saveCalls, 1);
+});
+
+test("week navigation exposes previous, current, and next week actions", async () => {
+  const { elements, state, ui } = harness();
+
+  ui.bindScheduleControls();
+  await elements["#previousWeek"].dispatch("click");
+  await elements["#thisWeek"].dispatch("click");
+  await elements["#nextWeek"].dispatch("click");
+
+  assert.deepEqual(state.weekNavigation, [-1, 1]);
+  assert.equal(state.currentWeekCalls, 1);
 });

@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=42" />
+    <link rel="stylesheet" href="styles.css?v=43" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -171,7 +171,14 @@
             <h2 id="weekTitle" data-i18n="weekHeading">This week</h2>
             <p class="section-note" data-i18n="weekRepeatsNote">Select a day to edit. The month below is a quick overview.</p>
           </div>
-          <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Clear week</button>
+          <div class="week-actions">
+            <div class="week-navigation" role="group" aria-label="Week navigation" data-i18n-aria-label="weekNavigationLabel">
+              <button class="ghost-button" id="previousWeek" type="button" data-i18n="previousWeek">Previous week</button>
+              <button class="ghost-button" id="thisWeek" type="button" data-i18n="thisWeek">This week</button>
+              <button class="ghost-button" id="nextWeek" type="button" data-i18n="nextWeek">Next week</button>
+            </div>
+            <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Clear week</button>
+          </div>
         </div>
         <div class="schedule-grid" id="scheduleGrid"></div>
         <section class="schedule-editor" id="weekDateEditor"></section>
@@ -578,6 +585,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=74"></script>
+    <script type="module" src="app.js?v=75"></script>
   </body>
 </html>
