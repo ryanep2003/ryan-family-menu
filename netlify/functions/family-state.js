@@ -16,6 +16,9 @@ const MAX_DELETED_RECIPES = 300;
 const MAX_PHOTO_BYTES = 500000;
 const MAX_REQUEST_BYTES = 3000000;
 const TASK_ASSIGNEES = ["alyson", "eric", "nelly", "theo", "pierce", "other"];
+const LEFTOVER_SERVINGS = ["one", "two", "threePlus"];
+const LEFTOVER_USE_FIRST = ["lunch", "snack", "nextDinner", "any"];
+const SNACK_STATUS = ["ready", "prepare"];
 
 function cleanText(value, maxLength) {
   return `${value || ""}`.trim().slice(0, maxLength);
@@ -30,15 +33,20 @@ function cleanPhoto(value) {
 
 function cleanMeal(value) {
   const source = value && typeof value === "object" ? value : {};
+  const handoff = source.handoff && typeof source.handoff === "object" ? source.handoff : {};
   return {
     main: cleanText(source.main, 120),
     side: cleanText(source.side, 120),
     salad: cleanText(source.salad, 120),
     notes: cleanLocalizedText(source.notes, 500),
     handoff: {
-      leftovers: Boolean(source.handoff?.leftovers),
-      kidsSnack: Boolean(source.handoff?.kidsSnack),
-      flexible: Boolean(source.handoff?.flexible),
+      leftovers: Boolean(handoff.leftovers),
+      kidsSnack: Boolean(handoff.kidsSnack),
+      flexible: Boolean(handoff.flexible),
+      leftoverServings: LEFTOVER_SERVINGS.includes(handoff.leftoverServings) ? handoff.leftoverServings : "",
+      leftoverUseFirst: LEFTOVER_USE_FIRST.includes(handoff.leftoverUseFirst) ? handoff.leftoverUseFirst : "",
+      snackStatus: SNACK_STATUS.includes(handoff.snackStatus) ? handoff.snackStatus : "",
+      snack: cleanLocalizedText(handoff.snack, 120),
     },
   };
 }

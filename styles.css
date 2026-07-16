@@ -599,6 +599,112 @@ h3 {
   resize: vertical;
 }
 
+.handoff-details {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface-success) 42%, var(--surface));
+}
+
+.handoff-detail-group {
+  display: grid;
+  gap: 7px;
+}
+
+.handoff-detail-group + .handoff-detail-group {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.handoff-detail-group h4,
+.handoff-detail-context,
+.handoff-detail-label {
+  margin: 0;
+}
+
+.handoff-detail-group h4 {
+  font-size: 0.92rem;
+}
+
+.handoff-detail-context,
+.handoff-detail-label {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.handoff-detail-line {
+  display: grid;
+  gap: 6px;
+}
+
+.handoff-snack-name {
+  display: grid;
+  gap: 6px;
+}
+
+.handoff-snack-name input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.handoff-choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.handoff-choice {
+  position: relative;
+  flex: 1 1 120px;
+  min-width: 0;
+  min-height: 44px;
+}
+
+.handoff-choice span {
+  display: grid;
+  min-height: 44px;
+  place-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: center;
+  cursor: pointer;
+}
+
+.handoff-choice input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.handoff-choice:has(input:checked) span {
+  border-color: var(--sage-dark);
+  background: var(--surface-success);
+  box-shadow: inset 0 0 0 1px var(--sage-dark);
+}
+
+.handoff-choice:focus-within span {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
 .meal-handoff-fieldset {
   grid-column: 1 / -1;
   margin: 0;
@@ -2962,6 +3068,10 @@ li {
   .handoff-options,
   .meal-handoff-options {
     grid-template-columns: 1fr;
+  }
+
+  .handoff-choice {
+    flex-basis: calc(50% - 6px);
   }
 
   .task-add {

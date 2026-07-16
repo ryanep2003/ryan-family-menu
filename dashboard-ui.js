@@ -1,4 +1,5 @@
 import { localizedText, updateLocalizedText } from "./localized-data.js";
+import { renderHandoffDetails } from "./handoff-ui.js";
 
 export function createDashboardUi({
   $,
@@ -70,6 +71,7 @@ export function createDashboardUi({
       `)
       .join("");
     const handoffOptionsElement = $("#todayHandoffOptions");
+    const handoffDetailsElement = $("#todayHandoffDetails");
     const handoffNote = $("#todayHandoffNote");
     if (handoffOptionsElement) {
       const handoff = meal.handoff || {};
@@ -80,6 +82,18 @@ export function createDashboardUi({
           <span>${escapeHtml(t(option.label))}</span>
         </label>
       `).join("");
+    }
+    if (handoffDetailsElement) {
+      handoffDetailsElement.innerHTML = renderHandoffDetails({
+        meal,
+        context: "today",
+        t,
+        escapeHtml,
+        localize,
+        mealRecipes,
+        inputAttributes: (field) => `data-today-handoff-detail="${escapeHtml(field)}"`,
+        getLang,
+      });
     }
     if (handoffNote) handoffNote.value = localizedText(meal.notes, getLang());
     const toBuy = getGroceries().filter((item) => !item.checked && !item.inInventory).length;
@@ -235,6 +249,27 @@ export function createDashboardUi({
         handoff: {
           ...(meal.handoff || {}),
           [checkbox.dataset.todayHandoff]: checkbox.checked,
+          ...(checkbox.dataset.todayHandoff === "leftovers" && !checkbox.checked
+            ? { leftoverServings: "", leftoverUseFirst: "" }
+            : {}),
+          ...(checkbox.dataset.todayHandoff === "kidsSnack" && !checkbox.checked
+            ? { snackStatus: "" }
+            : {}),
+        },
+      });
+    });
+
+    $("#todayHandoffDetails")?.addEventListener("change", async (event) => {
+      const control = event.target.closest?.("[data-today-handoff-detail]");
+      if (!control) return;
+      const meal = todaysMealPlan();
+      await updateTodayMeal({
+        ...meal,
+        handoff: {
+          ...(meal.handoff || {}),
+          [control.dataset.todayHandoffDetail]: control.dataset.todayHandoffDetail === "snack"
+            ? updateLocalizedText(meal.handoff?.snack, control.value.trim(), getLang())
+            : control.value,
         },
       });
     });

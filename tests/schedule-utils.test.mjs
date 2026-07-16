@@ -59,8 +59,35 @@ test("meal normalization preserves optional family handoff planning", () => {
     handoff: { leftovers: true, kidsSnack: "yes" },
   });
 
-  assert.deepEqual(meal.handoff, { leftovers: true, kidsSnack: true, flexible: false });
+  assert.deepEqual(meal.handoff, {
+    leftovers: true,
+    kidsSnack: true,
+    flexible: false,
+    leftoverServings: "",
+    leftoverUseFirst: "",
+    snackStatus: "",
+    snack: "",
+  });
   assert.equal(mealHasContent({ ...emptyMeal, handoff: { ...emptyMeal.handoff, flexible: true } }), true);
+});
+
+test("meal normalization keeps only supported handoff detail choices", () => {
+  const meal = normalizeMealPlan({
+    handoff: {
+      leftovers: true,
+      leftoverServings: "two",
+      leftoverUseFirst: "nextDinner",
+      snackStatus: "prepare",
+      snack: "Fruit",
+      unknown: "discard me",
+    },
+  });
+
+  assert.equal(meal.handoff.leftoverServings, "two");
+  assert.equal(meal.handoff.leftoverUseFirst, "nextDinner");
+  assert.equal(meal.handoff.snackStatus, "prepare");
+  assert.equal(meal.handoff.snack, "Fruit");
+  assert.equal(normalizeMealPlan({ handoff: { leftoverServings: "many" } }).handoff.leftoverServings, "");
 });
 
 test("removeRecipeFromPlans clears deleted recipes from weekly and calendar meals", () => {

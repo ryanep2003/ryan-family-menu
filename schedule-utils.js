@@ -16,13 +16,52 @@ export const handoffOptions = [
   { key: "flexible", label: "flexibleMeal", tone: "tomato" },
 ];
 
+export const leftoverServingOptions = [
+  { key: "one", label: "leftoverServingsOne" },
+  { key: "two", label: "leftoverServingsTwo" },
+  { key: "threePlus", label: "leftoverServingsThreePlus" },
+];
+
+export const leftoverUseOptions = [
+  { key: "lunch", label: "leftoverUseLunch" },
+  { key: "snack", label: "leftoverUseSnack" },
+  { key: "nextDinner", label: "leftoverUseNextDinner" },
+  { key: "any", label: "leftoverUseAny" },
+];
+
+export const snackStatusOptions = [
+  { key: "ready", label: "snackReady" },
+  { key: "prepare", label: "snackNeedsPrep" },
+];
+
 export const emptyHandoff = {
   leftovers: false,
   kidsSnack: false,
   flexible: false,
+  leftoverServings: "",
+  leftoverUseFirst: "",
+  snackStatus: "",
+  snack: "",
 };
 
-export const emptyMeal = { main: "", side: "", salad: "", notes: "", handoff: emptyHandoff };
+export const emptyMeal = { main: "", side: "", salad: "", notes: "", handoff: { ...emptyHandoff } };
+
+function allowedValue(value, options) {
+  return options.some((option) => option.key === value) ? value : "";
+}
+
+export function normalizeHandoff(value) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    leftovers: Boolean(source.leftovers),
+    kidsSnack: Boolean(source.kidsSnack),
+    flexible: Boolean(source.flexible),
+    leftoverServings: allowedValue(source.leftoverServings, leftoverServingOptions),
+    leftoverUseFirst: allowedValue(source.leftoverUseFirst, leftoverUseOptions),
+    snackStatus: allowedValue(source.snackStatus, snackStatusOptions),
+    snack: typeof source.snack === "string" || isLocalizedValue(source.snack) ? source.snack : "",
+  };
+}
 
 const defaultSchedule = {
   mon: { ...emptyMeal, main: "meatballs", side: "zaatar-parmesan-potatoes" },
@@ -40,9 +79,7 @@ export function normalizeMealPlan(value) {
   const normalized = {
     ...emptyMeal,
     ...value,
-    handoff: Object.fromEntries(
-      Object.keys(emptyHandoff).map((key) => [key, Boolean(value.handoff?.[key])])
-    ),
+    handoff: normalizeHandoff(value.handoff),
   };
   if (typeof normalized.notes !== "string" && !isLocalizedValue(normalized.notes)) {
     normalized.notes = "";

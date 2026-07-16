@@ -1,4 +1,5 @@
 import { localizedText, updateLocalizedText } from "./localized-data.js";
+import { renderHandoffDetails } from "./handoff-ui.js";
 
 export function createScheduleUi({
   $,
@@ -101,6 +102,16 @@ export function createScheduleUi({
                     </label>
                   `).join("")}
                 </div>
+                ${renderHandoffDetails({
+                  meal,
+                  context,
+                  t,
+                  escapeHtml,
+                  localize,
+                  mealRecipes,
+                  inputAttributes: (field) => `data-meal-context="${escapeHtml(context)}" data-slot="handoff-detail" data-handoff-field="${escapeHtml(field)}"`,
+                  getLang,
+                })}
               </fieldset>
             </div>
           </details>
@@ -129,6 +140,19 @@ export function createScheduleUi({
           target.handoff = {
             ...(target.handoff || {}),
             [control.dataset.handoffKey]: control.checked,
+            ...(control.dataset.handoffKey === "leftovers" && !control.checked
+              ? { leftoverServings: "", leftoverUseFirst: "" }
+              : {}),
+            ...(control.dataset.handoffKey === "kidsSnack" && !control.checked
+              ? { snackStatus: "" }
+              : {}),
+          };
+        } else if (slot === "handoff-detail") {
+          target.handoff = {
+            ...(target.handoff || {}),
+            [control.dataset.handoffField]: control.dataset.handoffField === "snack"
+              ? updateLocalizedText(target.handoff?.snack, control.value.trim(), getLang())
+              : control.value,
           };
         } else {
           target[slot] = control.value;

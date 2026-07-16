@@ -51,6 +51,34 @@ test("normalizeSharedState preserves remote collections and fallback metadata", 
   assert.deepEqual(normalized.deletedRecipeIds, ["old"]);
 });
 
+test("normalizeSharedState preserves the handoff detail choices", () => {
+  const normalized = normalizeSharedState({
+    schedule: {
+      mon: {
+        main: "pasta",
+        handoff: {
+          leftovers: true,
+          leftoverServings: "two",
+          leftoverUseFirst: "lunch",
+          snackStatus: "ready",
+          snack: "Fruit",
+        },
+      },
+    },
+    calendarMeals: {},
+  }, { calendarMeals: {} });
+
+  assert.deepEqual(normalized.schedule.mon.handoff, {
+    leftovers: true,
+    kidsSnack: false,
+    flexible: false,
+    leftoverServings: "two",
+    leftoverUseFirst: "lunch",
+    snackStatus: "ready",
+    snack: "Fruit",
+  });
+});
+
 test("persistSharedState writes the local storage keys", () => {
   const writes = new Map();
   const storage = {

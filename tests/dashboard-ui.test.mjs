@@ -44,6 +44,7 @@ function dashboardFixture({ mealOverride } = {}) {
     "todayGrocerySummary",
     "todayInventorySummary",
     "todayHandoffOptions",
+    "todayHandoffDetails",
     "todayHandoffNote",
     "cookToday",
     "taskForm",
@@ -72,6 +73,22 @@ function dashboardFixture({ mealOverride } = {}) {
       leftoversPlanned: "Leftovers planned",
       kidsSnack: "Kids snack",
       flexibleMeal: "Flexible meal",
+      leftoversDetailLabel: "Leftover plan",
+      leftoversFrom: "Leftovers from",
+      leftoversSourceUnknown: "Add a meal first to name the leftovers.",
+      leftoverServingsLabel: "How much is left?",
+      leftoverServingsOne: "1 serving",
+      leftoverServingsTwo: "2 servings",
+      leftoverServingsThreePlus: "3+ servings",
+      leftoverUseFirstLabel: "Use first for",
+      leftoverUseLunch: "Lunch",
+      leftoverUseSnack: "Kids snack",
+      leftoverUseNextDinner: "Next dinner",
+      leftoverUseAny: "Any meal",
+      snackDetailLabel: "Kid snack",
+      snackStatusLabel: "Snack status",
+      snackReady: "Ready now",
+      snackNeedsPrep: "Needs preparation",
       itemsToBuy: "items to buy",
       itemsAtHome: "items at home",
       mainSlot: "Main",
@@ -142,6 +159,35 @@ test("Today renders optional handoff planning without changing the meal list", (
   assert.match(elements.todayHandoffOptions.innerHTML, /data-today-handoff="flexible"[^>]*checked/);
   assert.doesNotMatch(elements.todayHandoffOptions.innerHTML, /data-today-handoff="kidsSnack"[^>]*checked/);
   assert.equal(elements.todayHandoffNote.value, "Save two portions for tomorrow.");
+});
+
+test("Today renders compact leftover and snack choices from the handoff flags", () => {
+  const { elements, ui } = dashboardFixture({
+    mealOverride: {
+      main: "main",
+      side: "side",
+      salad: "",
+      notes: "",
+      handoff: {
+        leftovers: true,
+        kidsSnack: true,
+        flexible: false,
+        leftoverServings: "two",
+        leftoverUseFirst: "lunch",
+        snackStatus: "ready",
+        snack: "Fruit",
+      },
+    },
+  });
+
+  ui.renderToday();
+
+  assert.match(elements.todayHandoffDetails.innerHTML, /Leftovers from:/);
+  assert.match(elements.todayHandoffDetails.innerHTML, /value="two"[^>]*checked/);
+  assert.match(elements.todayHandoffDetails.innerHTML, /value="lunch"[^>]*checked/);
+  assert.match(elements.todayHandoffDetails.innerHTML, /value="ready"[^>]*checked/);
+  assert.match(elements.todayHandoffDetails.innerHTML, /value="Fruit"/);
+  assert.equal((elements.todayHandoffDetails.innerHTML.match(/type="radio"/g) || []).length, 9);
 });
 
 test("Cook this opens and focuses the selected recipe", () => {

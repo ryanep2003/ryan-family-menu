@@ -81,6 +81,14 @@ function harness() {
     dataset: { mealContext: "calendar:2026-06-24", slot: "main" },
     value: "main-recipe",
   });
+  const weekHandoffControl = element({
+    dataset: {
+      mealContext: "weekdate:2026-06-22",
+      slot: "handoff-detail",
+      handoffField: "leftoverServings",
+    },
+    value: "two",
+  });
   const recipes = [
     { id: "main-recipe", name: "Main Recipe", category: "main" },
     { id: "side-recipe", name: "Side Recipe", category: "side" },
@@ -110,7 +118,7 @@ function harness() {
     $$: (selector) => {
       if (selector === "[data-edit-week-date]") return weekButtons;
       if (selector === "[data-edit-calendar-date]") return dateButtons;
-      if (selector === '[data-meal-context^="weekdate:"]') return [];
+      if (selector === '[data-meal-context^="weekdate:"]') return [weekHandoffControl];
       if (selector === '[data-meal-context^="calendar:"]') return [calendarControl];
       if (selector === "[data-use-weekly-plan]") return [];
       return [];
@@ -161,7 +169,7 @@ function harness() {
     setVisibleMonth: () => {},
   });
 
-  return { calendarControl, dateButtons, elements, state, ui, weekButtons };
+  return { calendarControl, dateButtons, elements, state, ui, weekButtons, weekHandoffControl };
 }
 
 test("week planning renders seven summaries with one focused editor", () => {
@@ -186,6 +194,20 @@ test("empty day keeps optional planning fields out of the first decision", () =>
   assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="main"/);
   assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /meal-optional-fields/);
   assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /data-slot="handoff"/);
+});
+
+test("handoff detail choices persist with the selected week meal", async () => {
+  const { state, ui, weekHandoffControl } = harness();
+  state.schedule.mon.handoff = {
+    ...emptyMeal.handoff,
+    leftovers: true,
+  };
+
+  ui.renderSchedule();
+  await weekHandoffControl.dispatch("change");
+
+  assert.equal(state.schedule.mon.handoff.leftoverServings, "two");
+  assert.equal(state.saveCalls, 1);
 });
 
 test("selecting a week day focuses the selected editor heading", async () => {
