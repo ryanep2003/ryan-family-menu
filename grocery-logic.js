@@ -9,6 +9,26 @@ export function cleanIngredientForGrocery(item) {
   return `${item || ""}`.replace(/\s+/g, " ").trim();
 }
 
+function normalizeWord(value) {
+  return `${value || ""}`
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function wordVariants(word) {
+  const variants = new Set([word]);
+  if (word.endsWith("ces") && word.length > 4) variants.add(`${word.slice(0, -3)}z`);
+  if (word.endsWith("es") && word.length > 4) variants.add(word.slice(0, -2));
+  if (word.endsWith("s") && word.length > 3) variants.add(word.slice(0, -1));
+  return [...variants].filter((variant) => variant.length > 2);
+}
+
+function wordsEquivalent(left, right) {
+  const rightVariants = new Set(wordVariants(right));
+  return wordVariants(left).some((variant) => rightVariants.has(variant));
+}
+
 export function normalizedWords(value) {
   const stopWords = new Set([
     "cup", "cups", "tbsp", "tablespoon", "tablespoons", "tsp", "teaspoon", "teaspoons",
@@ -16,15 +36,17 @@ export function normalizedWords(value) {
     "large", "small", "medium", "fresh", "freshly", "chopped", "diced", "sliced",
     "minced", "grated", "ground", "kosher", "taste", "optional", "plus", "more",
     "for", "and", "with", "the", "of", "or", "to", "in",
-  ]);
+  ].map(normalizeWord));
 
-  return allLocalizedText(value)
+  return [...new Set(allLocalizedText(value)
     .flatMap((entry) => `${entry || ""}`
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, " ")
+      .replace(/[^\p{Letter}\p{Number}\s-]/gu, " ")
       .split(/\s+/))
-    .map((word) => word.replace(/s$/, ""))
-    .filter((word) => word.length > 2 && !stopWords.has(word) && !/^\d+$/.test(word));
+    .map((word) => normalizeWord(word))
+    .filter((word) => word.length > 2 && !stopWords.has(word) && !/^\d+$/.test(word)))];
 }
 
 export function inventoryMatchFor(inventory, text, includeDepleted = false) {
@@ -35,7 +57,7 @@ export function inventoryMatchFor(inventory, text, includeDepleted = false) {
     if (!includeDepleted && ["low", "out"].includes(item.stockState)) return false;
     const itemWords = normalizedWords(item.text);
     if (!itemWords.length) return false;
-    return itemWords.every((word) => ingredientWords.includes(word));
+    return itemWords.every((word) => ingredientWords.some((ingredientWord) => wordsEquivalent(word, ingredientWord)));
   }) || null;
 }
 
