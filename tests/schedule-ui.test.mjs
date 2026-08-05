@@ -65,6 +65,8 @@ function harness() {
     "#previousWeek": element(),
     "#thisWeek": element(),
     "#nextWeek": element(),
+    "#copyWeekForward": element(),
+    "#scheduleStatus": element(),
     "#resetWeek": element(),
     "#previousMonth": element(),
     "#todayMonth": element(),
