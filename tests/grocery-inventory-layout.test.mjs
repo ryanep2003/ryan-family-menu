@@ -61,6 +61,7 @@ test("mobile content clears the fixed navigation with a safe bottom buffer", () 
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
+  assert.match(html, /id="copyWeekForward"/);
 });
 
 test("mobile header reserves rows for optional install controls", () => {

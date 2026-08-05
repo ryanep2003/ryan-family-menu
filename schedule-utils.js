@@ -101,6 +101,39 @@ export function mealHasContent(meal) {
   );
 }
 
+export function copyCurrentWeekToNextWeek(weekStartKey, schedule, calendarMeals) {
+  const normalizedSchedule = normalizeSchedule(schedule);
+  const normalizedCalendar = normalizeCalendar(calendarMeals);
+  const sourceWeek = activeWeekDateKeys(weekStartKey);
+  const nextWeekStart = dateFromKey(weekStartKey);
+  nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+  const targetWeek = activeWeekDateKeys(formatDateKey(nextWeekStart));
+  const nextCalendarMeals = { ...normalizedCalendar };
+  let copiedCount = 0;
+  let skippedCount = 0;
+
+  sourceWeek.forEach((day, index) => {
+    const sourceMeal = Object.prototype.hasOwnProperty.call(normalizedCalendar, day.dateKey)
+      ? normalizeMealPlan(normalizedCalendar[day.dateKey])
+      : normalizeMealPlan(normalizedSchedule[day.key]);
+    if (!mealHasContent(sourceMeal)) return;
+
+    const targetDateKey = targetWeek[index].dateKey;
+    const targetMeal = Object.prototype.hasOwnProperty.call(normalizedCalendar, targetDateKey)
+      ? normalizeMealPlan(normalizedCalendar[targetDateKey])
+      : { ...emptyMeal };
+    if (mealHasContent(targetMeal)) {
+      skippedCount += 1;
+      return;
+    }
+
+    nextCalendarMeals[targetDateKey] = { ...sourceMeal };
+    copiedCount += 1;
+  });
+
+  return { calendarMeals: nextCalendarMeals, copiedCount, skippedCount };
+}
+
 export function removeRecipeFromPlans(schedule, calendarMeals, recipeId, slotKeys = ["main", "side", "salad"]) {
   const clearMeal = (meal) => Object.fromEntries(
     Object.entries(normalizeMealPlan(meal)).map(([key, value]) =>

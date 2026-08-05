@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   activeWeekDateKeys,
+  copyCurrentWeekToNextWeek,
   currentWeekStartKey,
   emptyMeal,
   formatDateKey,
@@ -51,6 +52,32 @@ test("mealHasContent checks any planned slot or notes", () => {
   assert.equal(mealHasContent({ ...emptyMeal }), false);
   assert.equal(mealHasContent({ ...emptyMeal, notes: "pizza night" }), true);
   assert.equal(mealHasContent({ ...emptyMeal, notes: { es: "noche de pizza" } }), true);
+});
+
+test("copyCurrentWeekToNextWeek carries effective meals forward without overwriting planned dates", () => {
+  const result = copyCurrentWeekToNextWeek(
+    "2026-06-22",
+    {
+      mon: { ...emptyMeal, main: "meatballs" },
+      tue: { ...emptyMeal, side: "keeper-side" },
+      wed: { ...emptyMeal },
+      thu: { ...emptyMeal, notes: "leftovers" },
+      fri: { ...emptyMeal, salad: "greens" },
+      sat: { ...emptyMeal },
+      sun: { ...emptyMeal },
+    },
+    {
+      "2026-06-23": { ...emptyMeal, main: "override-taco" },
+      "2026-06-30": { ...emptyMeal, main: "already-planned" },
+    },
+  );
+
+  assert.equal(result.copiedCount, 3);
+  assert.equal(result.skippedCount, 1);
+  assert.deepEqual(result.calendarMeals["2026-06-29"], { ...emptyMeal, main: "meatballs" });
+  assert.deepEqual(result.calendarMeals["2026-07-02"], { ...emptyMeal, notes: "leftovers" });
+  assert.deepEqual(result.calendarMeals["2026-07-03"], { ...emptyMeal, salad: "greens" });
+  assert.equal(result.calendarMeals["2026-06-30"].main, "already-planned");
 });
 
 test("meal normalization preserves optional family handoff planning", () => {
