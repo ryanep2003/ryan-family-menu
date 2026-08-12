@@ -25,12 +25,25 @@ test("available food persists a localized label and rejects invalid records", ()
     label: "Yogurt",
     type: "snack",
     freshness: "tomorrow",
+    useFor: "snack",
     lang: "en",
     now: "2026-07-17T10:00:00Z",
   });
 
   assert.equal(next[0].label.en, "Yogurt");
   assert.equal(next[0].label.es, undefined);
+  assert.equal(next[0].useFor, "snack");
   assert.equal(addAvailableFood([], { label: "", type: "snack", freshness: "today" }), null);
   assert.deepEqual(normalizeAvailableFood([{ id: "bad", label: "", type: "dessert", freshness: "never" }]), []);
+});
+
+test("older available food records remain compatible with an optional next use", () => {
+  const [item] = normalizeAvailableFood([{
+    id: "legacy-leftover",
+    label: "Pasta",
+    type: "leftover",
+    freshness: "today",
+  }]);
+
+  assert.equal(item.useFor, "any");
 });

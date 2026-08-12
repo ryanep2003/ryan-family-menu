@@ -11,6 +11,13 @@ export const availableFoodFreshness = [
   { key: "later", label: "availableFoodLater" },
 ];
 
+export const availableFoodUses = [
+  { key: "lunch", label: "availableFoodUseLunch" },
+  { key: "snack", label: "availableFoodUseSnack" },
+  { key: "nextDinner", label: "availableFoodUseNextDinner" },
+  { key: "any", label: "availableFoodUseAny" },
+];
+
 const freshnessRank = Object.fromEntries(availableFoodFreshness.map(({ key }, index) => [key, index]));
 
 function optionKey(value, options) {
@@ -22,6 +29,7 @@ export function normalizeAvailableFoodItem(value) {
   const label = typeof source.label === "string" || isLocalizedValue(source.label) ? source.label : "";
   const type = optionKey(source.type, availableFoodTypes);
   const freshness = optionKey(source.freshness, availableFoodFreshness);
+  const useFor = optionKey(source.useFor, availableFoodUses) || "any";
   if (!source.id || !hasLocalizedContent(label) || !type || !freshness) return null;
 
   return {
@@ -29,6 +37,7 @@ export function normalizeAvailableFoodItem(value) {
     label,
     type,
     freshness,
+    useFor,
     createdAt: typeof source.createdAt === "string" ? source.createdAt : "",
     updatedAt: typeof source.updatedAt === "string" ? source.updatedAt : "",
   };
@@ -54,7 +63,7 @@ export function useFirstAvailableFood(value) {
   return orderAvailableFood(value)[0] || null;
 }
 
-export function addAvailableFood(existing, { label, type, freshness, lang = "en", now = new Date().toISOString(), id = `available-${Date.now()}` }) {
+export function addAvailableFood(existing, { label, type, freshness, useFor = "any", lang = "en", now = new Date().toISOString(), id = `available-${Date.now()}` }) {
   const text = `${label || ""}`.trim().slice(0, 160);
   if (!text || !optionKey(type, availableFoodTypes) || !optionKey(freshness, availableFoodFreshness)) return null;
 
@@ -63,6 +72,7 @@ export function addAvailableFood(existing, { label, type, freshness, lang = "en"
     label: updateLocalizedText("", text, lang),
     type,
     freshness,
+    useFor,
     createdAt: now,
     updatedAt: now,
   });

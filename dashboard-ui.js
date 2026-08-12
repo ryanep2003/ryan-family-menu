@@ -4,6 +4,7 @@ import {
   addAvailableFood,
   availableFoodFreshness,
   availableFoodTypes,
+  availableFoodUses,
   orderAvailableFood,
 } from "./available-food.js";
 
@@ -60,6 +61,12 @@ export function createDashboardUi({
     return t(options.find((option) => option.key === key)?.label || "availableFoodUnknown");
   }
 
+  function availableFoodUseText(item) {
+    return item.useFor && item.useFor !== "any"
+      ? ` · ${t("availableFoodUseLabel")}: ${escapeHtml(availableFoodLabel(item.useFor, availableFoodUses))}`
+      : "";
+  }
+
   function renderAvailableFood() {
     const firstElement = $("#todayUseFirst");
     const listElement = $("#todayAvailableFoodList");
@@ -67,19 +74,14 @@ export function createDashboardUi({
 
     const ordered = orderAvailableFood(getAvailableFood());
     const first = ordered[0];
-    firstElement.innerHTML = first
-      ? `<div class="use-first-card">
-          <span class="section-label">${t("availableFoodUseFirst")}</span>
-          <strong>${escapeHtml(localizedText(first.label, getLang()))}</strong>
-          <span>${escapeHtml(availableFoodLabel(first.type, availableFoodTypes))} · ${escapeHtml(availableFoodLabel(first.freshness, availableFoodFreshness))}</span>
-        </div>`
-      : `<p class="empty-state compact">${t("availableFoodEmpty")}</p>`;
+    firstElement.innerHTML = first ? "" : `<p class="empty-state compact">${t("availableFoodEmpty")}</p>`;
     listElement.innerHTML = ordered.length
       ? ordered.map((item) => `
-          <div class="available-food-row">
+          <div class="available-food-row${item.id === first?.id ? " is-use-first" : ""}">
             <div>
+              ${item.id === first?.id ? `<span class="available-food-priority">${t("availableFoodUseFirst")}</span>` : ""}
               <strong>${escapeHtml(localizedText(item.label, getLang()))}</strong>
-              <span>${escapeHtml(availableFoodLabel(item.type, availableFoodTypes))} · ${escapeHtml(availableFoodLabel(item.freshness, availableFoodFreshness))}</span>
+              <span>${escapeHtml(availableFoodLabel(item.type, availableFoodTypes))} · ${escapeHtml(availableFoodLabel(item.freshness, availableFoodFreshness))}${availableFoodUseText(item)}</span>
             </div>
             <button class="text-action" type="button" data-remove-available-food="${escapeHtml(item.id)}">${t("availableFoodUsed")}</button>
           </div>
@@ -336,6 +338,7 @@ export function createDashboardUi({
         label,
         type: $("#todayAvailableFoodType").value,
         freshness: $("#todayAvailableFoodFreshness").value,
+        useFor: $("#todayAvailableFoodUse").value,
         lang: getLang(),
       });
       if (!next) {

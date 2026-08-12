@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=47" />
+    <link rel="stylesheet" href="styles.css?v=48" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -54,7 +54,7 @@
         <button class="ghost-button sync-retry" id="retrySharedState" type="button" data-i18n="retrySync" hidden>Retry sync</button>
         <label class="household-member-picker household-member-global" for="householdMemberInput">
           <span data-i18n="updatingAsShort">Editing as</span>
-          <select id="householdMemberInput">
+          <select id="householdMemberInput" aria-label="Editing as" data-i18n-aria-label="updatingAsShort">
             <option value="Family" data-i18n="householdFamily">Family</option>
             <option value="Alyson">Alyson</option>
             <option value="Eric">Eric</option>
@@ -148,6 +148,15 @@
                   <option value="today" data-i18n="availableFoodToday">Today</option>
                   <option value="tomorrow" data-i18n="availableFoodTomorrow">Tomorrow</option>
                   <option value="later" data-i18n="availableFoodLater">Later</option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="availableFoodUseLabel">Best for</span>
+                <select id="todayAvailableFoodUse">
+                  <option value="any" data-i18n="availableFoodUseAny">Any meal</option>
+                  <option value="lunch" data-i18n="availableFoodUseLunch">Lunch</option>
+                  <option value="snack" data-i18n="availableFoodUseSnack">Kids snack</option>
+                  <option value="nextDinner" data-i18n="availableFoodUseNextDinner">Next dinner</option>
                 </select>
               </label>
               <button class="primary-action" type="submit" data-i18n="availableFoodSave">Add to handoff</button>
@@ -628,6 +637,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=78"></script>
+    <script type="module" src="app.js?v=79"></script>
   </body>
 </html>

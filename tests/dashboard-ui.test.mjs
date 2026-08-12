@@ -103,6 +103,11 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
       availableFoodToday: "Today",
       availableFoodTomorrow: "Tomorrow",
       availableFoodLater: "Later",
+      availableFoodUseLabel: "Best for",
+      availableFoodUseLunch: "Lunch",
+      availableFoodUseSnack: "Kids snack",
+      availableFoodUseNextDinner: "Next dinner",
+      availableFoodUseAny: "Any meal",
       availableFoodUsed: "Used",
       itemsToBuy: "items to buy",
       itemsAtHome: "items at home",
@@ -165,15 +170,18 @@ test("Today surfaces the most urgent available food first", () => {
   const { elements, ui } = dashboardFixture({
     availableFoodOverride: [
       { id: "later", label: "Crackers", type: "snack", freshness: "later", createdAt: "2026-07-17T08:00:00Z" },
-      { id: "today", label: "Tuesday pasta", type: "leftover", freshness: "today", createdAt: "2026-07-17T10:00:00Z" },
+      { id: "today", label: "Tuesday pasta", type: "leftover", freshness: "today", useFor: "lunch", createdAt: "2026-07-17T10:00:00Z" },
     ],
   });
 
   ui.renderToday();
 
-  assert.match(elements.todayUseFirst.innerHTML, /Use first/);
-  assert.match(elements.todayUseFirst.innerHTML, /Tuesday pasta/);
-  assert.match(elements.todayUseFirst.innerHTML, /Leftover · Today/);
+  assert.equal(elements.todayUseFirst.innerHTML, "");
+  assert.match(elements.todayAvailableFoodList.innerHTML, /Use first/);
+  assert.match(elements.todayAvailableFoodList.innerHTML, /Tuesday pasta/);
+  assert.match(elements.todayAvailableFoodList.innerHTML, /Leftover · Today/);
+  assert.match(elements.todayAvailableFoodList.innerHTML, /Best for: Lunch/);
+  assert.match(elements.todayAvailableFoodList.innerHTML, /available-food-row is-use-first/);
   assert.match(elements.todayAvailableFoodList.innerHTML, /data-remove-available-food="today"/);
 });
 

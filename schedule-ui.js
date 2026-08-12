@@ -83,6 +83,7 @@ export function createScheduleUi({
             </label>
           `).join("")}
         </div>
+        <p class="meal-period-helper">${t("mealPeriodsNote")}</p>
         ${(primarySlots.some((slot) => meal[slot.key]) || hasOptionalContent) ? `
           <details class="meal-optional-fields"${hasOptionalContent ? " open" : ""}>
             <summary>${t("moreMealOptions")}</summary>

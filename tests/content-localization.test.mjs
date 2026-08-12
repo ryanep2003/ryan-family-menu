@@ -2,6 +2,18 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { translations } from "../translations.js";
+
+test("Week editor literal translation calls exist in both languages", async () => {
+  const source = await readFile(new URL("../schedule-ui.js", import.meta.url), "utf8");
+  const keys = [...source.matchAll(/\bt\("([^\"]+)"\)/g)].map((match) => match[1]);
+
+  for (const key of new Set(keys)) {
+    assert.ok(translations.en[key], `English translation missing for ${key}`);
+    assert.ok(translations.es[key], `Spanish translation missing for ${key}`);
+  }
+});
+
 test("shared state sanitizer accepts localized task and note fields", async () => {
   const source = await readFile(new URL("../netlify/functions/family-state.js", import.meta.url), "utf8");
 
@@ -15,6 +27,7 @@ test("shared state sanitizer accepts localized task and note fields", async () =
   assert.match(source, /snackStatus: SNACK_STATUS\.includes\(handoff\.snackStatus\)/);
   assert.match(source, /snack: cleanLocalizedText\(handoff\.snack, 120\)/);
   assert.match(source, /AVAILABLE_FOOD_TYPES = \["snack", "leftover"\]/);
+  assert.match(source, /AVAILABLE_FOOD_USE_FOR = \["lunch", "snack", "nextDinner", "any"\]/);
   assert.match(source, /availableFood: cleanAvailableFood\(value\?\.availableFood\)/);
   assert.match(source, /const dinner = cleanText\(source\.dinner \|\| source\.main, 120\)/);
   assert.match(source, /breakfast: cleanText\(source\.breakfast, 120\)/);

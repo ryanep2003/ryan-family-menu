@@ -22,6 +22,7 @@ const LEFTOVER_USE_FIRST = ["lunch", "snack", "nextDinner", "any"];
 const SNACK_STATUS = ["ready", "prepare"];
 const AVAILABLE_FOOD_TYPES = ["snack", "leftover"];
 const AVAILABLE_FOOD_FRESHNESS = ["today", "tomorrow", "later"];
+const AVAILABLE_FOOD_USE_FOR = ["lunch", "snack", "nextDinner", "any"];
 
 function cleanText(value, maxLength) {
   return `${value || ""}`.trim().slice(0, maxLength);
@@ -112,6 +113,7 @@ function cleanAvailableFoodItem(item) {
     label,
     type: item.type,
     freshness: item.freshness,
+    useFor: AVAILABLE_FOOD_USE_FOR.includes(item?.useFor) ? item.useFor : "any",
     createdAt: cleanText(item.createdAt, 40),
     updatedAt: cleanText(item.updatedAt, 40),
   };

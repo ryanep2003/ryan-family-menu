@@ -125,7 +125,11 @@ function harness({ mealPeriods = [] } = {}) {
       if (selector === "[data-use-weekly-plan]") return [];
       return [];
     },
-    t: (key) => key,
+    t: (key) => ({
+      mealPeriodsNote: "Plan breakfast, lunch, or dinner as needed. Shared ingredients stay grouped in Groceries.",
+      moreMealOptions: "More meal options",
+      moreMealOptionsNote: "Add a side, salad, notes, or a handoff when you need them.",
+    })[key] || key,
     escapeHtml,
     localize: (value) => value,
     formatDateKey,
@@ -185,7 +189,8 @@ test("week planning renders seven summaries with one focused editor", () => {
   assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-context="weekdate:2026-06-22"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /openMain: Main Recipe/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="handoff"/);
-  assert.match(elements["#weekDateEditor"].innerHTML, /moreMealOptions/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /More meal options/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /Shared ingredients stay grouped in Groceries/);
 });
 
 test("empty day keeps optional planning fields out of the first decision", () => {

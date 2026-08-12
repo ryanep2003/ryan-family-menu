@@ -57,7 +57,7 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(96px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=47/);
+  assert.match(html, /styles\.css\?v=48/);
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
@@ -76,6 +76,12 @@ test("mobile header reserves rows for optional install controls", () => {
   assert.match(styles, /@media \(max-width: 780px\)[\s\S]*\.header-actions\s*\{[\s\S]*display: grid;[\s\S]*grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\) auto;/);
   assert.match(styles, /\.install-prompt\s*\{[\s\S]*grid-column: 1 \/ -1;[\s\S]*grid-row: 2;/);
   assert.match(styles, /@media \(max-width: 360px\)[\s\S]*\.shell-add-button\s*\{[\s\S]*grid-row: 2;/);
+});
+
+test("mobile sync status keeps the family member control compact and labeled", () => {
+  assert.match(html, /id="householdMemberInput" aria-label="Editing as" data-i18n-aria-label="updatingAsShort"/);
+  assert.match(styles, /\.app-sync-status \.household-member-global \{[\s\S]*?width: auto;[\s\S]*?flex: 0 0 auto;/);
+  assert.match(styles, /\.app-sync-status \.household-member-global > span \{[\s\S]*?clip: rect\(0, 0, 0, 0\)/);
 });
 
 test("file inputs use localized picker controls", () => {
