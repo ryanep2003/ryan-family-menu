@@ -30,7 +30,7 @@ import { createReceiptUi } from "./receipt-ui.js";
 import { recipes } from "./recipes-data.js";
 import { createScheduleUi } from "./schedule-ui.js";
 import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage-utils.js";
-import { formatSyncTime, renderSyncStatus } from "./sync-status.js";
+import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "./sync-status.js";
 import { translations } from "./translations.js";
 import {
   applyVersionConflict,
@@ -185,6 +185,11 @@ function setSyncStatus(area, key, { state = "success", canRetry = false, syncedA
   const status = $(elements.status);
   const retryButton = $(elements.retry);
   if (!status) return;
+  if (retryButton) {
+    const retryKey = syncRetryLabel(area, key);
+    retryButton.dataset.i18n = retryKey;
+    retryButton.textContent = t(retryKey);
+  }
   status.dataset.syncKey = key;
   status.dataset.syncTime = syncedAt;
   status.dataset.syncState = state;
@@ -228,6 +233,11 @@ function markSynced(area) {
 }
 
 let undoTimer = 0;
+let sharedRetryAction = null;
+
+function setSharedRetryAction(action) {
+  sharedRetryAction = action;
+}
 
 function offerUndo(message, undo) {
   const toast = $("#undoToast");
@@ -565,6 +575,7 @@ function saveSharedStateLocally() {
 }
 
 async function saveSharedState() {
+  setSharedRetryAction(saveSharedState);
   saveSharedStateLocally();
   setSyncStatus("shared", "savedLocallySyncing", { state: "pending" });
 
@@ -626,6 +637,7 @@ async function loadSharedState() {
     }
   } catch (error) {
     console.warn(error);
+    setSharedRetryAction(loadSharedState);
     setSyncStatus("shared", "usingSavedCopy", { state: "pending", canRetry: true });
   }
 }
@@ -1634,13 +1646,15 @@ $("#inventoryScanForm").addEventListener("submit", async (event) => {
   }
 });
 
-$("#retrySharedState").addEventListener("click", saveSharedState);
+$("#retrySharedState").addEventListener("click", async () => {
+  if (sharedRetryAction) await sharedRetryAction();
+});
 $("#retryGroceries").addEventListener("click", saveGroceries);
 $("#retryInventory").addEventListener("click", saveInventory);
 
 window.addEventListener("online", () => {
   const retries = [];
-  if (!$("#retrySharedState").hidden) retries.push(saveSharedState());
+  if (!$("#retrySharedState").hidden && sharedRetryAction) retries.push(sharedRetryAction());
   if (!$("#retryGroceries").hidden) retries.push(saveGroceries());
   if (!$("#retryInventory").hidden) retries.push(saveInventory());
   Promise.allSettled(retries);

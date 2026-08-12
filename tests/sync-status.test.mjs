@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { formatSyncTime, renderSyncStatus } from "../sync-status.js";
+import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "../sync-status.js";
+
+test("shared load failures use a reload label while save failures use retry sync", () => {
+  assert.equal(syncRetryLabel("shared", "usingSavedCopy"), "reloadSharedMenu");
+  assert.equal(syncRetryLabel("shared", "savedLocallyPending"), "retrySync");
+  assert.equal(syncRetryLabel("groceries", "usingSavedCopy"), "retrySync");
+});
 
 function classList() {
   const values = new Set();
