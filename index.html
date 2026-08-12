@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=49" />
+    <link rel="stylesheet" href="styles.css?v=50" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -437,7 +437,16 @@
               <div>
                 <button class="ghost-button" id="editRecipe" type="button" data-i18n="editRecipe">Edit recipe</button>
                 <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
-                <button class="ghost-button" id="markCooked" type="button" aria-describedby="recipeSafetyLockReason" data-i18n="markCooked">Mark cooked</button>
+                <button class="ghost-button" id="markCooked" type="button" aria-describedby="recipeSafetyLockReason" data-i18n="recordMealOutcome">How did it go?</button>
+                <div class="recipe-outcome-panel" id="recipeOutcomePanel" hidden role="group" aria-labelledby="recipeOutcomeHeading">
+                  <strong id="recipeOutcomeHeading" data-i18n="mealOutcomeHeading">How did it go?</strong>
+                  <div class="recipe-outcome-options">
+                    <button class="text-button" type="button" data-recipe-outcome="made" data-i18n="mealOutcomeMade">Made it</button>
+                    <button class="text-button" type="button" data-recipe-outcome="loved" data-i18n="mealOutcomeLoved">Loved it</button>
+                    <button class="text-button" type="button" data-recipe-outcome="repeat" data-i18n="mealOutcomeRepeat">Make it again</button>
+                    <button class="text-button danger-action" type="button" data-recipe-outcome="skip" data-i18n="mealOutcomeSkip">Skip next time</button>
+                  </div>
+                </div>
               </div>
             </details>
             <p class="detail-action-note" id="recipeSafetyLockReason" role="status" aria-live="polite" hidden></p>
@@ -656,6 +665,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=80"></script>
+    <script type="module" src="app.js?v=81"></script>
   </body>
 </html>

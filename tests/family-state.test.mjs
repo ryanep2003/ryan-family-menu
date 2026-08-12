@@ -3,7 +3,9 @@ import test from "node:test";
 
 import {
   normalizeSharedState,
+  normalizeRecipeFeedback,
   persistSharedState,
+  recordRecipeOutcome,
   sharedStateSnapshot,
 } from "../family-state.js";
 
@@ -15,6 +17,7 @@ test("sharedStateSnapshot uses the API field names", () => {
     favorites: ["pasta"],
     tasks: [{ text: "prep" }],
     availableFood: [],
+    recipeFeedback: {},
     recipeEdits: { pasta: { name: "Pasta" } },
     deletedRecipeIds: ["old"],
   }), {
@@ -24,6 +27,7 @@ test("sharedStateSnapshot uses the API field names", () => {
     favorites: ["pasta"],
     tasks: [{ text: "prep" }],
     availableFood: [],
+    recipeFeedback: {},
     recipeEdits: { pasta: { name: "Pasta" } },
     deletedRecipeIds: ["old"],
   });
@@ -52,6 +56,35 @@ test("normalizeSharedState preserves remote collections and fallback metadata", 
   assert.deepEqual(normalized.tasks, [{ text: "shop" }]);
   assert.deepEqual(normalized.recipeEdits, { pasta: { name: "Pasta" } });
   assert.deepEqual(normalized.deletedRecipeIds, ["old"]);
+});
+
+test("recipe feedback records useful outcomes and keeps old state compatible", () => {
+  const first = recordRecipeOutcome({}, "pasta", "loved", "eric", "2026-08-11T12:00:00.000Z");
+  const second = recordRecipeOutcome(first, "pasta", "skip", "alyson", "2026-08-12T12:00:00.000Z");
+
+  assert.deepEqual(second.pasta, {
+    made: 1,
+    loved: 1,
+    repeat: 0,
+    skip: 1,
+    lastOutcome: "skip",
+    lastMadeAt: "2026-08-11T12:00:00.000Z",
+    updatedAt: "2026-08-12T12:00:00.000Z",
+    updatedBy: "alyson",
+  });
+  assert.deepEqual(normalizeRecipeFeedback(undefined), {});
+  assert.deepEqual(normalizeRecipeFeedback({ old: { made: "bad", lastOutcome: "unknown" } }), {
+    old: {
+      made: 0,
+      loved: 0,
+      repeat: 0,
+      skip: 0,
+      lastOutcome: "",
+      lastMadeAt: "",
+      updatedAt: "",
+      updatedBy: "",
+    },
+  });
 });
 
 test("normalizeSharedState keeps local available food when an older server omits it", () => {
@@ -108,6 +141,7 @@ test("persistSharedState writes the local storage keys", () => {
     calendarMeals: {},
     favorites: ["pasta"],
     tasks: [],
+    recipeFeedback: { pasta: { made: 2 } },
     recipeEdits: {},
     deletedRecipeIds: [],
   }, 7);
@@ -117,4 +151,16 @@ test("persistSharedState writes the local storage keys", () => {
   assert.equal(writes.get("dinner-favorites"), "[\"pasta\"]");
   assert.equal(writes.get("dinner-schedule"), "{\"monday\":{\"main\":\"pasta\"}}");
   assert.equal(writes.get("dinner-available-food"), "[]");
+  assert.deepEqual(JSON.parse(writes.get("dinner-recipe-feedback")), {
+    pasta: {
+      made: 2,
+      loved: 0,
+      repeat: 0,
+      skip: 0,
+      lastOutcome: "",
+      lastMadeAt: "",
+      updatedAt: "",
+      updatedBy: "",
+    },
+  });
 });

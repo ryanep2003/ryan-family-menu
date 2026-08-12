@@ -145,6 +145,7 @@ export function createRecipeLibraryUi({
       : contentReady ? "" : t("recipeDetailsRequired");
     $("#recipeDetail").classList.remove("editing");
     $("#recipeMoreActions").open = false;
+    if ($("#recipeOutcomePanel")) $("#recipeOutcomePanel").hidden = true;
     $("#editRecipeForm").hidden = true;
     $("#detailName").textContent = nameDisplay.text || t("translationPendingShort");
     $("#detailMeta").textContent = metaDisplay.text;

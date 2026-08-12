@@ -57,13 +57,20 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(96px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=49/);
+  assert.match(html, /styles\.css\?v=50/);
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
   assert.match(html, /id="copyWeekForward"/);
   assert.match(styles, /\.schedule-editor\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles, /\.recipe-detail\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
+});
+
+test("recipe meal feedback stays hidden until requested and offers quick choices", () => {
+  assert.match(html, /id="markCooked"[^>]*data-i18n="recordMealOutcome"/);
+  assert.match(html, /id="recipeOutcomePanel"[^>]*hidden/);
+  assert.equal((html.match(/data-recipe-outcome=/g) || []).length, 4);
+  assert.match(styles, /\.recipe-outcome-panel\[hidden\]\s*\{[\s\S]*display: none;/);
 });
 
 test("update notices stay in document flow instead of covering app content", () => {

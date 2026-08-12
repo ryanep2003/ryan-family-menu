@@ -3,6 +3,7 @@ import { requireWriteAuth } from "./_auth.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 import { cleanLocalizedText, hasLocalizedContent } from "../../localized-data.js";
+import { normalizeRecipeFeedback } from "../../family-state.js";
 
 const STORE_NAME = "family-menu-state";
 const STATE_KEY = "shared-state";
@@ -171,6 +172,7 @@ export function cleanState(value) {
     favorites: cleanFavorites(value?.favorites),
     tasks: cleanTasks(value?.tasks),
     availableFood: cleanAvailableFood(value?.availableFood),
+    recipeFeedback: normalizeRecipeFeedback(value?.recipeFeedback),
     recipeEdits: cleanRecipeEdits(value?.recipeEdits),
     deletedRecipeIds: cleanDeletedRecipeIds(value?.deletedRecipeIds),
     updatedAt: new Date().toISOString(),

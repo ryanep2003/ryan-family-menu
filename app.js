@@ -8,7 +8,9 @@ import {
 import { bindInstallPrompt, registerServiceWorker } from "./app-lifecycle.js";
 import {
   normalizeSharedState,
+  normalizeRecipeFeedback,
   persistSharedState,
+  recordRecipeOutcome,
   sharedStateSnapshot as familyStateSnapshot,
 } from "./family-state.js";
 import { createDashboardUi } from "./dashboard-ui.js";
@@ -81,6 +83,7 @@ let sharedStateVersion = readNumberStorage(localStorage, "dinner-state-version",
 let favorites = readJsonStorage(localStorage, "dinner-favorites", []);
 let tasks = readJsonStorage(localStorage, "dinner-tasks", []);
 let availableFood = normalizeAvailableFood(readJsonStorage(localStorage, "dinner-available-food", []));
+let recipeFeedback = normalizeRecipeFeedback(readJsonStorage(localStorage, "dinner-recipe-feedback", {}));
 let drafts = readJsonStorage(localStorage, "dinner-drafts", []);
 let sharedRecipes = [];
 let recipeEdits = readJsonStorage(localStorage, "dinner-recipe-edits", {});
@@ -538,11 +541,11 @@ function calendarMealForDateKey(dateKey) {
 }
 
 function sharedStateSnapshot() {
-  return familyStateSnapshot({ weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeEdits, deletedRecipeIds });
+  return familyStateSnapshot({ weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, recipeEdits, deletedRecipeIds });
 }
 
 function currentSharedState() {
-  return { weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeEdits, deletedRecipeIds };
+  return { weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, recipeEdits, deletedRecipeIds };
 }
 
 function applySharedState(nextState) {
@@ -552,6 +555,7 @@ function applySharedState(nextState) {
   favorites = nextState.favorites;
   tasks = nextState.tasks;
   availableFood = normalizeAvailableFood(nextState.availableFood);
+  recipeFeedback = normalizeRecipeFeedback(nextState.recipeFeedback);
   recipeEdits = nextState.recipeEdits;
   deletedRecipeIds = nextState.deletedRecipeIds;
 }
@@ -608,6 +612,7 @@ async function loadSharedState() {
       favorites: [],
       tasks: [],
       availableFood,
+      recipeFeedback,
       recipeEdits: {},
       deletedRecipeIds: [],
     }));
@@ -1503,8 +1508,18 @@ recipeFormUi.bind();
 onboardingUi.bind();
 
 $("#markCooked").addEventListener("click", () => {
-  $("#markCooked").textContent = t("cookedToday");
-  $("#recipeMoreActions").open = false;
+  $("#recipeOutcomePanel").hidden = !$("#recipeOutcomePanel").hidden;
+});
+
+$$("[data-recipe-outcome]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    recipeFeedback = recordRecipeOutcome(recipeFeedback, selectedRecipeId, button.dataset.recipeOutcome, householdMember);
+    $("#recipeOutcomePanel").hidden = true;
+    $("#recipeMoreActions").open = false;
+    render();
+    setDetailStatus(t("mealOutcomeSaved"));
+    await saveSharedState();
+  });
 });
 
 recipeLibraryUi.bindLibraryControls();
