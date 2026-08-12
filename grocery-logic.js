@@ -43,6 +43,31 @@ function itemKey(item) {
   return `${item.store || "any"}::${canonicalText(item.text).toLowerCase()}`;
 }
 
+function normalizeMealUses(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((use) => use && typeof use === "object")
+    .map((use) => ({
+      dateKey: /^\d{4}-\d{2}-\d{2}$/.test(use.dateKey) ? use.dateKey : "",
+      mealSlot: ["breakfast", "lunch", "dinner"].includes(use.mealSlot) ? use.mealSlot : "",
+      recipeId: `${use.recipeId || ""}`.trim().slice(0, 160),
+      recipeName: use.recipeName,
+    }))
+    .filter((use) => use.dateKey && use.mealSlot && (use.recipeId || use.recipeName));
+}
+
+function mealUseKey(use) {
+  return `${use.dateKey}::${use.mealSlot}::${use.recipeId || canonicalText(use.recipeName).toLowerCase()}`;
+}
+
+export function mergeMealUses(existing = [], incoming = []) {
+  const byKey = new Map();
+  [...normalizeMealUses(existing), ...normalizeMealUses(incoming)].forEach((use) => {
+    byKey.set(mealUseKey(use), use);
+  });
+  return [...byKey.values()].slice(0, 12);
+}
+
 export function groceryItem(text, {
   store = "any",
   source = "manual",
@@ -51,6 +76,7 @@ export function groceryItem(text, {
   inventoryItem = null,
   lang = "en",
   updatedBy = "",
+  mealUses = [],
 } = {}) {
   const timestamp = new Date().toISOString();
   return {
@@ -66,6 +92,7 @@ export function groceryItem(text, {
     inInventory: Boolean(inventoryItem),
     createdAt: timestamp,
     updatedAt: timestamp,
+    mealUses: mergeMealUses(mealUses),
     ...(updatedBy ? { updatedBy } : {}),
   };
 }
@@ -73,14 +100,19 @@ export function groceryItem(text, {
 export function mergeGroceries(existing, incoming) {
   const byKey = new Map(existing.map((item) => [itemKey(item), item]));
   incoming.forEach((item) => {
-    if (!byKey.has(itemKey(item))) {
+    const key = itemKey(item);
+    if (!byKey.has(key)) {
       byKey.set(itemKey(item), item);
+      return;
     }
+    const existingItem = byKey.get(key);
+    const mealUses = mergeMealUses(existingItem.mealUses, item.mealUses);
+    if (mealUses.length) byKey.set(key, { ...existingItem, mealUses });
   });
   return [...byKey.values()];
 }
 
-export function groceryItemsFromRecipe(recipe, lang, inventory, updatedBy = "") {
+export function groceryItemsFromRecipe(recipe, lang, inventory, updatedBy = "", mealUse = null) {
   const ingredientsEn = recipe.ingredients?.en || [];
   const ingredientsEs = recipe.ingredients?.es || [];
   const ingredientCount = Math.max(ingredientsEn.length, ingredientsEs.length);
@@ -99,6 +131,7 @@ export function groceryItemsFromRecipe(recipe, lang, inventory, updatedBy = "") 
       inventoryItem: inventoryMatchFor(inventory, text),
       lang,
       updatedBy,
+      mealUses: mealUse ? [mealUse] : [],
     });
   }).filter(Boolean);
 }

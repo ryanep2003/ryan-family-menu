@@ -40,6 +40,7 @@ export function createGroceryUi({
   }
 
   function grocerySourceLabel(item) {
+    if (Array.isArray(item.mealUses) && item.mealUses.length > 1) return t("multipleMealsSource");
     const recipe = recipeForGroceryItem(item);
     if (recipe) return localize(recipe.name) || t("translationPendingShort");
     if (item.recipeName) return localizedTextExact(item.recipeName, getLang()) || t("translationPendingShort");
@@ -103,6 +104,17 @@ export function createGroceryUi({
     return `${t("alreadyAtHomeLabel")}: ${localizedTextExact(match.quantity, getLang()) || inventoryLocationLabel(match.location)}`;
   }
 
+  function groceryMealUseNote(item) {
+    if (!Array.isArray(item.mealUses) || item.mealUses.length < 2) return "";
+    const mealNames = [...new Set(item.mealUses.map((use) => {
+      const recipe = use.recipeId ? allRecipes().find((entry) => entry.id === use.recipeId) : null;
+      return recipe ? localize(recipe.name) : localizedTextExact(use.recipeName, getLang());
+    }).filter(Boolean))].slice(0, 3);
+    return t("spilloverFor")
+      .replace("{count}", `${item.mealUses.length}`)
+      .replace("{meals}", mealNames.join(", "));
+  }
+
   function inventoryShoppingNote(item) {
     const overlap = shoppingOverlapFor(item.text);
     return overlap ? `${t("onShoppingList")}: ${localizedTextExact(overlap.text, getLang()) || t("translationPendingShort")}` : "";
@@ -133,6 +145,7 @@ export function createGroceryUi({
         ${items.map((item) => {
           const displayText = groceryDisplayText(item);
           const atHomeNote = groceryAtHomeNote(item);
+          const mealUseNote = groceryMealUseNote(item);
           const activity = formatItemActivity(item);
           const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
           return `
@@ -141,6 +154,7 @@ export function createGroceryUi({
               <span>
                 <strong${displayText === t("translationPendingShort") ? ` class="translation-placeholder"` : ""}>${escapeHtml(displayText)}</strong>
                 ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
+                ${mealUseNote ? `<em class="meal-use-note">${escapeHtml(mealUseNote)}</em>` : ""}
                 ${activity ? `<em class="item-activity">${escapeHtml(activity)}</em>` : ""}
               </span>
               ${store ? `<small>${escapeHtml(store)}</small>` : ""}

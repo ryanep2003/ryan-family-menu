@@ -34,7 +34,7 @@ function element() {
   };
 }
 
-function dashboardFixture({ mealOverride } = {}) {
+function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
   const elements = Object.fromEntries([
     "todayRecipeName",
     "todayBand",
@@ -46,6 +46,13 @@ function dashboardFixture({ mealOverride } = {}) {
     "todayHandoffOptions",
     "todayHandoffDetails",
     "todayHandoffNote",
+    "todayUseFirst",
+    "todayAvailableFoodList",
+    "todayAvailableFoodForm",
+    "todayAvailableFoodLabel",
+    "todayAvailableFoodType",
+    "todayAvailableFoodFreshness",
+    "todayAvailableFoodStatus",
     "cookToday",
     "taskForm",
     "taskInput",
@@ -89,6 +96,14 @@ function dashboardFixture({ mealOverride } = {}) {
       snackStatusLabel: "Snack status",
       snackReady: "Ready now",
       snackNeedsPrep: "Needs preparation",
+      availableFoodUseFirst: "Use first",
+      availableFoodEmpty: "Nothing is marked for later yet.",
+      availableFoodSnack: "Snack",
+      availableFoodLeftover: "Leftover",
+      availableFoodToday: "Today",
+      availableFoodTomorrow: "Tomorrow",
+      availableFoodLater: "Later",
+      availableFoodUsed: "Used",
       itemsToBuy: "items to buy",
       itemsAtHome: "items at home",
       mainSlot: "Main",
@@ -120,6 +135,10 @@ function dashboardFixture({ mealOverride } = {}) {
     setTasks: () => {},
     getGroceries: () => [],
     getInventory: () => [],
+    getAvailableFood: () => availableFoodOverride,
+    setAvailableFood: (next) => {
+      availableFoodOverride = next;
+    },
     getCalendarMeals: () => ({}),
     setCalendarMeals: () => {},
     handoffOptions,
@@ -140,6 +159,22 @@ test("Today uses natural pluralized meal copy", () => {
   assert.equal(elements.todayMeta.textContent, "2 planned recipes");
   assert.equal(elements.todayBackdrop.src, "main.jpg");
   assert.equal(elements.cookToday.textContent, "Cook this");
+});
+
+test("Today surfaces the most urgent available food first", () => {
+  const { elements, ui } = dashboardFixture({
+    availableFoodOverride: [
+      { id: "later", label: "Crackers", type: "snack", freshness: "later", createdAt: "2026-07-17T08:00:00Z" },
+      { id: "today", label: "Tuesday pasta", type: "leftover", freshness: "today", createdAt: "2026-07-17T10:00:00Z" },
+    ],
+  });
+
+  ui.renderToday();
+
+  assert.match(elements.todayUseFirst.innerHTML, /Use first/);
+  assert.match(elements.todayUseFirst.innerHTML, /Tuesday pasta/);
+  assert.match(elements.todayUseFirst.innerHTML, /Leftover · Today/);
+  assert.match(elements.todayAvailableFoodList.innerHTML, /data-remove-available-food="today"/);
 });
 
 test("Today renders optional handoff planning without changing the meal list", () => {

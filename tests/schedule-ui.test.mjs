@@ -56,7 +56,7 @@ function calendarDates() {
   });
 }
 
-function harness() {
+function harness({ mealPeriods = [] } = {}) {
   const elements = {
     "#scheduleGrid": element(),
     "#weekDateEditor": element(),
@@ -133,6 +133,7 @@ function harness() {
       { key: "side", label: "sideSlot", choose: "chooseSide", categories: ["side"] },
       { key: "salad", label: "saladSlot", choose: "chooseSalad", categories: ["salad"] },
     ],
+    mealPeriods,
     handoffOptions,
     days,
     emptyMeal,
@@ -194,6 +195,21 @@ test("empty day keeps optional planning fields out of the first decision", () =>
   assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="main"/);
   assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /meal-optional-fields/);
   assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /data-slot="handoff"/);
+});
+
+test("meal-period planning shows breakfast, lunch, and dinner together", () => {
+  const periods = [
+    { key: "breakfast", label: "breakfastSlot", choose: "chooseBreakfast", categories: ["main"] },
+    { key: "lunch", label: "lunchSlot", choose: "chooseLunch", categories: ["main"] },
+    { key: "dinner", label: "dinnerSlot", choose: "chooseDinner", categories: ["main"] },
+  ];
+  const { elements, ui } = harness({ mealPeriods: periods });
+
+  ui.renderSchedule();
+
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="breakfast"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="lunch"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="dinner"/);
 });
 
 test("handoff detail choices persist with the selected week meal", async () => {

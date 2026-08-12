@@ -43,6 +43,28 @@ test("groceryItemsFromRecipe tags items already at home and keeps recipe context
   assert.equal(items[1].inInventory, false);
 });
 
+test("groceryItemsFromRecipe records the meal that will use an ingredient", () => {
+  const recipe = {
+    id: "bean-salad",
+    name: { en: "Bean Salad", es: "Ensalada de frijoles" },
+    ingredients: { en: ["1 bunch cilantro"], es: ["1 manojo de cilantro"] },
+  };
+
+  const items = groceryItemsFromRecipe(recipe, "en", [], "Family", {
+    dateKey: "2026-07-22",
+    mealSlot: "lunch",
+    recipeId: recipe.id,
+    recipeName: recipe.name,
+  });
+
+  assert.deepEqual(items[0].mealUses, [{
+    dateKey: "2026-07-22",
+    mealSlot: "lunch",
+    recipeId: "bean-salad",
+    recipeName: recipe.name,
+  }]);
+});
+
 test("mergeGroceries avoids duplicate ingredient rows", () => {
   const existing = [
     groceryItem("4 lemons", { source: "manual" }),
@@ -57,6 +79,35 @@ test("mergeGroceries avoids duplicate ingredient rows", () => {
   assert.equal(merged.length, 2);
   assert.deepEqual(merged[0].text, { en: "4 lemons" });
   assert.deepEqual(merged[1].text, { en: "1 cup olive oil" });
+});
+
+test("mergeGroceries keeps the meals that share a spillover ingredient", () => {
+  const existing = groceryItem("1 bunch cilantro", {
+    source: "week-plan",
+    mealUses: [{
+      dateKey: "2026-07-20",
+      mealSlot: "dinner",
+      recipeId: "tacos",
+      recipeName: { en: "Tacos" },
+    }],
+  });
+  const incoming = groceryItem("1 bunch cilantro", {
+    source: "week-plan",
+    mealUses: [{
+      dateKey: "2026-07-22",
+      mealSlot: "lunch",
+      recipeId: "salad",
+      recipeName: { en: "Herb salad" },
+    }],
+  });
+
+  const merged = mergeGroceries([existing], [incoming]);
+
+  assert.equal(merged.length, 1);
+  assert.deepEqual(merged[0].mealUses.map((use) => [use.dateKey, use.mealSlot]), [
+    ["2026-07-20", "dinner"],
+    ["2026-07-22", "lunch"],
+  ]);
 });
 
 test("groceryItem records optional household attribution", () => {

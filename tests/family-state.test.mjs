@@ -14,6 +14,7 @@ test("sharedStateSnapshot uses the API field names", () => {
     calendarMeals: { "2026-06-24": { main: "soup" } },
     favorites: ["pasta"],
     tasks: [{ text: "prep" }],
+    availableFood: [],
     recipeEdits: { pasta: { name: "Pasta" } },
     deletedRecipeIds: ["old"],
   }), {
@@ -22,6 +23,7 @@ test("sharedStateSnapshot uses the API field names", () => {
     calendarMeals: { "2026-06-24": { main: "soup" } },
     favorites: ["pasta"],
     tasks: [{ text: "prep" }],
+    availableFood: [],
     recipeEdits: { pasta: { name: "Pasta" } },
     deletedRecipeIds: ["old"],
   });
@@ -39,6 +41,7 @@ test("normalizeSharedState preserves remote collections and fallback metadata", 
     calendarMeals: {},
     favorites: [],
     tasks: [],
+    availableFood: [],
     recipeEdits: {},
     deletedRecipeIds: [],
   });
@@ -49,6 +52,18 @@ test("normalizeSharedState preserves remote collections and fallback metadata", 
   assert.deepEqual(normalized.tasks, [{ text: "shop" }]);
   assert.deepEqual(normalized.recipeEdits, { pasta: { name: "Pasta" } });
   assert.deepEqual(normalized.deletedRecipeIds, ["old"]);
+});
+
+test("normalizeSharedState keeps local available food when an older server omits it", () => {
+  const fallback = {
+    id: "local-snack",
+    label: "Fruit",
+    type: "snack",
+    freshness: "today",
+  };
+  const normalized = normalizeSharedState({}, { availableFood: [fallback] });
+
+  assert.equal(normalized.availableFood[0].id, "local-snack");
 });
 
 test("normalizeSharedState preserves the handoff detail choices", () => {
@@ -101,4 +116,5 @@ test("persistSharedState writes the local storage keys", () => {
   assert.equal(writes.get("dinner-state-version"), "7");
   assert.equal(writes.get("dinner-favorites"), "[\"pasta\"]");
   assert.equal(writes.get("dinner-schedule"), "{\"monday\":{\"main\":\"pasta\"}}");
+  assert.equal(writes.get("dinner-available-food"), "[]");
 });

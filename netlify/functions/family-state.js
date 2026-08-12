@@ -7,18 +7,21 @@ import { cleanLocalizedText, hasLocalizedContent } from "../../localized-data.js
 const STORE_NAME = "family-menu-state";
 const STATE_KEY = "shared-state";
 const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-const MEAL_KEYS = ["main", "side", "salad", "notes"];
+const MEAL_KEYS = ["breakfast", "lunch", "dinner", "main", "side", "salad", "notes"];
 const MAX_CALENDAR_DAYS = 730;
 const MAX_FAVORITES = 100;
 const MAX_TASKS = 300;
 const MAX_RECIPE_EDITS = 300;
 const MAX_DELETED_RECIPES = 300;
+const MAX_AVAILABLE_FOOD = 100;
 const MAX_PHOTO_BYTES = 500000;
 const MAX_REQUEST_BYTES = 3000000;
 const TASK_ASSIGNEES = ["alyson", "eric", "nelly", "theo", "pierce", "other"];
 const LEFTOVER_SERVINGS = ["one", "two", "threePlus"];
 const LEFTOVER_USE_FIRST = ["lunch", "snack", "nextDinner", "any"];
 const SNACK_STATUS = ["ready", "prepare"];
+const AVAILABLE_FOOD_TYPES = ["snack", "leftover"];
+const AVAILABLE_FOOD_FRESHNESS = ["today", "tomorrow", "later"];
 
 function cleanText(value, maxLength) {
   return `${value || ""}`.trim().slice(0, maxLength);
@@ -34,8 +37,13 @@ function cleanPhoto(value) {
 function cleanMeal(value) {
   const source = value && typeof value === "object" ? value : {};
   const handoff = source.handoff && typeof source.handoff === "object" ? source.handoff : {};
+  const dinner = cleanText(source.dinner || source.main, 120);
   return {
-    main: cleanText(source.main, 120),
+    breakfast: cleanText(source.breakfast, 120),
+    lunch: cleanText(source.lunch, 120),
+    dinner,
+    // Keep the legacy field in sync so older clients continue to read dinner.
+    main: dinner,
     side: cleanText(source.side, 120),
     salad: cleanText(source.salad, 120),
     notes: cleanLocalizedText(source.notes, 500),
@@ -94,6 +102,26 @@ function cleanTasks(value) {
   return value.map(cleanTask).filter(Boolean).slice(0, MAX_TASKS);
 }
 
+function cleanAvailableFoodItem(item) {
+  const label = cleanLocalizedText(item?.label, 160);
+  if (!hasLocalizedContent(label)) return null;
+  if (!AVAILABLE_FOOD_TYPES.includes(item?.type) || !AVAILABLE_FOOD_FRESHNESS.includes(item?.freshness)) return null;
+
+  return {
+    id: cleanText(item.id, 160) || `available-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    label,
+    type: item.type,
+    freshness: item.freshness,
+    createdAt: cleanText(item.createdAt, 40),
+    updatedAt: cleanText(item.updatedAt, 40),
+  };
+}
+
+function cleanAvailableFood(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map(cleanAvailableFoodItem).filter(Boolean).slice(0, MAX_AVAILABLE_FOOD);
+}
+
 function cleanRecipeEdit(edit) {
   const name = cleanLocalizedText(edit?.name, 120);
   if (!hasLocalizedContent(name)) return null;
@@ -140,6 +168,7 @@ export function cleanState(value) {
     calendarMeals: cleanCalendar(value?.calendarMeals),
     favorites: cleanFavorites(value?.favorites),
     tasks: cleanTasks(value?.tasks),
+    availableFood: cleanAvailableFood(value?.availableFood),
     recipeEdits: cleanRecipeEdits(value?.recipeEdits),
     deletedRecipeIds: cleanDeletedRecipeIds(value?.deletedRecipeIds),
     updatedAt: new Date().toISOString(),

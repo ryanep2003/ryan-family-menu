@@ -28,6 +28,7 @@ test("service worker pre-caches first-party app modules", async () => {
   for (const path of [
     "./app.js",
     "./app-lifecycle.js",
+    "./available-food.js",
     "./api.js",
     "./dashboard-ui.js",
     "./handoff-ui.js",

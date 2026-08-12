@@ -34,8 +34,17 @@ test("activeWeekDateKeys expands a monday week into seven date keys", () => {
 });
 
 test("meal normalization preserves legacy string meals and fills blanks", () => {
-  assert.deepEqual(normalizeMealPlan("meatballs"), { ...emptyMeal, main: "meatballs" });
+  assert.deepEqual(normalizeMealPlan("meatballs"), { ...emptyMeal, dinner: "meatballs", main: "meatballs" });
   assert.deepEqual(normalizeMealPlan({ side: "potatoes" }), { ...emptyMeal, side: "potatoes" });
+});
+
+test("meal normalization maps legacy main recipes to dinner and preserves new periods", () => {
+  const meal = normalizeMealPlan({ main: "legacy-dinner", breakfast: "oatmeal", lunch: "soup" });
+
+  assert.equal(meal.dinner, "legacy-dinner");
+  assert.equal(meal.main, "legacy-dinner");
+  assert.equal(meal.breakfast, "oatmeal");
+  assert.equal(meal.lunch, "soup");
 });
 
 test("schedule and calendar normalization keep expected shape", () => {
@@ -108,4 +117,9 @@ test("removeRecipeFromPlans clears deleted recipes from weekly and calendar meal
   assert.equal(result.schedule.tue.notes, "remember sauce");
   assert.equal(result.calendarMeals["2026-06-24"].main, "keeper");
   assert.equal(result.calendarMeals["2026-06-24"].side, "");
+});
+
+test("mealHasContent recognizes breakfast and lunch plans", () => {
+  assert.equal(mealHasContent({ ...emptyMeal, breakfast: "oatmeal" }), true);
+  assert.equal(mealHasContent({ ...emptyMeal, lunch: "soup" }), true);
 });

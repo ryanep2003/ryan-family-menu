@@ -1,5 +1,11 @@
 import { localizedText, updateLocalizedText } from "./localized-data.js";
 import { renderHandoffDetails } from "./handoff-ui.js";
+import {
+  addAvailableFood,
+  availableFoodFreshness,
+  availableFoodTypes,
+  orderAvailableFood,
+} from "./available-food.js";
 
 export function createDashboardUi({
   $,
@@ -26,6 +32,9 @@ export function createDashboardUi({
   setTasks,
   getGroceries,
   getInventory,
+  getAvailableFood = () => [],
+  setAvailableFood = () => {},
+  addAvailableFood: addAvailableFoodRecord = addAvailableFood,
   getCalendarMeals,
   setCalendarMeals,
   handoffOptions = [],
@@ -47,9 +56,43 @@ export function createDashboardUi({
     return calendarMealForDateKey(todayDateKey());
   }
 
+  function availableFoodLabel(key, options) {
+    return t(options.find((option) => option.key === key)?.label || "availableFoodUnknown");
+  }
+
+  function renderAvailableFood() {
+    const firstElement = $("#todayUseFirst");
+    const listElement = $("#todayAvailableFoodList");
+    if (!firstElement || !listElement) return;
+
+    const ordered = orderAvailableFood(getAvailableFood());
+    const first = ordered[0];
+    firstElement.innerHTML = first
+      ? `<div class="use-first-card">
+          <span class="section-label">${t("availableFoodUseFirst")}</span>
+          <strong>${escapeHtml(localizedText(first.label, getLang()))}</strong>
+          <span>${escapeHtml(availableFoodLabel(first.type, availableFoodTypes))} · ${escapeHtml(availableFoodLabel(first.freshness, availableFoodFreshness))}</span>
+        </div>`
+      : `<p class="empty-state compact">${t("availableFoodEmpty")}</p>`;
+    listElement.innerHTML = ordered.length
+      ? ordered.map((item) => `
+          <div class="available-food-row">
+            <div>
+              <strong>${escapeHtml(localizedText(item.label, getLang()))}</strong>
+              <span>${escapeHtml(availableFoodLabel(item.type, availableFoodTypes))} · ${escapeHtml(availableFoodLabel(item.freshness, availableFoodFreshness))}</span>
+            </div>
+            <button class="text-action" type="button" data-remove-available-food="${escapeHtml(item.id)}">${t("availableFoodUsed")}</button>
+          </div>
+        `).join("")
+      : "";
+  }
+
   function renderToday() {
     const meal = todaysMealPlan();
-    const mainRecipe = meal.main ? recipeById(meal.main) : null;
+    const dinnerId = meal.dinner || meal.main || "";
+    const primaryId = dinnerId || meal.lunch || meal.breakfast || "";
+    const mainRecipe = primaryId ? recipeById(primaryId) : null;
+    const dinnerRecipe = dinnerId ? recipeById(dinnerId) : null;
     const recipesForMeal = mealRecipes(meal);
     const backdrop = $("#todayBackdrop");
     const backdropSrc = mainRecipe?.photos?.[0] || "";
@@ -58,13 +101,15 @@ export function createDashboardUi({
     if (backdropSrc) backdrop.src = backdropSrc;
     else backdrop.removeAttribute("src");
     $("#todayRecipeName").textContent = mainRecipe ? localize(mainRecipe.name) : t("noMealSet");
+    const todayKicker = $("#todayKicker");
+    if (todayKicker) todayKicker.textContent = dinnerRecipe ? t("tonight") : recipesForMeal.length ? t("todayMeals") : t("tonight");
     $("#todayMeta").textContent = recipesForMeal.length
       ? `${t(recipesForMeal.length === 1 ? "plannedRecipeOne" : "plannedRecipeMany").replace("{count}", recipesForMeal.length)}${mealHasWarning(meal) ? ` · ${t("allergyBadge")}` : ""}`
       : t("planTonightNote");
     $("#todayMealList").innerHTML = recipesForMeal
       .map(({ key, recipe }) => `
         <button type="button" data-open="${escapeHtml(recipe.id)}">
-          <span>${t(`${key}Slot`)}</span>
+          <span>${t(key === "main" ? "dinnerSlot" : `${key}Slot`)}</span>
           <strong>${escapeHtml(localize(recipe.name))}</strong>
           ${recipe.allergyWarning ? `<em>${t("allergyBadge")}</em>` : ""}
         </button>
@@ -96,6 +141,7 @@ export function createDashboardUi({
       });
     }
     if (handoffNote) handoffNote.value = localizedText(meal.notes, getLang());
+    renderAvailableFood();
     const toBuy = getGroceries().filter((item) => !item.checked && !item.inInventory).length;
     $("#todayGrocerySummary").textContent = `${toBuy} ${t("itemsToBuy")}`;
     $("#todayInventorySummary").textContent = `${getInventory().filter((item) => item.stockState !== "out").length} ${t("itemsAtHome")}`;
@@ -173,7 +219,7 @@ export function createDashboardUi({
       date.setDate(start.getDate() + offset);
       const dateKey = formatDateKey(date);
       const meal = calendarMealForDateKey(dateKey);
-      if (!meal.main) return { dateKey, meal };
+      if (!(meal.dinner || meal.main)) return { dateKey, meal };
     }
     return { dateKey: formatDateKey(start), meal: todaysMealPlan() };
   }
@@ -228,11 +274,12 @@ export function createDashboardUi({
 
     $("#cookToday").addEventListener("click", () => {
       const mainRecipe = todaysMealPlan().main;
-      if (!mainRecipe) {
+      const dinnerRecipe = todaysMealPlan().dinner || mainRecipe;
+      if (!dinnerRecipe) {
         setView("schedule");
         return;
       }
-      setSelectedRecipeId(mainRecipe);
+      setSelectedRecipeId(dinnerRecipe);
       setView("recipes");
       renderDetail();
       $("#recipeDetail").hidden = false;
@@ -281,11 +328,40 @@ export function createDashboardUi({
         notes: updateLocalizedText(meal.notes, event.target.value.trim(), getLang()),
       });
     });
+
+    $("#todayAvailableFoodForm")?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const label = $("#todayAvailableFoodLabel").value.trim();
+      const next = addAvailableFoodRecord(getAvailableFood(), {
+        label,
+        type: $("#todayAvailableFoodType").value,
+        freshness: $("#todayAvailableFoodFreshness").value,
+        lang: getLang(),
+      });
+      if (!next) {
+        $("#todayAvailableFoodStatus").textContent = t("availableFoodLabelRequired");
+        return;
+      }
+      setAvailableFood(next);
+      $("#todayAvailableFoodLabel").value = "";
+      $("#todayAvailableFoodStatus").textContent = "";
+      render();
+      await saveSharedState();
+    });
+
+    $("#todayAvailableFoodList")?.addEventListener("click", async (event) => {
+      const button = event.target.closest?.("[data-remove-available-food]");
+      if (!button) return;
+      setAvailableFood(getAvailableFood().filter((item) => item.id !== button.dataset.removeAvailableFood));
+      render();
+      await saveSharedState();
+    });
   }
 
   return {
     bindDashboardControls,
     renderFavorites,
+    renderAvailableFood,
     renderTasks,
     renderToday,
     todaysMealPlan,

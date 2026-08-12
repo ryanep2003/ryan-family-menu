@@ -1,4 +1,5 @@
 import { normalizeCalendar, normalizeSchedule } from "./schedule-utils.js";
+import { normalizeAvailableFood } from "./available-food.js";
 
 export function sharedStateSnapshot({
   weekStartKey,
@@ -6,10 +7,11 @@ export function sharedStateSnapshot({
   calendarMeals,
   favorites,
   tasks,
+  availableFood = [],
   recipeEdits,
   deletedRecipeIds,
 }) {
-  return { weekStart: weekStartKey, schedule, calendarMeals, favorites, tasks, recipeEdits, deletedRecipeIds };
+  return { weekStart: weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeEdits, deletedRecipeIds };
 }
 
 export function normalizeSharedState(remoteState = {}, fallbacks = {}) {
@@ -19,6 +21,9 @@ export function normalizeSharedState(remoteState = {}, fallbacks = {}) {
     calendarMeals: normalizeCalendar(remoteState.calendarMeals),
     favorites: Array.isArray(remoteState.favorites) ? remoteState.favorites : fallbacks.favorites,
     tasks: Array.isArray(remoteState.tasks) ? remoteState.tasks : fallbacks.tasks,
+    availableFood: Array.isArray(remoteState.availableFood)
+      ? normalizeAvailableFood(remoteState.availableFood)
+      : normalizeAvailableFood(fallbacks.availableFood),
     recipeEdits: remoteState.recipeEdits && typeof remoteState.recipeEdits === "object"
       ? remoteState.recipeEdits
       : fallbacks.recipeEdits,
@@ -35,6 +40,7 @@ export function persistSharedState(storage, state, version) {
   storage.setItem("dinner-state-version", `${version}`);
   storage.setItem("dinner-favorites", JSON.stringify(state.favorites));
   storage.setItem("dinner-tasks", JSON.stringify(state.tasks));
+  storage.setItem("dinner-available-food", JSON.stringify(normalizeAvailableFood(state.availableFood)));
   storage.setItem("dinner-recipe-edits", JSON.stringify(state.recipeEdits));
   storage.setItem("dinner-deleted-recipes", JSON.stringify(state.deletedRecipeIds));
 }

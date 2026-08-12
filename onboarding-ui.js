@@ -44,7 +44,8 @@ export function createOnboardingUi({ $, $$, storage, setView, openInventory }) {
       });
     });
 
-    setOpen(!isDismissed());
+    // Keep the first task visible; the guide remains one tap away in the header.
+    setOpen(false);
   }
 
   return { bind, setOpen };

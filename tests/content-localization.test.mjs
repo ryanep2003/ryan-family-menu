@@ -14,6 +14,11 @@ test("shared state sanitizer accepts localized task and note fields", async () =
   assert.match(source, /leftoverUseFirst: LEFTOVER_USE_FIRST\.includes\(handoff\.leftoverUseFirst\)/);
   assert.match(source, /snackStatus: SNACK_STATUS\.includes\(handoff\.snackStatus\)/);
   assert.match(source, /snack: cleanLocalizedText\(handoff\.snack, 120\)/);
+  assert.match(source, /AVAILABLE_FOOD_TYPES = \["snack", "leftover"\]/);
+  assert.match(source, /availableFood: cleanAvailableFood\(value\?\.availableFood\)/);
+  assert.match(source, /const dinner = cleanText\(source\.dinner \|\| source\.main, 120\)/);
+  assert.match(source, /breakfast: cleanText\(source\.breakfast, 120\)/);
+  assert.match(source, /lunch: cleanText\(source\.lunch, 120\)/);
 });
 
 test("grocery and inventory write endpoints sanitize localized fields", async () => {
@@ -23,6 +28,7 @@ test("grocery and inventory write endpoints sanitize localized fields", async ()
   assert.match(groceries, /const text = cleanLocalizedText\(item\.text, 220\)/);
   assert.match(groceries, /recipeName: cleanLocalizedText\(item\.recipeName, 160\)/);
   assert.match(groceries, /updatedBy: cleanHouseholdMember\(item\.updatedBy\)/);
+  assert.match(groceries, /mealUses: Array\.isArray\(item\.mealUses\)/);
   assert.match(inventory, /const text = cleanLocalizedText\(item\.text, 220\)/);
   assert.match(inventory, /quantity: cleanLocalizedText\(item\.quantity, 80\)/);
   assert.match(inventory, /updatedBy: cleanHouseholdMember\(item\.updatedBy\)/);

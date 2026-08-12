@@ -87,6 +87,8 @@ function harness(overrides = {}) {
       alreadyHave: "Already have",
       checkedOffSection: "Checked off",
       weekPlanSource: "Weekly menu",
+      multipleMealsSource: "Used across meals",
+      spilloverFor: "Use across {count} meals: {meals}",
       selectedRecipeSource: "Selected recipe",
       restockSource: "Restock",
       addOnsSection: "Add-ons",
@@ -157,6 +159,28 @@ test("grocery items without the active language show a pending state", () => {
 
   assert.match(elements["#groceryList"].innerHTML, /Translation pending/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, />milk</);
+});
+
+test("renderGroceries surfaces shared meal use for spillover ingredients", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{
+        id: "spillover",
+        text: { en: "cilantro", es: "cilantro" },
+        checked: false,
+        store: "any",
+        source: "week-plan",
+        mealUses: [
+          { dateKey: "2026-07-20", mealSlot: "dinner", recipeId: "lemon-chicken", recipeName: { en: "Lemon Chicken" } },
+          { dateKey: "2026-07-22", mealSlot: "lunch", recipeId: "lemon-chicken", recipeName: { en: "Lemon Chicken" } },
+        ],
+      }],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /Use across 2 meals: Pollo al limon/);
 });
 
 test("grocery recipe matching works from localized recipe names", () => {

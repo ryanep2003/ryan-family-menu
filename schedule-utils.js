@@ -34,6 +34,14 @@ export const snackStatusOptions = [
   { key: "prepare", label: "snackNeedsPrep" },
 ];
 
+const mealRecipeCategories = ["main", "side", "salad", "sauce", "dessert", "draft"];
+
+export const mealPeriods = [
+  { key: "breakfast", label: "breakfastSlot", choose: "chooseBreakfast", categories: mealRecipeCategories },
+  { key: "lunch", label: "lunchSlot", choose: "chooseLunch", categories: mealRecipeCategories },
+  { key: "dinner", label: "dinnerSlot", choose: "chooseDinner", categories: mealRecipeCategories },
+];
+
 export const emptyHandoff = {
   leftovers: false,
   kidsSnack: false,
@@ -44,7 +52,17 @@ export const emptyHandoff = {
   snack: "",
 };
 
-export const emptyMeal = { main: "", side: "", salad: "", notes: "", handoff: { ...emptyHandoff } };
+export const emptyMeal = {
+  breakfast: "",
+  lunch: "",
+  dinner: "",
+  // Keep main as a storage-compatible alias for the original dinner slot.
+  main: "",
+  side: "",
+  salad: "",
+  notes: "",
+  handoff: { ...emptyHandoff },
+};
 
 function allowedValue(value, options) {
   return options.some((option) => option.key === value) ? value : "";
@@ -75,10 +93,17 @@ const defaultSchedule = {
 
 export function normalizeMealPlan(value) {
   if (!value) return { ...emptyMeal };
-  if (typeof value === "string") return { ...emptyMeal, handoff: { ...emptyHandoff }, main: value };
+  if (typeof value === "string") return { ...emptyMeal, handoff: { ...emptyHandoff }, dinner: value, main: value };
+  const dinner = typeof value.dinner === "string" && value.dinner
+    ? value.dinner
+    : typeof value.main === "string" ? value.main : "";
   const normalized = {
     ...emptyMeal,
     ...value,
+    breakfast: typeof value.breakfast === "string" ? value.breakfast : "",
+    lunch: typeof value.lunch === "string" ? value.lunch : "",
+    dinner,
+    main: dinner,
     handoff: normalizeHandoff(value.handoff),
   };
   if (typeof normalized.notes !== "string" && !isLocalizedValue(normalized.notes)) {
@@ -130,7 +155,10 @@ export function activeWeekDateKeys(weekStartKey) {
 
 export function mealHasContent(meal) {
   return Boolean(
-    meal.main
+    meal.breakfast
+    || meal.lunch
+    || meal.dinner
+    || meal.main
     || meal.side
     || meal.salad
     || hasLocalizedContent(meal.notes)
@@ -138,11 +166,25 @@ export function mealHasContent(meal) {
   );
 }
 
-export function removeRecipeFromPlans(schedule, calendarMeals, recipeId, slotKeys = ["main", "side", "salad"]) {
-  const clearMeal = (meal) => Object.fromEntries(
-    Object.entries(normalizeMealPlan(meal)).map(([key, value]) =>
-      slotKeys.includes(key) && value === recipeId ? [key, ""] : [key, value])
-  );
+export function removeRecipeFromPlans(
+  schedule,
+  calendarMeals,
+  recipeId,
+  slotKeys = ["breakfast", "lunch", "dinner", "main", "side", "salad"],
+) {
+  const clearMeal = (meal) => {
+    const normalized = normalizeMealPlan(meal);
+    const next = { ...normalized };
+    slotKeys.forEach((slotKey) => {
+      if (next[slotKey] !== recipeId) return;
+      next[slotKey] = "";
+      if (slotKey === "main" || slotKey === "dinner") {
+        next.main = "";
+        next.dinner = "";
+      }
+    });
+    return normalizeMealPlan(next);
+  };
 
   return {
     schedule: normalizeSchedule(Object.fromEntries(days.map((day) => [day.key, clearMeal(schedule?.[day.key])]))),

@@ -57,7 +57,7 @@ function harness(dismissed = false) {
 
 test("quick guide appears once and respects dismissal", async () => {
   const first = harness();
-  assert.equal(first.elements["#quickGuide"].hidden, false);
+  assert.equal(first.elements["#quickGuide"].hidden, true);
   await first.elements["#dismissQuickGuide"].click();
   assert.equal(first.elements["#quickGuide"].hidden, true);
   assert.equal(first.values.get("dinner-quick-guide-dismissed"), "true");

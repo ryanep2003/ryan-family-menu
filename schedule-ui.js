@@ -10,6 +10,7 @@ export function createScheduleUi({
   formatDateKey,
   normalizeMealPlan,
   mealSlots,
+  mealPeriods = [],
   handoffOptions = [],
   days,
   emptyMeal,
@@ -53,11 +54,16 @@ export function createScheduleUi({
   function renderMealControls(meal, context, label) {
     const recipesForMeal = mealRecipes(meal);
     const mainSlot = mealSlots.find((slot) => slot.key === "main") || mealSlots[0];
-    const optionalSlots = mealSlots.filter((slot) => slot.key !== mainSlot.key);
+    const primarySlots = mealPeriods.length ? mealPeriods : [mainSlot];
+    const primaryKeys = new Set(primarySlots.map((slot) => slot.key));
+    const optionalSlots = mealSlots.filter((slot) => !primaryKeys.has(slot.key) && slot.key !== "main");
     const hasOptionalContent = optionalSlots.some((slot) => meal[slot.key])
       || Boolean(localizedText(meal.notes, getLang()))
       || Object.values(meal.handoff || {}).some(Boolean);
     const openLabelBySlot = {
+      breakfast: "openBreakfast",
+      lunch: "openLunch",
+      dinner: "openDinner",
       main: "openMain",
       side: "openSide",
       salad: "openSalad",
@@ -65,14 +71,18 @@ export function createScheduleUi({
     return `
       ${label ? `<strong>${escapeHtml(label)}</strong>` : ""}
       <div class="meal-picker">
-        <label class="meal-primary-choice">
-          <span>${t(mainSlot.label)}</span>
-          <select data-meal-context="${context}" data-slot="${mainSlot.key}">
-            <option value="">${t(mainSlot.choose)}</option>
-            ${optionsForSlot(mainSlot, meal[mainSlot.key])}
-          </select>
-        </label>
-        ${(meal[mainSlot.key] || hasOptionalContent) ? `
+        <div class="meal-period-grid">
+          ${primarySlots.map((slot) => `
+            <label class="meal-primary-choice">
+              <span>${t(slot.label)}</span>
+              <select data-meal-context="${context}" data-slot="${slot.key}">
+                <option value="">${t(slot.choose)}</option>
+                ${optionsForSlot(slot, meal[slot.key])}
+              </select>
+            </label>
+          `).join("")}
+        </div>
+        ${(primarySlots.some((slot) => meal[slot.key]) || hasOptionalContent) ? `
           <details class="meal-optional-fields"${hasOptionalContent ? " open" : ""}>
             <summary>${t("moreMealOptions")}</summary>
             <p class="meal-optional-helper">${t("moreMealOptionsNote")}</p>

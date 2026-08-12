@@ -9,6 +9,7 @@ const STORE_NAME = "family-menu-groceries";
 const GROCERIES_KEY = "items";
 const MAX_ITEMS = 500;
 const MAX_REQUEST_BYTES = 250000;
+const MEAL_SLOTS = ["breakfast", "lunch", "dinner"];
 
 export function cleanItem(item) {
   const text = cleanLocalizedText(item.text, 220);
@@ -27,6 +28,14 @@ export function cleanItem(item) {
     createdAt: item.createdAt || new Date().toISOString(),
     updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
     updatedBy: cleanHouseholdMember(item.updatedBy),
+    mealUses: Array.isArray(item.mealUses)
+      ? item.mealUses.map((use) => ({
+        dateKey: /^\d{4}-\d{2}-\d{2}$/.test(use?.dateKey) ? use.dateKey : "",
+        mealSlot: MEAL_SLOTS.includes(use?.mealSlot) ? use.mealSlot : "",
+        recipeId: `${use?.recipeId || ""}`.trim().slice(0, 160),
+        recipeName: cleanLocalizedText(use?.recipeName, 160),
+      })).filter((use) => use.dateKey && use.mealSlot && (use.recipeId || hasLocalizedContent(use.recipeName))).slice(0, 12)
+      : [],
   };
 }
 

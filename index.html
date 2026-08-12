@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=45" />
+    <link rel="stylesheet" href="styles.css?v=47" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -52,6 +52,17 @@
       <div class="sync-status-row app-sync-status">
         <p class="upload-status" id="sharedStateStatus" role="status"></p>
         <button class="ghost-button sync-retry" id="retrySharedState" type="button" data-i18n="retrySync" hidden>Retry sync</button>
+        <label class="household-member-picker household-member-global" for="householdMemberInput">
+          <span data-i18n="updatingAsShort">Editing as</span>
+          <select id="householdMemberInput">
+            <option value="Family" data-i18n="householdFamily">Family</option>
+            <option value="Alyson">Alyson</option>
+            <option value="Eric">Eric</option>
+            <option value="Nelly">Nelly</option>
+            <option value="Theo">Theo</option>
+            <option value="Pierce">Pierce</option>
+          </select>
+        </label>
       </div>
 
       <section class="view active" id="todayView">
@@ -67,7 +78,7 @@
           <div class="quick-guide-actions">
             <button type="button" data-guide-view="schedule">
               <strong data-i18n="guidePlanHeading">Plan the week</strong>
-              <span data-i18n="guidePlanCopy">Pick a day, then choose dinner.</span>
+              <span data-i18n="guidePlanCopy">Pick a day, then plan breakfast, lunch, or dinner.</span>
             </button>
             <button type="button" data-guide-view="grocery" data-guide-inventory="home">
               <strong data-i18n="guideInventoryHeading">Check food at home</strong>
@@ -78,22 +89,11 @@
               <span data-i18n="guideRecipeCopy">Use photos, a link, or type it yourself.</span>
             </button>
           </div>
-          <label class="household-member-picker" for="householdMemberInput">
-            <span data-i18n="updatingAs">Credit changes from this device to</span>
-            <select id="householdMemberInput">
-              <option value="Family" data-i18n="householdFamily">Family</option>
-              <option value="Alyson">Alyson</option>
-              <option value="Eric">Eric</option>
-              <option value="Nelly">Nelly</option>
-              <option value="Theo">Theo</option>
-              <option value="Pierce">Pierce</option>
-            </select>
-          </label>
         </section>
         <section class="today-band" id="todayBand">
           <img class="today-backdrop" id="todayBackdrop" src="assets/meatballs-2.jpg" alt="" />
           <div class="today-band-copy">
-            <p class="section-label" data-i18n="tonight">Tonight</p>
+            <p class="section-label" id="todayKicker" data-i18n="tonight">Tonight</p>
             <h2 id="todayRecipeName">A 100% Chance of Meatballs</h2>
             <p id="todayMeta">1 planned item</p>
             <div class="today-meal-list" id="todayMealList"></div>
@@ -116,6 +116,44 @@
             <span data-i18n="handoffNoteLabel">Note for the next cook (optional)</span>
             <textarea id="todayHandoffNote" rows="2" maxlength="500" data-i18n-placeholder="handoffNotePlaceholder" placeholder="Save two portions for tomorrow's lunch..."></textarea>
           </label>
+        </section>
+
+        <section class="available-food-panel" id="todayAvailableFood" aria-labelledby="todayAvailableFoodHeading">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label" data-i18n="availableFoodKicker">Available now</p>
+              <h2 id="todayAvailableFoodHeading" data-i18n="availableFoodHeading">Snacks and leftovers</h2>
+            </div>
+          </div>
+          <p class="section-note" data-i18n="availableFoodHelper">Record quick food handoffs so the next person knows what to use first.</p>
+          <div id="todayUseFirst"></div>
+          <div class="available-food-list" id="todayAvailableFoodList"></div>
+          <details class="available-food-add">
+            <summary data-i18n="availableFoodAdd">Record a snack or leftover</summary>
+            <form id="todayAvailableFoodForm">
+              <label>
+                <span data-i18n="availableFoodLabel">What is available?</span>
+                <input id="todayAvailableFoodLabel" type="text" maxlength="160" data-i18n-placeholder="availableFoodLabelPlaceholder" placeholder="Apple slices or Tuesday's pasta" required />
+              </label>
+              <label>
+                <span data-i18n="availableFoodTypeLabel">Type</span>
+                <select id="todayAvailableFoodType">
+                  <option value="snack" data-i18n="availableFoodSnack">Snack</option>
+                  <option value="leftover" data-i18n="availableFoodLeftover">Leftover</option>
+                </select>
+              </label>
+              <label>
+                <span data-i18n="availableFoodFreshnessLabel">Use by</span>
+                <select id="todayAvailableFoodFreshness">
+                  <option value="today" data-i18n="availableFoodToday">Today</option>
+                  <option value="tomorrow" data-i18n="availableFoodTomorrow">Tomorrow</option>
+                  <option value="later" data-i18n="availableFoodLater">Later</option>
+                </select>
+              </label>
+              <button class="primary-action" type="submit" data-i18n="availableFoodSave">Add to handoff</button>
+              <p class="form-status" id="todayAvailableFoodStatus" role="status"></p>
+            </form>
+          </details>
         </section>
 
         <div class="today-shortcuts">
@@ -588,6 +626,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=77"></script>
+    <script type="module" src="app.js?v=78"></script>
   </body>
 </html>

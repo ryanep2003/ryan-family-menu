@@ -57,10 +57,18 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(96px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=45/);
+  assert.match(html, /styles\.css\?v=47/);
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
+  assert.match(styles, /\.schedule-editor\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(styles, /\.recipe-detail\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
+});
+
+test("update notices stay in document flow instead of covering app content", () => {
+  const noticeRule = styles.match(/\.app-update-notice\s*\{([^}]*)\}/)?.[1] || "";
+  assert.match(noticeRule, /position: relative;/);
+  assert.doesNotMatch(noticeRule, /position: sticky;/);
 });
 
 test("mobile header reserves rows for optional install controls", () => {

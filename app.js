@@ -12,6 +12,7 @@ import {
   sharedStateSnapshot as familyStateSnapshot,
 } from "./family-state.js";
 import { createDashboardUi } from "./dashboard-ui.js";
+import { addAvailableFood, normalizeAvailableFood } from "./available-food.js";
 import { inventoryItem, mergeInventory } from "./inventory-logic.js";
 import { getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
@@ -50,6 +51,7 @@ import {
   days,
   emptyMeal,
   handoffOptions,
+  mealPeriods,
   formatDateKey,
   mealHasContent,
   normalizeCalendar,
@@ -59,7 +61,7 @@ import {
 } from "./schedule-utils.js";
 
 const mealSlots = [
-  { key: "main", label: "mainSlot", choose: "chooseMain", categories: ["main"] },
+  ...mealPeriods,
   { key: "side", label: "sideSlot", choose: "chooseSide", categories: ["side", "sauce"] },
   { key: "salad", label: "saladSlot", choose: "chooseSalad", categories: ["salad"] },
 ];
@@ -77,6 +79,7 @@ let weekStartKey = readStringStorage(localStorage, "dinner-week-start", currentW
 let sharedStateVersion = readNumberStorage(localStorage, "dinner-state-version", 0);
 let favorites = readJsonStorage(localStorage, "dinner-favorites", []);
 let tasks = readJsonStorage(localStorage, "dinner-tasks", []);
+let availableFood = normalizeAvailableFood(readJsonStorage(localStorage, "dinner-available-food", []));
 let drafts = readJsonStorage(localStorage, "dinner-drafts", []);
 let sharedRecipes = [];
 let recipeEdits = readJsonStorage(localStorage, "dinner-recipe-edits", {});
@@ -534,11 +537,11 @@ function calendarMealForDateKey(dateKey) {
 }
 
 function sharedStateSnapshot() {
-  return familyStateSnapshot({ weekStartKey, schedule, calendarMeals, favorites, tasks, recipeEdits, deletedRecipeIds });
+  return familyStateSnapshot({ weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeEdits, deletedRecipeIds });
 }
 
 function currentSharedState() {
-  return { weekStartKey, schedule, calendarMeals, favorites, tasks, recipeEdits, deletedRecipeIds };
+  return { weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeEdits, deletedRecipeIds };
 }
 
 function applySharedState(nextState) {
@@ -547,6 +550,7 @@ function applySharedState(nextState) {
   weekStartKey = nextState.weekStartKey || weekStartKey;
   favorites = nextState.favorites;
   tasks = nextState.tasks;
+  availableFood = normalizeAvailableFood(nextState.availableFood);
   recipeEdits = nextState.recipeEdits;
   deletedRecipeIds = nextState.deletedRecipeIds;
 }
@@ -602,6 +606,7 @@ async function loadSharedState() {
       weekStartKey: currentWeekStartKey(),
       favorites: [],
       tasks: [],
+      availableFood,
       recipeEdits: {},
       deletedRecipeIds: [],
     }));
@@ -620,7 +625,8 @@ async function loadSharedState() {
 }
 
 function todaysRecipeId() {
-  return todaysMealPlan().main || "meatballs";
+  const meal = todaysMealPlan();
+  return meal.dinner || meal.main || meal.lunch || meal.breakfast || "meatballs";
 }
 
 function mealRecipes(meal) {
@@ -643,7 +649,10 @@ function mealSummary(meal) {
       ? t("handoffPlanned")
       : t("noMealSet");
   }
-  return items.map(({ recipe }) => localizeExact(recipe.name) || t("translationPendingShort")).join(" · ");
+  return items.map(({ key, recipe }) => {
+    const labelKey = key === "main" ? "dinnerSlot" : `${key}Slot`;
+    return `${t(labelKey)}: ${localizeExact(recipe.name) || t("translationPendingShort")}`;
+  }).join(" · ");
 }
 
 function groceryStoreLabel(store) {
@@ -657,8 +666,13 @@ function inventoryMatchFor(text, includeDepleted = false) {
   return findInventoryMatch(inventory, text, includeDepleted);
 }
 
-function recipeGroceries(recipe, source = "recipe-detail") {
-  return groceryItemsFromRecipe(recipe, lang, inventory, householdMember).map((item) => ({
+function recipeGroceries(recipe, source = "recipe-detail", mealUse = null) {
+  const use = mealUse ? {
+    ...mealUse,
+    recipeId: recipe.id,
+    recipeName: recipe.name,
+  } : null;
+  return groceryItemsFromRecipe(recipe, lang, inventory, householdMember, use).map((item) => ({
     ...item,
     source,
   }));
@@ -690,11 +704,15 @@ function detailGroceriesMessage(addedCount, atHomeCount) {
 }
 
 function weeklyMealRecipes() {
-  return days.flatMap((day) => mealRecipes(normalizeMealPlan(schedule[day.key])));
+  return activeWeekDateKeys().flatMap((day) => mealRecipes(calendarMealForDateKey(day.dateKey))
+    .map((mealItem) => ({ ...mealItem, dateKey: day.dateKey })));
 }
 
 function generatedGroceriesFromWeek() {
-  return weeklyMealRecipes().flatMap(({ recipe }) => recipeGroceries(recipe, "week-plan"));
+  return weeklyMealRecipes().flatMap(({ recipe, key, dateKey }) => recipeGroceries(recipe, "week-plan", {
+    dateKey,
+    mealSlot: key === "main" ? "dinner" : key,
+  }));
 }
 
 function manualGroceryItemsFromText(text, store) {
@@ -885,6 +903,11 @@ const dashboardUi = createDashboardUi({
   },
   getGroceries: () => groceries,
   getInventory: () => inventory,
+  getAvailableFood: () => availableFood,
+  setAvailableFood: (nextAvailableFood) => {
+    availableFood = normalizeAvailableFood(nextAvailableFood);
+  },
+  addAvailableFood,
   getCalendarMeals: () => calendarMeals,
   setCalendarMeals: (nextCalendarMeals) => {
     calendarMeals = normalizeCalendar(nextCalendarMeals);
@@ -910,6 +933,7 @@ const scheduleUi = createScheduleUi({
   formatDateKey,
   normalizeMealPlan,
   mealSlots,
+  mealPeriods,
   handoffOptions,
   days,
   emptyMeal,
