@@ -1,5 +1,5 @@
 import { getStore } from "@netlify/blobs";
-import { requireWriteAuth } from "./_auth.js";
+import { householdDataKey, requireHouseholdAccess } from "./_household.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 import { cleanLocalizedText, hasLocalizedContent } from "../../localized-data.js";
@@ -44,8 +44,8 @@ export function cleanItems(items) {
   return items.map(cleanItem).filter(Boolean).slice(0, MAX_ITEMS);
 }
 
-async function readItems(store) {
-  const saved = (await store.get(GROCERIES_KEY, { type: "json" })) || [];
+async function readItems(store, key) {
+  const saved = (await store.get(key, { type: "json" })) || [];
   const record = versionedRecord(saved, "items");
   return {
     ...record,
@@ -55,19 +55,19 @@ async function readItems(store) {
 
 export default async (request) => {
   const store = getStore(STORE_NAME);
+  const access = await requireHouseholdAccess(request);
+  if (access.error) return access.error;
+  const groceriesKey = householdDataKey(access.household.id, GROCERIES_KEY);
 
   if (request.method === "GET") {
-    return jsonResponse(await readItems(store));
+    return jsonResponse(await readItems(store, groceriesKey));
   }
 
   if (request.method === "PUT") {
-    const authError = requireWriteAuth(request);
-    if (authError) return authError;
-
     const { payload, error } = await readJsonRequest(request, { maxBytes: MAX_REQUEST_BYTES });
     if (error) return error;
 
-    const current = await readItems(store);
+    const current = await readItems(store, groceriesKey);
     if (hasVersionConflict(payload.version, current.version)) {
       return jsonResponse({
         error: "Grocery list changed on another device. Refresh and try again.",
@@ -78,7 +78,7 @@ export default async (request) => {
     }
 
     const record = nextVersionedRecord("items", cleanItems(payload.items), current.version);
-    await store.setJSON(GROCERIES_KEY, record);
+    await store.setJSON(groceriesKey, record);
     return jsonResponse(record);
   }
 

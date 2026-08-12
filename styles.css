@@ -62,6 +62,139 @@ body {
   color: var(--ink);
 }
 
+.household-locked > .app-header,
+.household-locked > .app-update-notice,
+.household-locked > main,
+.household-locked > .undo-toast {
+  display: none;
+}
+
+.household-gate {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px 14px;
+}
+
+.household-gate[hidden],
+.household-access-form[hidden],
+.household-key-receipt[hidden] {
+  display: none;
+}
+
+.household-gate-panel {
+  width: min(100%, 520px);
+  padding: 30px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.household-gate-brand {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  background: var(--sage);
+  color: var(--on-accent);
+  font-family: var(--font-display);
+  font-size: 1.9rem;
+  font-weight: 700;
+}
+
+.household-gate-panel h1 {
+  font-size: 2.2rem;
+  line-height: 1;
+}
+
+.household-gate-intro {
+  max-width: 48ch;
+  margin: 12px 0 22px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.household-gate-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.household-gate-tabs button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.household-gate-tabs button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--on-accent);
+}
+
+.household-access-form,
+.household-key-receipt {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.household-access-form label,
+.household-key-receipt label {
+  display: grid;
+  gap: 7px;
+  font-weight: 800;
+}
+
+.household-access-form input,
+.household-key-receipt input {
+  min-height: 48px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.field-note,
+.household-key-receipt p,
+.household-gate-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.household-gate-status[data-state="error"] {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-danger);
+  border-radius: 8px;
+  background: var(--surface-danger);
+  color: var(--danger-ink);
+}
+
+.household-key-receipt {
+  padding: 16px;
+  border: 1px solid var(--line-success);
+  border-radius: 8px;
+  background: var(--surface-success);
+}
+
+.household-key-receipt h2 {
+  font-size: 1.45rem;
+}
+
 button,
 input,
 textarea,
@@ -180,6 +313,74 @@ h3 {
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
+}
+
+.household-button {
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+}
+
+.household-button::-webkit-details-marker {
+  display: none;
+}
+
+.household-menu {
+  position: relative;
+}
+
+.household-menu-panel {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  right: 0;
+  display: grid;
+  gap: 10px;
+  width: min(340px, calc(100vw - 28px));
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-elevated);
+  box-shadow: 0 12px 30px rgba(61, 43, 27, 0.14);
+}
+
+.household-menu-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.household-menu-panel label {
+  display: grid;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.household-menu-panel input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.household-menu-panel .text-button {
+  justify-self: start;
+}
+
+.household-menu-status:empty {
+  display: none;
 }
 
 .app-update-notice {
@@ -3099,6 +3300,15 @@ li {
     gap: 8px;
   }
 
+  .household-menu {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .household-button {
+    min-height: 40px;
+  }
+
   .guide-button {
     padding: 0 10px;
   }
@@ -3120,8 +3330,16 @@ li {
 
   .install-prompt {
     grid-column: 1 / -1;
-    grid-row: 2;
+    grid-row: 3;
     justify-content: flex-start;
+  }
+
+  .household-gate-panel {
+    padding: 22px 18px;
+  }
+
+  .household-gate-tabs {
+    grid-template-columns: 1fr;
   }
 
   .quick-guide-intro,

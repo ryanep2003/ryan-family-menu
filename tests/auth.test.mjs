@@ -52,7 +52,7 @@ test("write auth accepts requests with the configured token", () => {
   }
 });
 
-test("AI scan endpoints check family write auth before OpenAI configuration", async () => {
+test("AI scan endpoints require household access before OpenAI configuration", async () => {
   const originalToken = process.env.FAMILY_WRITE_TOKEN;
   const originalOpenAiKey = process.env.OPENAI_API_KEY;
   process.env.FAMILY_WRITE_TOKEN = "family-secret";
@@ -67,7 +67,7 @@ test("AI scan endpoints check family write auth before OpenAI configuration", as
       }));
 
       assert.equal(response.status, 401);
-      assert.deepEqual(await response.json(), { error: "Family write access is required." });
+      assert.deepEqual(await response.json(), { error: "A valid household key is required." });
     }
   } finally {
     if (originalToken === undefined) {

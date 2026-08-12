@@ -1,5 +1,5 @@
 import { getStore } from "@netlify/blobs";
-import { requireWriteAuth } from "./_auth.js";
+import { householdDataKey, requireHouseholdAccess } from "./_household.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 import { cleanLocalizedText, hasLocalizedContent } from "../../localized-data.js";
@@ -185,19 +185,19 @@ function stateRecord(saved) {
 
 export default async (request) => {
   const store = getStore(STORE_NAME);
+  const access = await requireHouseholdAccess(request);
+  if (access.error) return access.error;
+  const stateKey = householdDataKey(access.household.id, STATE_KEY);
 
   if (request.method === "GET") {
-    return jsonResponse(stateRecord(await store.get(STATE_KEY, { type: "json" })));
+    return jsonResponse(stateRecord(await store.get(stateKey, { type: "json" })));
   }
 
   if (request.method === "PUT") {
-    const authError = requireWriteAuth(request);
-    if (authError) return authError;
-
     const { payload, error } = await readJsonRequest(request, { maxBytes: MAX_REQUEST_BYTES });
     if (error) return error;
 
-    const current = stateRecord(await store.get(STATE_KEY, { type: "json" }));
+    const current = stateRecord(await store.get(stateKey, { type: "json" }));
     if (hasVersionConflict(payload.version, current.version)) {
       return jsonResponse({
         error: "Family menu changed on another device. Refresh and try again.",
@@ -208,7 +208,7 @@ export default async (request) => {
     }
 
     const record = nextVersionedRecord("state", cleanState(payload.state), current.version);
-    await store.setJSON(STATE_KEY, record);
+    await store.setJSON(stateKey, record);
     return jsonResponse(record);
   }
 

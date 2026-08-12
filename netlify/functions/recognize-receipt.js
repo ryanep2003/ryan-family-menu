@@ -1,4 +1,4 @@
-import { requireWriteAuth } from "./_auth.js";
+import { requireHouseholdAccess } from "./_household.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
 import { cleanImageDataUrl, openAiErrorMessage, outputTextFromResponse, parseJsonObject } from "./_openai.js";
 
@@ -31,8 +31,8 @@ export default async (request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const authError = requireWriteAuth(request);
-  if (authError) return authError;
+  const access = await requireHouseholdAccess(request);
+  if (access.error) return access.error;
 
   if (!process.env.OPENAI_API_KEY) {
     return jsonResponse({ error: "Missing OPENAI_API_KEY in Netlify environment variables." }, 500);

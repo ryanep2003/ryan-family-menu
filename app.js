@@ -19,6 +19,7 @@ import { inventoryItem, mergeInventory } from "./inventory-logic.js";
 import { getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
 import { cleanHouseholdMember } from "./household-attribution.js";
+import { createHouseholdStorage, leaveHousehold, requireHouseholdSession } from "./household-access.js";
 import { createInventoryUi } from "./inventory-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
 import { localizedText, localizedTextExact, updateLocalizedText } from "./localized-data.js";
@@ -73,27 +74,30 @@ function supportedLang(value) {
   return Object.prototype.hasOwnProperty.call(translations, value) ? value : "en";
 }
 
+const household = await requireHouseholdSession();
+const householdStorage = createHouseholdStorage(localStorage, household.id);
+
 let lang = supportedLang(readStringStorage(localStorage, "dinner-lang", "en"));
-let householdMember = cleanHouseholdMember(readStringStorage(localStorage, "dinner-household-member", "Family")) || "Family";
+let householdMember = cleanHouseholdMember(readStringStorage(householdStorage, "dinner-household-member", "Family")) || "Family";
 let selectedRecipeId = "meatballs";
-let schedule = normalizeSchedule(readJsonStorage(localStorage, "dinner-schedule", null));
-let calendarMeals = normalizeCalendar(readJsonStorage(localStorage, "dinner-calendar", {}));
-let weekStartKey = readStringStorage(localStorage, "dinner-week-start", currentWeekStartKey());
-let sharedStateVersion = readNumberStorage(localStorage, "dinner-state-version", 0);
-let favorites = readJsonStorage(localStorage, "dinner-favorites", []);
-let tasks = readJsonStorage(localStorage, "dinner-tasks", []);
-let availableFood = normalizeAvailableFood(readJsonStorage(localStorage, "dinner-available-food", []));
-let recipeFeedback = normalizeRecipeFeedback(readJsonStorage(localStorage, "dinner-recipe-feedback", {}));
-let drafts = readJsonStorage(localStorage, "dinner-drafts", []);
+let schedule = normalizeSchedule(readJsonStorage(householdStorage, "dinner-schedule", null));
+let calendarMeals = normalizeCalendar(readJsonStorage(householdStorage, "dinner-calendar", {}));
+let weekStartKey = readStringStorage(householdStorage, "dinner-week-start", currentWeekStartKey());
+let sharedStateVersion = readNumberStorage(householdStorage, "dinner-state-version", 0);
+let favorites = readJsonStorage(householdStorage, "dinner-favorites", []);
+let tasks = readJsonStorage(householdStorage, "dinner-tasks", []);
+let availableFood = normalizeAvailableFood(readJsonStorage(householdStorage, "dinner-available-food", []));
+let recipeFeedback = normalizeRecipeFeedback(readJsonStorage(householdStorage, "dinner-recipe-feedback", {}));
+let drafts = readJsonStorage(householdStorage, "dinner-drafts", []);
 let sharedRecipes = [];
-let recipeEdits = readJsonStorage(localStorage, "dinner-recipe-edits", {});
-let deletedRecipeIds = readJsonStorage(localStorage, "dinner-deleted-recipes", []);
+let recipeEdits = readJsonStorage(householdStorage, "dinner-recipe-edits", {});
+let deletedRecipeIds = readJsonStorage(householdStorage, "dinner-deleted-recipes", []);
 let importedRecipePhotos = [];
 let importedRecipeCardPhoto = "";
 const groceryStorageKeys = { itemsKey: "dinner-groceries", versionKey: "dinner-grocery-version" };
 const inventoryStorageKeys = { itemsKey: "dinner-inventory", versionKey: "dinner-inventory-version" };
-const storedGroceries = readVersionedCollectionStorage(localStorage, groceryStorageKeys);
-const storedInventory = readVersionedCollectionStorage(localStorage, inventoryStorageKeys);
+const storedGroceries = readVersionedCollectionStorage(householdStorage, groceryStorageKeys);
+const storedInventory = readVersionedCollectionStorage(householdStorage, inventoryStorageKeys);
 let groceries = storedGroceries.items;
 let groceryVersion = storedGroceries.version;
 let inventory = storedInventory.items;
@@ -276,15 +280,15 @@ function draftById(id) {
 }
 
 function persistDrafts() {
-  localStorage.setItem("dinner-drafts", JSON.stringify(drafts));
+  householdStorage.setItem("dinner-drafts", JSON.stringify(drafts));
 }
 
 function persistGroceriesLocally(items = groceries, version = groceryVersion) {
-  persistVersionedCollection(localStorage, groceryStorageKeys, items, version);
+  persistVersionedCollection(householdStorage, groceryStorageKeys, items, version);
 }
 
 function persistInventoryLocally(items = inventory, version = inventoryVersion) {
-  persistVersionedCollection(localStorage, inventoryStorageKeys, items, version);
+  persistVersionedCollection(householdStorage, inventoryStorageKeys, items, version);
 }
 
 function recipeToEditableUpload(recipe) {
@@ -571,7 +575,7 @@ function applySharedState(nextState) {
 }
 
 function saveSharedStateLocally() {
-  persistSharedState(localStorage, currentSharedState(), sharedStateVersion);
+  persistSharedState(householdStorage, currentSharedState(), sharedStateVersion);
 }
 
 async function saveSharedState() {
@@ -1037,7 +1041,7 @@ const bindOpenButtons = () => recipeLibraryUi.bindOpenButtons();
 const onboardingUi = createOnboardingUi({
   $,
   $$,
-  storage: localStorage,
+  storage: householdStorage,
   setView,
   openInventory: () => {
     inventoryMode = "home";
@@ -1378,7 +1382,7 @@ $$("[data-lang]").forEach((button) => {
 
 $("#householdMemberInput").addEventListener("change", (event) => {
   householdMember = cleanHouseholdMember(event.target.value) || "Family";
-  localStorage.setItem("dinner-household-member", householdMember);
+  householdStorage.setItem("dinner-household-member", householdMember);
 });
 
 $("#addRecipeFromLibrary").addEventListener("click", () => setView("add"));
@@ -1518,6 +1522,22 @@ $("#addRecipeGroceries").addEventListener("click", async () => {
 
 recipeFormUi.bind();
 onboardingUi.bind();
+$("#householdMenuName").textContent = household.name;
+$("#currentHouseholdKey").value = household.key;
+$("#copyHouseholdKey").addEventListener("click", async () => {
+  const status = $("#householdMenuStatus");
+  try {
+    await navigator.clipboard.writeText(household.key);
+    status.textContent = "Family key copied.";
+  } catch {
+    $("#currentHouseholdKey").type = "text";
+    $("#currentHouseholdKey").select();
+    status.textContent = "Key selected. Copy it from the field.";
+  }
+});
+$("#leaveHousehold").addEventListener("click", () => {
+  if (window.confirm("Use a different household? Make sure this family key is saved first.")) leaveHousehold();
+});
 
 $("#markCooked").addEventListener("click", () => {
   $("#recipeOutcomePanel").hidden = !$("#recipeOutcomePanel").hidden;

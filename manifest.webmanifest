@@ -1,6 +1,6 @@
 {
-  "name": "Ryan Family Menu",
-  "short_name": "Ryan Menu",
+  "name": "Family Menu",
+  "short_name": "Family Menu",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f4ecdf",

@@ -1,6 +1,6 @@
-# Ryan Family Menu
+# Family Menu
 
-Private family dinner planner deployed on Netlify.
+Private, multi-household family dinner planner deployed on Netlify.
 
 Current features:
 
@@ -17,34 +17,34 @@ Current features:
 
 This folder is ready for Netlify. Use `.` as the publish directory and leave the build command blank.
 
-After connecting this repo to Netlify, any pushed update should redeploy the Ryan Family Menu site automatically.
+After connecting this repo to Netlify, any pushed update should redeploy the Family Menu site automatically.
 
 ## Storage
 
-Shared data is stored with Netlify Blobs from the functions in `netlify/functions/`:
+Shared data is stored with Netlify Blobs from the functions in `netlify/functions/`. Every record is namespaced by a validated household ID, and every read and write requires that household's private key:
 
 - `recipes.js`: shared uploaded recipes
 - `family-state.js`: schedule, calendar meals, favorites, tasks, recipe edits, hidden/deleted recipes
 - `groceries.js`: shared grocery list
 - `inventory.js`: home inventory
 
-The browser also keeps local fallbacks in `localStorage` so the app remains usable if a live save fails.
+The browser also keeps household-scoped local fallbacks in `localStorage` so the app remains usable if a live save fails without showing another household's cached data.
 
-## Optional Family Write Token
+## Household Setup
 
-By default, write endpoints stay open to preserve the current frictionless family workflow.
+Before deploying the multi-household version, set this required Netlify environment variable:
 
-For basic write protection, set this Netlify environment variable:
+- `HOUSEHOLD_CREATION_CODE`: invite code the site owner gives to a new family when they are allowed to create a household
 
-- `FAMILY_WRITE_TOKEN`: shared secret required for writes and AI-powered imports/scans
+Each household receives a random family key during setup. The key is shown once, is stored on that browser, and must be shared privately with other household members. Possession of the key grants read and write access to that household.
 
-Then set the same value in the browser once:
+Use a long, unique `HOUSEHOLD_CREATION_CODE` and rotate it after onboarding a new family. Household members can copy their household key later from the Household menu.
 
-```js
-localStorage.setItem("dinner-family-write-token", "your-shared-secret")
-```
+### Migrating the original household data
 
-Reload the app after setting it. Reads remain public unless Netlify site-level access controls are configured.
+Set a one-time `LEGACY_MIGRATION_CODE` in Netlify. An owner can then create the first household through the `households` function with `migrateLegacy: true` and that code. The legacy records are copied into the new namespace; the public setup screen never exposes this option. Remove `LEGACY_MIGRATION_CODE` after verifying the copy.
+
+Do not deploy this version before setting `HOUSEHOLD_CREATION_CODE`: household creation intentionally fails closed when it is absent.
 
 ## OpenAI-Powered Scanning
 

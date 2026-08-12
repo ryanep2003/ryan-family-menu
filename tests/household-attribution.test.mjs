@@ -17,5 +17,5 @@ test("household attribution rejects unknown values", () => {
 test("app normalizes stored household attribution", async () => {
   const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
 
-  assert.match(source, /cleanHouseholdMember\(readStringStorage\(localStorage, "dinner-household-member", "Family"\)\) \|\| "Family"/);
+  assert.match(source, /cleanHouseholdMember\(readStringStorage\(householdStorage, "dinner-household-member", "Family"\)\) \|\| "Family"/);
 });

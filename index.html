@@ -4,22 +4,80 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#f4ecdf" />
-    <title>Ryan Family Menu</title>
+    <title>Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=50" />
+    <link rel="stylesheet" href="styles.css?v=51" />
   </head>
-  <body data-view="today">
+  <body class="household-locked" data-view="today">
+    <section class="household-gate" id="householdGate" aria-labelledby="householdGateHeading">
+      <div class="household-gate-panel">
+        <div class="household-gate-brand" aria-hidden="true">F</div>
+        <h1 id="householdGateHeading">Your family’s shared kitchen</h1>
+        <p class="household-gate-intro">Meal plans, groceries, recipes, and food at home stay private to one household.</p>
+        <div class="household-gate-tabs" role="group" aria-label="Choose how to continue">
+          <button id="showJoinHousehold" type="button" aria-pressed="true">Join my household</button>
+          <button id="showCreateHousehold" type="button" aria-pressed="false">Create a household</button>
+        </div>
+
+        <form class="household-access-form" id="joinHouseholdForm">
+          <label>
+            <span>Family key</span>
+            <input name="householdKey" type="password" autocomplete="off" spellcheck="false" required placeholder="Paste the key shared by your family" />
+          </label>
+          <p class="field-note">Treat this key like a password. Everyone with it can see and update your family menu.</p>
+          <button class="primary-action" type="submit">Open our family menu</button>
+        </form>
+
+        <form class="household-access-form" id="createHouseholdForm" hidden>
+          <label>
+            <span>Household name</span>
+            <input name="householdName" type="text" autocomplete="organization" maxlength="80" required placeholder="The Rivera family" />
+          </label>
+          <label>
+            <span>New-family invite code</span>
+            <input name="creationCode" type="password" autocomplete="off" required placeholder="Provided by the app owner" />
+          </label>
+          <button class="primary-action" type="submit">Create our household</button>
+        </form>
+
+        <section class="household-key-receipt" id="householdKeyReceipt" hidden>
+          <h2>Save your family key now</h2>
+          <p>This is the only way to open this household on another device. Store it in your family password manager, then share it privately.</p>
+          <label>
+            <span>Family key</span>
+            <input id="createdHouseholdKey" type="text" readonly />
+          </label>
+          <button class="primary-action" id="continueToHousehold" type="button">I saved it — continue</button>
+        </section>
+        <p class="household-gate-status" id="householdGateStatus" role="status"></p>
+      </div>
+    </section>
+
     <header class="app-header">
       <div class="brand-lockup">
-        <span class="brand-mark" aria-hidden="true">R</span>
+        <span class="brand-mark" aria-hidden="true">F</span>
         <div>
-          <p class="eyebrow" data-i18n="eyebrow">Ryan Family Menu</p>
+          <p class="eyebrow"><span id="householdName">Family</span> · <span data-i18n="eyebrow">Family Menu</span></p>
           <h1 data-i18n="title">Tonight, made simple.</h1>
         </div>
       </div>
       <div class="header-actions">
+        <details class="household-menu">
+          <summary class="household-button">Household</summary>
+          <div class="household-menu-panel">
+            <strong id="householdMenuName">Family</strong>
+            <p>Share this key privately with family members you trust.</p>
+            <label>
+              <span>Family key</span>
+              <input id="currentHouseholdKey" type="password" readonly />
+            </label>
+            <button class="ghost-button" id="copyHouseholdKey" type="button">Copy family key</button>
+            <button class="text-button" id="leaveHousehold" type="button">Use a different household</button>
+            <p class="household-menu-status" id="householdMenuStatus" role="status"></p>
+          </div>
+        </details>
         <button class="guide-button" id="quickGuideToggle" type="button" aria-controls="quickGuide" aria-expanded="false" data-i18n="quickGuide">Quick guide</button>
         <button class="shell-add-button" id="globalAddRecipe" type="button" aria-label="Add recipe" data-i18n="addTab" data-i18n-aria-label="addRecipe">Add</button>
         <div class="install-prompt" id="installPrompt" role="group" aria-label="Install / Add to Home Screen" data-i18n-aria-label="installApp" hidden>
@@ -665,6 +723,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=82"></script>
+    <script type="module" src="app.js?v=84"></script>
   </body>
 </html>

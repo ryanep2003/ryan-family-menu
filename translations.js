@@ -1,6 +1,6 @@
 export const translations = {
   en: {
-    eyebrow: "Ryan Family Menu",
+    eyebrow: "Family Menu",
     title: "Tonight, made simple.",
     installApp: "Install / Add to Home Screen",
     installShort: "Install",
@@ -407,7 +407,7 @@ export const translations = {
     cookedToday: "Cooked today",
   },
   es: {
-    eyebrow: "Menú de la familia Ryan",
+    eyebrow: "Menú familiar",
     title: "La cena, más fácil.",
     installApp: "Instalar / Agregar a pantalla de inicio",
     installShort: "Instalar",
