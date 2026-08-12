@@ -23,6 +23,7 @@ export function createScheduleUi({
   mealSummary,
   recipeById,
   allRecipes,
+  copyCurrentWeekToNextWeek,
   saveSharedState,
   render,
   getLang,
@@ -379,6 +380,30 @@ export function createScheduleUi({
       await navigateWeek(1);
     });
 
+    const scheduleStatus = $("#scheduleStatus");
+    const setScheduleStatus = (message = "", isError = false) => {
+      if (!scheduleStatus) return;
+      scheduleStatus.textContent = message;
+      scheduleStatus.classList.toggle("error", isError);
+    };
+
+    $("#copyWeekForward").addEventListener("click", async () => {
+      const result = copyCurrentWeekToNextWeek();
+      if (!result.copiedCount) {
+        setScheduleStatus(
+          result.skippedCount ? t("weekCopyAlreadyPlanned") : t("weekCopyNothingPlanned")
+        );
+        return;
+      }
+
+      render();
+      setScheduleStatus(
+        t(result.skippedCount ? "weekCopiedToNextWithSkips" : "weekCopiedToNext")
+          .replace("{count}", result.copiedCount)
+      );
+      await saveSharedState();
+    });
+
     $("#resetWeek").addEventListener("click", async () => {
       if (!window.confirm(t("clearWeekConfirm"))) return;
       setSchedule(Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])));
@@ -386,6 +411,7 @@ export function createScheduleUi({
       activeWeekDateKeys().forEach(({ dateKey }) => delete nextCalendarMeals[dateKey]);
       setCalendarMeals(nextCalendarMeals);
       render();
+      setScheduleStatus("");
       await saveSharedState();
     });
 

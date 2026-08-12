@@ -3090,7 +3090,6 @@ li {
   .week-navigation #nextWeek {
     grid-area: next;
   }
-
   .today-band {
     min-height: 270px;
   }

@@ -47,6 +47,7 @@ import {
 } from "./recipe-utils.js";
 import {
   activeWeekDateKeys as dateKeysForWeek,
+  copyCurrentWeekToNextWeek,
   currentWeekStartKey,
   days,
   emptyMeal,
@@ -946,6 +947,11 @@ const scheduleUi = createScheduleUi({
   mealSummary,
   recipeById,
   allRecipes,
+  copyCurrentWeekToNextWeek: () => {
+    const result = copyCurrentWeekToNextWeek(weekStartKey, schedule, calendarMeals);
+    calendarMeals = normalizeCalendar(result.calendarMeals);
+    return result;
+  },
   saveSharedState,
   render,
   getLang: () => lang,

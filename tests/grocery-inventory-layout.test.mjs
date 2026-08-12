@@ -61,6 +61,7 @@ test("mobile content clears the fixed navigation with a safe bottom buffer", () 
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
+  assert.match(html, /id="copyWeekForward"/);
   assert.match(styles, /\.schedule-editor\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles, /\.recipe-detail\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
 });
