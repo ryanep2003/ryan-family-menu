@@ -75,6 +75,8 @@ function harness(overrides = {}) {
   };
   const elements = {
     "#recipeCount": element(),
+    "#recipePicksList": element(),
+    "#recipePicksEmpty": element({ hidden: true }),
     "#recipeList": element(),
     "#recipeSearch": element(),
     "#categoryFilter": element(),
@@ -118,6 +120,7 @@ function harness(overrides = {}) {
     categoryLabel: () => "Main",
     getLang: () => overrides.lang || "en",
     getFavorites: () => [],
+    getPlannedRecipeIds: () => overrides.plannedRecipeIds || [],
     allRecipes: () => [recipe],
     recipeById: () => recipe,
     draftById: () => null,
@@ -142,6 +145,25 @@ test("renderRecipes escapes recipe ids and photo URLs in card markup", () => {
   assert.match(elements["#recipeList"].innerHTML, /photo\.jpg&quot; onerror=&quot;alert\(1\)/);
   assert.match(elements["#recipeList"].innerHTML, /recipe-1&quot; autofocus=&quot;true/);
   assert.doesNotMatch(elements["#recipeList"].innerHTML, /onerror="alert/);
+});
+
+test("renderRecipes puts planned recipes in the family picks shelf", () => {
+  const { elements, ui } = harness({ plannedRecipeIds: ['recipe-1" autofocus="true'] });
+
+  ui.renderRecipes();
+
+  assert.match(elements["#recipePicksList"].innerHTML, /recipe-pick-label/);
+  assert.match(elements["#recipePicksList"].innerHTML, /recipe-1&quot; autofocus=&quot;true/);
+  assert.equal(elements["#recipePicksEmpty"].hidden, true);
+});
+
+test("renderRecipes keeps the picks shelf empty when there are no favorites or plans", () => {
+  const { elements, ui } = harness();
+
+  ui.renderRecipes();
+
+  assert.equal(elements["#recipePicksList"].innerHTML, "");
+  assert.equal(elements["#recipePicksEmpty"].hidden, false);
 });
 
 test("Spanish recipe search includes source-language fallback text", () => {

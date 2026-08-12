@@ -13,6 +13,7 @@ export function createRecipeLibraryUi({
   categoryLabel,
   getLang,
   getFavorites,
+  getPlannedRecipeIds = () => [],
   allRecipes,
   recipeById,
   draftById,
@@ -52,6 +53,28 @@ export function createRecipeLibraryUi({
     return { text: fallback, fallback: Boolean(fallback) };
   }
 
+  function recipeCardMarkup(recipe, index, { pick = false, plannedIds = new Set() } = {}) {
+    const name = requiredText(recipe.name);
+    const meta = displayText(recipe.meta).text;
+    const short = displayText(recipe.short).text;
+    const cardPhoto = cardPhotoFor(recipe);
+    const pickLabel = pick
+      ? plannedIds.has(recipe.id) ? t("recipePickPlanned") : t("recipePickFavorite")
+      : "";
+    return `
+      <button class="recipe-card${pick ? " recipe-pick-card" : ""}" style="--card-order: ${Math.min(index, 8)}" type="button" data-open="${escapeHtml(recipe.id)}">
+        <img src="${escapeHtml(cardPhoto)}" alt="${cardPhotoIsGenerated(recipe) ? "" : escapeHtml(name)}" loading="lazy" decoding="async" />
+        ${pickLabel ? `<span class="recipe-pick-label">${escapeHtml(pickLabel)}</span>` : ""}
+        <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
+        ${getFavorites().includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}
+        ${hasLocalizedContent(recipe.allergyWarning) ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
+        <h3>${escapeHtml(name)}</h3>
+        ${meta ? `<p>${escapeHtml(meta)}</p>` : ""}
+        ${short ? `<p>${escapeHtml(short)}</p>` : ""}
+      </button>
+    `;
+  }
+
   function renderRecipes() {
     const search = getRecipeSearch().trim().toLowerCase();
     const categoryFilter = getCategoryFilter();
@@ -65,27 +88,24 @@ export function createRecipeLibraryUi({
       return categoryMatch && (!search || haystack.includes(search));
     });
 
+    const favoriteIds = new Set(getFavorites());
+    const plannedIds = new Set(getPlannedRecipeIds());
+    const picks = recipes
+      .filter((recipe) => favoriteIds.has(recipe.id) || plannedIds.has(recipe.id))
+      .sort((left, right) => (
+        Number(plannedIds.has(right.id)) - Number(plannedIds.has(left.id))
+        || Number(favoriteIds.has(right.id)) - Number(favoriteIds.has(left.id))
+      ));
+
     $("#recipeCount").textContent = t(filtered.length === recipes.length ? "recipeCount" : "recipeCountFiltered")
       .replace("{count}", filtered.length)
       .replace("{total}", recipes.length);
+    $("#recipePicksList").innerHTML = picks.slice(0, 6)
+      .map((recipe, index) => recipeCardMarkup(recipe, index, { pick: true, plannedIds }))
+      .join("");
+    $("#recipePicksEmpty").hidden = picks.length > 0;
     $("#recipeList").innerHTML = filtered
-      .map((recipe, index) => {
-        const name = requiredText(recipe.name);
-        const meta = displayText(recipe.meta).text;
-        const short = displayText(recipe.short).text;
-        const cardPhoto = cardPhotoFor(recipe);
-        return `
-        <button class="recipe-card" style="--card-order: ${Math.min(index, 8)}" type="button" data-open="${escapeHtml(recipe.id)}">
-          <img src="${escapeHtml(cardPhoto)}" alt="${cardPhotoIsGenerated(recipe) ? "" : escapeHtml(name)}" loading="lazy" decoding="async" />
-          <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
-          ${getFavorites().includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}
-          ${hasLocalizedContent(recipe.allergyWarning) ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
-          <h3>${escapeHtml(name)}</h3>
-          ${meta ? `<p>${escapeHtml(meta)}</p>` : ""}
-          ${short ? `<p>${escapeHtml(short)}</p>` : ""}
-        </button>
-      `;
-      })
+      .map((recipe, index) => recipeCardMarkup(recipe, index))
       .join("");
     if (!filtered.length) {
       $("#recipeList").innerHTML = `<p class="empty-state">${t("noMatchingRecipes")}</p>`;

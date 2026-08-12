@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=48" />
+    <link rel="stylesheet" href="styles.css?v=49" />
   </head>
   <body data-view="today">
     <header class="app-header">
@@ -512,25 +512,44 @@
             </aside>
           </div>
         </section>
-        <div class="library-tools">
-          <label>
-            <span data-i18n="searchLabel">Search recipes</span>
-            <input type="search" id="recipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" placeholder="chicken, salad, pasta" />
-          </label>
-          <label>
-            <span data-i18n="categoryFilterLabel">Category</span>
-            <select id="categoryFilter">
-              <option value="all" data-i18n="categoryAll">All</option>
-              <option value="main" data-i18n="categoryMain">Mains</option>
-              <option value="side" data-i18n="categorySide">Sides</option>
-              <option value="salad" data-i18n="categorySalad">Salads</option>
-              <option value="sauce" data-i18n="categorySauce">Sauces</option>
-              <option value="dessert" data-i18n="categoryDessert">Desserts</option>
-              <option value="draft" data-i18n="categoryDraft">Drafts</option>
-            </select>
-          </label>
-        </div>
-        <div class="recipe-list" id="recipeList"></div>
+        <section class="recipe-picks" aria-labelledby="recipePicksHeading">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label" data-i18n="recipePicksKicker">Start with likely choices</p>
+              <h2 id="recipePicksHeading" data-i18n="recipePicksHeading">Family picks</h2>
+            </div>
+          </div>
+          <p class="section-note" data-i18n="recipePicksHelper">Your favorites and this week's planned recipes appear here first.</p>
+          <div class="recipe-list recipe-picks-list" id="recipePicksList"></div>
+          <p class="empty-state compact" id="recipePicksEmpty" data-i18n="recipePicksEmpty" hidden>Favorite a recipe or plan one in Week to see it here.</p>
+        </section>
+        <details class="recipe-browse" id="recipeBrowse">
+          <summary>
+            <span data-i18n="browseAllRecipes">Browse all recipes</span>
+            <small data-i18n="browseAllRecipesNote">Search and filter the full library.</small>
+          </summary>
+          <div class="recipe-browse-content">
+            <div class="library-tools">
+              <label>
+                <span data-i18n="searchLabel">Search recipes</span>
+                <input type="search" id="recipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" placeholder="chicken, salad, pasta" />
+              </label>
+              <label>
+                <span data-i18n="categoryFilterLabel">Category</span>
+                <select id="categoryFilter">
+                  <option value="all" data-i18n="categoryAll">All</option>
+                  <option value="main" data-i18n="categoryMain">Mains</option>
+                  <option value="side" data-i18n="categorySide">Sides</option>
+                  <option value="salad" data-i18n="categorySalad">Salads</option>
+                  <option value="sauce" data-i18n="categorySauce">Sauces</option>
+                  <option value="dessert" data-i18n="categoryDessert">Desserts</option>
+                  <option value="draft" data-i18n="categoryDraft">Drafts</option>
+                </select>
+              </label>
+            </div>
+            <div class="recipe-list" id="recipeList"></div>
+          </div>
+        </details>
       </section>
 
       <section class="view" id="addView">
@@ -637,6 +656,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=79"></script>
+    <script type="module" src="app.js?v=80"></script>
   </body>
 </html>
