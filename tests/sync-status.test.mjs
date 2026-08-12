@@ -3,10 +3,16 @@ import test from "node:test";
 
 import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "../sync-status.js";
 
-test("shared load failures use a reload label while save failures use retry sync", () => {
-  assert.equal(syncRetryLabel("shared", "usingSavedCopy"), "reloadSharedMenu");
+test("sync recovery always uses a simple retry label", () => {
+  assert.equal(syncRetryLabel("shared", "sharedMenuUnavailable"), "retrySync");
   assert.equal(syncRetryLabel("shared", "savedLocallyPending"), "retrySync");
-  assert.equal(syncRetryLabel("groceries", "usingSavedCopy"), "retrySync");
+  assert.equal(syncRetryLabel("groceries", "savedLocallyPending"), "retrySync");
+});
+
+test("shared menu recovery copy does not ask families to choose a device copy", async () => {
+  const source = await import("node:fs/promises").then(({ readFile }) => readFile(new URL("../translations.js", import.meta.url), "utf8"));
+  assert.doesNotMatch(source, /Reload shared menu|Using the copy saved on this device/);
+  assert.match(source, /Reconnecting automatically/);
 });
 
 function classList() {

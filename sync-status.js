@@ -6,10 +6,8 @@ export function formatSyncTime(language, value = new Date()) {
   }).format(value);
 }
 
-export function syncRetryLabel(area, key) {
-  return area === "shared" && key === "usingSavedCopy"
-    ? "reloadSharedMenu"
-    : "retrySync";
+export function syncRetryLabel() {
+  return "retrySync";
 }
 
 export function renderSyncStatus({

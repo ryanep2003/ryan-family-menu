@@ -238,6 +238,10 @@ function markSynced(area) {
 
 let undoTimer = 0;
 let sharedRetryAction = null;
+let sharedLoadRetryTimer = 0;
+let sharedLoadAttempt = 0;
+const SHARED_LOAD_RETRY_DELAYS = [800, 2000, 5000];
+const SHARED_LOAD_BACKGROUND_RETRY_DELAY = 15000;
 
 function setSharedRetryAction(action) {
   sharedRetryAction = action;
@@ -609,9 +613,16 @@ async function saveSharedState() {
   }
 }
 
-async function loadSharedState() {
+async function loadSharedState({ restart = false } = {}) {
+  window.clearTimeout(sharedLoadRetryTimer);
+  sharedLoadRetryTimer = 0;
+  if (restart) sharedLoadAttempt = 0;
+  setSharedRetryAction(() => loadSharedState({ restart: true }));
+  setSyncStatus("shared", "connectingSharedMenu", { state: "pending" });
+
   try {
     const data = await getJson("/.netlify/functions/family-state", "Could not load shared family state.");
+    sharedLoadAttempt = 0;
     sharedStateVersion = Number(data.version) || 0;
 
     if (!data.state) {
@@ -641,8 +652,19 @@ async function loadSharedState() {
     }
   } catch (error) {
     console.warn(error);
-    setSharedRetryAction(loadSharedState);
-    setSyncStatus("shared", "usingSavedCopy", { state: "pending", canRetry: true });
+    const retryDelay = SHARED_LOAD_RETRY_DELAYS[sharedLoadAttempt];
+    sharedLoadAttempt += 1;
+
+    if (retryDelay) {
+      sharedLoadRetryTimer = window.setTimeout(loadSharedState, retryDelay);
+      return;
+    }
+
+    setSyncStatus("shared", "sharedMenuUnavailable", { state: "pending", canRetry: true });
+    sharedLoadRetryTimer = window.setTimeout(
+      () => loadSharedState({ restart: true }),
+      SHARED_LOAD_BACKGROUND_RETRY_DELAY
+    );
   }
 }
 
