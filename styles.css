@@ -2991,6 +2991,84 @@ h3 {
   font-size: 1.15rem;
 }
 
+.source-instructions,
+.source-selection-status,
+.source-processing-status {
+  margin: 0;
+}
+
+.source-instructions {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.source-selection-status {
+  padding: 11px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--sage-dark);
+  font-weight: 750;
+}
+
+.source-process-button {
+  width: 100%;
+}
+
+.source-processing-status {
+  min-height: 0;
+  color: var(--sage-dark);
+  font-weight: 750;
+}
+
+.source-processing-status:empty {
+  display: none;
+}
+
+.source-processing-status.working {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.source-processing-status.error {
+  color: var(--danger-ink);
+}
+
+.source-process-button.is-processing::before {
+  content: "";
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  margin-inline-end: 9px;
+  vertical-align: -6px;
+  border-radius: 50%;
+  background: url("./assets/app-icon.svg") center / 36px 36px no-repeat;
+  box-shadow: 0 1px 3px rgba(40, 34, 29, 0.2);
+  animation: source-processing-spin 1.15s cubic-bezier(0.55, 0, 0.45, 1) infinite;
+}
+
+.source-process-button.is-processing:disabled {
+  cursor: progress;
+  background: var(--ink);
+  opacity: 1;
+}
+
+@keyframes source-processing-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .source-process-button.is-processing::before {
+    animation: none;
+  }
+}
+
 .source-number {
   position: absolute;
   top: -17px;

@@ -12,7 +12,13 @@ test("sync recovery always uses a simple retry label", () => {
 test("shared menu recovery copy does not ask families to choose a device copy", async () => {
   const source = await import("node:fs/promises").then(({ readFile }) => readFile(new URL("../translations.js", import.meta.url), "utf8"));
   assert.doesNotMatch(source, /Reload shared menu|Using the copy saved on this device/);
-  assert.match(source, /Reconnecting automatically/);
+  assert.match(source, /Can’t reach the shared menu/);
+});
+
+test("normal shared menu startup stays visually quiet", async () => {
+  const source = await import("node:fs/promises").then(({ readFile }) => readFile(new URL("../app.js", import.meta.url), "utf8"));
+  assert.doesNotMatch(source, /setSyncStatus\("shared", "connectingSharedMenu"/);
+  assert.match(source, /if \(area === "shared"\) \{\s*clearAreaStatus\(area\)/);
 });
 
 function classList() {

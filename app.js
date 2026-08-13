@@ -233,6 +233,10 @@ function refreshSyncStatuses() {
 }
 
 function markSynced(area) {
+  if (area === "shared") {
+    clearAreaStatus(area);
+    return;
+  }
   setSyncStatus(area, "syncedAt", { syncedAt: new Date().toISOString() });
 }
 
@@ -618,7 +622,7 @@ async function loadSharedState({ restart = false } = {}) {
   sharedLoadRetryTimer = 0;
   if (restart) sharedLoadAttempt = 0;
   setSharedRetryAction(() => loadSharedState({ restart: true }));
-  setSyncStatus("shared", "connectingSharedMenu", { state: "pending" });
+  clearAreaStatus("shared");
 
   try {
     const data = await getJson("/.netlify/functions/family-state", "Could not load shared family state.");
@@ -660,7 +664,7 @@ async function loadSharedState({ restart = false } = {}) {
       return;
     }
 
-    setSyncStatus("shared", "sharedMenuUnavailable", { state: "pending", canRetry: true });
+    setSyncStatus("shared", "sharedMenuUnavailable", { state: "error", canRetry: true });
     sharedLoadRetryTimer = window.setTimeout(
       () => loadSharedState({ restart: true }),
       SHARED_LOAD_BACKGROUND_RETRY_DELAY

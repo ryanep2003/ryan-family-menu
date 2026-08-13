@@ -68,6 +68,13 @@ export function createRecipeFormUi({
     if (disclosure) disclosure.open = true;
   }
 
+  function revealRecipeDetails() {
+    const disclosure = $("#recipeDetailsDisclosure");
+    if (!disclosure) return;
+    disclosure.open = true;
+    disclosure.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   function setRecipeSourceMode(mode) {
     const sources = [
       { mode: "photos", button: $("#usePhotoSource"), panel: $("#photoSourcePanel") },
@@ -116,14 +123,44 @@ export function createRecipeFormUi({
 
   function formatRecipePhotoStatus(count) {
     if (!count) return t("noRecipePhotosSelected");
-    return t("recipePhotosSelected").replace("{count}", count);
+    const key = count === 1 ? "oneRecipePhotoReady" : "recipePhotosReady";
+    return t(key).replace("{count}", count);
+  }
+
+  function formatPhotoProcessLabel(count) {
+    const key = count === 1 ? "createRecipeFromOnePhoto" : "createRecipeFromPhotos";
+    return t(key).replace("{count}", count);
   }
 
   function renderUploadPhotoQueue() {
     const count = uploadPhotoFiles.length;
     $("#selectedRecipePhotoStatus").textContent = formatRecipePhotoStatus(count);
+    $("#scanRecipePhotos").textContent = count ? formatPhotoProcessLabel(count) : t("scanRecipePhotos");
     $("#scanRecipePhotos").disabled = count === 0;
     $("#clearRecipePhotos").disabled = count === 0;
+  }
+
+  function setPhotoProcessing(processing) {
+    const button = $("#scanRecipePhotos");
+    $("#photoProcessingStatus").classList.toggle("working", processing);
+    $("#photoSourcePanel").setAttribute("aria-busy", `${processing}`);
+    $("#photoInput").disabled = processing;
+    $("#photoCameraInput").disabled = processing;
+    $("#clearRecipePhotos").disabled = processing || uploadPhotoFiles.length === 0;
+    button.disabled = processing || uploadPhotoFiles.length === 0;
+    button.classList.toggle("is-processing", processing);
+    button.textContent = processing ? t("recipeScanWorking") : formatPhotoProcessLabel(uploadPhotoFiles.length);
+  }
+
+  function setUrlProcessing(processing) {
+    const button = $("#importRecipeUrl");
+    const input = $("#recipeUrlInput");
+    $("#urlProcessingStatus").classList.toggle("working", processing);
+    $("#urlSourcePanel").setAttribute("aria-busy", `${processing}`);
+    input.disabled = processing;
+    button.disabled = processing || !input.value.trim();
+    button.classList.toggle("is-processing", processing);
+    button.textContent = processing ? t("recipeUrlWorking") : t("importRecipeUrl");
   }
 
   function fileKey(file) {
@@ -135,6 +172,8 @@ export function createRecipeFormUi({
     const incoming = [...files].filter((file) => !existing.has(fileKey(file)));
     uploadPhotoFiles = [...uploadPhotoFiles, ...incoming].slice(0, MAX_UPLOAD_PHOTOS);
     setImportedRecipeCardPhoto("");
+    $("#photoProcessingStatus").textContent = "";
+    $("#photoProcessingStatus").classList.remove("error");
     $("#photoInput").value = "";
     $("#photoCameraInput").value = "";
     renderUploadPhotoQueue();
@@ -292,7 +331,8 @@ export function createRecipeFormUi({
     const files = selectedUploadPhotoFiles();
     if (!files.length) return;
 
-    const status = $("#uploadStatus");
+    const status = $("#photoProcessingStatus");
+    setPhotoProcessing(true);
     status.textContent = t("recipeScanWorking");
     status.classList.remove("error");
 
@@ -304,33 +344,34 @@ export function createRecipeFormUi({
       });
       const recipe = await recognizeRecipe(images);
       fillUploadFormFromRecipe(recipe);
-      openRecipeDetails();
+      revealRecipeDetails();
       status.textContent = t("recipeScanSaved");
     } catch (error) {
       console.warn(error);
       status.textContent = error.message || t("recipeScanError");
       status.classList.add("error");
+    } finally {
+      setPhotoProcessing(false);
     }
   }
 
   async function importRecipeFromUrl() {
     const url = $("#recipeUrlInput").value.trim();
-    const status = $("#uploadStatus");
+    const status = $("#urlProcessingStatus");
     if (!url) {
       status.textContent = t("recipeUrlRequired");
       status.classList.add("error");
       return;
     }
 
-    const button = $("#importRecipeUrl");
-    button.disabled = true;
+    setUrlProcessing(true);
     status.textContent = t("recipeUrlWorking");
     status.classList.remove("error");
 
     try {
       const recipe = await importRecipeUrl(url);
       fillUploadFormFromRecipe(recipe, { overwrite: true });
-      openRecipeDetails();
+      revealRecipeDetails();
       setImportedRecipePhotos(Array.isArray(recipe.photos) ? recipe.photos : []);
       setImportedRecipeCardPhoto(recipe.cardPhoto || "");
       status.textContent = t("recipeUrlSaved");
@@ -339,7 +380,7 @@ export function createRecipeFormUi({
       status.textContent = error.message || t("recipeUrlError");
       status.classList.add("error");
     } finally {
-      button.disabled = false;
+      setUrlProcessing(false);
     }
   }
 
@@ -443,9 +484,15 @@ export function createRecipeFormUi({
     $("#scanRecipePhotos").addEventListener("click", scanRecipePhotos);
     $("#clearRecipePhotos").addEventListener("click", clearUploadPhotoFiles);
     $("#importRecipeUrl").addEventListener("click", importRecipeFromUrl);
+    $("#recipeUrlInput").addEventListener("input", () => {
+      $("#urlProcessingStatus").textContent = "";
+      $("#urlProcessingStatus").classList.remove("error");
+      setUrlProcessing(false);
+    });
     $("#saveRecipeDraft").addEventListener("click", saveRecipeDraft);
     $("#uploadForm").addEventListener("submit", submitUploadForm);
     renderUploadPhotoQueue();
+    setUrlProcessing(false);
   }
 
   return {

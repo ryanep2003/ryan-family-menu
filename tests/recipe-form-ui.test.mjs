@@ -74,7 +74,9 @@ function harness(overrides = {}) {
     "#scanRecipePhotos": element(),
     "#clearRecipePhotos": element(),
     "#selectedRecipePhotoStatus": element(),
+    "#photoProcessingStatus": element(),
     "#importRecipeUrl": element(),
+    "#urlProcessingStatus": element(),
     "#saveRecipeDraft": element(),
     "#uploadForm": element(),
     "#uploadForm .primary-action": element(),
@@ -144,10 +146,13 @@ function harness(overrides = {}) {
       recipeScanWorking: "Reading...",
       recipeScanSaved: "Scanned.",
       recipeScanError: "Scan failed.",
-      scanRecipePhotos: "Read selected photos",
+      scanRecipePhotos: "Create recipe from photos",
+      createRecipeFromOnePhoto: "Create recipe from 1 photo",
+      createRecipeFromPhotos: "Create recipe from {count} photos",
       clearRecipePhotos: "Clear photos",
       noRecipePhotosSelected: "No recipe photos selected.",
-      recipePhotosSelected: "{count} selected.",
+      oneRecipePhotoReady: "1 photo ready.",
+      recipePhotosReady: "{count} photos ready.",
       recipeUrlRequired: "Paste a URL.",
       recipeUrlWorking: "Reading URL...",
       recipeUrlSaved: "URL imported.",
@@ -378,7 +383,8 @@ test("recipe photos are queued and scanned together on demand", async () => {
   await elements["#photoCameraInput"].dispatch("change");
 
   assert.deepEqual(scannedBatches, []);
-  assert.equal(elements["#selectedRecipePhotoStatus"].textContent, "2 selected.");
+  assert.equal(elements["#selectedRecipePhotoStatus"].textContent, "2 photos ready.");
+  assert.equal(elements["#scanRecipePhotos"].textContent, "Create recipe from 2 photos");
   assert.equal(elements["#scanRecipePhotos"].disabled, false);
 
   await elements["#scanRecipePhotos"].dispatch("click");
@@ -387,6 +393,38 @@ test("recipe photos are queued and scanned together on demand", async () => {
   assert.equal(elements["#nameInput"].value, "Queued recipe");
   assert.equal(elements["#stepsInput"].value, "cook");
   assert.equal(elements["#recipeDetailsDisclosure"].open, true);
+  assert.equal(elements["#recipeDetailsDisclosure"].scrolled, true);
+  assert.equal(elements["#photoSourcePanel"]["aria-busy"], "false");
+  assert.equal(elements["#photoProcessingStatus"].textContent, "Scanned.");
+});
+
+test("recipe link action stays disabled until a URL is entered and reveals progress in place", async () => {
+  let resolveImport;
+  const importing = new Promise((resolve) => { resolveImport = resolve; });
+  const { elements } = harness({ importRecipeUrl: () => importing });
+
+  assert.equal(elements["#importRecipeUrl"].disabled, true);
+  elements["#recipeUrlInput"].value = "https://example.com/soup";
+  await elements["#recipeUrlInput"].dispatch("input");
+  assert.equal(elements["#importRecipeUrl"].disabled, false);
+
+  const clickPromise = elements["#importRecipeUrl"].dispatch("click");
+  await Promise.resolve();
+  assert.equal(elements["#urlSourcePanel"]["aria-busy"], "true");
+  assert.equal(elements["#importRecipeUrl"].disabled, true);
+  assert.equal(elements["#importRecipeUrl"].textContent, "Reading URL...");
+  assert.equal(elements["#urlProcessingStatus"].textContent, "Reading URL...");
+
+  resolveImport({ name: "Soup", ingredientsText: "beans", stepsText: "simmer" });
+  await clickPromise;
+  assert.equal(elements["#urlSourcePanel"]["aria-busy"], "false");
+  assert.equal(elements["#recipeDetailsDisclosure"].scrolled, true);
+});
+
+test("recipe processing uses the Family Menu app face as its loader", async () => {
+  const source = await import("node:fs/promises").then(({ readFile }) => readFile(new URL("../styles.css", import.meta.url), "utf8"));
+  assert.match(source, /\.source-process-button\.is-processing::before[\s\S]*?app-icon\.svg/);
+  assert.match(source, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?animation: none/);
 });
 
 test("failed live recipe save creates a local draft with imported photos", async () => {
