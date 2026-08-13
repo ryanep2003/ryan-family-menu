@@ -1,4 +1,4 @@
-const CACHE_NAME = "ryan-family-menu-v87";
+const CACHE_NAME = "ryan-family-menu-v88";
 const ASSETS = [
   "./",
   "./index.html",
@@ -22,6 +22,7 @@ const ASSETS = [
   "./recipe-library-ui.js",
   "./receipt-ui.js",
   "./schedule-ui.js",
+  "./shared-state-loader.js",
   "./storage-utils.js",
   "./sync-status.js",
   "./translations.js",
@@ -57,18 +58,19 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/.netlify/functions/")) return;
   if (url.origin !== self.location.origin) return;
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response.ok && response.type === "basic") {
-          const copy = response.clone();
-          event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)));
-        }
-        return response;
-      })
-      .catch(async () => {
-        const cached = await caches.match(event.request);
-        return cached || caches.match("./index.html");
-      })
-  );
+  event.respondWith((async () => {
+    const cached = await caches.match(event.request);
+    if (cached) return cached;
+
+    try {
+      const response = await fetch(event.request);
+      if (response.ok && response.type === "basic") {
+        const copy = response.clone();
+        event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)));
+      }
+      return response;
+    } catch {
+      return caches.match("./index.html");
+    }
+  })());
 });

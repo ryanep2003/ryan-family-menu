@@ -31,7 +31,7 @@ function cleanText(value, maxLength) {
 
 function cleanPhoto(value) {
   const photo = `${value || ""}`.trim();
-  if (/^assets\/[\w.-]+\.jpe?g$/i.test(photo)) return photo;
+  if (/^assets\/[\w.-]+\.(?:jpe?g|webp)$/i.test(photo)) return photo;
   if (photo.startsWith("data:image/") && photo.length * 0.75 <= MAX_PHOTO_BYTES) return photo;
   return "";
 }
@@ -140,7 +140,7 @@ function cleanRecipeEdit(edit) {
     stepsText: cleanLocalizedText(edit.stepsText, 12000),
     allergyWarning: cleanLocalizedText(edit.allergyWarning, 600),
     notes: cleanLocalizedText(edit.notes, 2000),
-    cardPhoto: cleanPhoto(edit.cardPhoto) || (/^assets\/[a-z0-9-]+\.jpg$/.test(edit.cardPhoto || "") ? edit.cardPhoto : ""),
+    cardPhoto: cleanPhoto(edit.cardPhoto),
     photos: Array.isArray(edit.photos)
       ? edit.photos.map(cleanPhoto).filter(Boolean).slice(0, 3)
       : [],

@@ -16,4 +16,5 @@ test("Netlify serves baseline security headers for the app shell", async () => {
   assert.match(source, /X-Content-Type-Options = "nosniff"/);
   assert.match(source, /X-Frame-Options = "DENY"/);
   assert.match(source, /Permissions-Policy = "camera=\(self\), microphone=\(\), geolocation=\(\), payment=\(\), usb=\(\)"/);
+  assert.match(source, /for = "\/assets\/\*"[\s\S]*Cache-Control = "public, max-age=2592000"/);
 });

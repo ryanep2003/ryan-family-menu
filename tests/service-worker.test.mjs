@@ -2,13 +2,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("service worker only runtime-caches successful same-origin responses", async () => {
+test("service worker reuses cached static assets before requesting the network", async () => {
   const source = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
 
   assert.match(source, /url\.origin !== self\.location\.origin/);
+  assert.match(source, /const cached = await caches\.match\(event\.request\);\s*if \(cached\) return cached;/);
   assert.match(source, /response\.ok && response\.type === "basic"/);
   assert.match(source, /event\.waitUntil\(caches\.open\(CACHE_NAME\)/);
-  assert.match(source, /cached \|\| caches\.match\("\.\/index\.html"\)/);
+  assert.match(source, /return caches\.match\("\.\/index\.html"\)/);
 });
 
 test("service worker cache version matches the app shell script version", async () => {
@@ -39,6 +40,7 @@ test("service worker pre-caches first-party app modules", async () => {
     "./recipe-library-ui.js",
     "./receipt-ui.js",
     "./schedule-ui.js",
+    "./shared-state-loader.js",
   ]) {
     assert.match(serviceWorker, new RegExp(path.replace(".", "\\.")), path);
   }

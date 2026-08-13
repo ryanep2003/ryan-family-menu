@@ -26,7 +26,7 @@ function cleanPhoto(value) {
   if (typeof value !== "string") return "";
   const photo = value.trim();
   if (photo.startsWith("data:image/") && photo.length * 0.75 <= MAX_PHOTO_BYTES) return photo;
-  if (/^assets\/[a-z0-9-]+\.jpe?g$/i.test(photo)) return photo;
+  if (/^assets\/[a-z0-9-]+\.(?:jpe?g|webp)$/i.test(photo)) return photo;
   return "";
 }
 

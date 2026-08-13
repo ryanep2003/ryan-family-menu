@@ -1,10 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { access } from "node:fs/promises";
 import {
   categoryFor,
   categoryLabel,
   cardPhotoFor,
   cardPhotoIsGenerated,
+  compactRecipeEditsForSync,
   recipeById,
   recipeToEditableUpload,
   uploadToRecipe,
@@ -31,7 +33,7 @@ test("uploadToRecipe normalizes shared uploads into display recipes", () => {
   assert.deepEqual(recipe.ingredients.en, ["1 lb carrots", "Olive oil"]);
   assert.deepEqual(recipe.ingredients.es, ["1 libra de zanahorias", "Aceite de oliva"]);
   assert.deepEqual(recipe.photos, []);
-  assert.equal(recipe.cardPhoto, "assets/recipe-card-placeholder.jpg");
+  assert.equal(recipe.cardPhoto, "assets/recipe-card-placeholder.webp");
   assert.equal(recipe.cardPhotoIsPlaceholder, true);
 });
 
@@ -58,7 +60,7 @@ test("uploadToRecipe keeps scanned source photos out of recipe cards", () => {
   }, "Shared upload", "Receta compartida");
 
   assert.deepEqual(recipe.photos, ["data:image/jpeg;base64,scan-page-1", "data:image/jpeg;base64,scan-page-2"]);
-  assert.equal(recipe.cardPhoto, "assets/recipe-card-placeholder.jpg");
+  assert.equal(recipe.cardPhoto, "assets/recipe-card-placeholder.webp");
   assert.equal(recipe.cardPhotoIsPlaceholder, true);
 });
 
@@ -92,10 +94,10 @@ test("uploadToRecipe preserves an explicit curated card photo", () => {
     ingredientsText: "pork",
     stepsText: "cook",
     photos: ["data:image/jpeg;base64,scan-page"],
-    cardPhoto: "assets/card-pot-roast.jpg",
+    cardPhoto: "assets/card-pot-roast.webp",
   }, "Shared upload", "Receta compartida");
 
-  assert.equal(recipe.cardPhoto, "assets/card-pot-roast.jpg");
+  assert.equal(recipe.cardPhoto, "assets/card-pot-roast.webp");
   assert.equal(recipe.cardPhotoIsPlaceholder, false);
 });
 
@@ -150,6 +152,50 @@ test("visibleRecipes combines shared uploads, drafts, edits, and deletions", () 
   assert.equal(recipes[2].meta.en, "Local draft");
 });
 
+test("compact recipe edits omit media already stored with a shared recipe", () => {
+  const photo = "data:image/jpeg;base64,already-stored";
+  const compact = compactRecipeEditsForSync({
+    "shared-1": {
+      id: "shared-1",
+      name: "Edited",
+      photos: [photo],
+      cardPhoto: photo,
+    },
+    "seed-1": {
+      id: "seed-1",
+      name: "Edited seed",
+      photos: ["assets/source.webp"],
+    },
+  }, [{ id: "shared-1", photos: [photo], cardPhoto: "" }]);
+
+  assert.deepEqual(compact["shared-1"], { id: "shared-1", name: "Edited" });
+  assert.deepEqual(compact["seed-1"].photos, ["assets/source.webp"]);
+});
+
+test("compact shared edits inherit their recipe media when rendered", () => {
+  const photo = "data:image/jpeg;base64,stored-on-recipe";
+  const [recipe] = visibleRecipes({
+    seedRecipes: [],
+    sharedRecipes: [{
+      id: "shared-1",
+      name: "Original",
+      ingredientsText: "beans",
+      stepsText: "cook",
+      photos: [photo],
+      cardPhoto: photo,
+    }],
+    drafts: [],
+    recipeEdits: {
+      "shared-1": { id: "shared-1", name: "Edited", ingredientsText: "beans", stepsText: "cook" },
+    },
+    deletedRecipeIds: [],
+    localize: localizeEn,
+  });
+
+  assert.deepEqual(recipe.photos, [photo]);
+  assert.equal(recipe.cardPhoto, photo);
+});
+
 test("recipeById returns selected recipe or sensible fallbacks", () => {
   const fallback = { id: "fallback" };
   const first = { id: "first" };
@@ -166,10 +212,19 @@ test("seed recipes use polished Spanish and dedicated discovery photos", () => {
 
   assert.match(meatballs.name.es, /albóndigas/);
   assert.match(soup.short.es, /cúrcuma/);
-  assert.equal(meatballs.cardPhoto, "assets/meatballs-2.jpg");
-  assert.equal(meatballs.photos[0], "assets/meatballs-1.jpg");
-  assert.equal(soup.cardPhoto, "assets/card-chicken-noodle-soup.jpg");
-  assert.equal(soup.photos[0], "assets/chicken-noodle-soup-1.jpg");
+  assert.equal(meatballs.cardPhoto, "assets/card-meatballs.webp");
+  assert.equal(meatballs.photos[0], "assets/meatballs-1.webp");
+  assert.equal(soup.cardPhoto, "assets/card-chicken-noodle-soup.webp");
+  assert.equal(soup.photos[0], "assets/chicken-noodle-soup-1.webp");
   assert.equal(recipes.every((recipe) => recipe.cardPhoto), true);
   assert.equal(new Set(recipes.map((recipe) => recipe.cardPhoto)).size, recipes.length);
+});
+
+test("every bundled recipe image resolves to an optimized WebP asset", async () => {
+  const paths = new Set(recipes.flatMap((recipe) => [recipe.cardPhoto, ...(recipe.photos || [])]));
+
+  for (const path of paths) {
+    assert.match(path, /^assets\/[a-z0-9-]+\.webp$/);
+    await access(new URL(`../${path}`, import.meta.url));
+  }
 });

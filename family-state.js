@@ -88,14 +88,23 @@ export function normalizeSharedState(remoteState = {}, fallbacks = {}) {
 }
 
 export function persistSharedState(storage, state, version) {
-  storage.setItem("dinner-schedule", JSON.stringify(state.schedule));
-  storage.setItem("dinner-calendar", JSON.stringify(state.calendarMeals));
-  storage.setItem("dinner-week-start", state.weekStartKey);
-  storage.setItem("dinner-state-version", `${version}`);
-  storage.setItem("dinner-favorites", JSON.stringify(state.favorites));
-  storage.setItem("dinner-tasks", JSON.stringify(state.tasks));
-  storage.setItem("dinner-available-food", JSON.stringify(normalizeAvailableFood(state.availableFood)));
-  storage.setItem("dinner-recipe-feedback", JSON.stringify(normalizeRecipeFeedback(state.recipeFeedback)));
-  storage.setItem("dinner-recipe-edits", JSON.stringify(state.recipeEdits));
-  storage.setItem("dinner-deleted-recipes", JSON.stringify(state.deletedRecipeIds));
+  try {
+    // Compact recipe edits are the largest cache entry. Write them first so a
+    // migration from an older photo-heavy value frees quota for the rest.
+    storage.setItem("dinner-recipe-edits", JSON.stringify(state.recipeEdits));
+    storage.setItem("dinner-schedule", JSON.stringify(state.schedule));
+    storage.setItem("dinner-calendar", JSON.stringify(state.calendarMeals));
+    storage.setItem("dinner-week-start", state.weekStartKey);
+    storage.setItem("dinner-state-version", `${version}`);
+    storage.setItem("dinner-favorites", JSON.stringify(state.favorites));
+    storage.setItem("dinner-tasks", JSON.stringify(state.tasks));
+    storage.setItem("dinner-available-food", JSON.stringify(normalizeAvailableFood(state.availableFood)));
+    storage.setItem("dinner-recipe-feedback", JSON.stringify(normalizeRecipeFeedback(state.recipeFeedback)));
+    storage.setItem("dinner-deleted-recipes", JSON.stringify(state.deletedRecipeIds));
+    return true;
+  } catch {
+    // Remote synchronization must continue even when a browser's local cache
+    // is full or unavailable (notably Safari private storage).
+    return false;
+  }
 }

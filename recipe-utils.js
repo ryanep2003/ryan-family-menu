@@ -1,6 +1,6 @@
 import { localizedTextExact } from "./localized-data.js";
 
-const DEFAULT_CARD_PHOTO = "assets/recipe-card-placeholder.jpg";
+const DEFAULT_CARD_PHOTO = "assets/recipe-card-placeholder.webp";
 
 function hasExplicitCardPhoto(value) {
   return typeof value === "string"
@@ -124,6 +124,30 @@ export function recipeToEditableUpload(recipe, lang, localize) {
   };
 }
 
+function samePhotoList(left, right) {
+  if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false;
+  return left.every((photo, index) => photo === right[index]);
+}
+
+export function compactRecipeEditsForSync(recipeEdits = {}, sharedRecipes = []) {
+  const sharedById = new Map(sharedRecipes.map((recipe) => [recipe.id, recipe]));
+
+  return Object.fromEntries(Object.entries(recipeEdits).map(([id, edit]) => {
+    const shared = sharedById.get(id);
+    if (!shared || !edit || typeof edit !== "object") return [id, edit];
+
+    const compact = { ...edit };
+    if (samePhotoList(compact.photos, shared.photos)) delete compact.photos;
+    if (compact.cardPhoto && (
+      compact.cardPhoto === shared.cardPhoto
+      || (!shared.cardPhoto && compact.cardPhoto === shared.photos?.[0])
+    )) {
+      delete compact.cardPhoto;
+    }
+    return [id, compact];
+  }));
+}
+
 export function visibleRecipes({
   seedRecipes,
   sharedRecipes,
@@ -142,7 +166,12 @@ export function visibleRecipes({
     .map((recipe) => {
       const edit = recipeEdits?.[recipe.id];
       if (!edit) return recipe;
-      const normalized = uploadToRecipe(edit, recipe.meta?.en || localize(recipe.meta), recipe.meta?.es || localize(recipe.meta));
+      const editWithMedia = {
+        ...edit,
+        photos: edit.photos?.length ? edit.photos : recipe.photos || [],
+        cardPhoto: hasExplicitCardPhoto(edit.cardPhoto) ? edit.cardPhoto : recipe.cardPhoto || "",
+      };
+      const normalized = uploadToRecipe(editWithMedia, recipe.meta?.en || localize(recipe.meta), recipe.meta?.es || localize(recipe.meta));
       const editedCardPhoto = hasExplicitCardPhoto(edit.cardPhoto);
       const existingCardPhoto = hasExplicitCardPhoto(recipe.cardPhoto);
       return {

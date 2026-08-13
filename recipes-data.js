@@ -71,11 +71,11 @@ const rawRecipes = [
       en: "Good family task: kids can help shape meatballs with clean, oiled hands. For freezing, freeze cooked meatballs without sauce in a single layer first, then bag them.",
       es: "Buena tarea familiar: los ninos pueden ayudar a formar albondigas con manos limpias y engrasadas. Para congelar, congela las albondigas cocidas sin salsa en una sola capa y despues guardalas en una bolsa.",
     },
-    cardPhoto: "assets/meatballs-2.jpg",
+    cardPhoto: "assets/card-meatballs.webp",
     photos: [
-      "assets/meatballs-1.jpg",
-      "assets/meatballs-2.jpg",
-      "assets/meatballs-3.jpg",
+      "assets/meatballs-1.webp",
+      "assets/meatballs-2.webp",
+      "assets/meatballs-3.webp",
     ],
   },
   {
@@ -148,12 +148,12 @@ const rawRecipes = [
       en: "Best eaten right away while crisp. Good with a simple salad or vegetables. Pounding the chicken is helpful but a little messy, so set up the plastic wrap first.",
       es: "Es mejor comerla de inmediato mientras esta crujiente. Va bien con ensalada sencilla o verduras. Aplastar el pollo ayuda mucho, pero ensucia un poco; prepara el plastico primero.",
     },
-    cardPhoto: "assets/milanese-2.jpg",
+    cardPhoto: "assets/card-milanese.webp",
     photos: [
-      "assets/milanese-1.jpg",
-      "assets/milanese-2.jpg",
-      "assets/milanese-3.jpg",
-      "assets/milanese-4.jpg",
+      "assets/milanese-1.webp",
+      "assets/milanese-2.webp",
+      "assets/milanese-3.webp",
+      "assets/milanese-4.webp",
     ],
   },
   {
@@ -222,16 +222,16 @@ const rawRecipes = [
       en: "Very low-mess dinner and a gentle way to serve fish to kids. Pea prep can be a kid helper task. Works with halibut, cod, hake, or another meaty white fish.",
       es: "Cena con muy poco desorden y una forma suave de servir pescado a los ninos. Sacar los chicharos puede ser tarea para ninos. Funciona con halibut, bacalao, merluza u otro pescado blanco firme.",
     },
-    cardPhoto: "assets/halibut-summer-2.jpg",
+    cardPhoto: "assets/card-halibut-summer.webp",
     photos: [
-      "assets/halibut-summer-1.jpg",
-      "assets/halibut-summer-2.jpg",
-      "assets/halibut-summer-3.jpg",
+      "assets/halibut-summer-1.webp",
+      "assets/halibut-summer-2.webp",
+      "assets/halibut-summer-3.webp",
     ],
   },
   {
     id: "lemon-chicken",
-    cardPhoto: "assets/card-lemon-chicken.jpg",
+    cardPhoto: "assets/card-lemon-chicken.webp",
     name: {
       en: "Lemon Chicken",
       es: "Pollo al limon",
@@ -295,12 +295,12 @@ const rawRecipes = [
       es: "Esta receta tiene notas familiares escritas a mano: usa 1 barra de mantequilla, 4-6 limones, dora unos 10 minutos por lado y hornea tapado unos 45 minutos. La foto original queda guardada como referencia.",
     },
     photos: [
-      "assets/lemon-chicken-1.jpg",
+      "assets/lemon-chicken-1.webp",
     ],
   },
   {
     id: "zaatar-parmesan-potatoes",
-    cardPhoto: "assets/card-zaatar-potatoes.jpg",
+    cardPhoto: "assets/card-zaatar-potatoes.webp",
     name: {
       en: "Smashed Potato Fries",
       es: "Papas aplastadas al horno",
@@ -360,12 +360,12 @@ const rawRecipes = [
       es: "Nombre familiar en la hoja: papas fritas aplastadas. Buena guarnicion para pollo al limon, milanesa, albondigas o cualquier proteina sencilla.",
     },
     photos: [
-      "assets/zaatar-potatoes-1.jpg",
+      "assets/zaatar-potatoes-1.webp",
     ],
   },
   {
     id: "lemon-bucatini-pasta",
-    cardPhoto: "assets/card-lemon-bucatini.jpg",
+    cardPhoto: "assets/card-lemon-bucatini.webp",
     name: {
       en: "Lemon Bucatini Pasta",
       es: "Pasta bucatini al limon",
@@ -427,12 +427,12 @@ const rawRecipes = [
       es: "La nota familiar escrita a mano dice pasta bucatini al limon. Mejor servir de inmediato mientras la salsa esta brillante y suelta.",
     },
     photos: [
-      "assets/lemon-bucatini-1.jpg",
+      "assets/lemon-bucatini-1.webp",
     ],
   },
   {
     id: "pasta-with-meat-sauce",
-    cardPhoto: "assets/card-pasta-meat-sauce.jpg",
+    cardPhoto: "assets/card-pasta-meat-sauce.webp",
     name: {
       en: "Pasta with Meat Sauce",
       es: "Pasta con salsa de carne",
@@ -508,12 +508,12 @@ const rawRecipes = [
       es: "La nota familiar escrita a mano dice pasta con salsa de carne. La fuente parece ser un ragu de entre semana; termina la pasta directamente en la salsa para que tome sabor.",
     },
     photos: [
-      "assets/pasta-meat-sauce-1.jpg",
+      "assets/pasta-meat-sauce-1.webp",
     ],
   },
   {
     id: "strawberry-crunch-salad",
-    cardPhoto: "assets/card-strawberry-crunch-salad.jpg",
+    cardPhoto: "assets/card-strawberry-crunch-salad.webp",
     name: {
       en: "Strawberry Crunch Salad",
       es: "Ensalada crujiente de fresa",
@@ -589,13 +589,13 @@ const rawRecipes = [
       es: "Mejor justo despues de mezclar para que las almendras sigan crujientes y el aguacate este fresco. Buena guarnicion para milanesa, pollo al limon, halibut o pasta.",
     },
     photos: [
-      "assets/strawberry-crunch-salad-1.jpg",
-      "assets/strawberry-crunch-salad-2.jpg",
+      "assets/strawberry-crunch-salad-1.webp",
+      "assets/strawberry-crunch-salad-2.webp",
     ],
   },
   {
     id: "roasted-brussels-sprouts-salad",
-    cardPhoto: "assets/card-roasted-brussels-salad.jpg",
+    cardPhoto: "assets/card-roasted-brussels-salad.webp",
     name: {
       en: "Roasted Brussels Sprouts Salad",
       es: "Ensalada de coles de Bruselas asadas",
@@ -663,13 +663,13 @@ const rawRecipes = [
       es: "Seca muy bien las coles, no llenes demasiado la charola y dejalas asar sin mover al principio para lograr bordes crujientes. Adereza mientras estan tibias para que absorban la vinagreta.",
     },
     photos: [
-      "assets/roasted-brussels-salad-1.jpg",
-      "assets/roasted-brussels-salad-2.jpg",
+      "assets/roasted-brussels-salad-1.webp",
+      "assets/roasted-brussels-salad-2.webp",
     ],
   },
   {
     id: "chicken-noodle-soup",
-    cardPhoto: "assets/card-chicken-noodle-soup.jpg",
+    cardPhoto: "assets/card-chicken-noodle-soup.webp",
     name: {
       en: "Chicken Noodle Soup",
       es: "Sopa de pollo con fideos",
@@ -743,12 +743,12 @@ const rawRecipes = [
       es: "Las notas escritas dicen sopa de pollo con fideos y posible alergia a algo, con la curcuma marcada. Mantener esta receta con aviso hasta saber que ingrediente causo la reaccion.",
     },
     photos: [
-      "assets/chicken-noodle-soup-1.jpg",
+      "assets/chicken-noodle-soup-1.webp",
     ],
   },
   {
     id: "ina-garten-pot-roast",
-    cardPhoto: "assets/card-pot-roast.jpg",
+    cardPhoto: "assets/card-pot-roast.webp",
     name: {
       en: "Ina Garten's Pot Roast",
       es: "Estofado de res estilo Ina Garten",
@@ -832,14 +832,14 @@ const rawRecipes = [
       es: "Buena comida para preparar con anticipacion o para invitados. Las sobras duran hasta 5 dias en el refrigerador. Recalienta tapado a 350°F por 20 a 25 minutos, o en la estufa. Congela la carne con jugos y la salsa aparte hasta 2 meses; descongela en el refrigerador durante la noche.",
     },
     photos: [
-      "assets/pot-roast-1.jpg",
-      "assets/pot-roast-2.jpg",
-      "assets/pot-roast-3.jpg",
+      "assets/pot-roast-1.webp",
+      "assets/pot-roast-2.webp",
+      "assets/pot-roast-3.webp",
     ],
   },
   {
     id: "basil-pesto-pasta",
-    cardPhoto: "assets/card-basil-pesto.jpg",
+    cardPhoto: "assets/card-basil-pesto.webp",
     name: {
       en: "Basil Pesto Pasta",
       es: "Pasta con pesto de albahaca",
@@ -909,8 +909,8 @@ const rawRecipes = [
       es: "Blanquear la albahaca ayuda a mantener el pesto verde brillante. El pesto puede durar hasta 2 semanas en el refrigerador o 3 meses en el congelador.",
     },
     photos: [
-      "assets/basil-pesto-1.jpg",
-      "assets/basil-pesto-2.jpg",
+      "assets/basil-pesto-1.webp",
+      "assets/basil-pesto-2.webp",
     ],
   },
 ];

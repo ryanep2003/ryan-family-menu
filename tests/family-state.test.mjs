@@ -135,7 +135,7 @@ test("persistSharedState writes the local storage keys", () => {
     },
   };
 
-  persistSharedState(storage, {
+  const persisted = persistSharedState(storage, {
     weekStartKey: "2026-06-22",
     schedule: { monday: { main: "pasta" } },
     calendarMeals: {},
@@ -147,6 +147,7 @@ test("persistSharedState writes the local storage keys", () => {
   }, 7);
 
   assert.equal(writes.get("dinner-week-start"), "2026-06-22");
+  assert.equal(persisted, true);
   assert.equal(writes.get("dinner-state-version"), "7");
   assert.equal(writes.get("dinner-favorites"), "[\"pasta\"]");
   assert.equal(writes.get("dinner-schedule"), "{\"monday\":{\"main\":\"pasta\"}}");
@@ -163,4 +164,24 @@ test("persistSharedState writes the local storage keys", () => {
       updatedBy: "",
     },
   });
+});
+
+test("a full browser cache cannot turn a successful shared load into a retry loop", () => {
+  const storage = {
+    setItem() {
+      throw new DOMException("Quota exceeded", "QuotaExceededError");
+    },
+  };
+
+  assert.equal(persistSharedState(storage, {
+    schedule: {},
+    calendarMeals: {},
+    weekStartKey: "2026-08-10",
+    favorites: [],
+    tasks: [],
+    availableFood: [],
+    recipeFeedback: {},
+    recipeEdits: {},
+    deletedRecipeIds: [],
+  }, 1), false);
 });

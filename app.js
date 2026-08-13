@@ -30,6 +30,7 @@ import { createRecipeLibraryUi } from "./recipe-library-ui.js";
 import { createReceiptUi } from "./receipt-ui.js";
 import { recipes } from "./recipes-data.js";
 import { createScheduleUi } from "./schedule-ui.js";
+import { createSharedStateLoader } from "./shared-state-loader.js";
 import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage-utils.js";
 import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "./sync-status.js";
 import { translations } from "./translations.js";
@@ -43,6 +44,7 @@ import {
 import {
   categoryFor,
   categoryLabel as localizedCategoryLabel,
+  compactRecipeEditsForSync,
   recipeById as findRecipeById,
   recipeToEditableUpload as recipeToEditable,
   uploadToRecipe,
@@ -242,10 +244,6 @@ function markSynced(area) {
 
 let undoTimer = 0;
 let sharedRetryAction = null;
-let sharedLoadRetryTimer = 0;
-let sharedLoadAttempt = 0;
-const SHARED_LOAD_RETRY_DELAYS = [800, 2000, 5000];
-const SHARED_LOAD_BACKGROUND_RETRY_DELAY = 15000;
 
 function setSharedRetryAction(action) {
   sharedRetryAction = action;
@@ -563,7 +561,17 @@ function calendarMealForDateKey(dateKey) {
 }
 
 function sharedStateSnapshot() {
-  return familyStateSnapshot({ weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, recipeEdits, deletedRecipeIds });
+  return familyStateSnapshot({
+    weekStartKey,
+    schedule,
+    calendarMeals,
+    favorites,
+    tasks,
+    availableFood,
+    recipeFeedback,
+    recipeEdits: compactRecipeEditsForSync(recipeEdits, sharedRecipes),
+    deletedRecipeIds,
+  });
 }
 
 function currentSharedState() {
@@ -583,7 +591,13 @@ function applySharedState(nextState) {
 }
 
 function saveSharedStateLocally() {
-  persistSharedState(householdStorage, currentSharedState(), sharedStateVersion);
+  const localState = {
+    ...currentSharedState(),
+    recipeEdits: compactRecipeEditsForSync(recipeEdits, sharedRecipes),
+  };
+  if (!persistSharedState(householdStorage, localState, sharedStateVersion)) {
+    console.warn("Shared menu local cache is full; continuing with the live household copy.");
+  }
 }
 
 async function saveSharedState() {
@@ -617,59 +631,56 @@ async function saveSharedState() {
   }
 }
 
-async function loadSharedState({ restart = false } = {}) {
-  window.clearTimeout(sharedLoadRetryTimer);
-  sharedLoadRetryTimer = 0;
-  if (restart) sharedLoadAttempt = 0;
+async function applyLoadedSharedState(data) {
+  sharedStateVersion = Number(data.version) || 0;
+
+  if (!data.state) {
+    rollWeekForwardIfNeeded();
+    await saveSharedState();
+    render();
+    return;
+  }
+
+  const missingWeekStart = !data.state.weekStart;
+  applySharedState(normalizeSharedState(data.state, {
+    weekStartKey: currentWeekStartKey(),
+    favorites: [],
+    tasks: [],
+    availableFood,
+    recipeFeedback,
+    recipeEdits: {},
+    deletedRecipeIds: [],
+  }));
+  const rolledForward = rollWeekForwardIfNeeded();
+  const compactEdits = compactRecipeEditsForSync(recipeEdits, sharedRecipes);
+  const compactedDuplicateMedia = JSON.stringify(compactEdits) !== JSON.stringify(recipeEdits);
+  if (compactedDuplicateMedia) recipeEdits = compactEdits;
+  saveSharedStateLocally();
+  render();
+  if (rolledForward || missingWeekStart || compactedDuplicateMedia) {
+    await saveSharedState();
+  } else {
+    markSynced("shared");
+  }
+}
+
+const sharedStateLoader = createSharedStateLoader({
+  fetchState: () => getJson("/.netlify/functions/family-state", "Could not load shared family state."),
+  applyState: applyLoadedSharedState,
+  onUnavailable: (error) => {
+    console.warn(error);
+    setSyncStatus("shared", "sharedMenuUnavailable", { state: "error", canRetry: true });
+  },
+  onApplyError: (error) => {
+    console.error(error);
+    setSyncStatus("shared", "sharedMenuUpdateError", { state: "error", canRetry: true });
+  },
+});
+
+function loadSharedState({ restart = false } = {}) {
   setSharedRetryAction(() => loadSharedState({ restart: true }));
   clearAreaStatus("shared");
-
-  try {
-    const data = await getJson("/.netlify/functions/family-state", "Could not load shared family state.");
-    sharedLoadAttempt = 0;
-    sharedStateVersion = Number(data.version) || 0;
-
-    if (!data.state) {
-      rollWeekForwardIfNeeded();
-      await saveSharedState();
-      render();
-      return;
-    }
-
-    const missingWeekStart = !data.state.weekStart;
-    applySharedState(normalizeSharedState(data.state, {
-      weekStartKey: currentWeekStartKey(),
-      favorites: [],
-      tasks: [],
-      availableFood,
-      recipeFeedback,
-      recipeEdits: {},
-      deletedRecipeIds: [],
-    }));
-    const rolledForward = rollWeekForwardIfNeeded();
-    saveSharedStateLocally();
-    render();
-    if (rolledForward || missingWeekStart) {
-      await saveSharedState();
-    } else {
-      markSynced("shared");
-    }
-  } catch (error) {
-    console.warn(error);
-    const retryDelay = SHARED_LOAD_RETRY_DELAYS[sharedLoadAttempt];
-    sharedLoadAttempt += 1;
-
-    if (retryDelay) {
-      sharedLoadRetryTimer = window.setTimeout(loadSharedState, retryDelay);
-      return;
-    }
-
-    setSyncStatus("shared", "sharedMenuUnavailable", { state: "error", canRetry: true });
-    sharedLoadRetryTimer = window.setTimeout(
-      () => loadSharedState({ restart: true }),
-      SHARED_LOAD_BACKGROUND_RETRY_DELAY
-    );
-  }
+  return sharedStateLoader.load({ restart });
 }
 
 function todaysRecipeId() {
@@ -1123,8 +1134,10 @@ async function loadSharedRecipes() {
     const data = await getJson("/.netlify/functions/recipes", "Could not load shared recipes.");
     sharedRecipes = Array.isArray(data.recipes) ? data.recipes : [];
     render();
+    return true;
   } catch (error) {
     console.warn(error);
+    return false;
   }
 }
 
@@ -1711,7 +1724,6 @@ registerServiceWorker({ $, onUpdateAvailable: showAppUpdateNotice });
 
 setupLocalizedFileInputs();
 render();
-loadSharedState();
-loadSharedRecipes();
+loadSharedRecipes().then(() => loadSharedState());
 loadGroceries();
 loadInventory();

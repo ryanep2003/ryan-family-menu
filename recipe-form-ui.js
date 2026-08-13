@@ -215,7 +215,7 @@ export function createRecipeFormUi({
     const photos = await readFilesAsDataUrls(selectedUploadPhotoFiles(), MAX_UPLOAD_PHOTOS, {
       maxSide: 700,
       quality: 0.68,
-      maxBytes: 420000,
+      maxBytes: 180000,
     });
     return photos.length ? photos : getImportedRecipePhotos();
   }
@@ -286,7 +286,7 @@ export function createRecipeFormUi({
         }, $("#editStepsInput").value.trim(), getLang()),
         allergyWarning: updateLocalizedText(current.allergyWarning, $("#editAllergyInput").value.trim(), getLang()),
         notes: updateLocalizedText(current.notes, $("#editNoteInput").value.trim(), getLang()),
-        cardPhoto: replacementPhotos[0] || current.cardPhoto || current.photos?.[0] || "assets/recipe-card-placeholder.jpg",
+        cardPhoto: replacementPhotos[0] || current.cardPhoto || current.photos?.[0] || "assets/recipe-card-placeholder.webp",
         photos: replacementPhotos.length
           ? replacementPhotos
           : current.photos?.length ? current.photos : [],

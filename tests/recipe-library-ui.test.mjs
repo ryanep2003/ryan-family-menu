@@ -196,7 +196,7 @@ test("photo-less recipes use a decorative food placeholder only on the card", ()
   const { elements, ui } = harness({
     recipe: {
       photos: [],
-      cardPhoto: "assets/recipe-card-placeholder.jpg",
+      cardPhoto: "assets/recipe-card-placeholder.webp",
       cardPhotoIsPlaceholder: true,
     },
   });
