@@ -8,7 +8,7 @@ import { normalizeRecipeFeedback } from "../../family-state.js";
 const STORE_NAME = "family-menu-state";
 const STATE_KEY = "shared-state";
 const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-const MEAL_KEYS = ["breakfast", "lunch", "dinner", "main", "side", "salad", "notes"];
+const MEAL_KEYS = ["breakfast", "lunch", "lunchSalad", "dinner", "main", "side", "salad", "notes"];
 const MAX_CALENDAR_DAYS = 730;
 const MAX_FAVORITES = 100;
 const MAX_TASKS = 300;
@@ -40,9 +40,18 @@ function cleanMeal(value) {
   const source = value && typeof value === "object" ? value : {};
   const handoff = source.handoff && typeof source.handoff === "object" ? source.handoff : {};
   const dinner = cleanText(source.dinner || source.main, 120);
+  const servingPlan = source.servingPlan && typeof source.servingPlan === "object" ? source.servingPlan : {};
+  const cleanCount = (entry, fallback) => Number.isFinite(Number(entry))
+    ? Math.min(20, Math.max(0, Math.round(Number(entry))))
+    : fallback;
+  const actualLeftovers = Object.fromEntries(Object.entries(servingPlan.actualLeftovers || {})
+    .filter(([id]) => /^[a-z0-9-]{1,120}$/i.test(id))
+    .slice(0, 20)
+    .map(([id, amount]) => [id, Math.min(100, Math.max(0, Math.round(Number(amount || 0) * 2) / 2))]));
   return {
     breakfast: cleanText(source.breakfast, 120),
     lunch: cleanText(source.lunch, 120),
+    lunchSalad: cleanText(source.lunchSalad, 120),
     dinner,
     // Keep the legacy field in sync so older clients continue to read dinner.
     main: dinner,
@@ -57,6 +66,12 @@ function cleanMeal(value) {
       leftoverUseFirst: LEFTOVER_USE_FIRST.includes(handoff.leftoverUseFirst) ? handoff.leftoverUseFirst : "",
       snackStatus: SNACK_STATUS.includes(handoff.snackStatus) ? handoff.snackStatus : "",
       snack: cleanLocalizedText(handoff.snack, 120),
+    },
+    servingPlan: {
+      adults: cleanCount(servingPlan.adults, 2),
+      kids: cleanCount(servingPlan.kids, 2),
+      guests: cleanCount(servingPlan.guests, 0),
+      actualLeftovers,
     },
   };
 }
@@ -136,6 +151,9 @@ function cleanRecipeEdit(edit) {
     id: cleanText(edit.id, 160),
     name,
     category,
+    servings: Number.isFinite(Number(edit.servings)) && Number(edit.servings) > 0
+      ? Math.min(100, Math.round(Number(edit.servings) * 2) / 2)
+      : 0,
     ingredientsText: cleanLocalizedText(edit.ingredientsText, 12000),
     stepsText: cleanLocalizedText(edit.stepsText, 12000),
     allergyWarning: cleanLocalizedText(edit.allergyWarning, 600),

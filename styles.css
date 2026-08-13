@@ -48,6 +48,66 @@
   font-family: var(--font-body);
 }
 
+.meal-serving-plan {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 84%, var(--sage) 16%);
+}
+
+.meal-serving-plan summary {
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.meal-serving-helper,
+.meal-yield-row span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.meal-diner-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.meal-diner-grid label,
+.meal-yield-row label {
+  display: grid;
+  gap: 5px;
+}
+
+.meal-diner-grid input,
+.meal-yield-row input {
+  width: 100%;
+}
+
+.meal-yield-list,
+.meal-yield-row {
+  display: grid;
+  gap: 8px;
+}
+
+.meal-yield-row {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.detail-servings {
+  margin: 4px 0 0;
+  color: var(--sage);
+  font-weight: 800;
+}
+
+@media (max-width: 520px) {
+  .meal-diner-grid {
+    grid-template-columns: repeat(3, minmax(70px, 1fr));
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -1808,6 +1868,35 @@ h3 {
   gap: 8px;
 }
 
+.meal-recipe-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 6px 8px;
+  min-width: 0;
+}
+
+.meal-recipe-picker > label,
+.meal-search-empty {
+  grid-column: 1 / -1;
+}
+
+.meal-recipe-picker > label {
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.meal-search-empty {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.meal-search-empty {
+  color: var(--danger-ink);
+  font-weight: 700;
+}
+
 .meal-period-helper {
   grid-column: 1 / -1;
   margin: -2px 0 2px;
@@ -1930,6 +2019,7 @@ h3 {
   grid-column: 1 / -1;
 }
 
+.schedule-editor input[type="search"],
 .schedule-editor select,
 .schedule-editor textarea {
   width: 100%;
@@ -1939,6 +2029,11 @@ h3 {
   border-radius: 8px;
   background: #fff;
   color: var(--ink);
+  font: inherit;
+}
+
+.schedule-editor input[type="search"]::placeholder {
+  color: var(--muted);
 }
 
 .schedule-editor .meal-open-buttons {
@@ -4015,6 +4110,15 @@ li {
 
   .meal-period-grid {
     grid-template-columns: 1fr;
+  }
+
+  .meal-recipe-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .meal-recipe-picker > label,
+  .meal-search-empty {
+    grid-column: auto;
   }
 
   .meal-optional-grid {

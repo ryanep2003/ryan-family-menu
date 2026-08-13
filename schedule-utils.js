@@ -38,7 +38,8 @@ const mealRecipeCategories = ["main", "side", "salad", "sauce", "dessert", "draf
 
 export const mealPeriods = [
   { key: "breakfast", label: "breakfastSlot", choose: "chooseBreakfast", categories: mealRecipeCategories },
-  { key: "lunch", label: "lunchSlot", choose: "chooseLunch", categories: mealRecipeCategories },
+  { key: "lunch", label: "lunchMainSlot", choose: "chooseLunchMain", categories: mealRecipeCategories },
+  { key: "lunchSalad", label: "lunchSaladSlot", choose: "chooseLunchSalad", categories: ["salad"] },
   { key: "dinner", label: "dinnerSlot", choose: "chooseDinner", categories: mealRecipeCategories },
 ];
 
@@ -52,9 +53,58 @@ export const emptyHandoff = {
   snack: "",
 };
 
+export const defaultServingPlan = {
+  adults: 2,
+  kids: 2,
+  guests: 0,
+  actualLeftovers: {},
+};
+
+function boundedCount(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(20, Math.max(0, Math.round(number))) : fallback;
+}
+
+function boundedServings(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.min(100, Math.max(0, Math.round(number * 2) / 2)) : fallback;
+}
+
+export function normalizeServingPlan(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const actualLeftovers = Object.fromEntries(Object.entries(source.actualLeftovers || {})
+    .filter(([id]) => typeof id === "string" && /^[a-z0-9-]{1,120}$/i.test(id))
+    .map(([id, servings]) => [id, boundedServings(servings)]));
+  return {
+    adults: boundedCount(source.adults, defaultServingPlan.adults),
+    kids: boundedCount(source.kids, defaultServingPlan.kids),
+    guests: boundedCount(source.guests, defaultServingPlan.guests),
+    actualLeftovers,
+  };
+}
+
+export function plannedServings(value) {
+  const plan = normalizeServingPlan(value);
+  return plan.adults + (plan.kids * 0.5) + plan.guests;
+}
+
+export function recipeBatchPlan(recipeServings, neededServings) {
+  const recipeYield = Number(recipeServings);
+  const needed = Number(neededServings);
+  if (!(recipeYield > 0) || !(needed > 0)) return null;
+  const batches = Math.ceil((needed / recipeYield) * 4) / 4;
+  const cookedServings = batches * recipeYield;
+  return {
+    batches,
+    cookedServings,
+    expectedLeftovers: Math.max(0, Math.round((cookedServings - needed) * 4) / 4),
+  };
+}
+
 export const emptyMeal = {
   breakfast: "",
   lunch: "",
+  lunchSalad: "",
   dinner: "",
   // Keep main as a storage-compatible alias for the original dinner slot.
   main: "",
@@ -62,6 +112,7 @@ export const emptyMeal = {
   salad: "",
   notes: "",
   handoff: { ...emptyHandoff },
+  servingPlan: { ...defaultServingPlan, actualLeftovers: {} },
 };
 
 function allowedValue(value, options) {
@@ -92,8 +143,8 @@ const defaultSchedule = {
 };
 
 export function normalizeMealPlan(value) {
-  if (!value) return { ...emptyMeal };
-  if (typeof value === "string") return { ...emptyMeal, handoff: { ...emptyHandoff }, dinner: value, main: value };
+  if (!value) return { ...emptyMeal, handoff: { ...emptyHandoff }, servingPlan: normalizeServingPlan() };
+  if (typeof value === "string") return { ...emptyMeal, handoff: { ...emptyHandoff }, servingPlan: normalizeServingPlan(), dinner: value, main: value };
   const dinner = typeof value.dinner === "string" && value.dinner
     ? value.dinner
     : typeof value.main === "string" ? value.main : "";
@@ -102,9 +153,11 @@ export function normalizeMealPlan(value) {
     ...value,
     breakfast: typeof value.breakfast === "string" ? value.breakfast : "",
     lunch: typeof value.lunch === "string" ? value.lunch : "",
+    lunchSalad: typeof value.lunchSalad === "string" ? value.lunchSalad : "",
     dinner,
     main: dinner,
     handoff: normalizeHandoff(value.handoff),
+    servingPlan: normalizeServingPlan(value.servingPlan),
   };
   if (typeof normalized.notes !== "string" && !isLocalizedValue(normalized.notes)) {
     normalized.notes = "";
@@ -157,6 +210,7 @@ export function mealHasContent(meal) {
   return Boolean(
     meal.breakfast
     || meal.lunch
+    || meal.lunchSalad
     || meal.dinner
     || meal.main
     || meal.side
@@ -203,7 +257,7 @@ export function removeRecipeFromPlans(
   schedule,
   calendarMeals,
   recipeId,
-  slotKeys = ["breakfast", "lunch", "dinner", "main", "side", "salad"],
+  slotKeys = ["breakfast", "lunch", "lunchSalad", "dinner", "main", "side", "salad"],
 ) {
   const clearMeal = (meal) => {
     const normalized = normalizeMealPlan(meal);
@@ -216,6 +270,11 @@ export function removeRecipeFromPlans(
         next.dinner = "";
       }
     });
+    if (Object.prototype.hasOwnProperty.call(next.servingPlan.actualLeftovers, recipeId)) {
+      const actualLeftovers = { ...next.servingPlan.actualLeftovers };
+      delete actualLeftovers[recipeId];
+      next.servingPlan = { ...next.servingPlan, actualLeftovers };
+    }
     return normalizeMealPlan(next);
   };
 

@@ -91,8 +91,21 @@ function harness({ mealPeriods = [] } = {}) {
     },
     value: "two",
   });
+  const weekRecipeControl = element({
+    dataset: { mealContext: "weekdate:2026-06-22", slot: "main" },
+    value: "main-recipe",
+  });
+  const weekRecipeSearch = element({
+    dataset: { mealSearch: "weekdate:2026-06-22", searchSlot: "main" },
+    value: "Another",
+  });
+  const weekRecipeSearchEmpty = element({
+    dataset: { mealSearchEmpty: "weekdate:2026-06-22", searchSlot: "main" },
+    hidden: true,
+  });
   const recipes = [
     { id: "main-recipe", name: "Main Recipe", category: "main" },
+    { id: "another-main", name: "Another Main", category: "main" },
     { id: "side-recipe", name: "Side Recipe", category: "side" },
     { id: "salad-recipe", name: "Salad Recipe", category: "salad" },
   ];
@@ -120,8 +133,12 @@ function harness({ mealPeriods = [] } = {}) {
     $$: (selector) => {
       if (selector === "[data-edit-week-date]") return weekButtons;
       if (selector === "[data-edit-calendar-date]") return dateButtons;
-      if (selector === '[data-meal-context^="weekdate:"]') return [weekHandoffControl];
+      if (selector === '[data-meal-context^="weekdate:"]') return [weekRecipeControl, weekHandoffControl];
       if (selector === '[data-meal-context^="calendar:"]') return [calendarControl];
+      if (selector === '[data-meal-search^="weekdate:"]') return [weekRecipeSearch];
+      if (selector === '[data-meal-search-empty^="weekdate:"]') return [weekRecipeSearchEmpty];
+      if (selector === '[data-meal-search^="calendar:"]') return [];
+      if (selector === '[data-meal-search-empty^="calendar:"]') return [];
       if (selector === "[data-use-weekly-plan]") return [];
       return [];
     },
@@ -176,7 +193,18 @@ function harness({ mealPeriods = [] } = {}) {
     setVisibleMonth: () => {},
   });
 
-  return { calendarControl, dateButtons, elements, state, ui, weekButtons, weekHandoffControl };
+  return {
+    calendarControl,
+    dateButtons,
+    elements,
+    state,
+    ui,
+    weekButtons,
+    weekHandoffControl,
+    weekRecipeControl,
+    weekRecipeSearch,
+    weekRecipeSearchEmpty,
+  };
 }
 
 test("week planning renders seven summaries with one focused editor", () => {
@@ -207,7 +235,8 @@ test("empty day keeps optional planning fields out of the first decision", () =>
 test("meal-period planning shows breakfast, lunch, and dinner together", () => {
   const periods = [
     { key: "breakfast", label: "breakfastSlot", choose: "chooseBreakfast", categories: ["main"] },
-    { key: "lunch", label: "lunchSlot", choose: "chooseLunch", categories: ["main"] },
+    { key: "lunch", label: "lunchMainSlot", choose: "chooseLunchMain", categories: ["main"] },
+    { key: "lunchSalad", label: "lunchSaladSlot", choose: "chooseLunchSalad", categories: ["salad"] },
     { key: "dinner", label: "dinnerSlot", choose: "chooseDinner", categories: ["main"] },
   ];
   const { elements, ui } = harness({ mealPeriods: periods });
@@ -216,7 +245,22 @@ test("meal-period planning shows breakfast, lunch, and dinner together", () => {
 
   assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="breakfast"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="lunch"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="lunchSalad"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="dinner"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /type="search"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /aria-describedby="meal-weekdate-2026-06-22-helper"/);
+});
+
+test("recipe search narrows a meal list before selection", async () => {
+  const { ui, weekRecipeControl, weekRecipeSearch, weekRecipeSearchEmpty } = harness();
+
+  ui.renderSchedule();
+  await weekRecipeSearch.dispatch("input");
+
+  assert.match(weekRecipeControl.innerHTML, /Another Main/);
+  assert.doesNotMatch(weekRecipeControl.innerHTML, />Main Recipe</);
+  assert.equal(weekRecipeControl.value, "");
+  assert.equal(weekRecipeSearchEmpty.hidden, true);
 });
 
 test("handoff detail choices persist with the selected week meal", async () => {

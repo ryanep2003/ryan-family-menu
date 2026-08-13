@@ -63,6 +63,20 @@ export function categoryFor(recipe) {
   return recipe.category || recipeCategories[recipe.id] || "main";
 }
 
+export function normalizeRecipeServings(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return 0;
+  return Math.min(100, Math.round(number * 2) / 2);
+}
+
+export function servingsForRecipe(recipe) {
+  const explicit = normalizeRecipeServings(recipe?.servings);
+  if (explicit) return explicit;
+  const meta = localizedTextExact(recipe?.meta, "en");
+  const match = meta.match(/\bserves?\s+(\d+(?:\.\d+)?)/i);
+  return normalizeRecipeServings(match?.[1]);
+}
+
 export function categoryLabel(category, localize) {
   return localize(categoryLabels[category] || categoryLabels.main);
 }
@@ -89,6 +103,7 @@ export function uploadToRecipe(upload, enMeta, esMeta) {
     short: localizedPair(upload.notes, "Needs review", "Necesita revisión"),
     tags: { en: enMeta, es: esMeta },
     category: upload.category || "draft",
+    servings: normalizeRecipeServings(upload.servings),
     allergyWarning: upload.allergyWarning
       ? localizedPair(upload.allergyWarning)
       : undefined,
@@ -112,6 +127,7 @@ export function recipeToEditableUpload(recipe, lang, localize) {
     id: recipe.id,
     name: localize(recipe.name),
     category: categoryFor(recipe),
+    servings: servingsForRecipe(recipe),
     ingredientsText: (recipe.ingredients?.[lang] || []).join("\n"),
     stepsText: (recipe.steps?.[lang] || []).join("\n"),
     allergyWarning: recipe.allergyWarning ? localize(recipe.allergyWarning) : "",

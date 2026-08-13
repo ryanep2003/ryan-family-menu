@@ -9,9 +9,18 @@ import {
   compactRecipeEditsForSync,
   recipeById,
   recipeToEditableUpload,
+  normalizeRecipeServings,
+  servingsForRecipe,
   uploadToRecipe,
   visibleRecipes,
 } from "../recipe-utils.js";
+
+test("recipe servings use explicit yield and remain compatible with seeded metadata", () => {
+  assert.equal(normalizeRecipeServings("4.4"), 4.5);
+  assert.equal(normalizeRecipeServings("unknown"), 0);
+  assert.equal(servingsForRecipe({ servings: 6 }), 6);
+  assert.equal(servingsForRecipe({ meta: { en: "Serves 4 · 30 minutes" } }), 4);
+});
 import { recipes } from "../recipes-data.js";
 
 const localizeEn = (value) => typeof value === "string" ? value : value.en;

@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=51" />
+    <link rel="stylesheet" href="styles.css?v=53" />
   </head>
   <body class="household-locked" data-view="today">
     <section class="household-gate" id="householdGate" aria-labelledby="householdGateHeading">
@@ -480,6 +480,7 @@
               <p class="section-label" data-i18n="selectedRecipe">Selected recipe</p>
                 <h2 id="detailName" tabindex="-1">A 100% Chance of Meatballs</h2>
                 <p id="detailMeta">Makes 18 meatballs · 1 hour · Mess 2/4</p>
+                <p class="detail-servings" id="detailServings"></p>
               </div>
             </div>
             <div class="segmented detail-language-toggle" aria-label="Language" data-i18n-aria-label="languageLabel">
@@ -526,6 +527,10 @@
                 <option value="sauce" data-i18n="categorySauce">Sauces</option>
                 <option value="dessert" data-i18n="categoryDessert">Desserts</option>
               </select>
+            </label>
+            <label>
+              <span data-i18n="servingsLabel">Recipe yield (servings)</span>
+              <input type="number" id="editServingsInput" min="0.5" max="100" step="0.5" inputmode="decimal" />
             </label>
             <label>
               <span data-i18n="ingredientsLabel">Ingredients</span>
@@ -691,6 +696,10 @@
                   <option value="dessert" data-i18n="categoryDessert">Desserts</option>
                 </select>
               </label>
+              <label>
+                <span data-i18n="servingsLabel">Recipe yield (servings)</span>
+                <input type="number" id="servingsInput" min="0.5" max="100" step="0.5" inputmode="decimal" data-i18n-placeholder="servingsPlaceholder" placeholder="For example, 4" />
+              </label>
             </div>
             <label>
               <span data-i18n="ingredientsLabel">Ingredients</span>
@@ -727,6 +736,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=88"></script>
+    <script type="module" src="app.js?v=90"></script>
   </body>
 </html>

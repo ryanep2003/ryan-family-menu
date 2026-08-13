@@ -48,6 +48,9 @@ export function cleanRecipe(input) {
     id,
     name,
     category,
+    servings: Number.isFinite(Number(input.servings)) && Number(input.servings) > 0
+      ? Math.min(100, Math.round(Number(input.servings) * 2) / 2)
+      : 0,
     ingredientsText,
     stepsText,
     allergyWarning: cleanLocalizedText(input.allergyWarning, 600),

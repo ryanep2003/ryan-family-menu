@@ -10,8 +10,24 @@ import {
   normalizeCalendar,
   normalizeMealPlan,
   normalizeSchedule,
+  normalizeServingPlan,
+  plannedServings,
+  recipeBatchPlan,
   removeRecipeFromPlans,
 } from "../schedule-utils.js";
+
+test("serving plans default to two adults and two kids", () => {
+  const plan = normalizeServingPlan();
+  assert.deepEqual(plan, { adults: 2, kids: 2, guests: 0, actualLeftovers: {} });
+  assert.equal(plannedServings(plan), 3);
+  assert.equal(plannedServings({ adults: 2, kids: 1, guests: 2 }), 4.5);
+});
+
+test("recipe batch planning rounds up to quarter batches and estimates leftovers", () => {
+  assert.deepEqual(recipeBatchPlan(4, 5), { batches: 1.25, cookedServings: 5, expectedLeftovers: 0 });
+  assert.deepEqual(recipeBatchPlan(6, 4), { batches: 0.75, cookedServings: 4.5, expectedLeftovers: 0.5 });
+  assert.equal(recipeBatchPlan(0, 4), null);
+});
 
 test("formatDateKey and currentWeekStartKey use local noon week boundaries", () => {
   assert.equal(formatDateKey(new Date("2026-06-24T12:00:00")), "2026-06-24");
@@ -40,12 +56,13 @@ test("meal normalization preserves legacy string meals and fills blanks", () => 
 });
 
 test("meal normalization maps legacy main recipes to dinner and preserves new periods", () => {
-  const meal = normalizeMealPlan({ main: "legacy-dinner", breakfast: "oatmeal", lunch: "soup" });
+  const meal = normalizeMealPlan({ main: "legacy-dinner", breakfast: "oatmeal", lunch: "soup", lunchSalad: "greens" });
 
   assert.equal(meal.dinner, "legacy-dinner");
   assert.equal(meal.main, "legacy-dinner");
   assert.equal(meal.breakfast, "oatmeal");
   assert.equal(meal.lunch, "soup");
+  assert.equal(meal.lunchSalad, "greens");
 });
 
 test("schedule and calendar normalization keep expected shape", () => {
@@ -149,4 +166,16 @@ test("removeRecipeFromPlans clears deleted recipes from weekly and calendar meal
 test("mealHasContent recognizes breakfast and lunch plans", () => {
   assert.equal(mealHasContent({ ...emptyMeal, breakfast: "oatmeal" }), true);
   assert.equal(mealHasContent({ ...emptyMeal, lunch: "soup" }), true);
+  assert.equal(mealHasContent({ ...emptyMeal, lunchSalad: "greens" }), true);
+});
+
+test("removeRecipeFromPlans clears a deleted lunch salad", () => {
+  const result = removeRecipeFromPlans(
+    { mon: { ...emptyMeal, lunch: "sandwich", lunchSalad: "deleted-recipe" } },
+    {},
+    "deleted-recipe",
+  );
+
+  assert.equal(result.schedule.mon.lunch, "sandwich");
+  assert.equal(result.schedule.mon.lunchSalad, "");
 });

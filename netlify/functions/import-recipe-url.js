@@ -196,6 +196,12 @@ function categoryFromText(recipe) {
   return "";
 }
 
+function cleanServings(value) {
+  const match = `${Array.isArray(value) ? value[0] : value || ""}`.match(/\d+(?:\.\d+)?/);
+  const number = Number(match?.[0]);
+  return Number.isFinite(number) && number > 0 ? Math.min(100, Math.round(number * 2) / 2) : 0;
+}
+
 export function recipeFromJsonLd(recipe, html, url) {
   const ingredients = cleanLines(recipe?.recipeIngredient, { lineLength: MAX_INGREDIENT_CHARS });
   const steps = cleanLines(
@@ -209,6 +215,7 @@ export function recipeFromJsonLd(recipe, html, url) {
   return {
     name: cleanText(recipe?.name || titleFromHtml(html), 120),
     category: cleanCategory(categoryFromText(recipe)),
+    servings: cleanServings(recipe?.recipeYield),
     ingredientsText: ingredients.join("\n"),
     stepsText: steps.join("\n"),
     allergyWarning: "",
@@ -222,7 +229,7 @@ async function recipeFromTextWithAi(text, url, html) {
 
   const prompt = [
     "Extract one recipe from this webpage text for a private family meal-planning app.",
-    "Return only JSON in this shape: {\"name\":\"Recipe name\",\"category\":\"side\",\"ingredients\":[\"1 lb carrots\"],\"steps\":[\"Heat oven to 425 F.\"],\"notes\":\"Short useful family note\"}",
+    "Return only JSON in this shape: {\"name\":\"Recipe name\",\"category\":\"side\",\"servings\":4,\"ingredients\":[\"1 lb carrots\"],\"steps\":[\"Heat oven to 425 F.\"],\"notes\":\"Short useful family note\"}",
     "Use only information in the page text. Do not invent missing ingredients or steps.",
     "Valid categories are main, side, salad, sauce, dessert. Use an empty string if unclear.",
     `Source URL: ${url}`,
@@ -249,6 +256,7 @@ async function recipeFromTextWithAi(text, url, html) {
   return {
     name: cleanText(parsed.name || titleFromHtml(html), 120),
     category: cleanCategory(parsed.category),
+    servings: cleanServings(parsed.servings),
     ingredientsText: cleanLines(parsed.ingredients, { lineLength: MAX_INGREDIENT_CHARS }).join("\n"),
     stepsText: cleanLines(parsed.steps, { lineLength: MAX_STEP_CHARS }).join("\n"),
     allergyWarning: "",
@@ -328,6 +336,7 @@ export default async (request) => {
     recipe: {
       name: recipe.name,
       category: recipe.category,
+      servings: recipe.servings,
       ingredientsText: recipe.ingredientsText,
       stepsText: recipe.stepsText,
       allergyWarning: recipe.allergyWarning,

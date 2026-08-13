@@ -57,6 +57,8 @@ export function createRecipeFormUi({
   function fillUploadFormFromRecipe(recipe, { overwrite = false } = {}) {
     if ((overwrite || !$("#nameInput").value.trim()) && recipe.name) $("#nameInput").value = recipe.name;
     if (recipe.category) $("#categoryInput").value = recipe.category;
+    const servingsInput = $("#servingsInput");
+    if (servingsInput && (overwrite || !servingsInput.value)) servingsInput.value = recipe.servings || "";
     if ((overwrite || !$("#ingredientsInput").value.trim()) && recipe.ingredientsText) $("#ingredientsInput").value = recipe.ingredientsText;
     if ((overwrite || !$("#stepsInput").value.trim()) && recipe.stepsText) $("#stepsInput").value = recipe.stepsText;
     if ((overwrite || !$("#allergyInput").value.trim()) && recipe.allergyWarning) $("#allergyInput").value = recipe.allergyWarning;
@@ -112,6 +114,7 @@ export function createRecipeFormUi({
     const editable = recipeToEditableUpload(recipe);
     $("#editNameInput").value = editable.name;
     $("#editCategoryInput").value = editable.category;
+    if ($("#editServingsInput")) $("#editServingsInput").value = editable.servings || "";
     $("#editIngredientsInput").value = editable.ingredientsText;
     $("#editStepsInput").value = editable.stepsText;
     $("#editAllergyInput").value = editable.allergyWarning;
@@ -195,6 +198,7 @@ export function createRecipeFormUi({
     return {
       name: updateLocalizedText("", name, getLang()),
       category: $("#categoryInput").value,
+      servings: Number($("#servingsInput")?.value) || 0,
       ingredientsText: updateLocalizedText("", $("#ingredientsInput").value.trim(), getLang()),
       stepsText: updateLocalizedText("", $("#stepsInput").value.trim(), getLang()),
       allergyWarning: updateLocalizedText("", $("#allergyInput").value.trim(), getLang()),
@@ -276,6 +280,7 @@ export function createRecipeFormUi({
         id: selectedRecipeId,
         name: updateLocalizedText(current.name, name, getLang()),
         category: $("#editCategoryInput").value,
+        servings: Number($("#editServingsInput")?.value) || 0,
         ingredientsText: updateLocalizedText({
           en: (current.ingredients?.en || []).join("\n"),
           es: (current.ingredients?.es || []).join("\n"),

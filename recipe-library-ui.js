@@ -1,6 +1,6 @@
 import { allLocalizedText, hasLocalizedContent } from "./localized-data.js";
 import { linesMatchLanguage } from "./language-quality.js";
-import { cardPhotoFor, cardPhotoIsGenerated } from "./recipe-utils.js";
+import { cardPhotoFor, cardPhotoIsGenerated, servingsForRecipe } from "./recipe-utils.js";
 
 export function createRecipeLibraryUi({
   $,
@@ -149,6 +149,10 @@ export function createRecipeLibraryUi({
     $("#editRecipeForm").hidden = true;
     $("#detailName").textContent = nameDisplay.text || t("translationPendingShort");
     $("#detailMeta").textContent = metaDisplay.text;
+    const servings = servingsForRecipe(recipe);
+    if ($("#detailServings")) {
+      $("#detailServings").textContent = servings ? t("recipeServes").replace("{count}", servings) : t("recipeYieldUnknown");
+    }
     $("#allergyWarning").hidden = !warning;
     $("#allergyWarning").textContent = warning;
     $("#recipeTranslationStatus").hidden = !usingFallback && contentReady;

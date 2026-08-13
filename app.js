@@ -47,6 +47,7 @@ import {
   compactRecipeEditsForSync,
   recipeById as findRecipeById,
   recipeToEditableUpload as recipeToEditable,
+  servingsForRecipe,
   uploadToRecipe,
   visibleRecipes,
 } from "./recipe-utils.js";
@@ -64,6 +65,8 @@ import {
   normalizeMealPlan,
   normalizeSchedule,
   removeRecipeFromPlans,
+  plannedServings,
+  recipeBatchPlan,
 } from "./schedule-utils.js";
 
 const mealSlots = [
@@ -685,7 +688,7 @@ function loadSharedState({ restart = false } = {}) {
 
 function todaysRecipeId() {
   const meal = todaysMealPlan();
-  return meal.dinner || meal.main || meal.lunch || meal.breakfast || "meatballs";
+  return meal.dinner || meal.main || meal.lunch || meal.lunchSalad || meal.breakfast || "meatballs";
 }
 
 function mealRecipes(meal) {
@@ -770,7 +773,7 @@ function weeklyMealRecipes() {
 function generatedGroceriesFromWeek() {
   return weeklyMealRecipes().flatMap(({ recipe, key, dateKey }) => recipeGroceries(recipe, "week-plan", {
     dateKey,
-    mealSlot: key === "main" ? "dinner" : key,
+      mealSlot: key === "main" ? "dinner" : key === "lunchSalad" ? "lunch" : key,
   }));
 }
 
@@ -945,6 +948,9 @@ const dashboardUi = createDashboardUi({
   mealHasWarning,
   calendarMealForDateKey,
   recipeById,
+  servingsForRecipe,
+  plannedServings,
+  recipeBatchPlan,
   allRecipes,
   saveSharedState,
   offerUndo,
@@ -1004,6 +1010,9 @@ const scheduleUi = createScheduleUi({
   mealHasWarning,
   mealSummary,
   recipeById,
+  servingsForRecipe,
+  plannedServings,
+  recipeBatchPlan,
   allRecipes,
   copyCurrentWeekToNextWeek: () => {
     const result = copyCurrentWeekToNextWeek(weekStartKey, schedule, calendarMeals);
@@ -1047,6 +1056,7 @@ const recipeLibraryUi = createRecipeLibraryUi({
   getPlannedRecipeIds: () => [...new Set(Object.values(schedule).flatMap((meal) => [
     meal.breakfast,
     meal.lunch,
+    meal.lunchSalad,
     meal.dinner,
     meal.main,
     meal.side,

@@ -22,6 +22,9 @@ export function createScheduleUi({
   mealHasWarning,
   mealSummary,
   recipeById,
+  servingsForRecipe = (recipe) => Number(recipe?.servings) || 0,
+  plannedServings = (plan = {}) => (Number(plan.adults) || 2) + ((Number(plan.kids) || 2) * 0.5) + (Number(plan.guests) || 0),
+  recipeBatchPlan = () => null,
   allRecipes,
   copyCurrentWeekToNextWeek,
   saveSharedState,
@@ -40,20 +43,52 @@ export function createScheduleUi({
   let selectedWeekDateKey = "";
   let selectedCalendarDateKey = "";
 
-  function optionsForSlot(slot, selectedId = "") {
+  function recipesForSlot(slot, selectedId = "", query = "") {
     const selectedRecipe = selectedId ? recipeById(selectedId) : null;
     const allowed = allRecipes().filter((recipe) => slot.categories.includes(categoryFor(recipe)) || recipe.id === selectedId);
     const recipesForOptions = selectedRecipe && !allowed.some((recipe) => recipe.id === selectedRecipe.id)
       ? [...allowed, selectedRecipe]
       : allowed;
+    const normalizedQuery = `${query || ""}`.trim().toLocaleLowerCase(getLang() === "es" ? "es" : "en");
 
-    return recipesForOptions
+    if (!normalizedQuery) return recipesForOptions;
+    return recipesForOptions.filter((recipe) => localize(recipe.name).toLocaleLowerCase(getLang() === "es" ? "es" : "en").includes(normalizedQuery));
+  }
+
+  function optionsForSlot(slot, selectedId = "", query = "") {
+    return recipesForSlot(slot, selectedId, query)
       .map((recipe) => `<option value="${escapeHtml(recipe.id)}"${recipe.id === selectedId ? " selected" : ""}>${escapeHtml(localize(recipe.name))}</option>`)
       .join("");
   }
 
+  function renderRecipePicker(slot, meal, context, className = "") {
+    const pickerId = `meal-${context}-${slot.key}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+    const helperId = `meal-${context}-helper`.replace(/[^a-zA-Z0-9_-]/g, "-");
+    return `
+      <div class="meal-recipe-picker${className ? ` ${className}` : ""}">
+        <label for="${pickerId}-search">${t(slot.label)}</label>
+        <input
+          id="${pickerId}-search"
+          type="search"
+          inputmode="search"
+          autocomplete="off"
+          data-meal-search="${escapeHtml(context)}"
+          data-search-slot="${escapeHtml(slot.key)}"
+          placeholder="${escapeHtml(t("searchRecipes"))}"
+          aria-describedby="${helperId}"
+        />
+        <select id="${pickerId}-select" data-meal-context="${escapeHtml(context)}" data-slot="${escapeHtml(slot.key)}" aria-label="${escapeHtml(t(slot.label))}">
+          <option value="">${t(slot.choose)}</option>
+          ${optionsForSlot(slot, meal[slot.key])}
+        </select>
+        <small class="meal-search-empty" data-meal-search-empty="${escapeHtml(context)}" data-search-slot="${escapeHtml(slot.key)}" hidden>${t("noRecipeMatches")}</small>
+      </div>
+    `;
+  }
+
   function renderMealControls(meal, context, label) {
     const recipesForMeal = mealRecipes(meal);
+    const neededServings = plannedServings(meal.servingPlan);
     const mainSlot = mealSlots.find((slot) => slot.key === "main") || mealSlots[0];
     const primarySlots = mealPeriods.length ? mealPeriods : [mainSlot];
     const primaryKeys = new Set(primarySlots.map((slot) => slot.key));
@@ -64,6 +99,7 @@ export function createScheduleUi({
     const openLabelBySlot = {
       breakfast: "openBreakfast",
       lunch: "openLunch",
+      lunchSalad: "openLunchSalad",
       dinner: "openDinner",
       main: "openMain",
       side: "openSide",
@@ -73,31 +109,44 @@ export function createScheduleUi({
       ${label ? `<strong>${escapeHtml(label)}</strong>` : ""}
       <div class="meal-picker">
         <div class="meal-period-grid">
-          ${primarySlots.map((slot) => `
-            <label class="meal-primary-choice">
-              <span>${t(slot.label)}</span>
-              <select data-meal-context="${context}" data-slot="${slot.key}">
-                <option value="">${t(slot.choose)}</option>
-                ${optionsForSlot(slot, meal[slot.key])}
-              </select>
-            </label>
-          `).join("")}
+          ${primarySlots.map((slot) => renderRecipePicker(slot, meal, context, "meal-primary-choice")).join("")}
         </div>
-        <p class="meal-period-helper">${t("mealPeriodsNote")}</p>
+        <p class="meal-period-helper" id="${`meal-${context}-helper`.replace(/[^a-zA-Z0-9_-]/g, "-")}">${t("mealPeriodsNote")}</p>
+        ${recipesForMeal.length ? `
+          <details class="meal-serving-plan">
+            <summary>${escapeHtml(t("cookingForSummary")
+              .replace("{adults}", meal.servingPlan.adults)
+              .replace("{kids}", meal.servingPlan.kids)
+              .replace("{guests}", meal.servingPlan.guests)
+              .replace("{servings}", neededServings))}</summary>
+            <p class="meal-serving-helper">${t("servingPlanHelper")}</p>
+            <div class="meal-diner-grid">
+              ${["adults", "kids", "guests"].map((field) => `
+                <label><span>${t(`${field}Count`)}</span><input type="number" min="0" max="20" step="1" value="${meal.servingPlan[field]}" data-meal-context="${escapeHtml(context)}" data-slot="serving-plan" data-serving-field="${field}" /></label>
+              `).join("")}
+            </div>
+            <div class="meal-yield-list">
+              ${recipesForMeal.map(({ recipe }) => {
+                const recipeYield = servingsForRecipe(recipe);
+                const batch = recipeBatchPlan(recipeYield, neededServings);
+                return `<div class="meal-yield-row">
+                  <strong>${escapeHtml(localize(recipe.name))}</strong>
+                  ${batch ? `<span>${escapeHtml(t("yieldPlan")
+                    .replace("{yield}", recipeYield)
+                    .replace("{batches}", batch.batches)
+                    .replace("{leftovers}", batch.expectedLeftovers))}</span>` : `<span class="meal-yield-missing">${t("yieldMissing")}</span>`}
+                  <label><span>${t("actualLeftovers")}</span><input type="number" min="0" max="100" step="0.5" value="${meal.servingPlan.actualLeftovers?.[recipe.id] || 0}" data-meal-context="${escapeHtml(context)}" data-slot="actual-leftovers" data-recipe-id="${escapeHtml(recipe.id)}" /></label>
+                </div>`;
+              }).join("")}
+            </div>
+          </details>
+        ` : ""}
         ${(primarySlots.some((slot) => meal[slot.key]) || hasOptionalContent) ? `
           <details class="meal-optional-fields"${hasOptionalContent ? " open" : ""}>
             <summary>${t("moreMealOptions")}</summary>
             <p class="meal-optional-helper">${t("moreMealOptionsNote")}</p>
             <div class="meal-optional-grid">
-              ${optionalSlots.map((slot) => `
-                <label>
-                  <span>${t(slot.label)}</span>
-                  <select data-meal-context="${context}" data-slot="${slot.key}">
-                    <option value="">${t(slot.choose)}</option>
-                    ${optionsForSlot(slot, meal[slot.key])}
-                  </select>
-                </label>
-              `).join("")}
+              ${optionalSlots.map((slot) => renderRecipePicker(slot, meal, context)).join("")}
               <label class="meal-notes">
                 <span>${t("notesSlot")}</span>
                 <textarea data-meal-context="${context}" data-slot="notes" rows="2">${escapeHtml(localizedText(meal.notes, getLang()))}</textarea>
@@ -141,6 +190,27 @@ export function createScheduleUi({
   }
 
   function bindMealControls(contextType) {
+    $$(`[data-meal-search^="${contextType}:"]`).forEach((search) => {
+      search.addEventListener("input", () => {
+        const context = search.dataset.mealSearch;
+        const slotKey = search.dataset.searchSlot;
+        const slot = mealSlots.find((item) => item.key === slotKey);
+        const select = $$(`[data-meal-context^="${contextType}:"]`).find((control) => (
+          control.dataset.mealContext === context && control.dataset.slot === slotKey
+        ));
+        if (!slot || !select) return;
+
+        const selectedId = select.value;
+        const matches = recipesForSlot(slot, selectedId, search.value);
+        select.innerHTML = `<option value="">${t(slot.choose)}</option>${optionsForSlot(slot, selectedId, search.value)}`;
+        select.value = matches.some((recipe) => recipe.id === selectedId) ? selectedId : "";
+        const empty = $$(`[data-meal-search-empty^="${contextType}:"]`).find((item) => (
+          item.dataset.mealSearchEmpty === context && item.dataset.searchSlot === slotKey
+        ));
+        if (empty) empty.hidden = matches.length > 0;
+      });
+    });
+
     $$(`[data-meal-context^="${contextType}:"]`).forEach((control) => {
       control.addEventListener("change", async () => {
         const [type, key] = control.dataset.mealContext.split(":");
@@ -165,6 +235,19 @@ export function createScheduleUi({
             [control.dataset.handoffField]: control.dataset.handoffField === "snack"
               ? updateLocalizedText(target.handoff?.snack, control.value.trim(), getLang())
               : control.value,
+          };
+        } else if (slot === "serving-plan") {
+          target.servingPlan = {
+            ...(target.servingPlan || {}),
+            [control.dataset.servingField]: Number(control.value),
+          };
+        } else if (slot === "actual-leftovers") {
+          target.servingPlan = {
+            ...(target.servingPlan || {}),
+            actualLeftovers: {
+              ...(target.servingPlan?.actualLeftovers || {}),
+              [control.dataset.recipeId]: Number(control.value),
+            },
           };
         } else {
           target[slot] = control.value;

@@ -92,7 +92,7 @@ export function createDashboardUi({
   function renderToday() {
     const meal = todaysMealPlan();
     const dinnerId = meal.dinner || meal.main || "";
-    const primaryId = dinnerId || meal.lunch || meal.breakfast || "";
+    const primaryId = dinnerId || meal.lunch || meal.lunchSalad || meal.breakfast || "";
     const mainRecipe = primaryId ? recipeById(primaryId) : null;
     const dinnerRecipe = dinnerId ? recipeById(dinnerId) : null;
     const recipesForMeal = mealRecipes(meal);
