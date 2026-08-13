@@ -165,7 +165,7 @@ export function createDashboardUi({
       pierce: "assigneePierce",
       other: "assigneeOther",
     };
-    return t(labels[assignee] || labels.other);
+    return labels[assignee] ? t(labels[assignee]) : `${assignee || ""}`.trim() || t(labels.other);
   }
 
   function todaysTasks() {

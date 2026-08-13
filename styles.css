@@ -1671,7 +1671,73 @@ h3 {
 
 .app-sync-status .household-member-global select,
 .app-sync-status .household-member-global input {
-  min-height: 38px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.today-tools {
+  margin-top: 24px;
+  border-top: 2px solid var(--ink);
+}
+
+.today-tools > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 12px 0;
+  color: var(--tomato-dark);
+  font-weight: 850;
+  cursor: pointer;
+  list-style: none;
+}
+
+.today-tools > summary::-webkit-details-marker {
+  display: none;
+}
+
+.today-tools > summary::after {
+  content: "+";
+  flex: 0 0 auto;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.today-tools[open] > summary::after {
+  content: "−";
+}
+
+.today-tools > summary small {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.today-tools-content {
+  padding-bottom: 2px;
+}
+
+.today-tools-content .available-food-panel {
+  margin-top: 4px;
+}
+
+.meal-save-status {
+  min-height: 22px;
+  margin: 4px 0 0;
+  color: var(--sage);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.meal-save-status.pending {
+  color: var(--attention-strong);
 }
 
 .grocery-banner {
@@ -3909,8 +3975,12 @@ li {
 }
 
 @media (max-width: 780px) {
+  html {
+    scroll-padding-bottom: calc(120px + env(safe-area-inset-bottom));
+  }
+
   body {
-    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
   }
 
   h1 {
@@ -3946,7 +4016,7 @@ li {
   }
 
   .household-button {
-    min-height: 40px;
+    min-height: 44px;
   }
 
   .guide-button {
@@ -4385,29 +4455,49 @@ li {
   }
 
   .app-sync-status .household-member-global {
-    width: auto;
-    flex: 0 0 auto;
+    width: 100%;
+    flex: 1 0 100%;
+    justify-content: flex-end;
     margin: 0;
     gap: 6px;
   }
 
   .app-sync-status .household-member-global > span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
+    position: static;
+    width: auto;
+    height: auto;
     padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
+    margin: 0;
+    overflow: visible;
+    clip: auto;
     white-space: nowrap;
-    border: 0;
   }
 
   .app-sync-status .household-member-global select,
   .app-sync-status .household-member-global input {
-    width: min(132px, 38vw);
-    max-width: 132px;
+    width: min(180px, 55vw);
+    max-width: 180px;
     margin-left: 0;
+  }
+
+  .app-sync-status .upload-status:not(:empty) {
+    flex-basis: calc(100% - 54px);
+    line-height: 1.35;
+  }
+
+  .today-tools > summary {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .today-tools > summary small {
+    width: calc(100% - 34px);
+    margin-left: 0;
+    text-align: left;
+  }
+
+  .today-tools > summary::after {
+    margin-left: auto;
   }
 
   .inventory-utility-row {

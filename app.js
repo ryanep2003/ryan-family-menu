@@ -674,6 +674,7 @@ async function saveSharedState() {
       saveSharedStateLocally();
     }
     markSynced("shared");
+    return true;
   } catch (error) {
     console.warn(error);
     if (error.status === 409 && error.data?.state) {
@@ -682,9 +683,10 @@ async function saveSharedState() {
       saveSharedStateLocally();
       render();
       setSyncStatus("shared", "sharedStateConflict", { state: "error" });
-      return;
+      return false;
     }
     setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
+    return false;
   }
 }
 
@@ -1087,6 +1089,9 @@ function renderTranslations() {
   });
   refreshSyncStatuses();
   if ($("#householdMemberInput")) $("#householdMemberInput").value = householdMember;
+  if ($("#taskAssigneeInput") && !$("#taskAssigneeInput").value.trim()) {
+    $("#taskAssigneeInput").value = householdMember;
+  }
   renderFileInputStatuses();
 }
 
@@ -1594,8 +1599,12 @@ $$("[data-lang]").forEach((button) => {
 });
 
 $("#householdMemberInput").addEventListener("change", (event) => {
+  const previousMember = householdMember;
   householdMember = cleanHouseholdMember(event.target.value) || "Family";
   householdStorage.setItem("dinner-household-member", householdMember);
+  if ($("#taskAssigneeInput") && ["", previousMember].includes($("#taskAssigneeInput").value.trim())) {
+    $("#taskAssigneeInput").value = householdMember;
+  }
 });
 
 $("#addRecipeFromLibrary").addEventListener("click", () => setView("add"));

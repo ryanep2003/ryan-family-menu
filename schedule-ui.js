@@ -270,7 +270,17 @@ export function createScheduleUi({
     }
     recordActivity("meal", t("activityMealUpdated").replace("{date}", key));
     render();
-    await saveSharedState();
+    const status = $(`[data-meal-save-status="${context}"]`);
+    if (status) {
+      status.textContent = t("mealChangeSaving");
+      status.classList.add("pending");
+    }
+    const saved = await saveSharedState();
+    const currentStatus = $(`[data-meal-save-status="${context}"]`);
+    if (currentStatus) {
+      currentStatus.textContent = t(saved === false ? "mealChangePending" : "mealChangeSaved");
+      currentStatus.classList.toggle("pending", saved === false);
+    }
   }
 
   function bindMealControls(contextType) {
@@ -490,6 +500,7 @@ export function createScheduleUi({
         <span>${t("editDay")}</span>
         <h3 id="weekEditorHeading" tabindex="-1">${escapeHtml(editorLabel)}</h3>
       </div>
+      <p class="meal-save-status" role="status" data-meal-save-status="weekdate:${selectedWeekDateKey}"></p>
       ${renderMealControls(calendarMealForDateKey(selectedWeekDateKey), `weekdate:${selectedWeekDateKey}`, "")}
     `;
 
@@ -604,6 +615,7 @@ export function createScheduleUi({
           <span>${t("editDate")}</span>
           <h3 id="calendarEditorHeading" tabindex="-1">${escapeHtml(dateFormatter.format(selectedDate))}</h3>
         </div>
+        <p class="meal-save-status" role="status" data-meal-save-status="calendar:${selectedCalendarDateKey}"></p>
         ${renderMealControls(selectedMeal, `calendar:${selectedCalendarDateKey}`, "")}
         ${hasOverride ? `<button class="text-action calendar-inherit" type="button" data-use-weekly-plan="${selectedCalendarDateKey}">${t("useWeeklyPlan")}</button>` : ""}
       `;
