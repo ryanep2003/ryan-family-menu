@@ -26,6 +26,21 @@ function cleanReceiptItem(item) {
   };
 }
 
+function cleanMoney(value) {
+  const amount = Number(`${value ?? ""}`.replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(amount) ? Math.min(100000, Math.max(0, Math.round(amount * 100) / 100)) : 0;
+}
+
+function cleanReceiptMeta(value) {
+  return {
+    store: cleanText(value?.store, 120) || "Store",
+    date: /^\d{4}-\d{2}-\d{2}$/.test(value?.date) ? value.date : new Date().toISOString().slice(0, 10),
+    subtotal: cleanMoney(value?.subtotal),
+    tax: cleanMoney(value?.tax),
+    total: cleanMoney(value?.total),
+  };
+}
+
 export default async (request) => {
   if (request.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
@@ -56,10 +71,11 @@ export default async (request) => {
 
   const prompt = [
     "You read grocery receipts for a family meal-planning app.",
-    "Return only JSON in this shape: {\"items\":[{\"text\":\"Milk\",\"quantity\":\"1 gallon\",\"confidence\":0.9}]}",
+    "Return only JSON in this shape: {\"receipt\":{\"store\":\"Publix\",\"date\":\"2026-08-13\",\"subtotal\":42.10,\"tax\":2.90,\"total\":45.00},\"items\":[{\"text\":\"Milk\",\"quantity\":\"1 gallon\",\"confidence\":0.9}]}",
     "Extract purchased grocery and household items only.",
-    "Use plain item names, not receipt abbreviations or prices.",
-    "Ignore taxes, totals, payment lines, discounts, store messages, bag fees, and non-item receipt text.",
+    "Use plain item names and quantities; do not include item prices in item names.",
+    "Read the store, purchase date, subtotal, tax, and final total when visible. Use numbers for money.",
+    "Ignore payment details, store messages, and bag fees as purchased items.",
     "Merge duplicate items and include quantities when clear.",
     "Be conservative; include only purchased items visible in the receipt.",
     outputLanguage === "es"
@@ -104,5 +120,5 @@ export default async (request) => {
     ? parsed.items.map(cleanReceiptItem).filter(Boolean).slice(0, 120)
     : [];
 
-  return jsonResponse({ items });
+  return jsonResponse({ items, receipt: cleanReceiptMeta(parsed?.receipt) });
 };

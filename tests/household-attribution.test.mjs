@@ -9,8 +9,9 @@ test("household attribution preserves recognized family members", () => {
   assert.equal(cleanHouseholdMember("Nelly"), "Nelly");
 });
 
-test("household attribution rejects unknown values", () => {
-  assert.equal(cleanHouseholdMember("Untrusted"), "");
+test("household attribution supports any family while cleaning unsafe values", () => {
+  assert.equal(cleanHouseholdMember("  Jordan Smith  "), "Jordan Smith");
+  assert.equal(cleanHouseholdMember("<Jordan>"), "Jordan");
   assert.equal(cleanHouseholdMember(undefined), "");
 });
 

@@ -28,12 +28,28 @@ export function cleanItem(item) {
     createdAt: item.createdAt || new Date().toISOString(),
     updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
     updatedBy: cleanHouseholdMember(item.updatedBy),
+    ingredientKey: `${item.ingredientKey || ""}`.replace(/[^a-z0-9-]/gi, "").slice(0, 220),
+    plannedQuantities: Object.fromEntries(["en", "es"].map((lang) => [
+      lang,
+      Math.min(10000, Math.max(0, Number(item.plannedQuantities?.[lang]) || 0)),
+    ]).filter(([, amount]) => amount > 0)),
+    ingredientRemainders: cleanLocalizedText(item.ingredientRemainders, 180),
+    plannedUnits: Object.fromEntries(["en", "es"].map((lang) => [
+      lang,
+      `${item.plannedUnits?.[lang] || ""}`.trim().slice(0, 20),
+    ]).filter(([, unit]) => unit)),
+    remainingQuantities: Object.fromEntries(["en", "es"].map((lang) => [
+      lang,
+      Math.min(10000, Math.max(0, Number(item.remainingQuantities?.[lang]) || 0)),
+    ]).filter(([, amount]) => amount > 0)),
     mealUses: Array.isArray(item.mealUses)
       ? item.mealUses.map((use) => ({
         dateKey: /^\d{4}-\d{2}-\d{2}$/.test(use?.dateKey) ? use.dateKey : "",
         mealSlot: MEAL_SLOTS.includes(use?.mealSlot) ? use.mealSlot : "",
         recipeId: `${use?.recipeId || ""}`.trim().slice(0, 160),
         recipeName: cleanLocalizedText(use?.recipeName, 160),
+        ...(Number(use?.batches) > 0 ? { batches: Math.min(100, Number(use.batches)) } : {}),
+        ...(Number(use?.servings) > 0 ? { servings: Math.min(100, Number(use.servings)) } : {}),
       })).filter((use) => use.dateKey && use.mealSlot && (use.recipeId || hasLocalizedContent(use.recipeName))).slice(0, 12)
       : [],
   };

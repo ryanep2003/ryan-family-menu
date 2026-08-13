@@ -53,6 +53,17 @@ test("attention inventory shows only low and out items", () => {
   assert.match(html, /Milk/);
 });
 
+test("attention inventory also surfaces expired food", () => {
+  const html = renderInventoryWith("attention", [
+    { id: "fresh", text: "Rice", location: "pantry", stockState: "full", expiresOn: "2026-09-30" },
+    { id: "soon", text: "Milk", location: "fridge", stockState: "full", expiresOn: "2020-01-01" },
+  ]);
+
+  assert.doesNotMatch(html, /Rice/);
+  assert.match(html, /Milk/);
+  assert.match(html, /inventoryExpired/);
+});
+
 test("attention inventory explains when everything is stocked", () => {
   const html = renderInventoryWith("attention", [
     { id: "full", text: "Rice", location: "pantry", stockState: "full" },

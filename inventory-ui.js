@@ -1,4 +1,5 @@
 import { canonicalText, localizedText } from "./localized-data.js";
+import { inventoryExpirationState } from "./inventory-logic.js";
 
 export function createInventoryUi({
   $,
@@ -42,6 +43,20 @@ export function createInventoryUi({
     return t({ full: "stockFull", some: "stockSome", low: "stockLow", out: "stockOut" }[stockState] || "stockSome");
   }
 
+  function inventoryUnitLabel(unit) {
+    return t({
+      each: "unitEach", package: "unitPackage", container: "unitContainer", cup: "unitCup",
+      oz: "unitOunce", lb: "unitPound", g: "unitGram", kg: "unitKilogram",
+    }[unit] || "unitEach");
+  }
+
+  function expirationLabel(item) {
+    const state = inventoryExpirationState(item);
+    if (state === "expired") return t("inventoryExpired");
+    if (state === "soon") return t("inventoryUseSoon").replace("{date}", item.expiresOn);
+    return item.expiresOn ? t("inventoryExpires").replace("{date}", item.expiresOn) : "";
+  }
+
   function renderInventoryMode() {
     $("#shoppingPanel").hidden = getInventoryMode() !== "shopping";
     $("#homePanel").hidden = getInventoryMode() !== "home";
@@ -68,10 +83,10 @@ export function createInventoryUi({
           || canonicalText(localizedText(item.text, getLang())).toLowerCase().includes(inventoryQuery);
         const matchesFilter = inventoryQuery
           || inventoryFilter === "all"
-          || (inventoryFilter === "attention" && ["low", "out"].includes(item.stockState))
+          || (inventoryFilter === "attention" && (["low", "out"].includes(item.stockState) || ["expired", "soon"].includes(inventoryExpirationState(item))))
           || group.key === inventoryFilter;
         return (item.location || "pantry") === group.key && matchesQuery && matchesFilter;
-      }),
+      }).sort((left, right) => (left.expiresOn || "9999-12-31").localeCompare(right.expiresOn || "9999-12-31")),
     })).filter((group) => group.items.length);
 
     if (!inventory.length) {
@@ -96,13 +111,32 @@ export function createInventoryUi({
             <div class="inventory-item-main">
               <span class="inventory-item-copy">
                 <strong>${escapeHtml(localizedText(item.text, getLang()))}</strong>
-                <em>${escapeHtml(localizedText(item.quantity, getLang()) || inventoryLocationLabel(item.location))}</em>
+                <em>${escapeHtml(item.amount > 0
+                  ? `${item.amount} ${inventoryUnitLabel(item.unit)}`
+                  : localizedText(item.quantity, getLang()) || inventoryLocationLabel(item.location))}</em>
+                ${expirationLabel(item) ? `<em class="inventory-expiration expiration-${inventoryExpirationState(item)}">${escapeHtml(expirationLabel(item))}</em>` : ""}
                 ${formatItemActivity(item) ? `<em class="item-activity">${escapeHtml(formatItemActivity(item))}</em>` : ""}
                 ${inventoryShoppingNote(item) ? `<em class="shopping-overlap">${escapeHtml(inventoryShoppingNote(item))}</em>` : ""}
                 ${["low", "out"].includes(item.stockState) && !inventoryShoppingNote(item)
                   ? `<button class="inventory-restock-action" type="button" data-add-inventory-to-shopping="${escapeHtml(item.id)}">${t("addToShopping")}</button>`
                   : ""}
               </span>
+              <div class="inventory-detail-controls">
+                <label>
+                  <span>${escapeHtml(t("inventoryAmountShort"))}</span>
+                  <input type="number" min="0" max="10000" step="0.25" value="${Number(item.amount) || 0}" data-inventory-amount="${escapeHtml(item.id)}" />
+                </label>
+                <label>
+                  <span>${escapeHtml(t("inventoryUnitShort"))}</span>
+                  <select data-inventory-unit="${escapeHtml(item.id)}">
+                    ${["each", "package", "container", "cup", "oz", "lb", "g", "kg"].map((unit) => `<option value="${unit}" ${unit === (item.unit || "each") ? "selected" : ""}>${escapeHtml(inventoryUnitLabel(unit))}</option>`).join("")}
+                  </select>
+                </label>
+                <label>
+                  <span>${escapeHtml(t("expiresOn"))}</span>
+                  <input type="date" value="${escapeHtml(item.expiresOn || "")}" data-inventory-expiration="${escapeHtml(item.id)}" />
+                </label>
+              </div>
               <label class="inventory-stock-control">
                 <span>${escapeHtml(t("stockLabel"))}</span>
                 <select class="stock-select stock-${escapeHtml(item.stockState || "some")}" data-stock-state="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("stockControlLabel").replace("{item}", localizedText(item.text, getLang())))}">
@@ -126,6 +160,27 @@ export function createInventoryUi({
   }
 
   function bindInventoryControls() {
+    $$('[data-inventory-amount], [data-inventory-unit], [data-inventory-expiration]').forEach((control) => {
+      control.addEventListener("change", async () => {
+        const id = control.dataset.inventoryAmount || control.dataset.inventoryUnit || control.dataset.inventoryExpiration;
+        const item = getInventory().find((entry) => entry.id === id);
+        if (!item) return;
+        if (control.dataset.inventoryAmount) {
+          item.amount = Math.min(10000, Math.max(0, Number(control.value) || 0));
+          if (item.amount === 0) item.stockState = "out";
+          else if (item.stockState === "out") item.stockState = "some";
+        } else if (control.dataset.inventoryUnit) {
+          item.unit = control.value;
+        } else {
+          item.expiresOn = /^\d{4}-\d{2}-\d{2}$/.test(control.value) ? control.value : "";
+        }
+        touchItem(item);
+        renderInventory();
+        bindInventoryControls();
+        await saveInventory();
+      });
+    });
+
     $$("[data-stock-state]").forEach((select) => {
       select.addEventListener("change", async () => {
         const item = getInventory().find((entry) => entry.id === select.dataset.stockState);

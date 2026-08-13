@@ -91,11 +91,16 @@ export function createDashboardUi({
 
   function renderToday() {
     const meal = todaysMealPlan();
-    const dinnerId = meal.dinner || meal.main || "";
-    const primaryId = dinnerId || meal.lunch || meal.lunchSalad || meal.breakfast || "";
-    const mainRecipe = primaryId ? recipeById(primaryId) : null;
-    const dinnerRecipe = dinnerId ? recipeById(dinnerId) : null;
-    const recipesForMeal = mealRecipes(meal);
+    const recipesForMeal = mealRecipes(meal).map((item) => ({
+      ...item,
+      period: item.period || (item.key === "main" ? "dinner" : item.key),
+      role: item.role || (["side", "salad"].includes(item.key) ? item.key : "main"),
+    }));
+    const dinnerItem = recipesForMeal.find(({ period, role }) => period === "dinner" && role === "main")
+      || recipesForMeal.find(({ period }) => period === "dinner");
+    const primaryItem = dinnerItem || recipesForMeal[0];
+    const mainRecipe = primaryItem?.recipe || null;
+    const dinnerRecipe = dinnerItem?.recipe || null;
     const backdrop = $("#todayBackdrop");
     const backdropSrc = mainRecipe?.photos?.[0] || "";
     $("#todayBand").classList.toggle("empty", !mainRecipe);
@@ -109,9 +114,9 @@ export function createDashboardUi({
       ? `${t(recipesForMeal.length === 1 ? "plannedRecipeOne" : "plannedRecipeMany").replace("{count}", recipesForMeal.length)}${mealHasWarning(meal) ? ` · ${t("allergyBadge")}` : ""}`
       : t("planTonightNote");
     $("#todayMealList").innerHTML = recipesForMeal
-      .map(({ key, recipe }) => `
+      .map(({ period, role, recipe }) => `
         <button type="button" data-open="${escapeHtml(recipe.id)}">
-          <span>${t(key === "main" ? "dinnerSlot" : `${key}Slot`)}</span>
+          <span>${t(`${period}Slot`)} · ${t(`role${role[0].toUpperCase()}${role.slice(1)}`)}</span>
           <strong>${escapeHtml(localize(recipe.name))}</strong>
           ${recipe.allergyWarning ? `<em>${t("allergyBadge")}</em>` : ""}
         </button>
@@ -221,7 +226,7 @@ export function createDashboardUi({
       date.setDate(start.getDate() + offset);
       const dateKey = formatDateKey(date);
       const meal = calendarMealForDateKey(dateKey);
-      if (!(meal.dinner || meal.main)) return { dateKey, meal };
+      if (!mealRecipes(meal).some((item) => (item.period || (item.key === "main" ? "dinner" : item.key)) === "dinner")) return { dateKey, meal };
     }
     return { dateKey: formatDateKey(start), meal: todaysMealPlan() };
   }
@@ -248,7 +253,16 @@ export function createDashboardUi({
     $$('[data-plan-favorite]').forEach((button) => {
       button.addEventListener("click", async () => {
         const target = nextOpenMealDate();
-        setCalendarMeals({ ...getCalendarMeals(), [target.dateKey]: { ...target.meal, main: button.dataset.planFavorite } });
+        setCalendarMeals({ ...getCalendarMeals(), [target.dateKey]: {
+          ...target.meal,
+          items: [...(target.meal.items || []), {
+            id: `meal-item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            period: "dinner",
+            role: "main",
+            sourceType: "recipe",
+            recipeId: button.dataset.planFavorite,
+          }],
+        } });
         render();
         await saveSharedState();
       });
@@ -275,13 +289,19 @@ export function createDashboardUi({
     });
 
     $("#cookToday").addEventListener("click", () => {
-      const mainRecipe = todaysMealPlan().main;
-      const dinnerRecipe = todaysMealPlan().dinner || mainRecipe;
-      if (!dinnerRecipe) {
+      const items = mealRecipes(todaysMealPlan()).map((item) => ({
+        ...item,
+        period: item.period || (item.key === "main" ? "dinner" : item.key),
+        role: item.role || (["side", "salad"].includes(item.key) ? item.key : "main"),
+      }));
+      const dinnerItem = items.find(({ period, role }) => period === "dinner" && role === "main")
+        || items.find(({ period }) => period === "dinner")
+        || items[0];
+      if (!dinnerItem) {
         setView("schedule");
         return;
       }
-      setSelectedRecipeId(dinnerRecipe);
+      setSelectedRecipeId(dinnerItem.recipe.id);
       setView("recipes");
       renderDetail();
       $("#recipeDetail").hidden = false;

@@ -2,16 +2,30 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createScheduleUi } from "../schedule-ui.js";
-import { days, emptyMeal, formatDateKey, handoffOptions } from "../schedule-utils.js";
+import { days, emptyMeal, formatDateKey, handoffOptions, mealPeriods, mealRoles, normalizeMealPlan } from "../schedule-utils.js";
 
 function element(initial = {}) {
   const listeners = new Map();
+  const classes = new Set();
   return {
     hidden: false,
     innerHTML: "",
     textContent: "",
     dataset: {},
     value: "",
+    attributes: {},
+    classList: {
+      contains(name) {
+        return classes.has(name);
+      },
+      toggle(name, force) {
+        if (force) classes.add(name);
+        else classes.delete(name);
+      },
+    },
+    setAttribute(name, value) {
+      this.attributes[name] = `${value}`;
+    },
     addEventListener(type, listener) {
       listeners.set(type, listener);
     },
@@ -56,11 +70,15 @@ function calendarDates() {
   });
 }
 
-function harness({ mealPeriods = [] } = {}) {
+function harness({ periods = mealPeriods, leftovers = [] } = {}) {
   const elements = {
     "#scheduleGrid": element(),
     "#weekDateEditor": element(),
     "#weekEditorHeading": element(),
+    "#weekPlanningPanel": element(),
+    "#monthPlanningPanel": element({ hidden: true }),
+    "#weekPlanningTab": element({ dataset: { planningMode: "week" } }),
+    "#monthPlanningTab": element({ dataset: { planningMode: "month" } }),
     "#weekTitle": element(),
     "#previousWeek": element(),
     "#thisWeek": element(),
@@ -76,12 +94,13 @@ function harness({ mealPeriods = [] } = {}) {
     "#calendarGrid": element(),
     "#calendarAgenda": element(),
     "#calendarDateEditor": element({ hidden: true }),
+    "#calendarEditorHeading": element(),
   };
   const weekButtons = weekDates().map(({ dateKey }) => element({ dataset: { editWeekDate: dateKey } }));
   const dateButtons = calendarDates().map((dateKey) => element({ dataset: { editCalendarDate: dateKey } }));
   const calendarControl = element({
-    dataset: { mealContext: "calendar:2026-06-24", slot: "main" },
-    value: "main-recipe",
+    dataset: { mealContext: "calendar:2026-06-24", slot: "notes" },
+    value: "Dinner out",
   });
   const weekHandoffControl = element({
     dataset: {
@@ -91,23 +110,46 @@ function harness({ mealPeriods = [] } = {}) {
     },
     value: "two",
   });
+  const weekServingControl = element({
+    dataset: {
+      mealContext: "weekdate:2026-06-22",
+      slot: "serving-plan",
+      period: "lunch",
+      servingField: "adults",
+    },
+    value: "1",
+  });
+  const weekActualLeftoverControl = element({
+    dataset: {
+      mealContext: "weekdate:2026-06-22",
+      slot: "actual-leftovers",
+      itemId: "legacy-dinner-main-0-main-recipe",
+    },
+    value: "2.5",
+  });
   const weekRecipeControl = element({
-    dataset: { mealContext: "weekdate:2026-06-22", slot: "main" },
-    value: "main-recipe",
+    dataset: { addMealRecipe: "weekdate:2026-06-22", period: "dinner" },
+    value: "",
   });
   const weekRecipeSearch = element({
-    dataset: { mealSearch: "weekdate:2026-06-22", searchSlot: "main" },
+    dataset: { mealItemSearch: "weekdate:2026-06-22", period: "dinner" },
     value: "Another",
   });
   const weekRecipeSearchEmpty = element({
-    dataset: { mealSearchEmpty: "weekdate:2026-06-22", searchSlot: "main" },
+    dataset: { mealItemEmpty: "weekdate:2026-06-22", period: "dinner" },
     hidden: true,
   });
+  const weekAddButton = element({ dataset: { addMealItem: "weekdate:2026-06-22", period: "dinner" }, disabled: true });
+  const weekRoleControl = element({ dataset: { addMealRole: "weekdate:2026-06-22", period: "dinner" }, value: "main" });
+  const weekLeftoverSource = element({ dataset: { addLeftoverSource: "weekdate:2026-06-22", period: "lunch" }, value: "" });
+  const weekLeftoverServings = element({ dataset: { addLeftoverServings: "weekdate:2026-06-22", period: "lunch" }, value: "1" });
+  const weekLeftoverAddButton = element({ dataset: { addLeftoverItem: "weekdate:2026-06-22", period: "lunch" }, disabled: true });
   const recipes = [
     { id: "main-recipe", name: "Main Recipe", category: "main" },
     { id: "another-main", name: "Another Main", category: "main" },
     { id: "side-recipe", name: "Side Recipe", category: "side" },
     { id: "salad-recipe", name: "Salad Recipe", category: "salad" },
+    { id: "dessert-recipe", name: "Dessert Recipe", category: "dessert" },
   ];
   const state = {
     schedule: Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])),
@@ -116,29 +158,41 @@ function harness({ mealPeriods = [] } = {}) {
     weekNavigation: [],
     currentWeekCalls: 0,
   };
-  state.schedule.mon.main = "main-recipe";
+  state.schedule.mon = normalizeMealPlan({ main: "main-recipe" });
 
   const activeWeekDateKeys = () => weekDates();
   const calendarMealForDateKey = (dateKey) => {
-    if (state.calendarMeals[dateKey]) return { ...emptyMeal, ...state.calendarMeals[dateKey] };
+    if (state.calendarMeals[dateKey]) return normalizeMealPlan(state.calendarMeals[dateKey]);
     const weekDate = weekDates().find((day) => day.dateKey === dateKey);
-    return weekDate ? { ...emptyMeal, ...state.schedule[weekDate.key] } : { ...emptyMeal };
+    return weekDate ? normalizeMealPlan(state.schedule[weekDate.key]) : normalizeMealPlan();
   };
-  const mealRecipes = (meal) => ["main", "side", "salad"]
-    .map((key) => ({ key, recipe: recipes.find((recipe) => recipe.id === meal[key]) }))
+  const mealRecipes = (meal) => normalizeMealPlan(meal).items
+    .map((item) => ({ ...item, key: item.period, recipe: recipes.find((recipe) => recipe.id === item.recipeId) }))
     .filter(({ recipe }) => recipe);
 
   const ui = createScheduleUi({
     $: (selector) => elements[selector],
     $$: (selector) => {
+      if (selector === "[data-planning-mode]") return [elements["#weekPlanningTab"], elements["#monthPlanningTab"]];
       if (selector === "[data-edit-week-date]") return weekButtons;
       if (selector === "[data-edit-calendar-date]") return dateButtons;
-      if (selector === '[data-meal-context^="weekdate:"]') return [weekRecipeControl, weekHandoffControl];
+      if (selector === '[data-meal-context^="weekdate:"]') return [weekHandoffControl, weekServingControl, weekActualLeftoverControl];
       if (selector === '[data-meal-context^="calendar:"]') return [calendarControl];
-      if (selector === '[data-meal-search^="weekdate:"]') return [weekRecipeSearch];
-      if (selector === '[data-meal-search-empty^="weekdate:"]') return [weekRecipeSearchEmpty];
-      if (selector === '[data-meal-search^="calendar:"]') return [];
-      if (selector === '[data-meal-search-empty^="calendar:"]') return [];
+      if (selector === '[data-meal-item-search^="weekdate:"]') return [weekRecipeSearch];
+      if (selector === '[data-meal-item-empty^="weekdate:"]') return [weekRecipeSearchEmpty];
+      if (selector === '[data-add-meal-recipe^="weekdate:"]') return [weekRecipeControl];
+      if (selector === '[data-add-meal-item^="weekdate:"]') return [weekAddButton];
+      if (selector === '[data-add-meal-role^="weekdate:"]') return [weekRoleControl];
+      if (selector === '[data-remove-meal-item][data-meal-context^="weekdate:"]') return [];
+      if (selector === '[data-add-leftover-source^="weekdate:"]') return [weekLeftoverSource];
+      if (selector === '[data-add-leftover-servings^="weekdate:"]') return [weekLeftoverServings];
+      if (selector === '[data-add-leftover-item^="weekdate:"]') return [weekLeftoverAddButton];
+      if (selector === '[data-meal-item-search^="calendar:"]') return [];
+      if (selector === '[data-meal-item-empty^="calendar:"]') return [];
+      if (selector === '[data-add-meal-recipe^="calendar:"]') return [];
+      if (selector === '[data-add-meal-item^="calendar:"]') return [];
+      if (selector === '[data-add-meal-role^="calendar:"]') return [];
+      if (selector === '[data-remove-meal-item][data-meal-context^="calendar:"]') return [];
       if (selector === "[data-use-weekly-plan]") return [];
       return [];
     },
@@ -150,25 +204,22 @@ function harness({ mealPeriods = [] } = {}) {
     escapeHtml,
     localize: (value) => value,
     formatDateKey,
-    normalizeMealPlan: (meal) => ({ ...emptyMeal, ...meal }),
-    mealSlots: [
-      { key: "main", label: "mainSlot", choose: "chooseMain", categories: ["main"] },
-      { key: "side", label: "sideSlot", choose: "chooseSide", categories: ["side"] },
-      { key: "salad", label: "saladSlot", choose: "chooseSalad", categories: ["salad"] },
-    ],
-    mealPeriods,
+    normalizeMealPlan,
+    mealPeriods: periods,
+    mealRoles,
     handoffOptions,
     days,
     emptyMeal,
     categoryFor: (recipe) => recipe.category,
     activeWeekDateKeys,
     calendarMealForDateKey,
-    mealHasContent: (meal) => Boolean(meal.main || meal.side || meal.salad || meal.notes),
+    mealHasContent: (meal) => Boolean(normalizeMealPlan(meal).items.length || meal.notes),
     mealRecipes,
     mealHasWarning: () => false,
     mealSummary: (meal) => mealRecipes(meal).map(({ recipe }) => recipe.name).join(" · ") || "No meal",
     recipeById: (id) => recipes.find((recipe) => recipe.id === id),
     allRecipes: () => recipes,
+    availableLeftoversForDate: () => leftovers,
     saveSharedState: async () => {
       state.saveCalls += 1;
     },
@@ -176,11 +227,11 @@ function harness({ mealPeriods = [] } = {}) {
     getLang: () => "en",
     getSchedule: () => state.schedule,
     setSchedule: (schedule) => {
-      state.schedule = schedule;
+      state.schedule = Object.fromEntries(Object.entries(schedule).map(([key, meal]) => [key, normalizeMealPlan(meal)]));
     },
     getCalendarMeals: () => state.calendarMeals,
     setCalendarMeals: (calendarMeals) => {
-      state.calendarMeals = calendarMeals;
+      state.calendarMeals = Object.fromEntries(Object.entries(calendarMeals).map(([key, meal]) => [key, normalizeMealPlan(meal)]));
     },
     navigateWeek: async (offset) => {
       state.weekNavigation.push(offset);
@@ -200,7 +251,14 @@ function harness({ mealPeriods = [] } = {}) {
     state,
     ui,
     weekButtons,
+    weekAddButton,
     weekHandoffControl,
+    weekServingControl,
+    weekActualLeftoverControl,
+    weekLeftoverSource,
+    weekLeftoverServings,
+    weekLeftoverAddButton,
+    weekRoleControl,
     weekRecipeControl,
     weekRecipeSearch,
     weekRecipeSearchEmpty,
@@ -215,10 +273,36 @@ test("week planning renders seven summaries with one focused editor", () => {
   assert.equal((elements["#scheduleGrid"].innerHTML.match(/data-edit-week-date=/g) || []).length, 7);
   assert.doesNotMatch(elements["#scheduleGrid"].innerHTML, /<select/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-context="weekdate:2026-06-22"/);
-  assert.match(elements["#weekDateEditor"].innerHTML, /openMain: Main Recipe/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /Main Recipe/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-item-id="legacy-dinner-main-0-main-recipe"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="handoff"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /More meal options/);
-  assert.match(elements["#weekDateEditor"].innerHTML, /Shared ingredients stay grouped in Groceries/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /flexibleMealBuilderNote/);
+});
+
+test("one meal can hold a main, side, salad, and dessert", async () => {
+  const { state, ui, weekAddButton, weekRecipeControl, weekRoleControl } = harness();
+
+  ui.renderSchedule();
+  for (const [recipeId, expectedRole] of [
+    ["side-recipe", "side"],
+    ["salad-recipe", "salad"],
+    ["dessert-recipe", "dessert"],
+  ]) {
+    weekRecipeControl.value = recipeId;
+    await weekRecipeControl.dispatch("change");
+    assert.equal(weekRoleControl.value, expectedRole);
+    assert.equal(weekAddButton.disabled, false);
+    await weekAddButton.dispatch("click");
+  }
+
+  assert.deepEqual(state.schedule.mon.items.map(({ role, recipeId }) => [role, recipeId]), [
+    ["main", "main-recipe"],
+    ["side", "side-recipe"],
+    ["salad", "salad-recipe"],
+    ["dessert", "dessert-recipe"],
+  ]);
+  assert.equal(state.saveCalls, 3);
 });
 
 test("empty day keeps optional planning fields out of the first decision", () => {
@@ -227,28 +311,22 @@ test("empty day keeps optional planning fields out of the first decision", () =>
   state.schedule.mon = { ...emptyMeal };
   ui.renderSchedule();
 
-  assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="main"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-add-meal-recipe="weekdate:2026-06-22"/);
   assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /meal-optional-fields/);
   assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /data-slot="handoff"/);
 });
 
 test("meal-period planning shows breakfast, lunch, and dinner together", () => {
-  const periods = [
-    { key: "breakfast", label: "breakfastSlot", choose: "chooseBreakfast", categories: ["main"] },
-    { key: "lunch", label: "lunchMainSlot", choose: "chooseLunchMain", categories: ["main"] },
-    { key: "lunchSalad", label: "lunchSaladSlot", choose: "chooseLunchSalad", categories: ["salad"] },
-    { key: "dinner", label: "dinnerSlot", choose: "chooseDinner", categories: ["main"] },
-  ];
-  const { elements, ui } = harness({ mealPeriods: periods });
+  const { elements, ui } = harness();
 
   ui.renderSchedule();
 
-  assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="breakfast"/);
-  assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="lunch"/);
-  assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="lunchSalad"/);
-  assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="dinner"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-period="breakfast"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-period="lunch"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-period="dinner"/);
+  assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /data-period="lunchSalad"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /type="search"/);
-  assert.match(elements["#weekDateEditor"].innerHTML, /aria-describedby="meal-weekdate-2026-06-22-helper"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-add-meal-role=/);
 });
 
 test("recipe search narrows a meal list before selection", async () => {
@@ -277,6 +355,52 @@ test("handoff detail choices persist with the selected week meal", async () => {
   assert.equal(state.saveCalls, 1);
 });
 
+test("each meal period can adjust its own family serving count", async () => {
+  const { state, ui, weekServingControl } = harness();
+
+  ui.renderSchedule();
+  await weekServingControl.dispatch("change");
+
+  assert.equal(state.schedule.mon.servingPlans.lunch.adults, 1);
+  assert.equal(state.schedule.mon.servingPlans.dinner.adults, 2);
+});
+
+test("actual leftovers attach to the exact cooked item", async () => {
+  const { state, ui, weekActualLeftoverControl } = harness();
+
+  ui.renderSchedule();
+  await weekActualLeftoverControl.dispatch("change");
+
+  assert.equal(state.schedule.mon.servingPlan.actualLeftovers["legacy-dinner-main-0-main-recipe"], 2.5);
+});
+
+test("recorded leftovers can be allocated to a later meal", async () => {
+  const source = {
+    sourceDate: "2026-06-21",
+    itemId: "source-main",
+    recipe: { id: "main-recipe", name: "Main Recipe", category: "main" },
+    availableServings: 2.5,
+  };
+  const {
+    state,
+    ui,
+    weekLeftoverAddButton,
+    weekLeftoverSource,
+  } = harness({ leftovers: [source] });
+
+  ui.renderSchedule();
+  weekLeftoverSource.value = "2026-06-21::source-main";
+  await weekLeftoverSource.dispatch("change");
+  assert.equal(weekLeftoverAddButton.disabled, false);
+  await weekLeftoverAddButton.dispatch("click");
+
+  const leftover = state.schedule.mon.items.find((item) => item.sourceType === "leftover");
+  assert.equal(leftover.recipeId, "main-recipe");
+  assert.equal(leftover.period, "lunch");
+  assert.equal(leftover.servings, 1);
+  assert.equal(leftover.leftoverSourceDate, "2026-06-21");
+});
+
 test("selecting a week day focuses the selected editor heading", async () => {
   const { elements, ui, weekButtons } = harness();
 
@@ -300,7 +424,23 @@ test("calendar stays read-only until a date opens its focused editor", async () 
   await dateButtons.find((button) => button.dataset.editCalendarDate === "2026-06-24").dispatch("click");
 
   assert.equal(elements["#calendarDateEditor"].hidden, false);
-  assert.match(elements["#calendarDateEditor"].innerHTML, /data-meal-context="calendar:2026-06-24"/);
+  assert.match(elements["#calendarDateEditor"].innerHTML, /data-add-meal-recipe="calendar:2026-06-24"/);
+  assert.equal(elements["#calendarDateEditor"].scrolled, true);
+  assert.equal(elements["#calendarEditorHeading"].focused, true);
+});
+
+test("week and month planning are separate focused views", async () => {
+  const { elements, ui } = harness();
+
+  ui.renderSchedule();
+  ui.bindScheduleControls();
+  assert.equal(elements["#weekPlanningPanel"].hidden, false);
+  assert.equal(elements["#monthPlanningPanel"].hidden, true);
+
+  await elements["#monthPlanningTab"].dispatch("click");
+  assert.equal(elements["#weekPlanningPanel"].hidden, true);
+  assert.equal(elements["#monthPlanningPanel"].hidden, false);
+  assert.equal(elements["#monthPlanningTab"].attributes["aria-selected"], "true");
 });
 
 test("focused calendar edits preserve date override storage", async () => {
@@ -310,7 +450,7 @@ test("focused calendar edits preserve date override storage", async () => {
   await dateButtons.find((button) => button.dataset.editCalendarDate === "2026-06-24").dispatch("click");
   await calendarControl.dispatch("change");
 
-  assert.equal(state.calendarMeals["2026-06-24"].main, "main-recipe");
+  assert.equal(state.calendarMeals["2026-06-24"].notes.en, "Dinner out");
   assert.equal(state.saveCalls, 1);
 });
 

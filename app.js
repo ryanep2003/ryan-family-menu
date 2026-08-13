@@ -1,9 +1,11 @@
 import {
+  applyInventoryCoverage,
   cleanIngredientForGrocery,
   groceryItem,
   groceryItemsFromRecipe,
   inventoryMatchFor as findInventoryMatch,
   mergeGroceries,
+  replacePlannedGroceries,
 } from "./grocery-logic.js";
 import { bindInstallPrompt, registerServiceWorker } from "./app-lifecycle.js";
 import {
@@ -14,8 +16,12 @@ import {
   sharedStateSnapshot as familyStateSnapshot,
 } from "./family-state.js";
 import { createDashboardUi } from "./dashboard-ui.js";
+import { createBudgetUi } from "./budget-ui.js";
+import { normalizeBudgetSettings, normalizeReceipt, normalizeReceipts } from "./budget-logic.js";
+import { createActivityUi } from "./activity-ui.js";
+import { activityEntry, normalizeActivity } from "./activity-logic.js";
 import { addAvailableFood, normalizeAvailableFood } from "./available-food.js";
-import { inventoryItem, mergeInventory } from "./inventory-logic.js";
+import { inventoryExpirationState, inventoryItem, mergeInventory } from "./inventory-logic.js";
 import { getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
 import { cleanHouseholdMember } from "./household-attribution.js";
@@ -59,6 +65,7 @@ import {
   emptyMeal,
   handoffOptions,
   mealPeriods,
+  mealRoles,
   formatDateKey,
   mealHasContent,
   normalizeCalendar,
@@ -69,11 +76,7 @@ import {
   recipeBatchPlan,
 } from "./schedule-utils.js";
 
-const mealSlots = [
-  ...mealPeriods,
-  { key: "side", label: "sideSlot", choose: "chooseSide", categories: ["side", "sauce"] },
-  { key: "salad", label: "saladSlot", choose: "chooseSalad", categories: ["salad"] },
-];
+const legacyMealSlotKeys = ["breakfast", "lunch", "lunchSalad", "dinner", "main", "side", "salad"];
 
 function supportedLang(value) {
   return Object.prototype.hasOwnProperty.call(translations, value) ? value : "en";
@@ -109,6 +112,10 @@ let inventory = storedInventory.items;
 let inventoryVersion = storedInventory.version;
 let inventorySuggestions = [];
 let receiptSuggestions = [];
+let pendingReceipt = null;
+let budgetSettings = normalizeBudgetSettings(readJsonStorage(householdStorage, "dinner-budget-settings", {}));
+let receipts = normalizeReceipts(readJsonStorage(householdStorage, "dinner-receipts", []));
+let activity = normalizeActivity(readJsonStorage(householdStorage, "dinner-activity", []));
 let inventoryMode = "shopping";
 let inventoryFilter = "all";
 let visibleMonth = new Date();
@@ -457,7 +464,7 @@ function mergeTranslatedRecipeEdit(recipe, translated, targetLang) {
 }
 
 function updateMealsAfterRecipeDelete(recipeId) {
-  const updated = removeRecipeFromPlans(schedule, calendarMeals, recipeId, mealSlots.map((slot) => slot.key));
+  const updated = removeRecipeFromPlans(schedule, calendarMeals, recipeId, legacyMealSlotKeys);
   schedule = updated.schedule;
   calendarMeals = updated.calendarMeals;
 }
@@ -563,6 +570,42 @@ function calendarMealForDateKey(dateKey) {
     : weeklyMealForDateKey(dateKey);
 }
 
+function plannedMealsByDate() {
+  const meals = new Map(Object.entries(calendarMeals).map(([dateKey, meal]) => [dateKey, normalizeMealPlan(meal)]));
+  activeWeekDateKeys().forEach(({ key, dateKey }) => {
+    if (!meals.has(dateKey)) meals.set(dateKey, normalizeMealPlan(schedule[key]));
+  });
+  return meals;
+}
+
+function availableLeftoversForDate(targetDateKey) {
+  const meals = plannedMealsByDate();
+  const allocated = new Map();
+  meals.forEach((meal) => meal.items.filter((item) => item.sourceType === "leftover").forEach((item) => {
+    const sourceKey = `${item.leftoverSourceDate}::${item.leftoverSourceItemId}`;
+    allocated.set(sourceKey, (allocated.get(sourceKey) || 0) + (Number(item.servings) || 0));
+  }));
+
+  return [...meals.entries()]
+    .filter(([dateKey]) => dateKey < targetDateKey)
+    .flatMap(([sourceDate, meal]) => meal.items
+      .filter((item) => item.sourceType !== "leftover")
+      .map((item) => {
+        const produced = Number(meal.servingPlan.actualLeftovers?.[item.id]
+          ?? meal.servingPlan.actualLeftovers?.[item.recipeId]
+          ?? 0);
+        const availableServings = Math.max(0, produced - (allocated.get(`${sourceDate}::${item.id}`) || 0));
+        return {
+          sourceDate,
+          itemId: item.id,
+          recipe: recipeById(item.recipeId),
+          availableServings,
+        };
+      }))
+    .filter((entry) => entry.recipe && entry.availableServings >= 0.5)
+    .sort((left, right) => right.sourceDate.localeCompare(left.sourceDate));
+}
+
 function sharedStateSnapshot() {
   return familyStateSnapshot({
     weekStartKey,
@@ -572,13 +615,21 @@ function sharedStateSnapshot() {
     tasks,
     availableFood,
     recipeFeedback,
+    budgetSettings,
+    receipts,
+    activity,
     recipeEdits: compactRecipeEditsForSync(recipeEdits, sharedRecipes),
     deletedRecipeIds,
   });
 }
 
 function currentSharedState() {
-  return { weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, recipeEdits, deletedRecipeIds };
+  return { weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, budgetSettings, receipts, activity, recipeEdits, deletedRecipeIds };
+}
+
+function recordActivity(type, label) {
+  const entry = activityEntry(type, label, householdMember);
+  if (entry) activity = [entry, ...activity].slice(0, 200);
 }
 
 function applySharedState(nextState) {
@@ -589,6 +640,9 @@ function applySharedState(nextState) {
   tasks = nextState.tasks;
   availableFood = normalizeAvailableFood(nextState.availableFood);
   recipeFeedback = normalizeRecipeFeedback(nextState.recipeFeedback);
+  budgetSettings = normalizeBudgetSettings(nextState.budgetSettings);
+  receipts = normalizeReceipts(nextState.receipts);
+  activity = normalizeActivity(nextState.activity);
   recipeEdits = nextState.recipeEdits;
   deletedRecipeIds = nextState.deletedRecipeIds;
 }
@@ -651,6 +705,9 @@ async function applyLoadedSharedState(data) {
     tasks: [],
     availableFood,
     recipeFeedback,
+    budgetSettings,
+    receipts,
+    activity,
     recipeEdits: {},
     deletedRecipeIds: [],
   }));
@@ -688,14 +745,23 @@ function loadSharedState({ restart = false } = {}) {
 
 function todaysRecipeId() {
   const meal = todaysMealPlan();
-  return meal.dinner || meal.main || meal.lunch || meal.lunchSalad || meal.breakfast || "meatballs";
+  return mealRecipes(meal).find(({ period, role }) => period === "dinner" && role === "main")?.recipe.id
+    || mealRecipes(meal)[0]?.recipe.id
+    || "meatballs";
 }
 
 function mealRecipes(meal) {
-  return mealSlots
-    .map((slot) => ({
-      ...slot,
-      recipe: meal[slot.key] ? recipeById(meal[slot.key]) : null,
+  return (normalizeMealPlan(meal).items || [])
+    .map((item) => ({
+      key: item.period,
+      period: item.period,
+      role: item.role,
+      sourceType: item.sourceType,
+      leftoverSourceDate: item.leftoverSourceDate,
+      leftoverSourceItemId: item.leftoverSourceItemId,
+      servings: item.servings,
+      itemId: item.id,
+      recipe: item.recipeId ? recipeById(item.recipeId) : null,
     }))
     .filter((item) => item.recipe);
 }
@@ -711,10 +777,11 @@ function mealSummary(meal) {
       ? t("handoffPlanned")
       : t("noMealSet");
   }
-  return items.map(({ key, recipe }) => {
-    const labelKey = key === "main" ? "dinnerSlot" : `${key}Slot`;
-    return `${t(labelKey)}: ${localizeExact(recipe.name) || t("translationPendingShort")}`;
-  }).join(" · ");
+  return mealPeriods.map((period) => {
+    const names = items.filter((item) => item.period === period.key)
+      .map(({ recipe }) => localizeExact(recipe.name) || t("translationPendingShort"));
+    return names.length ? `${t(period.label)}: ${names.join(", ")}` : "";
+  }).filter(Boolean).join(" · ");
 }
 
 function groceryStoreLabel(store) {
@@ -728,13 +795,13 @@ function inventoryMatchFor(text, includeDepleted = false) {
   return findInventoryMatch(inventory, text, includeDepleted);
 }
 
-function recipeGroceries(recipe, source = "recipe-detail", mealUse = null) {
+function recipeGroceries(recipe, source = "recipe-detail", mealUse = null, scale = 1) {
   const use = mealUse ? {
     ...mealUse,
     recipeId: recipe.id,
     recipeName: recipe.name,
   } : null;
-  return groceryItemsFromRecipe(recipe, lang, inventory, householdMember, use).map((item) => ({
+  return groceryItemsFromRecipe(recipe, lang, inventory, householdMember, use, scale).map((item) => ({
     ...item,
     source,
   }));
@@ -765,16 +832,47 @@ function detailGroceriesMessage(addedCount, atHomeCount) {
   return detailStatusMessage("recipeGroceriesAdded", { count: addedCount });
 }
 
-function weeklyMealRecipes() {
-  return activeWeekDateKeys().flatMap((day) => mealRecipes(calendarMealForDateKey(day.dateKey))
-    .map((mealItem) => ({ ...mealItem, dateKey: day.dateKey })));
+function dateKeysForGroceryRange(range) {
+  if (range === "month") {
+    const start = new Date(visibleMonth);
+    start.setDate(1);
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + 1);
+    return Array.from({ length: Math.round((end - start) / 86400000) }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return formatDateKey(date);
+    });
+  }
+  if (range === "next14") {
+    const start = new Date();
+    start.setHours(12, 0, 0, 0);
+    return Array.from({ length: 14 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return formatDateKey(date);
+    });
+  }
+  return activeWeekDateKeys().map(({ dateKey }) => dateKey);
 }
 
-function generatedGroceriesFromWeek() {
-  return weeklyMealRecipes().flatMap(({ recipe, key, dateKey }) => recipeGroceries(recipe, "week-plan", {
-    dateKey,
-      mealSlot: key === "main" ? "dinner" : key === "lunchSalad" ? "lunch" : key,
-  }));
+function generatedGroceriesFromPlan(range = "week") {
+  return dateKeysForGroceryRange(range).flatMap((dateKey) => {
+    const meal = calendarMealForDateKey(dateKey);
+    return mealRecipes(meal)
+      .filter(({ sourceType }) => sourceType !== "leftover")
+      .flatMap(({ recipe, period }) => {
+        const neededServings = plannedServings(meal.servingPlans?.[period] || meal.servingPlan);
+        const batch = recipeBatchPlan(servingsForRecipe(recipe), neededServings);
+        const batches = batch?.batches || 1;
+        return recipeGroceries(recipe, "meal-plan", {
+          dateKey,
+          mealSlot: period,
+          batches,
+          servings: neededServings,
+        }, batches);
+      });
+  });
 }
 
 function manualGroceryItemsFromText(text, store) {
@@ -884,6 +982,15 @@ const receiptUi = createReceiptUi({
   setReceiptSuggestions: (items) => {
     receiptSuggestions = items;
   },
+  getPendingReceipt: () => pendingReceipt,
+  setPendingReceipt: (receipt) => {
+    pendingReceipt = receipt;
+  },
+  addReceipt: async (receipt) => {
+    receipts = [normalizeReceipt({ ...receipt, updatedBy: householdMember }), ...receipts];
+    recordActivity("receipt", t("activityReceiptAdded").replace("{store}", receipt.store || t("receiptStore")));
+    await saveSharedState();
+  },
   getLang: () => lang,
   getHouseholdMember: () => householdMember,
   updateFileInputStatus,
@@ -898,6 +1005,62 @@ const receiptUi = createReceiptUi({
 });
 
 const renderReceiptSuggestions = () => receiptUi.renderReceiptSuggestions();
+
+const budgetUi = createBudgetUi({
+  $,
+  $$,
+  t,
+  escapeHtml,
+  getBudgetSettings: () => budgetSettings,
+  setBudgetSettings: (settings) => {
+    budgetSettings = normalizeBudgetSettings(settings);
+    recordActivity("budget", t("activityBudgetUpdated"));
+  },
+  getReceipts: () => receipts,
+  setReceipts: (items) => {
+    receipts = normalizeReceipts(items);
+  },
+  saveSharedState,
+});
+
+const renderBudget = () => budgetUi.renderBudget();
+const activityUi = createActivityUi({ $, t, escapeHtml, getActivity: () => activity });
+const renderActivity = () => activityUi.renderActivity();
+
+function renderSmartSuggestions() {
+  const suggestions = [];
+  const urgentInventory = inventory.find((item) => ["expired", "soon"].includes(inventoryExpirationState(item)));
+  if (urgentInventory) suggestions.push({
+    title: t("suggestionUseSoon").replace("{item}", localizeExact(urgentInventory.text)),
+    copy: t("suggestionUseSoonCopy"),
+    view: "grocery",
+    inventory: "home",
+  });
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowKey = formatDateKey(tomorrow);
+  const leftovers = availableLeftoversForDate(tomorrowKey);
+  if (leftovers.length) suggestions.push({
+    title: t("suggestionLeftovers").replace("{recipe}", localizeExact(leftovers[0].recipe.name)),
+    copy: t("suggestionLeftoversCopy").replace("{count}", leftovers[0].availableServings),
+    view: "schedule",
+  });
+  if (!mealHasContent(calendarMealForDateKey(tomorrowKey))) suggestions.push({
+    title: t("suggestionPlanTomorrow"),
+    copy: t("suggestionPlanTomorrowCopy"),
+    view: "schedule",
+  });
+  const panel = $("#smartSuggestions");
+  panel.hidden = !suggestions.length;
+  $("#smartSuggestionList").innerHTML = suggestions.slice(0, 3).map((suggestion) => `<button type="button" data-suggestion-view="${suggestion.view}" ${suggestion.inventory ? `data-suggestion-inventory="${suggestion.inventory}"` : ""}><strong>${escapeHtml(suggestion.title)}</strong><span>${escapeHtml(suggestion.copy)}</span></button>`).join("");
+  $$('[data-suggestion-view]').forEach((button) => button.addEventListener("click", () => {
+    setView(button.dataset.suggestionView);
+    if (button.dataset.suggestionInventory) {
+      inventoryMode = button.dataset.suggestionInventory;
+      renderInventoryMode();
+    }
+  }));
+}
 
 function renderTranslations() {
   document.documentElement.lang = lang;
@@ -997,8 +1160,8 @@ const scheduleUi = createScheduleUi({
   localize: (value) => localizeExact(value) || t("translationPendingShort"),
   formatDateKey,
   normalizeMealPlan,
-  mealSlots,
   mealPeriods,
+  mealRoles,
   handoffOptions,
   days,
   emptyMeal,
@@ -1014,6 +1177,8 @@ const scheduleUi = createScheduleUi({
   plannedServings,
   recipeBatchPlan,
   allRecipes,
+  availableLeftoversForDate,
+  recordActivity,
   copyCurrentWeekToNextWeek: () => {
     const result = copyCurrentWeekToNextWeek(weekStartKey, schedule, calendarMeals);
     calendarMeals = normalizeCalendar(result.calendarMeals);
@@ -1053,15 +1218,8 @@ const recipeLibraryUi = createRecipeLibraryUi({
   categoryLabel,
   getLang: () => lang,
   getFavorites: () => favorites,
-  getPlannedRecipeIds: () => [...new Set(Object.values(schedule).flatMap((meal) => [
-    meal.breakfast,
-    meal.lunch,
-    meal.lunchSalad,
-    meal.dinner,
-    meal.main,
-    meal.side,
-    meal.salad,
-  ].filter(Boolean)))],
+  getPlannedRecipeIds: () => [...new Set(Object.values(schedule)
+    .flatMap((meal) => normalizeMealPlan(meal).items.map((item) => item.recipeId)))],
   allRecipes,
   recipeById,
   draftById,
@@ -1100,11 +1258,14 @@ function render() {
   renderTranslations();
   renderInventoryMode();
   renderToday();
+  renderSmartSuggestions();
   renderTasks();
   renderFavorites();
   renderSchedule();
   renderCalendar();
   renderGroceries();
+  renderBudget();
+  renderActivity();
   renderInventory();
   renderInventorySuggestions();
   renderRecipes();
@@ -1418,7 +1579,10 @@ const recipeFormUi = createRecipeFormUi({
 
 async function recognizeReceipt(images) {
   const data = await postJson("/.netlify/functions/recognize-receipt", { images, lang }, t("receiptScanError"));
-  return Array.isArray(data.items) ? data.items : [];
+  return {
+    items: Array.isArray(data.items) ? data.items : [],
+    receipt: data.receipt && typeof data.receipt === "object" ? data.receipt : null,
+  };
 }
 
 $$("[data-lang]").forEach((button) => {
@@ -1617,15 +1781,19 @@ $("#groceryForm").addEventListener("submit", async (event) => {
   $("#groceryInput").value = "";
   renderGroceries();
   bindGroceryControls();
-  await saveGroceries();
+  recordActivity("grocery", t("activityGroceryAdded").replace("{item}", text));
+  await Promise.all([saveGroceries(), saveSharedState()]);
 });
 
 $("#generateGroceries").addEventListener("click", async () => {
-  $(".grocery-tools-menu").open = false;
-  groceries = mergeGroceries(groceries, generatedGroceriesFromWeek());
+  groceries = applyInventoryCoverage(
+    replacePlannedGroceries(groceries, generatedGroceriesFromPlan($("#groceryPlanRange").value)),
+    inventory,
+  );
   renderGroceries();
   bindGroceryControls();
-  await saveGroceries();
+  recordActivity("grocery", t("activityShoppingBuilt"));
+  await Promise.all([saveGroceries(), saveSharedState()]);
 });
 
 $("#clearCheckedGroceries").addEventListener("click", async () => {
@@ -1637,6 +1805,7 @@ $("#clearCheckedGroceries").addEventListener("click", async () => {
 });
 
 receiptUi.bindReceiptControls();
+budgetUi.bindBudgetControls();
 
 $("#restockPurchased").addEventListener("click", async () => {
   const purchased = purchasedGroceries();
@@ -1672,20 +1841,28 @@ $("#inventoryForm").addEventListener("submit", async (event) => {
   const photos = await readFilesAsDataUrls($("#inventoryPhotoInput").files, 1);
   inventory.unshift(inventoryItem(
     text,
-    $("#inventoryQuantityInput").value.trim(),
+    "",
     $("#inventoryLocationInput").value,
     photos,
     "some",
     lang,
-    householdMember
+    householdMember,
+    {
+      amount: $("#inventoryQuantityInput").value,
+      unit: $("#inventoryUnitInput").value,
+      expiresOn: $("#inventoryExpirationInput").value,
+    }
   ));
   $("#inventoryInput").value = "";
   $("#inventoryQuantityInput").value = "";
+  $("#inventoryUnitInput").value = "each";
+  $("#inventoryExpirationInput").value = "";
   $("#inventoryPhotoInput").value = "";
   updateFileInputStatus($("#inventoryPhotoInput"));
   renderInventory();
   bindInventoryControls();
-  await saveInventory();
+  recordActivity("inventory", t("activityInventoryAdded").replace("{item}", text));
+  await Promise.all([saveInventory(), saveSharedState()]);
 });
 
 $("#inventoryScanForm").addEventListener("submit", async (event) => {

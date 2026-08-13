@@ -29,10 +29,11 @@ test("shared state sanitizer accepts localized task and note fields", async () =
   assert.match(source, /AVAILABLE_FOOD_TYPES = \["snack", "leftover"\]/);
   assert.match(source, /AVAILABLE_FOOD_USE_FOR = \["lunch", "snack", "nextDinner", "any"\]/);
   assert.match(source, /availableFood: cleanAvailableFood\(value\?\.availableFood\)/);
-  assert.match(source, /const dinner = cleanText\(source\.dinner \|\| source\.main, 120\)/);
-  assert.match(source, /breakfast: cleanText\(source\.breakfast, 120\)/);
-  assert.match(source, /lunch: cleanText\(source\.lunch, 120\)/);
-  assert.match(source, /lunchSalad: cleanText\(source\.lunchSalad, 120\)/);
+  assert.match(source, /const legacyDinner = cleanText\(source\.dinner \|\| source\.main, 120\)/);
+  assert.match(source, /const MEAL_PERIODS = \["breakfast", "lunch", "dinner"\]/);
+  assert.match(source, /const MEAL_ROLES = \["main", "side", "salad", "dessert", "sauce", "drink", "other"\]/);
+  assert.match(source, /mealItemsVersion: 1/);
+  assert.match(source, /items,/);
 });
 
 test("grocery and inventory write endpoints sanitize localized fields", async () => {

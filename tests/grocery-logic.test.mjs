@@ -2,11 +2,21 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  applyInventoryCoverage,
   groceryItem,
   groceryItemsFromRecipe,
   inventoryMatchFor,
   mergeGroceries,
+  parseIngredientAmount,
+  replacePlannedGroceries,
+  scaleIngredientText,
 } from "../grocery-logic.js";
+
+test("ingredient quantities scale with the planned recipe batch", () => {
+  assert.deepEqual(parseIngredientAmount("1 1/2 cups rice"), { quantity: 1.5, remainder: "cups rice" });
+  assert.equal(scaleIngredientText("2 cups rice", 1.25), "2 1/2 cups rice");
+  assert.equal(scaleIngredientText("Salt to taste", 1.5), "Salt to taste");
+});
 
 test("inventoryMatchFor ignores low and out stock by default", () => {
   const inventory = [
@@ -108,6 +118,98 @@ test("mergeGroceries keeps the meals that share a spillover ingredient", () => {
     ["2026-07-20", "dinner"],
     ["2026-07-22", "lunch"],
   ]);
+});
+
+test("mergeGroceries totals compatible planned ingredient quantities", () => {
+  const recipe = {
+    id: "onion-dish",
+    name: { en: "Onion Dish" },
+    ingredients: { en: ["1 onion"] },
+  };
+  const first = groceryItemsFromRecipe(recipe, "en", [], "Family", {
+    dateKey: "2026-08-13", mealSlot: "dinner", recipeId: recipe.id, recipeName: recipe.name,
+  }, 1);
+  const second = groceryItemsFromRecipe(recipe, "en", [], "Family", {
+    dateKey: "2026-08-14", mealSlot: "lunch", recipeId: recipe.id, recipeName: recipe.name,
+  }, 0.5);
+  const [merged] = mergeGroceries(first, second);
+
+  assert.deepEqual(merged.text, { en: "1 1/2 onion" });
+  assert.equal(merged.plannedQuantities.en, 1.5);
+});
+
+test("generating the same planned meal twice does not double its quantity", () => {
+  const recipe = { id: "rice", name: { en: "Rice" }, ingredients: { en: ["1 cup rice"] } };
+  const use = { dateKey: "2026-08-13", mealSlot: "dinner", recipeId: recipe.id, recipeName: recipe.name };
+  const generated = groceryItemsFromRecipe(recipe, "en", [], "Family", use, 1.25);
+  const [merged] = mergeGroceries(generated, generated);
+
+  assert.equal(merged.plannedQuantities.en, 1.25);
+  assert.deepEqual(merged.text, { en: "1 1/4 cup rice" });
+});
+
+test("rebuilding a plan replaces stale quantities while preserving manual items", () => {
+  const recipe = { id: "rice", name: { en: "Rice" }, ingredients: { en: ["1 cup rice"] } };
+  const use = { dateKey: "2026-08-13", mealSlot: "dinner", recipeId: recipe.id, recipeName: recipe.name };
+  const first = groceryItemsFromRecipe(recipe, "en", [], "Family", use, 1)[0];
+  first.source = "meal-plan";
+  const updated = groceryItemsFromRecipe(recipe, "en", [], "Family", use, 2)[0];
+  updated.source = "meal-plan";
+  const manual = groceryItem("Milk", { source: "manual" });
+
+  const rebuilt = replacePlannedGroceries([manual, first], [updated]);
+
+  assert.equal(rebuilt.length, 2);
+  assert.equal(rebuilt.find((item) => item.source === "meal-plan").plannedQuantities.en, 2);
+  assert.ok(rebuilt.some((item) => item.source === "manual"));
+});
+
+test("the first rebuilt plan removes legacy week-plan rows", () => {
+  const legacy = groceryItem("1 cup rice", { source: "week-plan" });
+  const current = groceryItem("2 cups rice", { source: "meal-plan" });
+
+  const rebuilt = replacePlannedGroceries([legacy], [current]);
+
+  assert.equal(rebuilt.length, 1);
+  assert.equal(rebuilt[0].source, "meal-plan");
+});
+
+test("rebuilding a month remains idempotent beyond twelve shared uses", () => {
+  const recipe = { id: "rice", name: { en: "Rice" }, ingredients: { en: ["1 cup rice"] } };
+  const generated = Array.from({ length: 14 }, (_, index) => groceryItemsFromRecipe(recipe, "en", [], "Family", {
+    dateKey: `2026-08-${`${index + 1}`.padStart(2, "0")}`,
+    mealSlot: "dinner",
+    recipeId: recipe.id,
+    recipeName: recipe.name,
+  }, 1)[0]);
+  generated.forEach((item) => { item.source = "meal-plan"; });
+
+  const first = replacePlannedGroceries([], generated);
+  const second = replacePlannedGroceries(first, generated);
+
+  assert.equal(first[0].plannedQuantities.en, 14);
+  assert.equal(second[0].plannedQuantities.en, 14);
+});
+
+test("structured inventory subtracts from the total planned grocery amount", () => {
+  const recipe = { id: "lemonade", name: { en: "Lemonade" }, ingredients: { en: ["4 lemons"] } };
+  const [planned] = groceryItemsFromRecipe(recipe, "en", [], "Family", {
+    dateKey: "2026-08-13", mealSlot: "dinner", recipeId: recipe.id, recipeName: recipe.name,
+  }, 1);
+  const [partial] = applyInventoryCoverage([planned], [{
+    text: { en: "lemons" }, stockState: "some", amount: 2, unit: "each",
+  }]);
+
+  assert.equal(partial.checked, false);
+  assert.equal(partial.inInventory, true);
+  assert.equal(partial.remainingQuantities.en, 2);
+  assert.deepEqual(partial.text, { en: "2 lemons" });
+
+  const [covered] = applyInventoryCoverage([planned], [{
+    text: { en: "lemons" }, stockState: "full", amount: 4, unit: "each",
+  }]);
+  assert.equal(covered.checked, true);
+  assert.equal(covered.remainingQuantities.en, 0);
 });
 
 test("groceryItem records optional household attribution", () => {

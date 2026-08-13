@@ -57,7 +57,7 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(96px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=53/);
+  assert.match(html, /styles\.css\?v=54/);
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
@@ -86,7 +86,7 @@ test("mobile header reserves rows for optional install controls", () => {
 });
 
 test("mobile sync status keeps the family member control compact and labeled", () => {
-  assert.match(html, /id="householdMemberInput" aria-label="Editing as" data-i18n-aria-label="updatingAsShort"/);
+  assert.match(html, /id="householdMemberInput"[^>]+list="householdMemberSuggestions"[^>]+aria-label="Editing as"/);
   assert.match(styles, /\.app-sync-status \.household-member-global \{[\s\S]*?width: auto;[\s\S]*?flex: 0 0 auto;/);
   assert.match(styles, /\.app-sync-status \.household-member-global > span \{[\s\S]*?clip: rect\(0, 0, 0, 0\)/);
 });

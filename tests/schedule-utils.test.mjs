@@ -9,6 +9,7 @@ import {
   mealHasContent,
   normalizeCalendar,
   normalizeMealPlan,
+  normalizeMealServingPlans,
   normalizeSchedule,
   normalizeServingPlan,
   plannedServings,
@@ -21,6 +22,42 @@ test("serving plans default to two adults and two kids", () => {
   assert.deepEqual(plan, { adults: 2, kids: 2, guests: 0, actualLeftovers: {} });
   assert.equal(plannedServings(plan), 3);
   assert.equal(plannedServings({ adults: 2, kids: 1, guests: 2 }), 4.5);
+});
+
+test("meal periods inherit legacy counts and can diverge safely", () => {
+  const plans = normalizeMealServingPlans({
+    servingPlan: { adults: 1, kids: 2, guests: 1 },
+    servingPlans: { lunch: { adults: 2, kids: 0, guests: 0 } },
+  });
+  assert.deepEqual(plans.breakfast, { adults: 1, kids: 2, guests: 1, actualLeftovers: {} });
+  assert.deepEqual(plans.lunch, { adults: 2, kids: 0, guests: 0, actualLeftovers: {} });
+  assert.deepEqual(plans.dinner, { adults: 1, kids: 2, guests: 1, actualLeftovers: {} });
+});
+
+test("leftover meal items preserve their exact source and allocation", () => {
+  const meal = normalizeMealPlan({
+    mealItemsVersion: 1,
+    items: [{
+      id: "future-lunch",
+      period: "lunch",
+      role: "main",
+      sourceType: "leftover",
+      recipeId: "meatballs",
+      leftoverSourceDate: "2026-06-21",
+      leftoverSourceItemId: "sunday-meatballs",
+      servings: 2.5,
+    }],
+  });
+  assert.deepEqual(meal.items[0], {
+    id: "future-lunch",
+    period: "lunch",
+    role: "main",
+    sourceType: "leftover",
+    recipeId: "meatballs",
+    leftoverSourceDate: "2026-06-21",
+    leftoverSourceItemId: "sunday-meatballs",
+    servings: 2.5,
+  });
 });
 
 test("recipe batch planning rounds up to quarter batches and estimates leftovers", () => {
@@ -51,8 +88,15 @@ test("activeWeekDateKeys expands a monday week into seven date keys", () => {
 });
 
 test("meal normalization preserves legacy string meals and fills blanks", () => {
-  assert.deepEqual(normalizeMealPlan("meatballs"), { ...emptyMeal, dinner: "meatballs", main: "meatballs" });
-  assert.deepEqual(normalizeMealPlan({ side: "potatoes" }), { ...emptyMeal, side: "potatoes" });
+  const dinner = normalizeMealPlan("meatballs");
+  assert.equal(dinner.dinner, "meatballs");
+  assert.deepEqual(dinner.items.map(({ period, role, recipeId }) => ({ period, role, recipeId })), [
+    { period: "dinner", role: "main", recipeId: "meatballs" },
+  ]);
+  const side = normalizeMealPlan({ side: "potatoes" });
+  assert.equal(side.side, "potatoes");
+  assert.equal(side.dinner, "");
+  assert.equal(side.items[0].role, "side");
 });
 
 test("meal normalization maps legacy main recipes to dinner and preserves new periods", () => {
@@ -71,7 +115,10 @@ test("schedule and calendar normalization keep expected shape", () => {
   assert.deepEqual(schedule.tue, { ...emptyMeal });
 
   const calendar = normalizeCalendar({ "2026-06-24": { salad: "greens" } });
-  assert.deepEqual(calendar["2026-06-24"], { ...emptyMeal, salad: "greens" });
+  assert.equal(calendar["2026-06-24"].salad, "greens");
+  assert.deepEqual(calendar["2026-06-24"].items.map(({ period, role, recipeId }) => ({ period, role, recipeId })), [
+    { period: "dinner", role: "salad", recipeId: "greens" },
+  ]);
 });
 
 test("mealHasContent checks any planned slot or notes", () => {
@@ -84,25 +131,25 @@ test("copyCurrentWeekToNextWeek carries effective meals forward without overwrit
   const result = copyCurrentWeekToNextWeek(
     "2026-06-22",
     {
-      mon: { ...emptyMeal, main: "meatballs" },
-      tue: { ...emptyMeal, side: "keeper-side" },
-      wed: { ...emptyMeal },
-      thu: { ...emptyMeal, notes: "leftovers" },
-      fri: { ...emptyMeal, salad: "greens" },
-      sat: { ...emptyMeal },
-      sun: { ...emptyMeal },
+      mon: { main: "meatballs" },
+      tue: { side: "keeper-side" },
+      wed: {},
+      thu: { notes: "leftovers" },
+      fri: { salad: "greens" },
+      sat: {},
+      sun: {},
     },
     {
-      "2026-06-23": { ...emptyMeal, main: "override-taco" },
-      "2026-06-30": { ...emptyMeal, main: "already-planned" },
+      "2026-06-23": { main: "override-taco" },
+      "2026-06-30": { main: "already-planned" },
     },
   );
 
   assert.equal(result.copiedCount, 3);
   assert.equal(result.skippedCount, 1);
-  assert.deepEqual(result.calendarMeals["2026-06-29"], { ...emptyMeal, dinner: "meatballs", main: "meatballs" });
-  assert.deepEqual(result.calendarMeals["2026-07-02"], { ...emptyMeal, notes: "leftovers" });
-  assert.deepEqual(result.calendarMeals["2026-07-03"], { ...emptyMeal, salad: "greens" });
+  assert.equal(result.calendarMeals["2026-06-29"].dinner, "meatballs");
+  assert.equal(result.calendarMeals["2026-07-02"].notes, "leftovers");
+  assert.equal(result.calendarMeals["2026-07-03"].salad, "greens");
   assert.equal(result.calendarMeals["2026-06-30"].main, "already-planned");
 });
 
@@ -146,11 +193,11 @@ test("meal normalization keeps only supported handoff detail choices", () => {
 test("removeRecipeFromPlans clears deleted recipes from weekly and calendar meals", () => {
   const result = removeRecipeFromPlans(
     {
-      mon: { ...emptyMeal, main: "deleted-recipe", side: "keeper" },
-      tue: { ...emptyMeal, salad: "deleted-recipe", notes: "remember sauce" },
+      mon: { main: "deleted-recipe", side: "keeper" },
+      tue: { salad: "deleted-recipe", notes: "remember sauce" },
     },
     {
-      "2026-06-24": { ...emptyMeal, main: "keeper", side: "deleted-recipe" },
+      "2026-06-24": { main: "keeper", side: "deleted-recipe" },
     },
     "deleted-recipe",
   );
@@ -171,7 +218,7 @@ test("mealHasContent recognizes breakfast and lunch plans", () => {
 
 test("removeRecipeFromPlans clears a deleted lunch salad", () => {
   const result = removeRecipeFromPlans(
-    { mon: { ...emptyMeal, lunch: "sandwich", lunchSalad: "deleted-recipe" } },
+    { mon: { lunch: "sandwich", lunchSalad: "deleted-recipe" } },
     {},
     "deleted-recipe",
   );

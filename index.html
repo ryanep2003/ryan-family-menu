@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=53" />
+    <link rel="stylesheet" href="styles.css?v=54" />
   </head>
   <body class="household-locked" data-view="today">
     <section class="household-gate" id="householdGate" aria-labelledby="householdGateHeading">
@@ -74,6 +74,10 @@
               <input id="currentHouseholdKey" type="password" readonly />
             </label>
             <button class="ghost-button" id="copyHouseholdKey" type="button">Copy family key</button>
+            <details class="household-activity">
+              <summary data-i18n="recentActivity">Recent activity</summary>
+              <div id="householdActivity"></div>
+            </details>
             <button class="text-button" id="leaveHousehold" type="button">Use a different household</button>
             <p class="household-menu-status" id="householdMenuStatus" role="status"></p>
           </div>
@@ -112,14 +116,10 @@
         <button class="ghost-button sync-retry" id="retrySharedState" type="button" data-i18n="retrySync" hidden>Retry sync</button>
         <label class="household-member-picker household-member-global" for="householdMemberInput">
           <span data-i18n="updatingAsShort">Editing as</span>
-          <select id="householdMemberInput" aria-label="Editing as" data-i18n-aria-label="updatingAsShort">
-            <option value="Family" data-i18n="householdFamily">Family</option>
-            <option value="Alyson">Alyson</option>
-            <option value="Eric">Eric</option>
-            <option value="Nelly">Nelly</option>
-            <option value="Theo">Theo</option>
-            <option value="Pierce">Pierce</option>
-          </select>
+          <input id="householdMemberInput" type="text" maxlength="40" list="householdMemberSuggestions" value="Family" aria-label="Editing as" data-i18n-aria-label="updatingAsShort" />
+          <datalist id="householdMemberSuggestions">
+            <option value="Family"></option>
+          </datalist>
         </label>
       </div>
 
@@ -157,6 +157,13 @@
             <div class="today-meal-list" id="todayMealList"></div>
           </div>
           <button class="primary-action" id="cookToday" type="button" data-i18n="cookButton">Cook this</button>
+        </section>
+
+        <section class="smart-suggestions" id="smartSuggestions" aria-labelledby="smartSuggestionsHeading" hidden>
+          <div class="panel-heading">
+            <div><p class="section-label" data-i18n="smartSuggestionsLabel">Make the week easier</p><h2 id="smartSuggestionsHeading" data-i18n="smartSuggestionsHeading">Worth doing next</h2></div>
+          </div>
+          <div id="smartSuggestionList"></div>
         </section>
 
         <section class="family-handoff" id="todayHandoff" aria-labelledby="todayHandoffHeading">
@@ -272,52 +279,53 @@
       </section>
 
       <section class="view" id="scheduleView">
-        <div class="section-heading view-banner week-banner">
-          <div>
-            <p class="view-kicker" data-i18n="weekKicker">The family table</p>
-            <h2 id="weekTitle" data-i18n="weekHeading">This week</h2>
-            <p class="section-note" data-i18n="weekRepeatsNote">Select a day to edit. The month below is a quick overview.</p>
-          </div>
-          <div class="week-actions">
-            <div class="week-navigation" role="group" aria-label="Week navigation" data-i18n-aria-label="weekNavigationLabel">
-              <button class="ghost-button" id="previousWeek" type="button"><span class="week-nav-icon" aria-hidden="true">←</span><span data-i18n="previousWeek">Previous week</span></button>
-              <button class="ghost-button" id="thisWeek" type="button"><span data-i18n="thisWeek">This week</span></button>
-              <button class="ghost-button" id="nextWeek" type="button"><span class="week-nav-icon" aria-hidden="true">→</span><span data-i18n="nextWeek">Next week</span></button>
-            </div>
-            <button class="primary-action" id="copyWeekForward" type="button" data-i18n="copyWeekForward">Plan next week</button>
-            <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Clear week</button>
-          </div>
+        <div class="planning-mode-switch" role="tablist" aria-label="Planning view" data-i18n-aria-label="planningViewLabel">
+          <button class="active" id="weekPlanningTab" type="button" role="tab" aria-controls="weekPlanningPanel" aria-selected="true" data-planning-mode="week" data-i18n="planByWeek">Week</button>
+          <button id="monthPlanningTab" type="button" role="tab" aria-controls="monthPlanningPanel" aria-selected="false" data-planning-mode="month" data-i18n="planByMonth">Month</button>
         </div>
-        <p class="upload-status" id="scheduleStatus" role="status"></p>
-        <div class="schedule-grid" id="scheduleGrid"></div>
-        <section class="schedule-editor" id="weekDateEditor"></section>
 
-        <details class="calendar-disclosure">
-          <summary>
-            <span data-i18n="calendarToggle">Open calendar</span>
-            <small data-i18n="calendarToggleNote">Plan beyond this week</small>
-          </summary>
-          <div class="calendar-disclosure-content">
-            <div class="section-heading calendar-heading">
-              <div>
-                <p class="section-label" data-i18n="monthLabel">Recipe calendar</p>
-                <h2 id="monthTitle">June 2026</h2>
-                <p class="section-note" data-i18n="calendarInstructions">Choose a date to review its plan or make a one-day change.</p>
-              </div>
-              <div class="calendar-actions">
-                <button class="ghost-button" id="previousMonth" type="button" data-i18n="previousMonth">Previous</button>
-                <button class="ghost-button" id="todayMonth" type="button" data-i18n="thisMonth">This month</button>
-                <button class="ghost-button" id="nextMonth" type="button" data-i18n="nextMonth">Next</button>
-              </div>
+        <div id="weekPlanningPanel" role="tabpanel" aria-labelledby="weekPlanningTab">
+          <div class="section-heading view-banner week-banner">
+            <div>
+              <p class="view-kicker" data-i18n="weekKicker">The family table</p>
+              <h2 id="weekTitle" tabindex="-1" data-i18n="weekHeading">This week</h2>
+              <p class="section-note" data-i18n="weekRepeatsNote">Choose a day to plan every meal and course.</p>
             </div>
-            <section class="schedule-editor" id="calendarDateEditor" hidden></section>
-            <div class="calendar-scroll">
-              <div class="calendar-weekdays" id="calendarWeekdays"></div>
-              <div class="calendar-grid" id="calendarGrid"></div>
-              <div class="calendar-agenda" id="calendarAgenda" aria-live="polite"></div>
+            <div class="week-actions">
+              <div class="week-navigation" role="group" aria-label="Week navigation" data-i18n-aria-label="weekNavigationLabel">
+                <button class="ghost-button" id="previousWeek" type="button"><span class="week-nav-icon" aria-hidden="true">←</span><span data-i18n="previousWeek">Previous week</span></button>
+                <button class="ghost-button" id="thisWeek" type="button"><span data-i18n="thisWeek">This week</span></button>
+                <button class="ghost-button" id="nextWeek" type="button"><span class="week-nav-icon" aria-hidden="true">→</span><span data-i18n="nextWeek">Next week</span></button>
+              </div>
+              <button class="primary-action" id="copyWeekForward" type="button" data-i18n="copyWeekForward">Plan next week</button>
+              <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Clear week</button>
             </div>
           </div>
-        </details>
+          <p class="upload-status" id="scheduleStatus" role="status"></p>
+          <div class="schedule-grid" id="scheduleGrid"></div>
+          <section class="schedule-editor" id="weekDateEditor"></section>
+        </div>
+
+        <div id="monthPlanningPanel" role="tabpanel" aria-labelledby="monthPlanningTab" hidden>
+          <div class="section-heading view-banner month-banner">
+            <div>
+              <p class="view-kicker" data-i18n="monthLabel">Monthly plan</p>
+              <h2 id="monthTitle" tabindex="-1">June 2026</h2>
+              <p class="section-note" data-i18n="calendarInstructions">Choose any date to plan breakfast, lunch, dinner, and every course.</p>
+            </div>
+            <div class="calendar-actions">
+              <button class="ghost-button" id="previousMonth" type="button" data-i18n="previousMonth">Previous</button>
+              <button class="ghost-button" id="todayMonth" type="button" data-i18n="thisMonth">This month</button>
+              <button class="ghost-button" id="nextMonth" type="button" data-i18n="nextMonth">Next</button>
+            </div>
+          </div>
+          <div class="calendar-scroll">
+            <div class="calendar-weekdays" id="calendarWeekdays"></div>
+            <div class="calendar-grid" id="calendarGrid"></div>
+            <div class="calendar-agenda" id="calendarAgenda" aria-live="polite"></div>
+          </div>
+          <section class="schedule-editor calendar-date-editor" id="calendarDateEditor" hidden></section>
+        </div>
       </section>
 
       <section class="view" id="groceryView">
@@ -330,7 +338,7 @@
           <div class="section-heading grocery-heading view-banner grocery-banner">
             <div>
               <p class="view-kicker" data-i18n="groceryLabel">Shared grocery list</p>
-              <h2 data-i18n="groceryHeading">Groceries for this week</h2>
+              <h2 data-i18n="groceryHeading">Shopping list</h2>
             </div>
             <div class="grocery-actions">
               <button class="primary-action" id="restockPurchased" type="button" hidden data-i18n="movePurchasedHome">Move purchased home</button>
@@ -346,6 +354,40 @@
             </select>
             <button class="primary-action" type="submit" data-i18n="addGroceryItem">Add item</button>
           </form>
+          <section class="plan-grocery-generator" aria-labelledby="planGroceryHeading">
+            <div>
+              <strong id="planGroceryHeading" data-i18n="planGroceryHeading">Build from your meal plan</strong>
+              <span data-i18n="planGroceryHelper">Recipe amounts are scaled for your family. Food already at home is marked off.</span>
+            </div>
+            <select id="groceryPlanRange" aria-label="Meal-plan range" data-i18n-aria-label="groceryPlanRangeLabel">
+              <option value="week" data-i18n="groceryRangeWeek">This week</option>
+              <option value="next14" data-i18n="groceryRangeNext14">Next 14 days</option>
+              <option value="month" data-i18n="groceryRangeMonth">This month</option>
+            </select>
+            <button class="primary-action" id="generateGroceries" type="button" data-i18n="generateGroceries">Build shopping list</button>
+          </section>
+          <section class="monthly-budget" aria-labelledby="budgetHeading">
+            <div class="monthly-budget-heading">
+              <div>
+                <p class="section-label" data-i18n="budgetLabel">Grocery budget</p>
+                <h3 id="budgetHeading" data-i18n="budgetHeading">This month</h3>
+              </div>
+              <form id="budgetForm">
+                <label><span data-i18n="monthlyBudgetTarget">Monthly target</span><input id="monthlyBudgetInput" type="number" min="0" max="100000" step="1" inputmode="decimal" placeholder="$800" /></label>
+                <button class="ghost-button" type="submit" data-i18n="saveBudget">Save</button>
+              </form>
+            </div>
+            <div class="budget-metrics">
+              <div><span data-i18n="budgetSpent">Spent</span><strong id="budgetSpent">$0.00</strong></div>
+              <div><span data-i18n="budgetTarget">Target</span><strong id="budgetTarget">Not set</strong></div>
+              <div><span id="budgetRemainingLabel" data-i18n="budgetRemaining">Remaining</span><strong id="budgetRemaining">—</strong></div>
+            </div>
+            <div class="budget-progress-track" aria-hidden="true"><span id="budgetProgress"></span></div>
+            <details class="receipt-history">
+              <summary data-i18n="receiptHistory">Receipt history</summary>
+              <div id="receiptHistory"></div>
+            </details>
+          </section>
           <div class="sync-status-row">
             <p class="upload-status" id="groceryStatus" role="status"></p>
             <button class="ghost-button sync-retry" id="retryGroceries" type="button" data-i18n="retrySync" hidden>Retry sync</button>
@@ -355,7 +397,6 @@
             <summary data-i18n="listTools">List tools</summary>
             <div>
               <button class="ghost-button" id="scanReceiptToggle" type="button" data-i18n="useReceipt">Use receipt</button>
-              <button class="ghost-button" id="generateGroceries" type="button" data-i18n="generateGroceries">Generate from week</button>
               <button class="text-button" id="clearCheckedGroceries" type="button" data-i18n="clearChecked">Clear checked</button>
             </div>
           </details>
@@ -390,7 +431,21 @@
                   <summary data-i18n="addInventoryItem">Add item</summary>
                   <form class="inventory-add" id="inventoryForm">
                     <input type="text" id="inventoryInput" data-i18n-placeholder="inventoryPlaceholder" data-i18n-aria-label="inventoryItemLabel" aria-label="Inventory item" placeholder="Add eggs, milk, paper towels..." />
-                    <input type="text" id="inventoryQuantityInput" data-i18n-placeholder="inventoryQuantityPlaceholder" data-i18n-aria-label="inventoryAmountLabel" aria-label="Inventory amount" placeholder="Amount, optional" />
+                    <input type="number" id="inventoryQuantityInput" min="0" max="10000" step="0.25" data-i18n-placeholder="inventoryQuantityPlaceholder" data-i18n-aria-label="inventoryAmountLabel" aria-label="Inventory amount" placeholder="Amount" />
+                    <select id="inventoryUnitInput" aria-label="Inventory unit" data-i18n-aria-label="inventoryUnitLabel">
+                      <option value="each" data-i18n="unitEach">Each</option>
+                      <option value="package" data-i18n="unitPackage">Package</option>
+                      <option value="container" data-i18n="unitContainer">Container</option>
+                      <option value="cup" data-i18n="unitCup">Cup</option>
+                      <option value="oz" data-i18n="unitOunce">Ounce</option>
+                      <option value="lb" data-i18n="unitPound">Pound</option>
+                      <option value="g" data-i18n="unitGram">Gram</option>
+                      <option value="kg" data-i18n="unitKilogram">Kilogram</option>
+                    </select>
+                    <label class="inventory-expiration-input">
+                      <span data-i18n="expiresOn">Expires</span>
+                      <input type="date" id="inventoryExpirationInput" aria-label="Expiration date" data-i18n-aria-label="expirationDateLabel" />
+                    </label>
                     <input type="file" id="inventoryPhotoInput" accept="image/*" capture="environment" aria-label="Inventory photo" data-i18n-aria-label="inventoryPhotoLabel" data-file-action="choosePhoto" />
                     <select id="inventoryLocationInput" aria-label="Location" data-i18n-aria-label="locationLabel">
                       <option value="pantry" data-i18n="locationPantry">Pantry</option>
@@ -736,6 +791,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=90"></script>
+    <script type="module" src="app.js?v=91"></script>
   </body>
 </html>

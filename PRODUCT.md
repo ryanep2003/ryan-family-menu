@@ -14,11 +14,11 @@ Ryan Family Menu is for family members and caretakers who need a shared, always-
 
 ## Product Purpose
 
-This product exists to help a household manage food and groceries together without friction. It should make it easy to plan dinners quickly, keep grocery and inventory information current, save and update family recipes, and let multiple people access the same home food system from wherever they are. Success looks like less confusion, faster coordination, and fewer missed ingredients or duplicated trips.
+Family Menu is the shared operating system for a household's food life. It helps every family member plan every meal across the month, shop intelligently, manage food at home, use leftovers intentionally, and stay within budget with the least possible effort and waste. Success looks like a household being able to answer five questions quickly: what are we eating, what do we already have, what do we need to buy, what should we use soon, and what are we spending?
 
 ## Positioning
 
-A shared home food system for families and caretakers.
+The simplest shared food-management system for families and caretakers, connecting meal planning, recipes, groceries, inventory, leftovers, spending, and household collaboration.
 
 ## Brand Personality
 
@@ -35,6 +35,9 @@ It should not feel corporate, stodgy, or old. Avoid the look and tone of enterpr
 - Bilingual by default: English and Spanish support should feel built in, not bolted on.
 - Fast confidence over ceremony: common tasks should be quick to complete, with clear feedback and very little friction.
 - Warm practicality: the interface should feel human and supportive without slipping into corporate polish or old-fashioned visual habits.
+- Flexible before rigid: meals contain whatever a family actually serves; categories organize items but never limit them.
+- Enter once, use everywhere: recipes, portions, plans, inventory, groceries, leftovers, and costs should share one connected source of truth.
+- Progressive usefulness: families should receive value from partial use and should never need perfect inventory or budget data before planning a meal.
 
 ## Accessibility & Inclusion
 

@@ -15,6 +15,8 @@ const MAX_TASKS = 300;
 const MAX_RECIPE_EDITS = 300;
 const MAX_DELETED_RECIPES = 300;
 const MAX_AVAILABLE_FOOD = 100;
+const MAX_RECEIPTS = 500;
+const MAX_ACTIVITY = 200;
 const MAX_PHOTO_BYTES = 500000;
 const MAX_REQUEST_BYTES = 3000000;
 const TASK_ASSIGNEES = ["alyson", "eric", "nelly", "theo", "pierce", "other"];
@@ -24,6 +26,8 @@ const SNACK_STATUS = ["ready", "prepare"];
 const AVAILABLE_FOOD_TYPES = ["snack", "leftover"];
 const AVAILABLE_FOOD_FRESHNESS = ["today", "tomorrow", "later"];
 const AVAILABLE_FOOD_USE_FOR = ["lunch", "snack", "nextDinner", "any"];
+const MEAL_PERIODS = ["breakfast", "lunch", "dinner"];
+const MEAL_ROLES = ["main", "side", "salad", "dessert", "sauce", "drink", "other"];
 
 function cleanText(value, maxLength) {
   return `${value || ""}`.trim().slice(0, maxLength);
@@ -39,24 +43,73 @@ function cleanPhoto(value) {
 function cleanMeal(value) {
   const source = value && typeof value === "object" ? value : {};
   const handoff = source.handoff && typeof source.handoff === "object" ? source.handoff : {};
-  const dinner = cleanText(source.dinner || source.main, 120);
+  const legacyDinner = cleanText(source.dinner || source.main, 120);
+  const legacyItems = [
+    ["breakfast", "main", source.breakfast],
+    ["lunch", "main", source.lunch],
+    ["lunch", "salad", source.lunchSalad],
+    ["dinner", "main", legacyDinner],
+    ["dinner", "side", source.side],
+    ["dinner", "salad", source.salad],
+  ].filter(([, , recipeId]) => cleanText(recipeId, 120))
+    .map(([period, role, recipeId], index) => ({
+      id: `legacy-${period}-${role}-${index}-${cleanText(recipeId, 120)}`.slice(0, 160),
+      period,
+      role,
+      sourceType: "recipe",
+      recipeId: cleanText(recipeId, 120),
+    }));
+  const hasCanonicalItems = source.mealItemsVersion === 1 && Array.isArray(source.items);
+  const rawItems = hasCanonicalItems
+    ? source.items
+    : Array.isArray(source.items) && source.items.length
+      ? source.items
+      : legacyItems;
+  const items = rawItems.map((item, index) => {
+    const recipeId = cleanText(item?.recipeId, 120);
+    if (!recipeId) return null;
+    const leftoverSourceDate = /^\d{4}-\d{2}-\d{2}$/.test(item?.leftoverSourceDate) ? item.leftoverSourceDate : "";
+    const leftoverSourceItemId = /^[a-z0-9-]{1,160}$/i.test(item?.leftoverSourceItemId) ? item.leftoverSourceItemId : "";
+    const sourceType = item?.sourceType === "leftover" && leftoverSourceDate && leftoverSourceItemId ? "leftover" : "recipe";
+    return {
+      id: /^[a-z0-9-]{1,160}$/i.test(item?.id) ? item.id : `meal-item-${index}-${recipeId}`.slice(0, 160),
+      period: MEAL_PERIODS.includes(item?.period) ? item.period : "dinner",
+      role: MEAL_ROLES.includes(item?.role) ? item.role : "other",
+      sourceType,
+      recipeId,
+      ...(sourceType === "leftover" ? {
+        leftoverSourceDate,
+        leftoverSourceItemId,
+        servings: Math.min(100, Math.max(0, Math.round(Number(item?.servings || 0) * 2) / 2)),
+      } : {}),
+    };
+  }).filter(Boolean).slice(0, 40);
+  const firstRecipe = (period, role) => items.find((item) => item.period === period && (!role || item.role === role))?.recipeId || "";
+  const dinner = firstRecipe("dinner", "main");
   const servingPlan = source.servingPlan && typeof source.servingPlan === "object" ? source.servingPlan : {};
   const cleanCount = (entry, fallback) => Number.isFinite(Number(entry))
     ? Math.min(20, Math.max(0, Math.round(Number(entry))))
     : fallback;
   const actualLeftovers = Object.fromEntries(Object.entries(servingPlan.actualLeftovers || {})
-    .filter(([id]) => /^[a-z0-9-]{1,120}$/i.test(id))
-    .slice(0, 20)
+    .filter(([id]) => /^[a-z0-9-]{1,160}$/i.test(id))
+    .slice(0, 40)
     .map(([id, amount]) => [id, Math.min(100, Math.max(0, Math.round(Number(amount || 0) * 2) / 2))]));
+  const cleanServingPlan = (plan = servingPlan) => ({
+    adults: cleanCount(plan?.adults, 2),
+    kids: cleanCount(plan?.kids, 2),
+    guests: cleanCount(plan?.guests, 0),
+  });
   return {
-    breakfast: cleanText(source.breakfast, 120),
-    lunch: cleanText(source.lunch, 120),
-    lunchSalad: cleanText(source.lunchSalad, 120),
+    mealItemsVersion: 1,
+    items,
+    breakfast: firstRecipe("breakfast"),
+    lunch: firstRecipe("lunch", "main") || firstRecipe("lunch"),
+    lunchSalad: firstRecipe("lunch", "salad"),
     dinner,
     // Keep the legacy field in sync so older clients continue to read dinner.
     main: dinner,
-    side: cleanText(source.side, 120),
-    salad: cleanText(source.salad, 120),
+    side: firstRecipe("dinner", "side"),
+    salad: firstRecipe("dinner", "salad"),
     notes: cleanLocalizedText(source.notes, 500),
     handoff: {
       leftovers: Boolean(handoff.leftovers),
@@ -68,11 +121,13 @@ function cleanMeal(value) {
       snack: cleanLocalizedText(handoff.snack, 120),
     },
     servingPlan: {
-      adults: cleanCount(servingPlan.adults, 2),
-      kids: cleanCount(servingPlan.kids, 2),
-      guests: cleanCount(servingPlan.guests, 0),
+      ...cleanServingPlan(),
       actualLeftovers,
     },
+    servingPlans: Object.fromEntries(MEAL_PERIODS.map((period) => [
+      period,
+      cleanServingPlan(source.servingPlans?.[period]),
+    ])),
   };
 }
 
@@ -140,6 +195,42 @@ function cleanAvailableFood(value) {
   return value.map(cleanAvailableFoodItem).filter(Boolean).slice(0, MAX_AVAILABLE_FOOD);
 }
 
+function cleanBudgetSettings(value) {
+  const target = Number(value?.monthlyTarget);
+  return { monthlyTarget: Number.isFinite(target) ? Math.min(100000, Math.max(0, Math.round(target * 100) / 100)) : 0 };
+}
+
+function cleanReceipt(item) {
+  const total = Math.min(100000, Math.max(0, Math.round(Number(item?.total || 0) * 100) / 100));
+  if (!(total > 0)) return null;
+  return {
+    id: cleanText(item.id, 160) || `receipt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    date: /^\d{4}-\d{2}-\d{2}$/.test(item.date) ? item.date : new Date().toISOString().slice(0, 10),
+    store: cleanText(item.store, 120) || "Store",
+    subtotal: Math.min(100000, Math.max(0, Math.round(Number(item.subtotal || 0) * 100) / 100)),
+    tax: Math.min(100000, Math.max(0, Math.round(Number(item.tax || 0) * 100) / 100)),
+    total,
+    itemCount: Math.min(500, Math.max(0, Math.round(Number(item.itemCount) || 0))),
+    createdAt: cleanText(item.createdAt, 40),
+    updatedBy: cleanText(item.updatedBy, 80),
+  };
+}
+
+function cleanReceipts(value) {
+  return Array.isArray(value) ? value.map(cleanReceipt).filter(Boolean).slice(0, MAX_RECEIPTS) : [];
+}
+
+function cleanActivity(value) {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry) => ({
+    id: cleanText(entry?.id, 160),
+    type: ["meal", "grocery", "inventory", "receipt", "budget", "recipe"].includes(entry?.type) ? entry.type : "meal",
+    label: cleanText(entry?.label, 220),
+    updatedBy: cleanText(entry?.updatedBy, 80) || "Family",
+    updatedAt: cleanText(entry?.updatedAt, 40),
+  })).filter((entry) => entry.id && entry.label && !Number.isNaN(new Date(entry.updatedAt).getTime())).slice(0, MAX_ACTIVITY);
+}
+
 function cleanRecipeEdit(edit) {
   const name = cleanLocalizedText(edit?.name, 120);
   if (!hasLocalizedContent(name)) return null;
@@ -191,6 +282,9 @@ export function cleanState(value) {
     tasks: cleanTasks(value?.tasks),
     availableFood: cleanAvailableFood(value?.availableFood),
     recipeFeedback: normalizeRecipeFeedback(value?.recipeFeedback),
+    budgetSettings: cleanBudgetSettings(value?.budgetSettings),
+    receipts: cleanReceipts(value?.receipts),
+    activity: cleanActivity(value?.activity),
     recipeEdits: cleanRecipeEdits(value?.recipeEdits),
     deletedRecipeIds: cleanDeletedRecipeIds(value?.deletedRecipeIds),
     updatedAt: new Date().toISOString(),

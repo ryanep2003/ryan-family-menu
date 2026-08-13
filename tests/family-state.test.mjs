@@ -18,6 +18,9 @@ test("sharedStateSnapshot uses the API field names", () => {
     tasks: [{ text: "prep" }],
     availableFood: [],
     recipeFeedback: {},
+    budgetSettings: {},
+    receipts: [],
+    activity: [],
     recipeEdits: { pasta: { name: "Pasta" } },
     deletedRecipeIds: ["old"],
   }), {
@@ -28,6 +31,9 @@ test("sharedStateSnapshot uses the API field names", () => {
     tasks: [{ text: "prep" }],
     availableFood: [],
     recipeFeedback: {},
+    budgetSettings: {},
+    receipts: [],
+    activity: [],
     recipeEdits: { pasta: { name: "Pasta" } },
     deletedRecipeIds: ["old"],
   });

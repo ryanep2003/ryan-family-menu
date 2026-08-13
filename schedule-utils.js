@@ -37,11 +37,96 @@ export const snackStatusOptions = [
 const mealRecipeCategories = ["main", "side", "salad", "sauce", "dessert", "draft"];
 
 export const mealPeriods = [
-  { key: "breakfast", label: "breakfastSlot", choose: "chooseBreakfast", categories: mealRecipeCategories },
-  { key: "lunch", label: "lunchMainSlot", choose: "chooseLunchMain", categories: mealRecipeCategories },
-  { key: "lunchSalad", label: "lunchSaladSlot", choose: "chooseLunchSalad", categories: ["salad"] },
-  { key: "dinner", label: "dinnerSlot", choose: "chooseDinner", categories: mealRecipeCategories },
+  { key: "breakfast", label: "breakfastSlot" },
+  { key: "lunch", label: "lunchSlot" },
+  { key: "dinner", label: "dinnerSlot" },
 ];
+
+export const mealRoles = [
+  { key: "main", label: "roleMain" },
+  { key: "side", label: "roleSide" },
+  { key: "salad", label: "roleSalad" },
+  { key: "dessert", label: "roleDessert" },
+  { key: "sauce", label: "roleSauce" },
+  { key: "drink", label: "roleDrink" },
+  { key: "other", label: "roleOther" },
+];
+
+const mealPeriodKeys = new Set(mealPeriods.map(({ key }) => key));
+const mealRoleKeys = new Set(mealRoles.map(({ key }) => key));
+
+function legacyMealItems(value) {
+  const dinner = typeof value?.dinner === "string" && value.dinner
+    ? value.dinner
+    : typeof value?.main === "string" ? value.main : "";
+  return [
+    ["breakfast", "main", value?.breakfast],
+    ["lunch", "main", value?.lunch],
+    ["lunch", "salad", value?.lunchSalad],
+    ["dinner", "main", dinner],
+    ["dinner", "side", value?.side],
+    ["dinner", "salad", value?.salad],
+  ].filter(([, , recipeId]) => typeof recipeId === "string" && recipeId)
+    .map(([period, role, recipeId], index) => ({
+      id: `legacy-${period}-${role}-${index}-${recipeId}`.slice(0, 160),
+      period,
+      role,
+      sourceType: "recipe",
+      recipeId,
+    }));
+}
+
+export function normalizeMealItems(value) {
+  const hasCanonicalItems = value?.mealItemsVersion === 1 && Array.isArray(value?.items);
+  const source = hasCanonicalItems
+    ? value.items
+    : Array.isArray(value?.items) && value.items.length
+      ? value.items
+      : legacyMealItems(value);
+  return source.map((item, index) => {
+    if (!item || typeof item !== "object") return null;
+    const recipeId = typeof item.recipeId === "string" ? item.recipeId.trim().slice(0, 120) : "";
+    if (!recipeId) return null;
+    const period = mealPeriodKeys.has(item.period) ? item.period : "dinner";
+    const role = mealRoleKeys.has(item.role) ? item.role : "other";
+    const id = typeof item.id === "string" && /^[a-z0-9-]{1,160}$/i.test(item.id)
+      ? item.id
+      : `meal-item-${index}-${recipeId}`.slice(0, 160);
+    const leftoverSourceDate = typeof item.leftoverSourceDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item.leftoverSourceDate)
+      ? item.leftoverSourceDate
+      : "";
+    const leftoverSourceItemId = typeof item.leftoverSourceItemId === "string" && /^[a-z0-9-]{1,160}$/i.test(item.leftoverSourceItemId)
+      ? item.leftoverSourceItemId
+      : "";
+    const sourceType = item.sourceType === "leftover" && leftoverSourceDate && leftoverSourceItemId ? "leftover" : "recipe";
+    return {
+      id,
+      period,
+      role,
+      sourceType,
+      recipeId,
+      ...(sourceType === "leftover" ? {
+        leftoverSourceDate,
+        leftoverSourceItemId,
+        servings: boundedServings(item.servings),
+      } : {}),
+    };
+  }).filter(Boolean).slice(0, 40);
+}
+
+function legacyFieldsFromItems(items) {
+  const first = (period, role) => items.find((item) => item.period === period && (!role || item.role === role))?.recipeId || "";
+  const dinner = first("dinner", "main");
+  return {
+    breakfast: first("breakfast"),
+    lunch: first("lunch", "main") || first("lunch"),
+    lunchSalad: first("lunch", "salad"),
+    dinner,
+    main: dinner,
+    side: first("dinner", "side"),
+    salad: first("dinner", "salad"),
+  };
+}
 
 export const emptyHandoff = {
   leftovers: false,
@@ -73,7 +158,7 @@ function boundedServings(value, fallback = 0) {
 export function normalizeServingPlan(value) {
   const source = value && typeof value === "object" ? value : {};
   const actualLeftovers = Object.fromEntries(Object.entries(source.actualLeftovers || {})
-    .filter(([id]) => typeof id === "string" && /^[a-z0-9-]{1,120}$/i.test(id))
+    .filter(([id]) => typeof id === "string" && /^[a-z0-9-]{1,160}$/i.test(id))
     .map(([id, servings]) => [id, boundedServings(servings)]));
   return {
     adults: boundedCount(source.adults, defaultServingPlan.adults),
@@ -81,6 +166,15 @@ export function normalizeServingPlan(value) {
     guests: boundedCount(source.guests, defaultServingPlan.guests),
     actualLeftovers,
   };
+}
+
+export function normalizeMealServingPlans(value) {
+  const source = value && typeof value === "object" ? value : {};
+  const legacy = normalizeServingPlan(source.servingPlan);
+  return Object.fromEntries(mealPeriods.map(({ key }) => {
+    const periodPlan = source.servingPlans?.[key];
+    return [key, normalizeServingPlan(periodPlan || legacy)];
+  }));
 }
 
 export function plannedServings(value) {
@@ -102,6 +196,8 @@ export function recipeBatchPlan(recipeServings, neededServings) {
 }
 
 export const emptyMeal = {
+  mealItemsVersion: 1,
+  items: [],
   breakfast: "",
   lunch: "",
   lunchSalad: "",
@@ -113,6 +209,7 @@ export const emptyMeal = {
   notes: "",
   handoff: { ...emptyHandoff },
   servingPlan: { ...defaultServingPlan, actualLeftovers: {} },
+  servingPlans: Object.fromEntries(mealPeriods.map(({ key }) => [key, { ...defaultServingPlan, actualLeftovers: {} }])),
 };
 
 function allowedValue(value, options) {
@@ -133,31 +230,39 @@ export function normalizeHandoff(value) {
 }
 
 const defaultSchedule = {
-  mon: { ...emptyMeal, main: "meatballs", side: "zaatar-parmesan-potatoes" },
-  tue: { ...emptyMeal, main: "chicken-milanese", salad: "strawberry-crunch-salad" },
-  wed: { ...emptyMeal, main: "lemon-chicken", side: "zaatar-parmesan-potatoes" },
-  thu: { ...emptyMeal, main: "halibut-summer-vegetables" },
-  fri: { ...emptyMeal, main: "pasta-with-meat-sauce", salad: "roasted-brussels-sprouts-salad" },
+  mon: { ...emptyMeal, items: legacyMealItems({ main: "meatballs", side: "zaatar-parmesan-potatoes" }) },
+  tue: { ...emptyMeal, items: legacyMealItems({ main: "chicken-milanese", salad: "strawberry-crunch-salad" }) },
+  wed: { ...emptyMeal, items: legacyMealItems({ main: "lemon-chicken", side: "zaatar-parmesan-potatoes" }) },
+  thu: { ...emptyMeal, items: legacyMealItems({ main: "halibut-summer-vegetables" }) },
+  fri: { ...emptyMeal, items: legacyMealItems({ main: "pasta-with-meat-sauce", salad: "roasted-brussels-sprouts-salad" }) },
   sat: { ...emptyMeal },
   sun: { ...emptyMeal },
 };
 
 export function normalizeMealPlan(value) {
-  if (!value) return { ...emptyMeal, handoff: { ...emptyHandoff }, servingPlan: normalizeServingPlan() };
-  if (typeof value === "string") return { ...emptyMeal, handoff: { ...emptyHandoff }, servingPlan: normalizeServingPlan(), dinner: value, main: value };
-  const dinner = typeof value.dinner === "string" && value.dinner
-    ? value.dinner
-    : typeof value.main === "string" ? value.main : "";
+  if (!value) return {
+    ...emptyMeal,
+    handoff: { ...emptyHandoff },
+    servingPlan: normalizeServingPlan(),
+    servingPlans: normalizeMealServingPlans(),
+  };
+  if (typeof value === "string") return normalizeMealPlan({ dinner: value });
+  const items = normalizeMealItems(value);
+  const legacyFields = legacyFieldsFromItems(items);
+  const servingPlans = normalizeMealServingPlans(value);
+  const servingPlan = {
+    ...servingPlans.dinner,
+    actualLeftovers: normalizeServingPlan(value.servingPlan).actualLeftovers,
+  };
   const normalized = {
     ...emptyMeal,
     ...value,
-    breakfast: typeof value.breakfast === "string" ? value.breakfast : "",
-    lunch: typeof value.lunch === "string" ? value.lunch : "",
-    lunchSalad: typeof value.lunchSalad === "string" ? value.lunchSalad : "",
-    dinner,
-    main: dinner,
+    ...legacyFields,
+    mealItemsVersion: 1,
+    items,
     handoff: normalizeHandoff(value.handoff),
-    servingPlan: normalizeServingPlan(value.servingPlan),
+    servingPlan,
+    servingPlans,
   };
   if (typeof normalized.notes !== "string" && !isLocalizedValue(normalized.notes)) {
     normalized.notes = "";
@@ -208,7 +313,8 @@ export function activeWeekDateKeys(weekStartKey) {
 
 export function mealHasContent(meal) {
   return Boolean(
-    meal.breakfast
+    meal.items?.length
+    || meal.breakfast
     || meal.lunch
     || meal.lunchSalad
     || meal.dinner
@@ -246,7 +352,17 @@ export function copyCurrentWeekToNextWeek(weekStartKey, schedule, calendarMeals)
       return;
     }
 
-    nextCalendarMeals[targetDateKey] = { ...sourceMeal };
+    nextCalendarMeals[targetDateKey] = {
+      ...sourceMeal,
+      items: sourceMeal.items.filter((item) => item.sourceType !== "leftover").map((item) => ({ ...item })),
+      handoff: { ...sourceMeal.handoff },
+      servingPlan: {
+        ...sourceMeal.servingPlan,
+        actualLeftovers: {},
+      },
+      servingPlans: Object.fromEntries(Object.entries(sourceMeal.servingPlans)
+        .map(([period, plan]) => [period, { ...plan, actualLeftovers: { ...plan.actualLeftovers } }])),
+    };
     copiedCount += 1;
   });
 
@@ -262,6 +378,8 @@ export function removeRecipeFromPlans(
   const clearMeal = (meal) => {
     const normalized = normalizeMealPlan(meal);
     const next = { ...normalized };
+    const removedItemIds = normalized.items.filter((item) => item.recipeId === recipeId).map((item) => item.id);
+    next.items = normalized.items.filter((item) => item.recipeId !== recipeId);
     slotKeys.forEach((slotKey) => {
       if (next[slotKey] !== recipeId) return;
       next[slotKey] = "";
@@ -270,9 +388,10 @@ export function removeRecipeFromPlans(
         next.dinner = "";
       }
     });
-    if (Object.prototype.hasOwnProperty.call(next.servingPlan.actualLeftovers, recipeId)) {
+    if (Object.prototype.hasOwnProperty.call(next.servingPlan.actualLeftovers, recipeId) || removedItemIds.length) {
       const actualLeftovers = { ...next.servingPlan.actualLeftovers };
       delete actualLeftovers[recipeId];
+      removedItemIds.forEach((itemId) => delete actualLeftovers[itemId]);
       next.servingPlan = { ...next.servingPlan, actualLeftovers };
     }
     return normalizeMealPlan(next);

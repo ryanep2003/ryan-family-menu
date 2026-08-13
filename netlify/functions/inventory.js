@@ -31,6 +31,9 @@ export function cleanItem(item) {
     id: `${item.id || `inventory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`}`,
     text,
     quantity: cleanLocalizedText(item.quantity, 80),
+    amount: Math.min(10000, Math.max(0, Number(item.amount) || 0)),
+    unit: `${item.unit || ""}`.trim().slice(0, 40),
+    expiresOn: /^\d{4}-\d{2}-\d{2}$/.test(item.expiresOn) ? item.expiresOn : "",
     location,
     stockState,
     photos: Array.isArray(item.photos)
