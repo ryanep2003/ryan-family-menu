@@ -175,7 +175,7 @@ export function createRecipeLibraryUi({
     $("#publishDraftRecipe").hidden = !isLocalDraft;
     $("#addRecipeGroceries").textContent = t("addRecipeToGroceries");
     $("#addRecipeGroceries").disabled = !contentReady;
-    $("#markCooked").disabled = !contentReady;
+    if ($("#markCooked")) $("#markCooked").disabled = !contentReady;
     $("#recipeSafetyLockReason").hidden = !actionLockReason;
     $("#recipeSafetyLockReason").textContent = actionLockReason;
     setDetailStatus("");

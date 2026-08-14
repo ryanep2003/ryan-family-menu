@@ -1,4 +1,5 @@
 import { hasLocalizedContent, isLocalizedValue } from "./localized-data.js";
+import { normalizeDinnerPace } from "./memory-logic.js";
 
 export const days = [
   { key: "mon", en: "Monday", es: "Lunes" },
@@ -206,6 +207,7 @@ export const emptyMeal = {
   main: "",
   side: "",
   salad: "",
+  dinnerPace: "",
   notes: "",
   handoff: { ...emptyHandoff },
   servingPlan: { ...defaultServingPlan, actualLeftovers: {} },
@@ -260,6 +262,7 @@ export function normalizeMealPlan(value) {
     ...legacyFields,
     mealItemsVersion: 1,
     items,
+    dinnerPace: normalizeDinnerPace(value.dinnerPace),
     handoff: normalizeHandoff(value.handoff),
     servingPlan,
     servingPlans,
@@ -321,6 +324,7 @@ export function mealHasContent(meal) {
     || meal.main
     || meal.side
     || meal.salad
+    || meal.dinnerPace
     || hasLocalizedContent(meal.notes)
     || Object.values(meal.handoff || {}).some(Boolean)
   );

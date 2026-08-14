@@ -19,6 +19,7 @@ import { createDashboardUi } from "./dashboard-ui.js";
 import { createBudgetUi } from "./budget-ui.js";
 import { normalizeBudgetSettings, normalizeReceipt, normalizeReceipts } from "./budget-logic.js";
 import { createActivityUi } from "./activity-ui.js";
+import { createFamilyUi } from "./family-ui.js";
 import { activityEntry, normalizeActivity } from "./activity-logic.js";
 import { addAvailableFood, normalizeAvailableFood } from "./available-food.js";
 import { inventoryExpirationState, inventoryItem, mergeInventory } from "./inventory-logic.js";
@@ -40,6 +41,13 @@ import { createSharedStateLoader } from "./shared-state-loader.js";
 import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage-utils.js";
 import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "./sync-status.js";
 import { translations } from "./translations.js";
+import {
+  normalizeDinnerEvents,
+  normalizeFamilyMembers,
+  normalizeFamilyPreferences,
+  normalizeFamilyRules,
+  rankedRecipes,
+} from "./memory-logic.js";
 import {
   applyVersionConflict,
   loadVersionedCollection,
@@ -116,6 +124,14 @@ let pendingReceipt = null;
 let budgetSettings = normalizeBudgetSettings(readJsonStorage(householdStorage, "dinner-budget-settings", {}));
 let receipts = normalizeReceipts(readJsonStorage(householdStorage, "dinner-receipts", []));
 let activity = normalizeActivity(readJsonStorage(householdStorage, "dinner-activity", []));
+let familyMembers = normalizeFamilyMembers(readJsonStorage(householdStorage, "dinner-family-members", []));
+let familyPreferences = normalizeFamilyPreferences(readJsonStorage(householdStorage, "dinner-family-preferences", []), familyMembers);
+let familyRules = normalizeFamilyRules(readJsonStorage(householdStorage, "dinner-family-rules", {}));
+const dinnerHistoryStorageKeys = { itemsKey: "dinner-history", versionKey: "dinner-history-version" };
+const storedDinnerHistory = readVersionedCollectionStorage(householdStorage, dinnerHistoryStorageKeys);
+let dinnerEvents = normalizeDinnerEvents(storedDinnerHistory.items);
+let dinnerHistoryVersion = storedDinnerHistory.version;
+let dinnerHistoryPending = readStringStorage(householdStorage, "dinner-history-pending", "") === "1";
 let inventoryMode = "shopping";
 let inventoryFilter = "all";
 let visibleMonth = new Date();
@@ -618,13 +634,16 @@ function sharedStateSnapshot() {
     budgetSettings,
     receipts,
     activity,
+    familyMembers,
+    familyPreferences,
+    familyRules,
     recipeEdits: compactRecipeEditsForSync(recipeEdits, sharedRecipes),
     deletedRecipeIds,
   });
 }
 
 function currentSharedState() {
-  return { weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, budgetSettings, receipts, activity, recipeEdits, deletedRecipeIds };
+  return { weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, budgetSettings, receipts, activity, familyMembers, familyPreferences, familyRules, recipeEdits, deletedRecipeIds };
 }
 
 function recordActivity(type, label) {
@@ -643,6 +662,9 @@ function applySharedState(nextState) {
   budgetSettings = normalizeBudgetSettings(nextState.budgetSettings);
   receipts = normalizeReceipts(nextState.receipts);
   activity = normalizeActivity(nextState.activity);
+  familyMembers = normalizeFamilyMembers(nextState.familyMembers);
+  familyPreferences = normalizeFamilyPreferences(nextState.familyPreferences, familyMembers);
+  familyRules = normalizeFamilyRules(nextState.familyRules);
   recipeEdits = nextState.recipeEdits;
   deletedRecipeIds = nextState.deletedRecipeIds;
 }
@@ -710,6 +732,9 @@ async function applyLoadedSharedState(data) {
     budgetSettings,
     receipts,
     activity,
+    familyMembers,
+    familyPreferences,
+    familyRules,
     recipeEdits: {},
     deletedRecipeIds: [],
   }));
@@ -743,6 +768,79 @@ function loadSharedState({ restart = false } = {}) {
   setSharedRetryAction(() => loadSharedState({ restart: true }));
   clearAreaStatus("shared");
   return sharedStateLoader.load({ restart });
+}
+
+function persistDinnerHistoryLocally(items = dinnerEvents, version = dinnerHistoryVersion) {
+  try {
+    persistVersionedCollection(householdStorage, dinnerHistoryStorageKeys, normalizeDinnerEvents(items), version);
+  } catch {
+    console.warn("Dinner history could not be cached on this device.");
+  }
+}
+
+async function loadDinnerHistory() {
+  try {
+    const localEvents = dinnerEvents;
+    const data = await getJson("/.netlify/functions/dinner-history", "Could not load dinner history.");
+    dinnerHistoryVersion = Number(data.version) || 0;
+    dinnerEvents = normalizeDinnerEvents(dinnerHistoryPending ? [...localEvents, ...(data.items || [])] : data.items);
+    persistDinnerHistoryLocally();
+    render();
+    if (dinnerHistoryPending) return saveDinnerHistory();
+    return true;
+  } catch (error) {
+    console.warn(error);
+    return false;
+  }
+}
+
+async function saveDinnerHistory() {
+  const localEvents = normalizeDinnerEvents(dinnerEvents);
+  dinnerEvents = localEvents;
+  persistDinnerHistoryLocally();
+  try {
+    const result = await saveVersionedCollection({
+      putJson,
+      url: "/.netlify/functions/dinner-history",
+      fallbackMessage: "Could not save dinner history.",
+      items: dinnerEvents,
+      version: dinnerHistoryVersion,
+      setItems: (items) => { dinnerEvents = normalizeDinnerEvents(items); },
+      setVersion: (version) => { dinnerHistoryVersion = version; },
+      persist: persistDinnerHistoryLocally,
+    });
+    dinnerHistoryPending = false;
+    householdStorage.removeItem("dinner-history-pending");
+    return result.saved;
+  } catch (error) {
+    if (error.status === 409 && Array.isArray(error.data?.items)) {
+      dinnerHistoryVersion = Number(error.data.version) || dinnerHistoryVersion;
+      dinnerEvents = normalizeDinnerEvents([...localEvents, ...error.data.items]);
+      persistDinnerHistoryLocally();
+      try {
+        const data = await putJson(
+          "/.netlify/functions/dinner-history",
+          { items: dinnerEvents, version: dinnerHistoryVersion },
+          "Could not merge dinner history."
+        );
+        dinnerEvents = normalizeDinnerEvents(data.items || dinnerEvents);
+        dinnerHistoryVersion = Number(data.version) || dinnerHistoryVersion;
+        persistDinnerHistoryLocally();
+        dinnerHistoryPending = false;
+        householdStorage.removeItem("dinner-history-pending");
+        return true;
+      } catch (retryError) {
+        console.warn(retryError);
+        dinnerHistoryPending = true;
+        householdStorage.setItem("dinner-history-pending", "1");
+        return false;
+      }
+    }
+    console.warn(error);
+    dinnerHistoryPending = true;
+    householdStorage.setItem("dinner-history-pending", "1");
+    return false;
+  }
 }
 
 function todaysRecipeId() {
@@ -1047,11 +1145,35 @@ function renderSmartSuggestions() {
     copy: t("suggestionLeftoversCopy").replace("{count}", leftovers[0].availableServings),
     view: "schedule",
   });
-  if (!mealHasContent(calendarMealForDateKey(tomorrowKey))) suggestions.push({
-    title: t("suggestionPlanTomorrow"),
-    copy: t("suggestionPlanTomorrowCopy"),
-    view: "schedule",
-  });
+  if (!mealHasContent(calendarMealForDateKey(tomorrowKey))) {
+    const hasMemory = dinnerEvents.length || familyPreferences.length;
+    const recommendation = hasMemory ? rankedRecipes(allRecipes(), {
+      events: dinnerEvents,
+      members: familyMembers,
+      preferences: familyPreferences,
+      rules: familyRules,
+      recipeFeedback,
+      dateKey: tomorrowKey,
+    })[0] : null;
+    if (recommendation) {
+      const reason = recommendation.recommendation.reasons.includes("liked")
+        ? t("suggestionReasonLiked")
+        : recommendation.recommendation.reasons.includes("reliable")
+          ? t("suggestionReasonReliable")
+          : recommendation.recommendation.reasons.includes("notRecent")
+            ? t("suggestionReasonNotRecent")
+            : t("suggestionReasonFits");
+      suggestions.push({
+        title: t("suggestionRememberedRecipe").replace("{recipe}", localize(recommendation.recipe.name)),
+        copy: reason,
+        view: "schedule",
+      });
+    } else suggestions.push({
+      title: t("suggestionPlanTomorrow"),
+      copy: t("suggestionPlanTomorrowCopy"),
+      view: "schedule",
+    });
+  }
   const panel = $("#smartSuggestions");
   panel.hidden = !suggestions.length;
   $("#smartSuggestionList").innerHTML = suggestions.slice(0, 3).map((suggestion) => `<button type="button" data-suggestion-view="${suggestion.view}" ${suggestion.inventory ? `data-suggestion-inventory="${suggestion.inventory}"` : ""}><strong>${escapeHtml(suggestion.title)}</strong><span>${escapeHtml(suggestion.copy)}</span></button>`).join("");
@@ -1259,6 +1381,46 @@ const onboardingUi = createOnboardingUi({
   },
 });
 
+const familyUi = createFamilyUi({
+  $,
+  $$,
+  t,
+  escapeHtml,
+  localize,
+  formatDateKey,
+  getHouseholdMember: () => householdMember,
+  setHouseholdMember: (name) => {
+    householdMember = cleanHouseholdMember(name) || "Family";
+    householdStorage.setItem("dinner-household-member", householdMember);
+    if ($("#householdMemberInput")) $("#householdMemberInput").value = householdMember;
+  },
+  getFamilyMembers: () => familyMembers,
+  setFamilyMembers: (members) => { familyMembers = normalizeFamilyMembers(members); },
+  getFamilyPreferences: () => familyPreferences,
+  setFamilyPreferences: (preferences) => { familyPreferences = normalizeFamilyPreferences(preferences, familyMembers); },
+  getFamilyRules: () => familyRules,
+  setFamilyRules: (rules) => { familyRules = normalizeFamilyRules(rules); },
+  getDinnerEvents: () => dinnerEvents,
+  setDinnerEvents: (events) => { dinnerEvents = normalizeDinnerEvents(events); },
+  getTodaysMeal: todaysMealPlan,
+  recipeById,
+  allRecipes,
+  saveSharedState,
+  saveDinnerEvents: saveDinnerHistory,
+  recordDinnerOutcome: (event, previous) => {
+    if (previous || event.status !== "cooked") return;
+    const outcome = ({ loved: "loved", worked: "made", mixed: "made", skip: "skip" })[event.outcome];
+    if (!outcome) return;
+    event.items.forEach((item) => {
+      recipeFeedback = recordRecipeOutcome(recipeFeedback, item.recipeId, outcome, householdMember, event.updatedAt);
+    });
+    recordActivity("meal", t("activityDinnerRemembered").replace("{date}", event.dateKey));
+  },
+  renderApp: render,
+  setView,
+  getLang: () => lang,
+});
+
 function render() {
   renderTranslations();
   renderInventoryMode();
@@ -1271,6 +1433,8 @@ function render() {
   renderGroceries();
   renderBudget();
   renderActivity();
+  familyUi.renderFamily();
+  familyUi.renderTodayFeedback();
   renderInventory();
   renderInventorySuggestions();
   renderRecipes();
@@ -1282,6 +1446,7 @@ function render() {
 }
 
 function setView(viewName) {
+  const viewChanged = document.body.dataset.view !== viewName;
   $$(".view").forEach((view) => view.classList.toggle("active", view.id === `${viewName}View`));
   $$(".tabs button").forEach((button) => {
     const active = button.dataset.view === (viewName === "add" ? "recipes" : viewName);
@@ -1297,6 +1462,7 @@ function setView(viewName) {
     else addButton.removeAttribute("aria-current");
   }
   document.body.dataset.view = viewName;
+  if (viewChanged) window.scrollTo({ top: 0, behavior: "auto" });
   $("#recipeDetail").hidden = true;
   $("#recipesView").classList.remove("detail-open");
   if (viewName !== "today" && $("#quickGuide") && $("#quickGuideToggle")) {
@@ -1744,6 +1910,7 @@ $("#addRecipeGroceries").addEventListener("click", async () => {
 
 recipeFormUi.bind();
 onboardingUi.bind();
+familyUi.bind();
 $("#householdMenuName").textContent = household.name;
 $("#currentHouseholdKey").value = household.key;
 $("#copyHouseholdKey").addEventListener("click", async () => {
@@ -1759,21 +1926,6 @@ $("#copyHouseholdKey").addEventListener("click", async () => {
 });
 $("#leaveHousehold").addEventListener("click", () => {
   if (window.confirm("Use a different household? Make sure this family key is saved first.")) leaveHousehold();
-});
-
-$("#markCooked").addEventListener("click", () => {
-  $("#recipeOutcomePanel").hidden = !$("#recipeOutcomePanel").hidden;
-});
-
-$$("[data-recipe-outcome]").forEach((button) => {
-  button.addEventListener("click", async () => {
-    recipeFeedback = recordRecipeOutcome(recipeFeedback, selectedRecipeId, button.dataset.recipeOutcome, householdMember);
-    $("#recipeOutcomePanel").hidden = true;
-    $("#recipeMoreActions").open = false;
-    render();
-    setDetailStatus(t("mealOutcomeSaved"));
-    await saveSharedState();
-  });
 });
 
 recipeLibraryUi.bindLibraryControls();
@@ -1912,6 +2064,7 @@ window.addEventListener("online", () => {
   if (!$("#retrySharedState").hidden && sharedRetryAction) retries.push(sharedRetryAction());
   if (!$("#retryGroceries").hidden) retries.push(saveGroceries());
   if (!$("#retryInventory").hidden) retries.push(saveInventory());
+  if (dinnerHistoryPending) retries.push(saveDinnerHistory());
   Promise.allSettled(retries);
 });
 
@@ -1921,5 +2074,6 @@ registerServiceWorker({ $, onUpdateAvailable: showAppUpdateNotice });
 setupLocalizedFileInputs();
 render();
 loadSharedRecipes().then(() => loadSharedState());
+loadDinnerHistory();
 loadGroceries();
 loadInventory();

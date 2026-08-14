@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=57" />
+    <link rel="stylesheet" href="styles.css?v=58" />
   </head>
   <body class="household-locked" data-view="today">
     <section class="household-gate" id="householdGate" aria-labelledby="householdGateHeading">
@@ -74,6 +74,7 @@
               <input id="currentHouseholdKey" type="password" readonly />
             </label>
             <button class="ghost-button" id="copyHouseholdKey" type="button">Copy family key</button>
+            <button class="primary-action" id="openFamily" type="button" data-i18n="openFamily">Family &amp; preferences</button>
             <details class="household-activity">
               <summary data-i18n="recentActivity">Recent activity</summary>
               <div id="householdActivity"></div>
@@ -158,6 +159,8 @@
           </div>
           <button class="primary-action" id="cookToday" type="button" data-i18n="cookButton">Cook this</button>
         </section>
+
+        <section class="dinner-feedback" id="dinnerFeedback" aria-live="polite" hidden></section>
 
         <section class="smart-suggestions" id="smartSuggestions" aria-labelledby="smartSuggestionsHeading" hidden>
           <div class="panel-heading">
@@ -277,6 +280,49 @@
         </div>
           </div>
         </details>
+      </section>
+
+      <section class="view family-view" id="familyView">
+        <div class="section-heading view-banner family-banner">
+          <div>
+            <h2 tabindex="-1" id="familyHeading" data-i18n="familyHeading">Your family</h2>
+            <p class="section-note" data-i18n="familyIntro">Teach Family Menu what works at your table. Everyone with the family key can see and update this information.</p>
+          </div>
+          <button class="ghost-button" id="closeFamily" type="button" data-i18n="backToToday">Back to Today</button>
+        </div>
+
+        <nav class="family-section-links" aria-label="Family settings" data-i18n-aria-label="familySettingsLabel">
+          <a href="#familyMembersSection" data-i18n="familyMembersHeading">Family members</a>
+          <a href="#familyRulesSection" data-i18n="familyRulesHeading">How we eat</a>
+          <a href="#pastDinnersSection" data-i18n="pastDinnersHeading">Past dinners</a>
+        </nav>
+
+        <section class="family-workspace" id="familyMembersSection" aria-labelledby="familyMembersHeading">
+          <div class="family-section-heading"><div><h2 id="familyMembersHeading" data-i18n="familyMembersHeading">Family members</h2><p data-i18n="familyMembersHelper">Add the people who regularly eat with your household. Preferences stay visible to everyone with the family key.</p></div></div>
+          <form class="add-family-member" id="addFamilyMemberForm">
+            <label><span data-i18n="memberName">Name</span><input name="name" maxlength="40" required data-i18n-placeholder="memberNamePlaceholder" placeholder="Name" /></label>
+            <label><span data-i18n="memberRole">Family role</span><select name="role"><option value="adult" data-i18n="familyRoleAdult">Adult</option><option value="child" data-i18n="familyRoleChild">Child</option></select></label>
+            <button class="primary-action" type="submit" data-i18n="addFamilyMember">Add family member</button>
+          </form>
+          <div class="family-members-list" id="familyMembersList"></div>
+        </section>
+
+        <section class="family-workspace" id="familyRulesSection" aria-labelledby="familyRulesHeading">
+          <div class="family-section-heading"><div><h2 id="familyRulesHeading" data-i18n="familyRulesHeading">How we eat</h2><p data-i18n="familyRulesHelper">These are planning preferences, not locks. Allergies and firm restrictions belong with each family member above.</p></div></div>
+          <form class="family-rules-form" id="familyRulesForm">
+            <label><span data-i18n="repeatRuleLabel">Avoid repeating dinner for</span><span class="number-with-unit"><input name="repeatDays" type="number" min="0" max="60" /><small data-i18n="daysUnit">days</small></span></label>
+            <label><span data-i18n="prepRuleLabel">Weeknight preparation under</span><span class="number-with-unit"><input name="maxWeeknightMinutes" type="number" min="0" max="240" /><small data-i18n="minutesUnit">minutes</small></span></label>
+            <label><span data-i18n="kidSafeRuleLabel">Kid-safe dinners each week</span><input name="minKidSafeDinners" type="number" min="0" max="7" /></label>
+            <label><span data-i18n="pastaRuleLabel">Maximum pasta dinners each week</span><input name="maxPastaDinners" type="number" min="0" max="7" /></label>
+            <label class="family-rule-toggle"><input name="preferLeftovers" type="checkbox" /><span data-i18n="leftoverRuleLabel">Prefer dinners that leave lunch leftovers</span></label>
+            <div class="family-rules-actions"><button class="primary-action" type="submit" data-i18n="saveHowWeEat">Save how we eat</button><p class="form-status" id="familyRulesStatus" role="status"></p></div>
+          </form>
+        </section>
+
+        <section class="family-workspace" id="pastDinnersSection" aria-labelledby="pastDinnersHeading">
+          <div class="family-section-heading"><div><h2 id="pastDinnersHeading" data-i18n="pastDinnersHeading">Past dinners</h2><p data-i18n="pastDinnersHelper">This history is created automatically when someone records how dinner went.</p></div></div>
+          <div class="past-dinners-list" id="pastDinnersList"></div>
+        </section>
       </section>
 
       <section class="view" id="scheduleView">
@@ -552,16 +598,6 @@
               <div>
                 <button class="ghost-button" id="editRecipe" type="button" data-i18n="editRecipe">Edit recipe</button>
                 <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
-                <button class="ghost-button" id="markCooked" type="button" aria-describedby="recipeSafetyLockReason" data-i18n="recordMealOutcome">How did it go?</button>
-                <div class="recipe-outcome-panel" id="recipeOutcomePanel" hidden role="group" aria-labelledby="recipeOutcomeHeading">
-                  <strong id="recipeOutcomeHeading" data-i18n="mealOutcomeHeading">How did it go?</strong>
-                  <div class="recipe-outcome-options">
-                    <button class="text-button" type="button" data-recipe-outcome="made" data-i18n="mealOutcomeMade">Made it</button>
-                    <button class="text-button" type="button" data-recipe-outcome="loved" data-i18n="mealOutcomeLoved">Loved it</button>
-                    <button class="text-button" type="button" data-recipe-outcome="repeat" data-i18n="mealOutcomeRepeat">Make it again</button>
-                    <button class="text-button danger-action" type="button" data-recipe-outcome="skip" data-i18n="mealOutcomeSkip">Skip next time</button>
-                  </div>
-                </div>
               </div>
             </details>
             <p class="detail-action-note" id="recipeSafetyLockReason" role="status" aria-live="polite" hidden></p>
@@ -792,6 +828,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=92"></script>
+    <script type="module" src="app.js?v=94"></script>
   </body>
 </html>

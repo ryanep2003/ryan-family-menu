@@ -2,6 +2,7 @@ import { normalizeCalendar, normalizeSchedule } from "./schedule-utils.js";
 import { normalizeAvailableFood } from "./available-food.js";
 import { normalizeBudgetSettings, normalizeReceipts } from "./budget-logic.js";
 import { normalizeActivity } from "./activity-logic.js";
+import { normalizeFamilyMembers, normalizeFamilyPreferences, normalizeFamilyRules } from "./memory-logic.js";
 
 const RECIPE_OUTCOMES = ["made", "loved", "repeat", "skip"];
 const MAX_RECIPE_FEEDBACK = 300;
@@ -66,10 +67,13 @@ export function sharedStateSnapshot({
   budgetSettings = {},
   receipts = [],
   activity = [],
+  familyMembers = [],
+  familyPreferences = [],
+  familyRules = {},
   recipeEdits,
   deletedRecipeIds,
 }) {
-  return { weekStart: weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, budgetSettings, receipts, activity, recipeEdits, deletedRecipeIds };
+  return { weekStart: weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, budgetSettings, receipts, activity, familyMembers, familyPreferences, familyRules, recipeEdits, deletedRecipeIds };
 }
 
 export function normalizeSharedState(remoteState = {}, fallbacks = {}) {
@@ -86,6 +90,12 @@ export function normalizeSharedState(remoteState = {}, fallbacks = {}) {
     budgetSettings: normalizeBudgetSettings(remoteState.budgetSettings || fallbacks.budgetSettings),
     receipts: normalizeReceipts(Array.isArray(remoteState.receipts) ? remoteState.receipts : fallbacks.receipts),
     activity: normalizeActivity(Array.isArray(remoteState.activity) ? remoteState.activity : fallbacks.activity),
+    familyMembers: normalizeFamilyMembers(Array.isArray(remoteState.familyMembers) ? remoteState.familyMembers : fallbacks.familyMembers),
+    familyPreferences: normalizeFamilyPreferences(
+      Array.isArray(remoteState.familyPreferences) ? remoteState.familyPreferences : fallbacks.familyPreferences,
+      Array.isArray(remoteState.familyMembers) ? remoteState.familyMembers : fallbacks.familyMembers,
+    ),
+    familyRules: normalizeFamilyRules(remoteState.familyRules || fallbacks.familyRules),
     recipeEdits: remoteState.recipeEdits && typeof remoteState.recipeEdits === "object"
       ? remoteState.recipeEdits
       : fallbacks.recipeEdits,
@@ -111,6 +121,9 @@ export function persistSharedState(storage, state, version) {
     storage.setItem("dinner-budget-settings", JSON.stringify(normalizeBudgetSettings(state.budgetSettings)));
     storage.setItem("dinner-receipts", JSON.stringify(normalizeReceipts(state.receipts)));
     storage.setItem("dinner-activity", JSON.stringify(normalizeActivity(state.activity)));
+    storage.setItem("dinner-family-members", JSON.stringify(normalizeFamilyMembers(state.familyMembers)));
+    storage.setItem("dinner-family-preferences", JSON.stringify(normalizeFamilyPreferences(state.familyPreferences, state.familyMembers)));
+    storage.setItem("dinner-family-rules", JSON.stringify(normalizeFamilyRules(state.familyRules)));
     storage.setItem("dinner-deleted-recipes", JSON.stringify(state.deletedRecipeIds));
     return true;
   } catch {

@@ -216,6 +216,13 @@ test("mealHasContent recognizes breakfast and lunch plans", () => {
   assert.equal(mealHasContent({ ...emptyMeal, lunchSalad: "greens" }), true);
 });
 
+test("dinner pace persists and can make a no-cooking day visible", () => {
+  const meal = normalizeMealPlan({ dinnerPace: "no-cooking" });
+  assert.equal(meal.dinnerPace, "no-cooking");
+  assert.equal(mealHasContent(meal), true);
+  assert.equal(normalizeMealPlan({ dinnerPace: "unsupported" }).dinnerPace, "");
+});
+
 test("removeRecipeFromPlans clears a deleted lunch salad", () => {
   const result = removeRecipeFromPlans(
     { mon: { lunch: "sandwich", lunchSalad: "deleted-recipe" } },

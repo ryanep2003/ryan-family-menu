@@ -750,6 +750,459 @@ h3 {
   border-top: 2px solid var(--sage);
 }
 
+.dinner-feedback {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--sage) 42%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--sage-soft) 64%, var(--surface));
+}
+
+.dinner-feedback[hidden] {
+  display: none;
+}
+
+.dinner-feedback-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dinner-feedback-heading h2,
+.dinner-feedback-heading p {
+  margin: 0;
+}
+
+.dinner-feedback-heading p {
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.dinner-memory-state {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--sage);
+  color: var(--on-accent);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.dinner-outcome-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.dinner-outcome-options button {
+  min-height: 48px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.dinner-outcome-options button[aria-pressed="true"] {
+  border-color: var(--sage);
+  background: var(--sage);
+  color: var(--on-accent);
+}
+
+.dinner-feedback-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.dinner-feedback-details {
+  border-top: 1px solid color-mix(in srgb, var(--sage) 28%, var(--line));
+}
+
+.dinner-feedback-details > summary {
+  min-height: 44px;
+  padding: 12px 0 0;
+  color: var(--tomato-dark);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+#dinnerFeedbackDetailsForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 12px;
+}
+
+#dinnerFeedbackDetailsForm fieldset,
+#dinnerFeedbackDetailsForm > label,
+#dinnerFeedbackDetailsForm > button,
+#dinnerFeedbackDetailsForm > .form-status {
+  grid-column: 1 / -1;
+}
+
+#dinnerFeedbackDetailsForm fieldset {
+  padding: 0;
+  border: 0;
+}
+
+#dinnerFeedbackDetailsForm legend,
+#dinnerFeedbackDetailsForm label > span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.dinner-attendees {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.dinner-attendees label {
+  position: relative;
+}
+
+.dinner-attendees input {
+  position: absolute;
+  opacity: 0;
+}
+
+.dinner-attendees span {
+  display: inline-flex !important;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 13px;
+  margin: 0 !important;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.dinner-attendees input:checked + span {
+  border-color: var(--sage);
+  background: var(--sage);
+  color: var(--on-accent);
+}
+
+.dinner-attendees input:focus-visible + span {
+  outline: 3px solid color-mix(in srgb, var(--tomato) 70%, white);
+  outline-offset: 2px;
+}
+
+.dinner-leftovers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.family-banner {
+  background: color-mix(in srgb, var(--sage-soft) 70%, var(--surface));
+}
+
+.family-section-links {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.family-section-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.family-workspace {
+  padding: 22px 0;
+  border-top: 2px solid var(--sage);
+  scroll-margin-top: 16px;
+}
+
+.family-section-heading h2,
+.family-section-heading p {
+  margin: 0;
+}
+
+.family-section-heading p {
+  max-width: 70ch;
+  margin-top: 5px;
+  color: var(--muted);
+}
+
+.add-family-member {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(140px, 0.5fr) auto;
+  align-items: end;
+  gap: 8px;
+  margin: 18px 0 8px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-paper-muted);
+}
+
+.family-members-list {
+  display: grid;
+}
+
+.family-member-card {
+  display: grid;
+  gap: 14px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.family-member-card.archived {
+  opacity: 0.68;
+}
+
+.family-member-heading,
+.family-member-actions,
+.family-rules-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.family-member-heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.family-member-heading strong {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+
+.family-member-heading span,
+.past-dinner-meta {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.family-member-basics,
+.family-preference-grid,
+.family-rules-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.family-member-basics {
+  grid-template-columns: 1fr minmax(130px, 0.45fr) minmax(150px, 0.55fr);
+}
+
+.family-member-card label > span,
+.add-family-member label > span,
+.family-rules-form label > span:first-child {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.family-member-card input,
+.family-member-card select,
+.family-member-card textarea,
+.add-family-member input,
+.add-family-member select,
+.family-rules-form input,
+#dinnerFeedbackDetailsForm input,
+#dinnerFeedbackDetailsForm select,
+#dinnerFeedbackDetailsForm textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+}
+
+.family-member-card textarea,
+#dinnerFeedbackDetailsForm textarea {
+  resize: vertical;
+}
+
+.family-rules-form {
+  margin-top: 18px;
+}
+
+.family-rules-form > label {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.number-with-unit {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.number-with-unit small {
+  color: var(--muted);
+}
+
+.family-rule-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.family-rule-toggle input {
+  width: 22px;
+  min-height: 22px;
+}
+
+.family-rule-toggle span {
+  margin: 0 !important;
+}
+
+.family-rules-actions {
+  grid-column: 1 / -1;
+}
+
+.past-dinners-list {
+  display: grid;
+  margin-top: 12px;
+}
+
+.past-dinner-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.past-dinner-item > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.past-dinner-item time {
+  color: var(--sage);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.past-dinner-meta {
+  display: flex;
+  align-items: end;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+}
+
+.family-empty {
+  padding: 24px 0;
+}
+
+.family-empty h3,
+.family-empty p {
+  margin: 0;
+}
+
+.family-empty p {
+  margin-top: 5px;
+  color: var(--muted);
+}
+
+.dinner-pace-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 0.45fr);
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dinner-pace-control strong,
+.dinner-pace-control small {
+  display: block;
+}
+
+.dinner-pace-control small {
+  margin-top: 2px;
+  color: var(--muted);
+}
+
+.dinner-pace-badge {
+  display: inline-block;
+  width: fit-content;
+  margin-top: 5px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--sage-soft);
+  color: var(--sage-dark);
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+@media (max-width: 780px) {
+  .dinner-outcome-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dinner-outcome-options button:last-child {
+    grid-column: 1 / -1;
+  }
+
+  #dinnerFeedbackDetailsForm,
+  .dinner-leftovers,
+  .family-member-basics,
+  .family-preference-grid,
+  .family-rules-form,
+  .add-family-member,
+  .dinner-pace-control {
+    grid-template-columns: 1fr;
+  }
+
+  .family-rules-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .family-rules-actions .primary-action,
+  .add-family-member .primary-action {
+    width: 100%;
+  }
+
+  .past-dinner-item {
+    grid-template-columns: 1fr;
+  }
+
+  .past-dinner-meta {
+    align-items: start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    text-align: left;
+  }
+}
+
 .available-food-panel {
   display: grid;
   gap: 10px;

@@ -21,6 +21,9 @@ test("sharedStateSnapshot uses the API field names", () => {
     budgetSettings: {},
     receipts: [],
     activity: [],
+    familyMembers: [],
+    familyPreferences: [],
+    familyRules: {},
     recipeEdits: { pasta: { name: "Pasta" } },
     deletedRecipeIds: ["old"],
   }), {
@@ -34,6 +37,9 @@ test("sharedStateSnapshot uses the API field names", () => {
     budgetSettings: {},
     receipts: [],
     activity: [],
+    familyMembers: [],
+    familyPreferences: [],
+    familyRules: {},
     recipeEdits: { pasta: { name: "Pasta" } },
     deletedRecipeIds: ["old"],
   });

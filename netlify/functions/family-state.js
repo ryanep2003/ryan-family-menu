@@ -4,6 +4,7 @@ import { jsonResponse, readJsonRequest } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 import { cleanLocalizedText, hasLocalizedContent } from "../../localized-data.js";
 import { normalizeRecipeFeedback } from "../../family-state.js";
+import { normalizeDinnerPace, normalizeFamilyMembers, normalizeFamilyPreferences, normalizeFamilyRules } from "../../memory-logic.js";
 
 const STORE_NAME = "family-menu-state";
 const STATE_KEY = "shared-state";
@@ -110,6 +111,7 @@ function cleanMeal(value) {
     main: dinner,
     side: firstRecipe("dinner", "side"),
     salad: firstRecipe("dinner", "salad"),
+    dinnerPace: normalizeDinnerPace(source.dinnerPace),
     notes: cleanLocalizedText(source.notes, 500),
     handoff: {
       leftovers: Boolean(handoff.leftovers),
@@ -285,6 +287,9 @@ export function cleanState(value) {
     budgetSettings: cleanBudgetSettings(value?.budgetSettings),
     receipts: cleanReceipts(value?.receipts),
     activity: cleanActivity(value?.activity),
+    familyMembers: normalizeFamilyMembers(value?.familyMembers),
+    familyPreferences: normalizeFamilyPreferences(value?.familyPreferences, value?.familyMembers),
+    familyRules: normalizeFamilyRules(value?.familyRules),
     recipeEdits: cleanRecipeEdits(value?.recipeEdits),
     deletedRecipeIds: cleanDeletedRecipeIds(value?.deletedRecipeIds),
     updatedAt: new Date().toISOString(),
