@@ -2,6 +2,29 @@
   publish = "."
   functions = "netlify/functions"
 
+# Normal family use makes only a handful of calls per minute. These generous
+# per-IP ceilings stop runaway clients and obvious bot floods before they can
+# consume an unusual amount of function, AI, or bandwidth credits.
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+
+  [redirects.rate_limit]
+    action = "rate_limit"
+    window_limit = 120
+    window_size = 60
+    aggregate_by = ["ip", "domain"]
+
+[[redirects]]
+  from = "/*"
+  to = "/:splat"
+
+  [redirects.rate_limit]
+    action = "rate_limit"
+    window_limit = 600
+    window_size = 60
+    aggregate_by = ["ip", "domain"]
+
 [[headers]]
   for = "/*"
   [headers.values]

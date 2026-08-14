@@ -18,3 +18,10 @@ test("Netlify serves baseline security headers for the app shell", async () => {
   assert.match(source, /Permissions-Policy = "camera=\(self\), microphone=\(\), geolocation=\(\), payment=\(\), usb=\(\)"/);
   assert.match(source, /for = "\/assets\/\*"[\s\S]*Cache-Control = "public, max-age=2592000"/);
 });
+
+test("Netlify blocks only clearly abnormal traffic spikes", async () => {
+  const source = await readFile(new URL("../netlify.toml", import.meta.url), "utf8");
+  assert.match(source, /from = "\/\.netlify\/functions\/\*"[\s\S]*window_limit = 120[\s\S]*window_size = 60[\s\S]*aggregate_by = \["ip", "domain"\]/);
+  assert.match(source, /from = "\/\*"[\s\S]*window_limit = 600[\s\S]*window_size = 60[\s\S]*aggregate_by = \["ip", "domain"\]/);
+  assert.equal((source.match(/\[redirects\.rate_limit\]/g) || []).length, 2);
+});
