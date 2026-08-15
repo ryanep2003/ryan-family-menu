@@ -58,13 +58,22 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*html\s*\{[\s\S]*scroll-padding-bottom: calc\(120px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(120px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=58/);
+  assert.match(html, /styles\.css\?v=59/);
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
   assert.match(html, /id="copyWeekForward"/);
   assert.match(styles, /\.schedule-editor\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles, /\.recipe-detail\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
+});
+
+test("meal-linked grocery controls collapse safely on mobile", () => {
+  assert.match(html, /id="groceryMealFilterPanel"[^>]*hidden/);
+  assert.match(html, /id="groceryMealFilter"/);
+  assert.match(styles, /\.grocery-meal-filter\s*\{[\s\S]*grid-template-columns: minmax\(220px, 1fr\) minmax\(210px, 280px\)/);
+  assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*\.grocery-meal-filter,[\s\S]*grid-template-columns: 1fr/);
+  assert.match(styles, /\.grocery-meal-filter select\s*\{[\s\S]*max-width: 100%/);
+  assert.match(styles, /\.meal-grocery-link\s*\{[\s\S]*min-height: 44px/);
 });
 
 test("dinner feedback lives on Today and keeps details optional", () => {

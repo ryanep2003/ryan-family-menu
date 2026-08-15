@@ -1305,6 +1305,16 @@ const scheduleUi = createScheduleUi({
   recipeBatchPlan,
   allRecipes,
   availableLeftoversForDate,
+  openGroceriesForMeal: (dateKey, mealSlot) => {
+    inventoryMode = "shopping";
+    renderInventoryMode();
+    groceryUi.showMeal(dateKey, mealSlot);
+    setView("grocery");
+    requestAnimationFrame(() => {
+      $("#groceryMealFilterPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      $("#groceryMealFilter")?.focus({ preventScroll: true });
+    });
+  },
   recordActivity,
   copyCurrentWeekToNextWeek: () => {
     const result = copyCurrentWeekToNextWeek(weekStartKey, schedule, calendarMeals);

@@ -24,7 +24,7 @@ The shipped product currently supports:
 - Intentional leftover recording and allocation to later meals.
 - A shared recipe library with bundled and household recipes, local drafts, editing, favorites, and hiding/deletion overlays.
 - Recipe creation from photos, public links, or manual entry.
-- A grocery list generated from meal plans, with shared-ingredient aggregation and inventory coverage.
+- A grocery list generated from meal plans, with shared-ingredient aggregation, inventory coverage, meal/date attribution, and per-meal filtering.
 - Home inventory by location, stock level, quantity, and expiration.
 - Receipt capture and monthly grocery-budget tracking.
 - Family profiles, food preferences, household rules, quick dinner feedback, dinner history, and deterministic recommendation ranking.

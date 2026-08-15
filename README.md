@@ -11,7 +11,7 @@ Current features:
 - Recipe library with built-in recipes plus shared recipe uploads
 - Recipe photo scanning and recipe URL import
 - Recipe editing, hiding/deleting from the family menu, and photo replacement
-- Shared grocery generation from meal plans, with receipt scanning
+- Shared grocery generation from meal plans, with meal-specific filtering and receipt scanning
 - Home inventory tracking with quantities, expiration, and shelf-photo scanning
 - Receipt history and monthly grocery-budget tracking
 - Family profiles, preferences, household rules, dinner feedback, and meal history

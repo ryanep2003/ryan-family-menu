@@ -127,6 +127,9 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     },
     value: "2.5",
   });
+  const weekGroceryButton = element({
+    dataset: { viewMealGroceries: "weekdate:2026-06-22", period: "dinner" },
+  });
   const weekRecipeControl = element({
     dataset: { addMealRecipe: "weekdate:2026-06-22", period: "dinner" },
     value: "",
@@ -157,6 +160,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     saveCalls: 0,
     weekNavigation: [],
     currentWeekCalls: 0,
+    groceryTargets: [],
   };
   state.schedule.mon = normalizeMealPlan({ main: "main-recipe" });
 
@@ -177,7 +181,9 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
       if (selector === "[data-edit-week-date]") return weekButtons;
       if (selector === "[data-edit-calendar-date]") return dateButtons;
       if (selector === '[data-meal-context^="weekdate:"]') return [weekHandoffControl, weekServingControl, weekActualLeftoverControl];
+      if (selector === '[data-view-meal-groceries^="weekdate:"]') return [weekGroceryButton];
       if (selector === '[data-meal-context^="calendar:"]') return [calendarControl];
+      if (selector === '[data-view-meal-groceries^="calendar:"]') return [];
       if (selector === '[data-meal-item-search^="weekdate:"]') return [weekRecipeSearch];
       if (selector === '[data-meal-item-empty^="weekdate:"]') return [weekRecipeSearchEmpty];
       if (selector === '[data-add-meal-recipe^="weekdate:"]') return [weekRecipeControl];
@@ -220,6 +226,9 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     recipeById: (id) => recipes.find((recipe) => recipe.id === id),
     allRecipes: () => recipes,
     availableLeftoversForDate: () => leftovers,
+    openGroceriesForMeal: (dateKey, mealSlot) => {
+      state.groceryTargets.push([dateKey, mealSlot]);
+    },
     saveSharedState: async () => {
       state.saveCalls += 1;
     },
@@ -253,6 +262,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     weekButtons,
     weekAddButton,
     weekHandoffControl,
+    weekGroceryButton,
     weekServingControl,
     weekActualLeftoverControl,
     weekLeftoverSource,
@@ -278,6 +288,16 @@ test("week planning renders seven summaries with one focused editor", () => {
   assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="handoff"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /More meal options/);
   assert.match(elements["#weekDateEditor"].innerHTML, /flexibleMealBuilderNote/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-view-meal-groceries="weekdate:2026-06-22"/);
+});
+
+test("planned meal can open groceries filtered to its date and meal period", async () => {
+  const { state, ui, weekGroceryButton } = harness();
+
+  ui.renderSchedule();
+  await weekGroceryButton.dispatch("click");
+
+  assert.deepEqual(state.groceryTargets, [["2026-06-22", "dinner"]]);
 });
 
 test("one meal can hold a main, side, salad, and dessert", async () => {

@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=58" />
+    <link rel="stylesheet" href="styles.css?v=59" />
   </head>
   <body class="household-locked" data-view="today">
     <section class="household-gate" id="householdGate" aria-labelledby="householdGateHeading">
@@ -435,6 +435,16 @@
               <div id="receiptHistory"></div>
             </details>
           </section>
+          <section class="grocery-meal-filter" id="groceryMealFilterPanel" aria-labelledby="groceryMealFilterHeading" hidden>
+            <div>
+              <strong id="groceryMealFilterHeading" data-i18n="groceryMealFilterHeading">Shop by planned meal</strong>
+              <span data-i18n="groceryMealFilterHelper">See only the ingredients connected to one breakfast, lunch, or dinner.</span>
+            </div>
+            <label>
+              <span class="visually-hidden" data-i18n="groceryMealFilterLabel">Planned meal</span>
+              <select id="groceryMealFilter" aria-label="Planned meal" data-i18n-aria-label="groceryMealFilterLabel"></select>
+            </label>
+          </section>
           <div class="sync-status-row">
             <p class="upload-status" id="groceryStatus" role="status"></p>
             <button class="ghost-button sync-retry" id="retryGroceries" type="button" data-i18n="retrySync" hidden>Retry sync</button>
@@ -828,6 +838,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=94"></script>
+    <script type="module" src="app.js?v=95"></script>
   </body>
 </html>

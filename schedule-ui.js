@@ -35,6 +35,7 @@ export function createScheduleUi({
   recipeBatchPlan = () => null,
   allRecipes,
   availableLeftoversForDate = () => [],
+  openGroceriesForMeal = () => {},
   copyCurrentWeekToNextWeek,
   saveSharedState,
   recordActivity = () => {},
@@ -98,7 +99,12 @@ export function createScheduleUi({
       <section class="meal-builder-period" aria-labelledby="${controlId}-heading">
         <div class="meal-builder-period-heading">
           <h4 id="${controlId}-heading">${t(period.label)}</h4>
-          <span>${t(items.length === 1 ? "mealItemCountOne" : "mealItemCountMany").replace("{count}", items.length)}</span>
+          <div class="meal-builder-period-meta">
+            <span>${t(items.length === 1 ? "mealItemCountOne" : "mealItemCountMany").replace("{count}", items.length)}</span>
+            ${items.some((item) => item.sourceType !== "leftover")
+              ? `<button class="text-button meal-grocery-link" type="button" data-view-meal-groceries="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}">${t("viewMealGroceries")}</button>`
+              : ""}
+          </div>
         </div>
         <div class="meal-item-list">
           ${items.length ? items.map((item) => {
@@ -293,6 +299,12 @@ export function createScheduleUi({
   }
 
   function bindMealControls(contextType) {
+    $$(`[data-view-meal-groceries^="${contextType}:"]`).forEach((button) => {
+      button.addEventListener("click", () => {
+        openGroceriesForMeal(button.dataset.viewMealGroceries.split(":")[1], button.dataset.period);
+      });
+    });
+
     $$(`[data-meal-item-search^="${contextType}:"]`).forEach((search) => {
       search.addEventListener("input", () => {
         const context = search.dataset.mealItemSearch;

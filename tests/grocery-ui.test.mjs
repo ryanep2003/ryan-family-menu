@@ -37,6 +37,8 @@ function element() {
 function harness(overrides = {}) {
   const elements = {
     "#groceryList": element(),
+    "#groceryMealFilterPanel": element({ hidden: true }),
+    "#groceryMealFilter": element(),
     "#restockPurchased": element(),
   };
   const state = {
@@ -81,6 +83,19 @@ function harness(overrides = {}) {
     $: (selector) => elements[selector],
     t: (key) => ({
       groceryEmpty: "Empty",
+      groceryMealFilterEmpty: "No items for this meal",
+      groceryMealFilterOption: "{date} · {meal}",
+      groceryMealFilterHeading: "Shop by planned meal",
+      groceryMealFilterLabel: "Planned meal",
+      groceryAllMeals: "Everything on the list",
+      groceryPlannedFor: "Planned meal details",
+      groceryMealUse: "{date} · {meal} · {recipe}",
+      groceryMealServings: "{count} servings",
+      groceryMealBatches: "cook {count}×",
+      groceryMealUseMore: "+{count} more planned meals",
+      breakfastSlot: "Desayuno",
+      lunchSlot: "Almuerzo",
+      dinnerSlot: "Cena",
       movePurchasedHome: "Move purchased home",
       checkSection: "Check section",
       deleteSection: "Delete section",
@@ -161,7 +176,7 @@ test("grocery items without the active language show a pending state", () => {
   assert.doesNotMatch(elements["#groceryList"].innerHTML, />milk</);
 });
 
-test("renderGroceries surfaces shared meal use for spillover ingredients", () => {
+test("renderGroceries explains the meals, servings, and batches behind generated items", () => {
   const { elements, ui } = harness({
     state: {
       groceries: [{
@@ -171,8 +186,8 @@ test("renderGroceries surfaces shared meal use for spillover ingredients", () =>
         store: "any",
         source: "week-plan",
         mealUses: [
-          { dateKey: "2026-07-20", mealSlot: "dinner", recipeId: "lemon-chicken", recipeName: { en: "Lemon Chicken" } },
-          { dateKey: "2026-07-22", mealSlot: "lunch", recipeId: "lemon-chicken", recipeName: { en: "Lemon Chicken" } },
+          { dateKey: "2026-07-20", mealSlot: "dinner", recipeId: "lemon-chicken", recipeName: { en: "Lemon Chicken" }, servings: 4, batches: 1 },
+          { dateKey: "2026-07-22", mealSlot: "lunch", recipeId: "lemon-chicken", recipeName: { en: "Lemon Chicken" }, servings: 2, batches: 0.5 },
         ],
       }],
     },
@@ -180,7 +195,50 @@ test("renderGroceries surfaces shared meal use for spillover ingredients", () =>
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, /Use across 2 meals: Pollo al limon/);
+  assert.match(elements["#groceryList"].innerHTML, /Cena · Pollo al limon · 4 servings · cook 1×/);
+  assert.match(elements["#groceryList"].innerHTML, /Almuerzo · Pollo al limon · 2 servings · cook 0.5×/);
+  assert.equal(elements["#groceryMealFilterPanel"].hidden, false);
+  assert.match(elements["#groceryMealFilter"].innerHTML, /2026-07-20::dinner/);
+});
+
+test("meal filter shows only groceries connected to the selected planned meal", async () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [
+        {
+          id: "dinner-lemons",
+          text: { en: "4 lemons", es: "4 limones" },
+          checked: false,
+          store: "any",
+          source: "meal-plan",
+          recipeId: "lemon-chicken",
+          mealUses: [{ dateKey: "2026-07-20", mealSlot: "dinner", recipeId: "lemon-chicken" }],
+        },
+        {
+          id: "lunch-oil",
+          text: { en: "1 cup olive oil", es: "1 taza de aceite de oliva" },
+          checked: false,
+          store: "any",
+          source: "meal-plan",
+          recipeId: "lemon-chicken",
+          mealUses: [{ dateKey: "2026-07-22", mealSlot: "lunch", recipeId: "lemon-chicken" }],
+        },
+        { id: "manual", text: { es: "leche" }, checked: false, store: "any", source: "manual" },
+      ],
+    },
+  });
+
+  ui.showMeal("2026-07-20", "dinner");
+
+  assert.match(elements["#groceryList"].innerHTML, /4 limones/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /aceite de oliva/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /leche/);
+  assert.equal(elements["#groceryMealFilter"].value, "2026-07-20::dinner");
+
+  elements["#groceryMealFilter"].value = "";
+  await elements["#groceryMealFilter"].dispatch("change", elements["#groceryMealFilter"]);
+  assert.match(elements["#groceryList"].innerHTML, /aceite de oliva/);
+  assert.match(elements["#groceryList"].innerHTML, /leche/);
 });
 
 test("grocery recipe matching works from localized recipe names", () => {
