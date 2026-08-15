@@ -71,3 +71,13 @@ This is a lightweight record of architectural and product decisions that future 
 **Alternatives considered:** A large AI memory backend or vector search from the start.
 
 **Consequences:** Learning must stay transparent, optional, and low-friction. Add more sophisticated memory only after real household usage demonstrates the need.
+
+## 2026-08-15 — Translate recipes only on explicit request
+
+**Decision:** Changing the app language never starts recipe AI calls. A family member may explicitly translate the one selected recipe when its current-language content is missing.
+
+**Reason:** The former render-time queue could fan one language switch out into many OpenAI calls and shared-state writes, creating avoidable cost and version conflicts.
+
+**Alternatives considered:** Automatically translating the full library, translating a fixed background batch, and removing AI translation entirely.
+
+**Consequences:** One translation action produces at most one provider call and one shared-state save. Original recipe content remains readable as a fallback, existing translations are preserved, and safety actions remain locked when a required warning is untranslated.

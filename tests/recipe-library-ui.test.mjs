@@ -85,7 +85,9 @@ function harness(overrides = {}) {
     "#detailName": element(),
     "#detailMeta": element(),
     "#allergyWarning": element(),
+    "#recipeTranslationPanel": element(),
     "#recipeTranslationStatus": element(),
+    "#translateSelectedRecipe": element(),
     "#ingredientList": element(),
     "#stepList": element(),
     "#familyNotes": element(),
@@ -131,6 +133,8 @@ function harness(overrides = {}) {
     getCategoryFilter: () => "all",
     setCategoryFilter: () => {},
     setDetailStatus: () => {},
+    canTranslateRecipe: () => overrides.canTranslate ?? (overrides.lang === "es"),
+    isRecipeTranslationPending: () => Boolean(overrides.translationPending),
     setView: () => {},
   });
 
@@ -252,8 +256,39 @@ test("Spanish detail uses source content while translation is pending", () => {
   assert.match(elements["#stepList"].innerHTML, />cook</);
   assert.equal(elements["#addRecipeGroceries"].disabled, false);
   assert.equal(elements["#markCooked"].disabled, false);
-  assert.equal(elements["#recipeTranslationStatus"].hidden, false);
+  assert.equal(elements["#recipeTranslationPanel"].hidden, false);
   assert.match(elements["#recipeTranslationStatus"].textContent, /translationFallbackDetail/);
+  assert.equal(elements["#translateSelectedRecipe"].hidden, false);
+  assert.equal(elements["#translateSelectedRecipe"].disabled, false);
+  assert.equal(elements["#translateSelectedRecipe"].textContent, "translateRecipe");
+});
+
+test("explicit recipe translation shows one visible pending action", () => {
+  const { elements, ui } = harness({ lang: "es", translationPending: true });
+
+  ui.renderDetail();
+
+  assert.equal(elements["#recipeTranslationPanel"].hidden, false);
+  assert.equal(elements["#translateSelectedRecipe"].disabled, true);
+  assert.equal(elements["#translateSelectedRecipe"].textContent, "translatingRecipe");
+});
+
+test("complete translated recipe does not offer another AI translation", () => {
+  const { elements, ui } = harness({
+    lang: "es",
+    canTranslate: false,
+    recipe: {
+      name: { en: "Recipe", es: "Receta" },
+      ingredients: { en: ["one"], es: ["uno"] },
+      steps: { en: ["cook"], es: ["cocinar"] },
+      notes: { en: "note", es: "nota" },
+    },
+  });
+
+  ui.renderDetail();
+
+  assert.equal(elements["#recipeTranslationPanel"].hidden, true);
+  assert.equal(elements["#translateSelectedRecipe"].hidden, true);
 });
 
 test("missing Spanish safety warning keeps cooking actions disabled", () => {
@@ -272,7 +307,7 @@ test("missing Spanish safety warning keeps cooking actions disabled", () => {
   assert.equal(elements["#allergyWarning"].textContent, "Contains nuts");
   assert.equal(elements["#addRecipeGroceries"].disabled, true);
   assert.equal(elements["#markCooked"].disabled, true);
-  assert.equal(elements["#recipeTranslationStatus"].hidden, false);
+  assert.equal(elements["#recipeTranslationPanel"].hidden, false);
   assert.equal(elements["#recipeSafetyLockReason"].hidden, false);
   assert.match(elements["#recipeSafetyLockReason"].textContent, /safetyActionsLocked/);
 });

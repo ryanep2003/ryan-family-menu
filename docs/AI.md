@@ -14,7 +14,7 @@ The default model is `gpt-5.4-mini`. `OPENAI_MODEL` can override it without a co
 | `recognize-receipt.js` | Up to 4 images plus language | Receipt metadata and purchased items | High-detail image inputs |
 | `recognize-inventory.js` | Up to 6 images plus location/language | Inventory candidates with confidence | Largest image batch |
 | `import-recipe-url.js` | Public URL | Recipe fields and optional image | Uses page JSON-LD first; AI only when structured recipe data is absent |
-| `translate-recipe.js` | Recipe text and source/target languages | Translated localized fields | Can run in sequence for recipes missing the selected language |
+| `translate-recipe.js` | One selected recipe plus source/target languages | Translated localized fields | Runs only after the user requests translation for that recipe |
 
 Manual recipe, grocery, and inventory entry remains available without OpenAI. URL import can work without OpenAI when the page exposes readable Recipe JSON-LD.
 
@@ -70,7 +70,7 @@ Do not weaken host checks, timeouts, redirect restrictions, content limits, or i
 
 ## Translation
 
-Translation preserves quantities, temperatures, timing, ordered steps, and safety warnings. Missing translations can be queued sequentially from the browser. The current app avoids copying untranslated safety content into a translated field and can disable cooking actions when required safety text is unavailable.
+Translation preserves quantities, temperatures, timing, ordered steps, and safety warnings. When a selected recipe is missing the current language, the app shows its original content and offers an explicit action to translate that recipe. One action creates at most one provider call and one shared-state save. The app does not scan or translate the library in the background. It avoids copying untranslated safety content into a translated field and can disable cooking actions when required safety text is unavailable.
 
 Changing translation behavior must preserve:
 
@@ -91,6 +91,8 @@ Do not add raw household recipes, photos, receipts, preferences, household keys,
 Existing controls include household access, request/image limits, deterministic URL parsing, finite retries, no background polling, and a site-level Netlify traffic cap.
 
 Before increasing image counts, image detail, translation breadth, automatic triggers, or retry behavior, estimate the multiplication effect across households. A single user action should create a predictable, bounded number of provider calls.
+
+Recipe translation is deliberately user-triggered and limited to the selected recipe. Do not restore library-wide translation queues or start translation from general rendering or language-switch events.
 
 ## Testing AI Changes
 

@@ -1897,6 +1897,9 @@ h3 {
 }
 
 .translation-state {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
   margin: 0 0 16px;
   padding: 12px;
   border: 1px solid var(--gold);
@@ -1904,6 +1907,15 @@ h3 {
   background: var(--surface-attention);
   color: var(--attention-ink);
   font-weight: 800;
+}
+
+.translation-state p {
+  margin: 0;
+}
+
+.translation-state .ghost-button {
+  min-height: 44px;
+  background: var(--surface);
 }
 
 .translation-state[hidden] {

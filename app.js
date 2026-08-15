@@ -140,8 +140,6 @@ let recipeSearch = "";
 let categoryFilter = "all";
 let appUpdateNoticeShown = false;
 const recipeTranslationInFlight = new Set();
-const recipeTranslationFailed = new Set();
-let recipeTranslationQueue = Promise.resolve();
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -1373,6 +1371,14 @@ const recipeLibraryUi = createRecipeLibraryUi({
     categoryFilter = filter;
   },
   setDetailStatus,
+  canTranslateRecipe: (recipeId, targetLang) => {
+    const recipe = rawRecipeById(recipeId);
+    return Boolean(
+      rawRecipeNeedsLocale(recipe, targetLang)
+      && recipeTranslationSourceLang(recipe, targetLang)
+    );
+  },
+  isRecipeTranslationPending: (recipeId, targetLang) => recipeTranslationInFlight.has(`${recipeId}:${targetLang}`),
   setView,
 });
 
@@ -1452,7 +1458,6 @@ function render() {
   bindOpenButtons();
   bindGroceryControls();
   bindInventoryControls();
-  queueRecipeBackfillForCurrentLanguage();
 }
 
 function setView(viewName) {
@@ -1657,10 +1662,10 @@ async function translateRecipeContent(recipe, sourceLang, targetLang) {
 
 async function backfillRecipeLocale(recipeId, targetLang) {
   const recipe = rawRecipeById(recipeId);
-  if (!recipe || !rawRecipeNeedsLocale(recipe, targetLang)) return;
+  if (!recipe || !rawRecipeNeedsLocale(recipe, targetLang)) return true;
 
   const sourceLang = recipeTranslationSourceLang(recipe, targetLang);
-  if (!sourceLang || sourceLang === targetLang) return;
+  if (!sourceLang || sourceLang === targetLang) return false;
 
   const translated = await translateRecipeContent(recipe, sourceLang, targetLang);
   const nextEdit = mergeTranslatedRecipeEdit(recipe, translated, targetLang);
@@ -1670,36 +1675,13 @@ async function backfillRecipeLocale(recipeId, targetLang) {
     drafts = drafts.map((draft, index) => (index === draftIndex ? { ...draft, ...nextEdit } : draft));
     persistDrafts();
     render();
-    return;
+    return true;
   }
 
   recipeEdits[recipeId] = nextEdit;
   saveSharedStateLocally();
   render();
-  await saveSharedState();
-}
-
-function queueRecipeBackfillForCurrentLanguage() {
-  const targetLang = lang;
-  if (!["en", "es"].includes(targetLang)) return;
-
-  allRecipes()
-    .filter((recipe) => rawRecipeNeedsLocale(rawRecipeById(recipe.id), targetLang))
-    .forEach((recipe) => {
-      const key = `${recipe.id}:${targetLang}`;
-      if (recipeTranslationInFlight.has(key) || recipeTranslationFailed.has(key)) return;
-
-      recipeTranslationInFlight.add(key);
-      recipeTranslationQueue = recipeTranslationQueue
-        .then(() => backfillRecipeLocale(recipe.id, targetLang))
-        .catch((error) => {
-          console.warn(error);
-          recipeTranslationFailed.add(key);
-        })
-        .finally(() => {
-          recipeTranslationInFlight.delete(key);
-        });
-    });
+  return saveSharedState();
 }
 
 const recipeFormUi = createRecipeFormUi({
@@ -1857,6 +1839,33 @@ $$("[data-scroll-to]").forEach((button) => {
   button.addEventListener("click", () => {
     $(`#${button.dataset.scrollTo}`).scrollIntoView({ behavior: "smooth", block: "start" });
   });
+});
+
+$("#translateSelectedRecipe").addEventListener("click", async () => {
+  const recipeId = selectedRecipeId;
+  const targetLang = lang;
+  const key = `${recipeId}:${targetLang}`;
+  if (recipeTranslationInFlight.has(key)) return;
+
+  recipeTranslationInFlight.add(key);
+  renderDetail();
+  setDetailStatus(t("translatingRecipe"));
+  let resultMessage = "";
+  let resultIsError = false;
+
+  try {
+    const saved = await backfillRecipeLocale(recipeId, targetLang);
+    resultMessage = t(saved ? "recipeTranslationReady" : "recipeTranslationSaveError");
+    resultIsError = !saved;
+  } catch (error) {
+    console.warn(error);
+    resultMessage = error.message ? `${t("recipeTranslationError")} ${error.message}` : t("recipeTranslationError");
+    resultIsError = true;
+  } finally {
+    recipeTranslationInFlight.delete(key);
+    renderDetail();
+    setDetailStatus(resultMessage, resultIsError);
+  }
 });
 
 scheduleUi.bindScheduleControls();
