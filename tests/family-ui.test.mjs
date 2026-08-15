@@ -29,7 +29,7 @@ function familyUiFixture({ members = [], currentMember = "Family" } = {}) {
   const ui = createFamilyUi({
     $: (selector) => elements[selector.slice(1)] || null,
     $$: () => [],
-    t: (key) => key === "householdFamily" ? "Family" : key,
+    t: (key) => ({ householdFamily: "Family", addFamilyMembersShort: "Add family members" })[key] || key,
     escapeHtml: (value) => `${value}`,
     getHouseholdMember: () => selectedMember,
     setHouseholdMember: (name) => { selectedMember = name; },
@@ -45,6 +45,7 @@ test("member attribution offers setup instead of a dead-looking Family field", (
 
   assert.equal(elements.householdMemberPicker.hidden, true);
   assert.equal(elements.setupFamilyMembers.hidden, false);
+  assert.equal(elements.setupFamilyMembers.textContent, "Add family members");
   assert.match(elements.householdMemberInput.innerHTML, /value="Family">Family/);
 });
 

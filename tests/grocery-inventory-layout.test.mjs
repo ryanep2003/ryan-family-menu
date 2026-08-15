@@ -97,7 +97,7 @@ test("mobile header reserves rows for optional install controls", () => {
 
 test("mobile sync status keeps the family member control compact and labeled", () => {
   assert.match(html, /id="householdMemberPicker"[^>]*hidden[\s\S]*?<span data-i18n="usingAsShort">Using as<\/span>[\s\S]*?<select id="householdMemberInput"[^>]+aria-label="Using as"/);
-  assert.match(html, /id="setupFamilyMembers"[^>]*data-i18n="addFamilyMembersShort"/);
+  assert.match(html, /id="setupFamilyMembers"[^>]*data-i18n="openFamily"/);
   assert.match(styles, /\.app-sync-status \.household-member-global \{[\s\S]*?display: flex;[\s\S]*?margin: 0 0 0 auto;/);
   assert.match(styles, /\.app-sync-status \.household-member-global select\s*\{[\s\S]*?width: min\(132px, 38vw\);/);
   assert.match(styles, /\.app-sync-status \.setup-family-members\s*\{[\s\S]*?min-height: 44px;/);

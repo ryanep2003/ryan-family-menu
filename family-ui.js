@@ -54,7 +54,10 @@ export function createFamilyUi({
     const setupButton = $("#setupFamilyMembers");
     const select = $("#householdMemberInput");
     if (picker) picker.hidden = members.length === 0;
-    if (setupButton) setupButton.hidden = members.length > 0;
+    if (setupButton) {
+      setupButton.hidden = members.length > 0;
+      setupButton.textContent = t("addFamilyMembersShort");
+    }
     if (select) {
       select.innerHTML = names.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name === "Family" ? t("householdFamily") : name)}</option>`).join("");
       const selectedName = names.includes(getHouseholdMember()) ? getHouseholdMember() : "Family";
