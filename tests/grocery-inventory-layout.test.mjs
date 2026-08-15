@@ -58,7 +58,7 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*html\s*\{[\s\S]*scroll-padding-bottom: calc\(120px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(120px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=61/);
+  assert.match(html, /styles\.css\?v=63/);
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
@@ -96,10 +96,11 @@ test("mobile header reserves rows for optional install controls", () => {
 });
 
 test("mobile sync status keeps the family member control compact and labeled", () => {
-  assert.match(html, /id="householdMemberInput"[^>]+list="householdMemberSuggestions"[^>]+aria-label="Editing as"/);
-  assert.match(styles, /\.app-sync-status \.household-member-global \{[\s\S]*?width: 100%;[\s\S]*?flex: 1 0 100%;/);
-  assert.match(styles, /\.app-sync-status \.household-member-global > span \{[\s\S]*?position: static;[\s\S]*?clip: auto;/);
-  assert.match(styles, /\.app-sync-status \.household-member-global input\s*\{[\s\S]*?min-height: 44px;/);
+  assert.match(html, /id="householdMemberPicker"[^>]*hidden[\s\S]*?<span data-i18n="usingAsShort">Using as<\/span>[\s\S]*?<select id="householdMemberInput"[^>]+aria-label="Using as"/);
+  assert.match(html, /id="setupFamilyMembers"[^>]*data-i18n="addFamilyMembersShort"/);
+  assert.match(styles, /\.app-sync-status \.household-member-global \{[\s\S]*?display: flex;[\s\S]*?margin: 0 0 0 auto;/);
+  assert.match(styles, /\.app-sync-status \.household-member-global select\s*\{[\s\S]*?width: min\(132px, 38vw\);/);
+  assert.match(styles, /\.app-sync-status \.setup-family-members\s*\{[\s\S]*?min-height: 44px;/);
 });
 
 test("Today keeps secondary household coordination behind one clear disclosure", () => {

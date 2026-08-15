@@ -46,9 +46,21 @@ export function createFamilyUi({
 
   function updateMemberSuggestions() {
     const members = normalizeFamilyMembers(getFamilyMembers()).filter((member) => member.active);
+    const names = ["Family", ...members.map((member) => member.name)];
     const datalist = $("#householdMemberSuggestions");
-    if (datalist) datalist.innerHTML = ["Family", ...members.map((member) => member.name)]
+    if (datalist) datalist.innerHTML = names
       .map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
+    const picker = $("#householdMemberPicker");
+    const setupButton = $("#setupFamilyMembers");
+    const select = $("#householdMemberInput");
+    if (picker) picker.hidden = members.length === 0;
+    if (setupButton) setupButton.hidden = members.length > 0;
+    if (select) {
+      select.innerHTML = names.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name === "Family" ? t("householdFamily") : name)}</option>`).join("");
+      const selectedName = names.includes(getHouseholdMember()) ? getHouseholdMember() : "Family";
+      if (selectedName !== getHouseholdMember()) setHouseholdMember(selectedName);
+      select.value = selectedName;
+    }
   }
 
   function renderMembers() {
@@ -203,18 +215,23 @@ export function createFamilyUi({
   }
 
   function bind() {
-    $("#openFamily")?.addEventListener("click", () => {
+    const openFamilyMembers = (focusForm = false) => {
       $(".household-menu").open = false;
       setView("family");
       renderFamily();
-    });
+      if (focusForm) $("#addFamilyMemberForm input[name='name']")?.focus();
+    };
+    $("#openFamily")?.addEventListener("click", () => openFamilyMembers());
+    $("#setupFamilyMembers")?.addEventListener("click", () => openFamilyMembers(true));
     $("#closeFamily")?.addEventListener("click", () => setView("today"));
     $("#addFamilyMemberForm")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const data = new FormData(event.currentTarget);
       const member = familyMember({ name: data.get("name"), role: data.get("role"), active: true }, getHouseholdMember());
       if (!member) return;
+      const isFirstActiveMember = !normalizeFamilyMembers(getFamilyMembers()).some((item) => item.active);
       setFamilyMembers([...getFamilyMembers(), member]);
+      if (isFirstActiveMember) setHouseholdMember(member.name);
       event.currentTarget.reset();
       renderApp();
       await saveSharedState();
@@ -240,6 +257,7 @@ export function createFamilyUi({
       event.preventDefault();
       const memberId = form.dataset.familyMemberForm;
       const data = new FormData(form);
+      const previousMember = getFamilyMembers().find((member) => member.id === memberId);
       const members = getFamilyMembers().map((member) => member.id === memberId ? familyMember({
         ...member,
         name: data.get("name"),
@@ -251,6 +269,8 @@ export function createFamilyUi({
         preferences = preferencesFromText(preferences, members, memberId, kind, data.get(`preference-${kind}`), getHouseholdMember());
       });
       setFamilyMembers(members);
+      const updatedMember = members.find((member) => member.id === memberId);
+      if (previousMember?.name === getHouseholdMember() && updatedMember?.name) setHouseholdMember(updatedMember.name);
       setFamilyPreferences(normalizeFamilyPreferences(preferences, members));
       renderApp();
       const saved = await saveSharedState();

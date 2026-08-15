@@ -623,11 +623,15 @@ h3 {
 .household-member-picker {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 14px;
+  gap: 6px;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 750;
+}
+
+.household-member-picker[hidden],
+.setup-family-members[hidden] {
+  display: none;
 }
 
 .household-member-picker select,
@@ -2130,6 +2134,10 @@ h3 {
 }
 
 .app-sync-status .household-member-global {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
   margin: 0 0 0 auto;
   white-space: nowrap;
 }
@@ -2142,6 +2150,17 @@ h3 {
   border-radius: 8px;
   background: var(--surface);
   color: var(--ink);
+}
+
+.app-sync-status .household-member-global select {
+  width: min(132px, 38vw);
+  max-width: 132px;
+}
+
+.app-sync-status .setup-family-members {
+  min-height: 44px;
+  padding: 6px 4px;
+  color: var(--sage-dark);
 }
 
 .today-tools {
@@ -5007,28 +5026,22 @@ li {
   }
 
   .app-sync-status .household-member-global {
-    width: 100%;
-    flex: 1 0 100%;
+    width: auto;
+    flex: 0 1 auto;
     justify-content: flex-end;
-    margin: 0;
+    margin-left: auto;
     gap: 6px;
   }
 
-  .app-sync-status .household-member-global > span {
-    position: static;
+  .app-sync-status .household-member-picker {
     width: auto;
-    height: auto;
-    padding: 0;
-    margin: 0;
-    overflow: visible;
-    clip: auto;
-    white-space: nowrap;
+    flex-direction: row;
+    align-items: center;
   }
 
-  .app-sync-status .household-member-global select,
-  .app-sync-status .household-member-global input {
-    width: min(180px, 55vw);
-    max-width: 180px;
+  .app-sync-status .household-member-global select {
+    width: min(128px, 38vw);
+    max-width: 128px;
     margin-left: 0;
   }
 
