@@ -2489,7 +2489,7 @@ h3 {
   flex-wrap: wrap;
 }
 
-.meal-grocery-link {
+.meal-builder-period-meta .meal-grocery-link {
   min-height: 44px;
   padding: 4px 2px;
   color: var(--sage-dark);
