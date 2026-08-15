@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Review"
+  short_description: "Review usability without automatic redesign"
+  default_prompt: "Use $ui-review to evaluate this Ryan Family Menu screen and prioritize usability improvements without implementing them."

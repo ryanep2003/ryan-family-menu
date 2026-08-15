@@ -1,17 +1,46 @@
-# Family Menu
+# Ryan Family Menu
 
-Private, multi-household family dinner planner deployed on Netlify.
+Private, multi-household food planning and coordination app deployed on Netlify.
 
 Current features:
 
-- Weekly dinner schedule and monthly meal calendar
+- Today dashboard for meals, food to use soon, handoffs, tasks, and activity
+- Weekly and monthly breakfast, lunch, and dinner planning
+- Flexible meal composition with mains, sides, salads, desserts, sauces, and more
+- Adult, child, and guest serving plans with batch and leftover estimates
 - Recipe library with built-in recipes plus shared recipe uploads
 - Recipe photo scanning and recipe URL import
 - Recipe editing, hiding/deleting from the family menu, and photo replacement
-- Shared grocery list grouped by meal, with receipt scanning
-- Home inventory tracking with shelf-photo scanning
+- Shared grocery generation from meal plans, with receipt scanning
+- Home inventory tracking with quantities, expiration, and shelf-photo scanning
+- Receipt history and monthly grocery-budget tracking
+- Family profiles, preferences, household rules, dinner feedback, and meal history
 - English / Spanish UI toggle and Spanish grocery item helper text
 - Installable web app shell with a small offline cache
+
+## Repository Guide
+
+- `AGENTS.md`: permanent Codex operating manual and safety rules
+- `PRODUCT.md`: product purpose, current workflows, terminology, and priorities
+- `DESIGN.md`: visual system and interaction guidance
+- `docs/ARCHITECTURE.md`: system components and data flow
+- `docs/DATA_MODEL.md`: persisted records and compatibility rules
+- `docs/AI.md`: OpenAI integrations, prompts, fallbacks, and cost-sensitive paths
+- `docs/DEPLOYMENT.md`: local setup, configuration, deployment, verification, and rollback
+- `docs/DECISIONS.md`: durable decisions that should not be accidentally reversed
+
+Repository-specific Codex workflows live in `.agents/skills/`. The current set covers feature work, root-cause debugging, UI review, safe data changes, pre-deployment assessment, mobile/PWA testing, and verified Netlify deployment.
+
+## Development
+
+Install dependencies and run the full automated suite:
+
+```sh
+npm install
+npm test
+```
+
+The frontend has no compilation or bundling step. Netlify publishes the repository root directly and serves serverless functions from `netlify/functions/`.
 
 ## Deploying
 
@@ -27,6 +56,7 @@ Shared data is stored with Netlify Blobs from the functions in `netlify/function
 - `family-state.js`: schedule, calendar meals, favorites, tasks, recipe edits, hidden/deleted recipes
 - `groceries.js`: shared grocery list
 - `inventory.js`: home inventory
+- `dinner-history.js`: meal feedback and dinner history
 
 The browser also keeps household-scoped local fallbacks in `localStorage` so the app remains usable if a live save fails without showing another household's cached data.
 
@@ -54,6 +84,7 @@ Photo and URL parsing use the OpenAI API from Netlify functions:
 - `recognize-receipt.js`
 - `recognize-inventory.js`
 - `import-recipe-url.js`
+- `translate-recipe.js`
 
 Required Netlify environment variables:
 
@@ -62,8 +93,11 @@ Required Netlify environment variables:
 
 Keep a small API billing limit while testing. Manual recipe, grocery, and inventory entry works without OpenAI configured.
 
+URL imports parse Recipe JSON-LD before using AI. `OPENAI_MODEL` is optional and defaults to `gpt-5.4-mini`.
+
 ## Maintenance Notes
 
 - Keep `app.js` simple until it is split by domain; avoid adding new framework dependencies.
 - Do not precache every recipe photo in `service-worker.js`; large assets should be cached on demand.
 - Prefer small sanitizer/test additions when changing Netlify functions.
+- Read `AGENTS.md` and the relevant document in `docs/` before changing persisted data, household access, AI behavior, synchronization, or deployment.

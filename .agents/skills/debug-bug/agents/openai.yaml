@@ -1,0 +1,4 @@
+interface:
+  display_name: "Debug Bug"
+  short_description: "Find root causes and make focused fixes"
+  default_prompt: "Use $debug-bug to trace this Ryan Family Menu bug to its root cause and verify the smallest appropriate fix."

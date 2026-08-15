@@ -12,6 +12,59 @@ Ryan Family Menu is for family members and caretakers who need a shared, always-
 
 Family Menu is the shared operating system for a household's food life. It helps every family member plan every meal across the month, shop intelligently, manage food at home, use leftovers intentionally, and stay within budget with the least possible effort and waste. Success looks like a household being able to answer five questions quickly: what are we eating, what do we already have, what do we need to buy, what should we use soon, and what are we spending?
 
+## Current Experience
+
+The shipped product currently supports:
+
+- Private household creation and shared access through a family key.
+- A Today view for the current meal, available leftovers/snacks, household handoffs, tasks, favorites, and recent activity.
+- Weekly and monthly planning across breakfast, lunch, and dinner.
+- Flexible meal composition using mains, sides, salads, desserts, sauces, drinks, and other recipe roles.
+- Per-meal serving plans for adults, children, and guests, with batch and leftover estimates.
+- Intentional leftover recording and allocation to later meals.
+- A shared recipe library with bundled and household recipes, local drafts, editing, favorites, and hiding/deletion overlays.
+- Recipe creation from photos, public links, or manual entry.
+- A grocery list generated from meal plans, with shared-ingredient aggregation and inventory coverage.
+- Home inventory by location, stock level, quantity, and expiration.
+- Receipt capture and monthly grocery-budget tracking.
+- Family profiles, food preferences, household rules, quick dinner feedback, dinner history, and deterministic recommendation ranking.
+- English and Spanish interface/content support.
+- Installable mobile PWA behavior and household-scoped offline fallbacks.
+
+The product does not currently provide individual user accounts, verified identity, administrator roles, key recovery/rotation, calendar integration, push notifications, native iOS features, or automatic AI-generated meal plans.
+
+## Primary Workflows
+
+1. **Open a household:** create an invited household or enter the private family key on a new device.
+2. **Plan food:** choose meals for a week or specific month date, compose each meal, adjust eaters, and estimate leftovers.
+3. **Prepare and hand off:** use Today to see what is planned, what should be used soon, and who is helping.
+4. **Shop:** build the grocery list from the plan, add manual items, account for inventory, and move purchased items home.
+5. **Manage food at home:** track location, amount, stock, and expiration; scan photos for suggested items.
+6. **Manage recipes:** browse, search, favorite, import, scan, edit, draft, and publish household recipes.
+7. **Learn from dinner:** record a two-second outcome, optional individual reactions, and leftovers so later suggestions can improve.
+8. **Track spending:** scan or record receipt totals and compare monthly grocery spending with the household target.
+
+## Product Terminology
+
+- **Household:** one isolated family data space opened with a private key.
+- **Family key:** the household's bearer credential; everyone who possesses it has shared read/write access.
+- **Meal period:** breakfast, lunch, or dinner.
+- **Meal role:** a flexible part of a meal, such as main, side, salad, dessert, sauce, or drink.
+- **Serving plan:** adults, children, and guests expected for one meal period.
+- **Available food:** a leftover or snack that should be used soon.
+- **Handoff:** optional coordination details that help another caretaker continue meal preparation.
+- **Dinner pace:** quick, standard, or no-cooking guidance for an evening.
+- **Family memory:** explicit preferences, household rules, dinner outcomes, and history used to rank suggestions.
+- **Shared state:** the primary household record containing planning and collaboration data.
+
+## Current Priorities
+
+1. Validate the new household-memory loop through real daily use.
+2. Improve recommendations only after enough dinner feedback exists to support trustworthy behavior.
+3. Preserve multi-household isolation, predictable synchronization, mobile usability, and low infrastructure cost while the app expands to friends and family.
+4. Improve budget and food-quantity accuracy before adding heavier AI or infrastructure.
+5. Keep household learning transparent, correctable, and optional.
+
 ## Positioning
 
 The simplest shared food-management system for families and caretakers, connecting meal planning, recipes, groceries, inventory, leftovers, spending, and household collaboration.

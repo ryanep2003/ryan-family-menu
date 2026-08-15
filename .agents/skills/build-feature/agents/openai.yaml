@@ -1,0 +1,4 @@
+interface:
+  display_name: "Build Feature"
+  short_description: "Implement features safely in this app"
+  default_prompt: "Use $build-feature to implement this Ryan Family Menu feature safely within the existing architecture."

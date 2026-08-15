@@ -1,0 +1,4 @@
+interface:
+  display_name: "Safe Database Change"
+  short_description: "Protect household data during model changes"
+  default_prompt: "Use $safe-database-change to plan and implement this Ryan Family Menu data-model change with backward compatibility and rollback safety."

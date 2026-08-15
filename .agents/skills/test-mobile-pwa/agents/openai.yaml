@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test Mobile PWA"
+  short_description: "Check mobile, install, update, and offline flows"
+  default_prompt: "Use $test-mobile-pwa to verify this Ryan Family Menu change on narrow mobile layouts and relevant PWA states."

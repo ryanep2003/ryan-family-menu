@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deploy Netlify"
+  short_description: "Ship and verify the production release"
+  default_prompt: "Use $deploy-netlify to safely publish the approved Ryan Family Menu changes through main and verify the live Netlify release."

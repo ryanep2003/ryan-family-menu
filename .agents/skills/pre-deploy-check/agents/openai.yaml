@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pre-Deploy Check"
+  short_description: "Decide whether a release is safe to ship"
+  default_prompt: "Use $pre-deploy-check to perform the applicable Ryan Family Menu release checks and return a clear deployment decision."
