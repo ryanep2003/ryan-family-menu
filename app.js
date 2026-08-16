@@ -711,7 +711,10 @@ function mergeSharedState(serverState, localState, baseState) {
   return merged;
 }
 
-async function saveSharedState({ retrying = false } = {}) {
+let sharedSaveInFlight = null;
+let sharedSaveQueued = false;
+
+async function performSaveSharedState({ retrying = false } = {}) {
   setSharedRetryAction(saveSharedState);
   saveSharedStateLocally();
   setSyncStatus("shared", "savedLocallySyncing", { state: "pending" });
@@ -741,12 +744,32 @@ async function saveSharedState({ retrying = false } = {}) {
       sharedStateBaseState = serverState;
       saveSharedStateLocally();
       render();
-      if (!retrying) return saveSharedState({ retrying: true });
+      if (!retrying) return performSaveSharedState({ retrying: true });
       setSyncStatus("shared", "sharedStateConflict", { state: "error" });
       return false;
     }
     setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
     return false;
+  }
+}
+
+async function saveSharedState(options = {}) {
+  if (sharedSaveInFlight && !options.retrying) {
+    sharedSaveQueued = true;
+    await sharedSaveInFlight;
+    return true;
+  }
+  if (options.retrying) return performSaveSharedState(options);
+
+  sharedSaveInFlight = performSaveSharedState(options);
+  try {
+    return await sharedSaveInFlight;
+  } finally {
+    sharedSaveInFlight = null;
+    if (sharedSaveQueued) {
+      sharedSaveQueued = false;
+      await saveSharedState();
+    }
   }
 }
 

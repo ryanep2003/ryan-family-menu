@@ -4800,21 +4800,21 @@ li {
 
 @media (max-width: 780px) {
   html {
-    scroll-padding-bottom: calc(120px + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(144px + env(safe-area-inset-bottom));
   }
 
   body {
-    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+    padding-bottom: calc(144px + env(safe-area-inset-bottom));
   }
 
   body.finish-shopping-visible:not(.finish-shopping-open) {
-    padding-bottom: calc(260px + env(safe-area-inset-bottom));
+    padding-bottom: calc(280px + env(safe-area-inset-bottom));
   }
 
   .finish-shopping-prompt {
     position: fixed;
     right: 12px;
-    bottom: calc(82px + env(safe-area-inset-bottom));
+    bottom: calc(94px + env(safe-area-inset-bottom));
     left: 12px;
     z-index: 40;
     display: grid;
