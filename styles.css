@@ -2233,6 +2233,11 @@ h3 {
   color: #7f2b22;
 }
 
+.grocery-banner .receipt-upload-button {
+  flex: 0 0 auto;
+  min-width: 148px;
+}
+
 .inventory-banner {
   background: var(--sage-pale);
   color: var(--sage-dark);
@@ -2620,6 +2625,33 @@ h3 {
   background: var(--surface-paper-muted);
 }
 
+.meal-search-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 0.38fr);
+  gap: 8px;
+}
+
+.meal-search-tools label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.meal-search-tools input,
+.meal-search-tools select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 10px 12px;
+  text-transform: none;
+}
+
 .meal-item-adder-fields .meal-search-empty {
   grid-column: 1 / -1;
 }
@@ -2657,6 +2689,29 @@ h3 {
   font-size: 0.76rem;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.meal-recipe-results button .meal-recipe-result-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.meal-recipe-results button .meal-recipe-result-copy strong,
+.meal-recipe-results button .meal-recipe-result-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-recipe-results button .meal-recipe-result-copy small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.meal-recipe-results button .category-pill {
+  flex: 0 0 auto;
 }
 
 .leftover-adder-fields {
@@ -5238,6 +5293,10 @@ li {
     padding: 16px 20px;
   }
 
+  .grocery-banner .receipt-upload-button {
+    width: 100%;
+  }
+
   .inventory-banner {
     min-height: 96px;
     padding: 16px 20px;
@@ -5510,6 +5569,10 @@ li {
   }
 
   .meal-item-adder-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .meal-search-tools {
     grid-template-columns: 1fr;
   }
 

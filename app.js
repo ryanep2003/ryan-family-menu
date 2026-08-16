@@ -2051,12 +2051,24 @@ $("#clearCheckedGroceries").addEventListener("click", async () => {
 receiptUi.bindReceiptControls();
 budgetUi.bindBudgetControls();
 
-$("#restockPurchased").addEventListener("click", () => {
+function openFinishShopping({ showReceipt = false } = {}) {
   $("#finishShoppingPanel").hidden = false;
   $("#finishShoppingPrompt").hidden = true;
   $("#manualReceiptDate").value ||= formatDateKey(new Date());
+  if (showReceipt) {
+    $("#receiptScanPanel").hidden = false;
+    $("#scanReceiptToggle").setAttribute("aria-expanded", "true");
+  }
   document.body.classList.add("finish-shopping-open");
   $("#finishShoppingPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+$("#quickReceiptUpload").addEventListener("click", () => {
+  openFinishShopping({ showReceipt: true });
+});
+
+$("#restockPurchased").addEventListener("click", () => {
+  openFinishShopping();
 });
 
 $("#closeFinishShopping").addEventListener("click", () => {

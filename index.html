@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=68" />
+    <link rel="stylesheet" href="styles.css?v=70" />
   </head>
   <body class="household-locked" data-view="today">
     <section class="household-gate" id="householdGate" aria-labelledby="householdGateHeading">
@@ -392,6 +392,7 @@
               <p class="view-kicker" data-i18n="groceryLabel">Shared grocery list</p>
               <h2 data-i18n="groceryHeading">Shopping list</h2>
             </div>
+            <button class="primary-action receipt-upload-button" id="quickReceiptUpload" type="button" data-i18n="uploadReceipt">Upload receipt</button>
           </div>
           <section class="finish-shopping-prompt" id="finishShoppingPrompt" hidden>
             <div>
@@ -877,6 +878,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=107"></script>
+    <script type="module" src="app.js?v=109"></script>
   </body>
 </html>

@@ -38,7 +38,7 @@ The product does not currently provide individual user accounts, verified identi
 1. **Open a household:** create an invited household or enter the private family key on a new device.
 2. **Plan food:** choose meals for a week or specific month date, compose each meal, adjust eaters, and estimate leftovers.
 3. **Prepare and hand off:** use Today to see what is planned, what should be used soon, and who is helping.
-4. **Shop:** open a planned meal directly in the grocery list, review possible inventory matches, check items while shopping, then finish the trip with an optional receipt so purchases move home and spending stays current.
+4. **Shop:** open a planned meal directly in the grocery list, review possible inventory matches, check items while shopping, or upload a receipt directly so purchases move home and spending stays current.
 5. **Manage food at home:** track location, amount, stock, and expiration; scan photos for suggested items.
 6. **Manage recipes:** browse, search, favorite, import, scan, edit, draft, and publish household recipes.
 7. **Learn from dinner:** record a two-second outcome, optional individual reactions, and leftovers so later suggestions can improve.

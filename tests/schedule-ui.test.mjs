@@ -138,6 +138,10 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     dataset: { mealItemSearch: "weekdate:2026-06-22", period: "dinner" },
     value: "Another",
   });
+  const weekRecipeCategoryFilter = element({
+    dataset: { mealCategoryFilter: "weekdate:2026-06-22", period: "dinner" },
+    value: "all",
+  });
   const weekRecipeSearchEmpty = element({
     dataset: { mealItemEmpty: "weekdate:2026-06-22", period: "dinner" },
     hidden: true,
@@ -154,7 +158,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     { id: "main-recipe", name: "Main Recipe", category: "main" },
     { id: "another-main", name: "Another Main", category: "main" },
     { id: "side-recipe", name: "Side Recipe", category: "side" },
-    { id: "salad-recipe", name: "Salad Recipe", category: "salad" },
+    { id: "salad-recipe", name: "Salad Recipe", meta: "Fresh greens", category: "salad" },
     { id: "dessert-recipe", name: "Dessert Recipe", category: "dessert" },
   ];
   const state = {
@@ -188,6 +192,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
       if (selector === '[data-meal-context^="calendar:"]') return [calendarControl];
       if (selector === '[data-view-meal-groceries^="calendar:"]') return [];
       if (selector === '[data-meal-item-search^="weekdate:"]') return [weekRecipeSearch];
+      if (selector === '[data-meal-category-filter^="weekdate:"]') return [weekRecipeCategoryFilter];
       if (selector === '[data-meal-item-empty^="weekdate:"]') return [weekRecipeSearchEmpty];
       if (selector === '[data-meal-recipe-results^="weekdate:"]') return [weekRecipeResults];
       if (selector === '[data-add-meal-recipe^="weekdate:"]') return [weekRecipeControl];
@@ -276,6 +281,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     weekRoleControl,
     weekRecipeControl,
     weekRecipeSearch,
+    weekRecipeCategoryFilter,
     weekRecipeSearchEmpty,
     weekRecipeResults,
   };
@@ -363,7 +369,7 @@ test("meal-period planning shows breakfast, lunch, and dinner together", () => {
 });
 
 test("recipe search shows one-tap matching results", async () => {
-  const { ui, weekRecipeResults, weekRecipeSearch, weekRecipeSearchEmpty } = harness();
+  const { ui, weekRecipeResults, weekRecipeSearch, weekRecipeSearchEmpty, weekRecipeCategoryFilter } = harness();
 
   ui.renderSchedule();
   await weekRecipeSearch.dispatch("input");
@@ -372,6 +378,16 @@ test("recipe search shows one-tap matching results", async () => {
   assert.doesNotMatch(weekRecipeResults.innerHTML, />Main Recipe</);
   assert.match(weekRecipeResults.innerHTML, /data-add-meal-result=/);
   assert.equal(weekRecipeSearchEmpty.hidden, true);
+
+  weekRecipeSearch.value = "greens";
+  await weekRecipeSearch.dispatch("input");
+  assert.match(weekRecipeResults.innerHTML, /Salad Recipe/);
+
+  weekRecipeSearch.value = "";
+  weekRecipeCategoryFilter.value = "dessert";
+  await weekRecipeCategoryFilter.dispatch("change");
+  assert.match(weekRecipeResults.innerHTML, /Dessert Recipe/);
+  assert.doesNotMatch(weekRecipeResults.innerHTML, /Salad Recipe/);
 });
 
 test("handoff detail choices persist with the selected week meal", async () => {

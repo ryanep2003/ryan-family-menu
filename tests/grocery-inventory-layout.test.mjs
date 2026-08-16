@@ -27,6 +27,14 @@ test("shopping completion keeps receipt capture at the end of the trip", () => {
   assert.match(styles, /\.view\.active\s*\{[\s\S]*animation: view-arrival[^;]*backwards;/);
 });
 
+test("receipt upload is always available without checking grocery items first", () => {
+  assert.match(html, /class="primary-action receipt-upload-button" id="quickReceiptUpload"[^>]*data-i18n="uploadReceipt"/);
+  assert.ok(html.indexOf('id="quickReceiptUpload"') < html.indexOf('id="groceryList"'));
+  assert.match(app, /#quickReceiptUpload[\s\S]*openFinishShopping\(\{ showReceipt: true \}\)/);
+  assert.match(app, /showReceipt[\s\S]*#receiptScanPanel[\s\S]*hidden = false/);
+  assert.match(styles, /\.grocery-banner \.receipt-upload-button\s*\{[\s\S]*min-width: 148px/);
+});
+
 test("inventory maintenance uses one progressive disclosure", () => {
   assert.match(html, /class="inventory-tools-menu"/);
   assert.match(html, /data-i18n="inventoryManageShort"/);
@@ -71,7 +79,7 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*html\s*\{[\s\S]*scroll-padding-bottom: calc\(120px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(120px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=68/);
+  assert.match(html, /styles\.css\?v=70/);
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
