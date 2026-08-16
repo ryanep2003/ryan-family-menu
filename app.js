@@ -984,6 +984,20 @@ function detailGroceriesMessage(addedCount, atHomeCount) {
 }
 
 function dateKeysForGroceryRange(range) {
+  if (range === "next3") {
+    const start = new Date();
+    start.setHours(12, 0, 0, 0);
+    return Array.from({ length: 3 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      return formatDateKey(date);
+    });
+  }
+  if (range === "nextWeek") {
+    const start = new Date(`${currentWeekStartKey()}T12:00:00`);
+    start.setDate(start.getDate() + 7);
+    return dateKeysForWeek(formatDateKey(start)).map(({ dateKey }) => dateKey);
+  }
   if (range === "month") {
     const start = new Date(visibleMonth);
     start.setDate(1);

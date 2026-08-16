@@ -738,18 +738,20 @@ export function createScheduleUi({
     $("#copyWeekForward").addEventListener("click", async () => {
       const result = copyCurrentWeekToNextWeek();
       if (!result.copiedCount) {
-        setScheduleStatus(
-          result.skippedCount ? t("weekCopyAlreadyPlanned") : t("weekCopyNothingPlanned")
-        );
+        if (!result.skippedCount) {
+          setScheduleStatus(t("weekCopyNothingPlanned"));
+          return;
+        }
+        await navigateWeek(1);
+        setScheduleStatus(t("weekCopyAlreadyPlanned"));
         return;
       }
 
-      render();
+      await navigateWeek(1);
       setScheduleStatus(
         t(result.skippedCount ? "weekCopiedToNextWithSkips" : "weekCopiedToNext")
           .replace("{count}", result.copiedCount)
       );
-      await saveSharedState();
     });
 
     $("#resetWeek").addEventListener("click", async () => {

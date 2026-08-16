@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=72" />
+    <link rel="stylesheet" href="styles.css?v=73" />
   </head>
   <body class="household-locked" data-view="today">
     <section class="household-gate" id="householdGate" aria-labelledby="householdGateHeading">
@@ -474,6 +474,8 @@
                 </div>
                 <select id="groceryPlanRange" aria-label="Meal-plan range" data-i18n-aria-label="groceryPlanRangeLabel">
                   <option value="week" data-i18n="groceryRangeWeek">This week</option>
+                  <option value="next3" data-i18n="groceryRangeNext3">Next 3 days</option>
+                  <option value="nextWeek" data-i18n="groceryRangeNextWeek">Next week</option>
                   <option value="next14" data-i18n="groceryRangeNext14">Next 14 days</option>
                   <option value="month" data-i18n="groceryRangeMonth">This month</option>
                 </select>
@@ -881,6 +883,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=111"></script>
+    <script type="module" src="app.js?v=113"></script>
   </body>
 </html>

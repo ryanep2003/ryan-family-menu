@@ -70,7 +70,7 @@ function calendarDates() {
   });
 }
 
-function harness({ periods = mealPeriods, leftovers = [] } = {}) {
+function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedCount: 1, skippedCount: 0 } } = {}) {
   const elements = {
     "#scheduleGrid": element(),
     "#weekDateEditor": element(),
@@ -242,6 +242,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     recipeById: (id) => recipes.find((recipe) => recipe.id === id),
     allRecipes: () => recipes,
     availableLeftoversForDate: () => leftovers,
+    copyCurrentWeekToNextWeek: () => copyResult,
     openGroceriesForMeal: (dateKey, mealSlot) => {
       state.groceryTargets.push([dateKey, mealSlot]);
     },
@@ -531,4 +532,11 @@ test("week navigation exposes previous, current, and next week actions", async (
 
   assert.deepEqual(state.weekNavigation, [-1, 1]);
   assert.equal(state.currentWeekCalls, 1);
+});
+
+test("plan next week opens the destination week after copying", async () => {
+  const { elements, state, ui } = harness({ copyResult: { copiedCount: 2, skippedCount: 0 } });
+  ui.bindScheduleControls();
+  await elements["#copyWeekForward"].dispatch("click");
+  assert.deepEqual(state.weekNavigation, [1]);
 });

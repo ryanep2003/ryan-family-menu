@@ -2785,6 +2785,10 @@ h3 {
   margin-bottom: 14px;
 }
 
+.schedule-editor-heading > div {
+  min-width: 0;
+}
+
 .meal-save-button {
   flex: 0 0 auto;
 }
@@ -5015,6 +5019,16 @@ li {
 
   .primary-action,
   .ghost-button {
+    width: 100%;
+  }
+
+  .schedule-editor-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .schedule-editor-heading .meal-save-button {
     width: 100%;
   }
 
