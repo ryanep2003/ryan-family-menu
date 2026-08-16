@@ -2312,6 +2312,8 @@ h3 {
 }
 
 .file-picker-button {
+  appearance: none;
+  font: inherit;
   display: inline-flex;
   align-items: center;
   justify-content: center;

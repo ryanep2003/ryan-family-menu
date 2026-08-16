@@ -181,10 +181,12 @@ function setupLocalizedFileInputs() {
     container.className = "localized-file-input";
     input.insertAdjacentElement("beforebegin", container);
     container.appendChild(input);
-    const button = document.createElement("span");
+    const button = document.createElement("button");
+    button.type = "button";
     button.className = "file-picker-button";
     button.dataset.i18n = input.dataset.fileAction;
     button.textContent = t(input.dataset.fileAction);
+    button.addEventListener("click", () => input.click());
     input.insertAdjacentElement("afterend", button);
     if (input.dataset.fileStatus !== "false") {
       const status = document.createElement("small");

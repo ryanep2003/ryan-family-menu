@@ -124,7 +124,9 @@ export function createReceiptUi({
 
     $("#receiptScanForm").addEventListener("submit", async (event) => {
       event.preventDefault();
-      const files = $("#receiptScanPhotoInput").files;
+      const photoInput = $("#receiptScanPhotoInput");
+      const cameraInput = $("#receiptScanCameraInput");
+      const files = [...(photoInput?.files || []), ...(cameraInput?.files || [])];
       if (!files.length) return;
 
       const submitButton = $("#receiptScanForm .primary-action");
@@ -148,8 +150,9 @@ export function createReceiptUi({
             matchText: match?.text || "",
           };
         }));
-        $("#receiptScanPhotoInput").value = "";
-        updateFileInputStatus($("#receiptScanPhotoInput"));
+        if (photoInput) photoInput.value = "";
+        if (cameraInput) cameraInput.value = "";
+        updateFileInputStatus(photoInput);
         renderReceiptSuggestions();
         if (getReceiptSuggestions().length) clearGroceryStatus();
         else setGroceryStatus("receiptScanEmpty");

@@ -79,7 +79,7 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*html\s*\{[\s\S]*scroll-padding-bottom: calc\(120px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(120px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=70/);
+  assert.match(html, /styles\.css\?v=71/);
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
@@ -136,7 +136,9 @@ test("task attribution accepts members from any household", () => {
 
 test("file inputs use localized picker controls", () => {
   assert.match(html, /id="receiptScanPhotoInput"[^>]*data-file-action="choosePhotos"/);
+  assert.match(html, /id="receiptScanCameraInput"[^>]*capture="environment"[^>]*data-file-action="takePhoto"/);
   assert.match(html, /id="photoCameraInput"[^>]*data-file-action="takePhoto"/);
   assert.match(app, /function setupLocalizedFileInputs\(\)/);
+  assert.match(app, /button\.addEventListener\("click", \(\) => input\.click\(\)\)/);
   assert.match(styles, /\.localized-file-input input\[type="file"\]/);
 });
