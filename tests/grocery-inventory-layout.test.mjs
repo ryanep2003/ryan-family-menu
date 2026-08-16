@@ -79,13 +79,15 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*html\s*\{[\s\S]*scroll-padding-bottom: calc\(144px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(144px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=74/);
+  assert.match(html, /styles\.css\?v=75/);
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
   assert.match(html, /id="copyWeekForward"/);
   assert.match(styles, /\.schedule-editor\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles, /\.recipe-detail\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
+  assert.match(styles, /\.recipe-card > :not\(img, \.favorite-pill\)\s*\{[\s\S]*min-width: 0;[\s\S]*max-width: 100%/);
+  assert.match(styles, /\.recipe-card h3\s*\{[\s\S]*overflow-wrap: anywhere/);
 });
 
 test("meal-linked grocery controls collapse safely on mobile", () => {

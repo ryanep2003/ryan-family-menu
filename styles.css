@@ -5480,10 +5480,13 @@ li {
   .recipe-card > :not(img, .favorite-pill) {
     grid-column: 2;
     justify-self: start;
+    min-width: 0;
+    max-width: 100%;
   }
 
   .recipe-card h3 {
     font-size: 1.1rem;
+    overflow-wrap: anywhere;
   }
 
   .recipe-card p:last-child {
