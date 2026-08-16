@@ -81,3 +81,23 @@ This is a lightweight record of architectural and product decisions that future 
 **Alternatives considered:** Automatically translating the full library, translating a fixed background batch, and removing AI translation entirely.
 
 **Consequences:** One translation action produces at most one provider call and one shared-state save. Original recipe content remains readable as a fallback, existing translations are preserved, and safety actions remain locked when a required warning is untranslated.
+
+## 2026-08-16 — The shopping list is authoritative at the store
+
+**Decision:** Treat home inventory as advice, not as permission to silently reduce or hide planned groceries. A possible match stays active until a shopper explicitly chooses **Keep on list** or **Have enough**.
+
+**Reason:** Inventory can become stale between household updates. Automatically checking off a partial or old match can make a family underbuy while they are already at the store.
+
+**Alternatives considered:** Automatically subtracting structured inventory quantities, continuing to hide all name matches, and requiring inventory cleanup before shopping.
+
+**Consequences:** New grocery rows store additive suggestion and decision fields. Legacy auto-hidden matches safely return for review. The full recipe quantity remains visible until a person confirms coverage, and no production-data rewrite is required.
+
+## 2026-08-16 — Shopping trips end with one explicit finish step
+
+**Decision:** Organize grocery use as prepare the list, check purchases at the store, then finish the trip. Receipt photo capture and manual receipt totals live in that final step; a receipt is helpful but optional.
+
+**Reason:** Receipt capture was buried in list utilities and purchased items could move home without a clear end-of-trip moment. Families need one understandable bridge between the shopping list, home inventory, and grocery budget.
+
+**Alternatives considered:** Keeping receipt upload in a tools menu, requiring a receipt for every trip, and automatically moving every unchecked list item into inventory.
+
+**Consequences:** Checked rows are the authoritative purchased set when no detailed receipt is available. Receipt recognition may match additional items. Finishing removes purchased rows, updates home inventory, and records a receipt total when supplied without introducing a new persisted schema.

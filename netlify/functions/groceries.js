@@ -25,6 +25,10 @@ export function cleanItem(item) {
     recipeId: `${item.recipeId || ""}`.trim().slice(0, 160),
     recipeName: cleanLocalizedText(item.recipeName, 160),
     inInventory: Boolean(item.inInventory),
+    inventorySuggested: Boolean(item.inventorySuggested),
+    inventoryDecision: ["review", "need", "have"].includes(item.inventoryDecision)
+      ? item.inventoryDecision
+      : "",
     createdAt: item.createdAt || new Date().toISOString(),
     updatedAt: item.updatedAt || item.createdAt || new Date().toISOString(),
     updatedBy: cleanHouseholdMember(item.updatedBy),

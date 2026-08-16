@@ -133,6 +133,8 @@ export function groceryItem(text, {
   plannedQuantities = {},
   ingredientRemainders = {},
   plannedUnits = {},
+  inventorySuggested = false,
+  inventoryDecision = "",
 } = {}) {
   const timestamp = new Date().toISOString();
   return {
@@ -140,12 +142,14 @@ export function groceryItem(text, {
     text: typeof text === "string"
       ? updateLocalizedText("", cleanIngredientForGrocery(text), lang)
       : text,
-    checked: Boolean(inventoryItem),
+    checked: inventoryDecision === "have",
     store,
     source,
     recipeId,
     recipeName: typeof recipeName === "string" ? localizedTextMap(recipeName) : recipeName,
-    inInventory: Boolean(inventoryItem),
+    inInventory: inventoryDecision === "have",
+    inventorySuggested: Boolean(inventoryItem || inventorySuggested),
+    ...(inventoryDecision ? { inventoryDecision } : (inventoryItem ? { inventoryDecision: "review" } : {})),
     createdAt: timestamp,
     updatedAt: timestamp,
     mealUses: mergeMealUses(mealUses),
@@ -182,6 +186,8 @@ export function mergeGroceries(existing, incoming) {
         ingredientRemainders: item.ingredientRemainders,
         plannedUnits: item.plannedUnits,
         inInventory: existingItem.inInventory || item.inInventory,
+        inventorySuggested: existingItem.inventorySuggested || item.inventorySuggested,
+        inventoryDecision: existingItem.inventoryDecision || item.inventoryDecision,
         checked: existingItem.checked || item.checked,
         mealUses,
       });
@@ -213,27 +219,31 @@ export function applyInventoryCoverage(items, inventory) {
   return items.map((item) => {
     if (!Object.keys(item.plannedQuantities || {}).length) return item;
     const inventoryItem = inventoryMatchFor(inventory, item.ingredientRemainders || item.text);
-    if (!inventoryItem) return { ...item, inInventory: false };
+    if (!inventoryItem) return {
+      ...item,
+      inInventory: false,
+      inventorySuggested: false,
+      inventoryDecision: item.inventoryDecision === "have" ? "need" : item.inventoryDecision,
+      checked: item.inventoryDecision === "have" ? false : item.checked,
+    };
     const remainingQuantities = {};
-    const text = { ...(typeof item.text === "object" ? item.text : localizedTextMap(item.text)) };
     for (const lang of ["en", "es"]) {
       const needed = Number(item.plannedQuantities?.[lang] || 0);
       if (!(needed > 0)) continue;
       const compatible = normalizedUnit(item.plannedUnits?.[lang]) === normalizedUnit(inventoryItem.unit || "each");
       const remaining = compatible ? Math.max(0, needed - (Number(inventoryItem.amount) || 0)) : needed;
       remainingQuantities[lang] = remaining;
-      if (remaining > 0 && item.ingredientRemainders?.[lang]) {
-        text[lang] = `${formatIngredientAmount(remaining)} ${item.ingredientRemainders[lang]}`;
-      }
     }
-    const covered = Object.values(remainingQuantities).length > 0
-      && Object.values(remainingQuantities).every((amount) => amount <= 0);
+    const explicitDecision = ["review", "need", "have"].includes(item.inventoryDecision)
+      ? item.inventoryDecision
+      : "review";
     return {
       ...item,
-      text,
       remainingQuantities,
-      inInventory: true,
-      checked: covered || item.checked,
+      inventorySuggested: true,
+      inventoryDecision: explicitDecision,
+      inInventory: explicitDecision === "have",
+      checked: explicitDecision === "have" ? true : Boolean(item.checked && !item.inInventory),
     };
   });
 }

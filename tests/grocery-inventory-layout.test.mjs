@@ -14,6 +14,19 @@ test("grocery list appears before occasional list tools", () => {
   );
 });
 
+test("shopping completion keeps receipt capture at the end of the trip", () => {
+  const finishPanel = html.indexOf('id="finishShoppingPanel"');
+  const groceryList = html.indexOf('id="groceryList"');
+  const listTools = html.indexOf('class="grocery-tools-menu"');
+  assert.ok(finishPanel > -1 && finishPanel < groceryList);
+  assert.ok(groceryList < listTools);
+  assert.match(html, /id="scanReceiptToggle"[^>]*data-i18n="addReceiptPhoto"/);
+  assert.match(html, /id="manualReceiptForm"[\s\S]*id="manualReceiptTotal"[\s\S]*data-i18n="saveReceiptAndFinish"/);
+  assert.doesNotMatch(html, /class="grocery-tools-menu"[\s\S]*id="scanReceiptToggle"/);
+  assert.match(app, /#finishWithoutReceipt[\s\S]*movePurchasedItemsHome\(\)/);
+  assert.match(styles, /\.view\.active\s*\{[\s\S]*animation: view-arrival[^;]*backwards;/);
+});
+
 test("inventory maintenance uses one progressive disclosure", () => {
   assert.match(html, /class="inventory-tools-menu"/);
   assert.match(html, /data-i18n="inventoryManageShort"/);
@@ -58,7 +71,7 @@ test("mobile navigation keeps recipe creation inside Recipes", () => {
 test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*html\s*\{[\s\S]*scroll-padding-bottom: calc\(120px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(120px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=63/);
+  assert.match(html, /styles\.css\?v=68/);
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);

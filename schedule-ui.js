@@ -78,10 +78,16 @@ export function createScheduleUi({
       .includes(normalizedQuery));
   }
 
-  function recipeOptions(query = "") {
-    return matchingRecipes(query)
-      .map((recipe) => `<option value="${escapeHtml(recipe.id)}">${escapeHtml(localize(recipe.name))}</option>`)
-      .join("");
+  function recipeResults(query, context, period) {
+    if (!`${query || ""}`.trim()) return "";
+    return matchingRecipes(query).slice(0, 8).map((recipe) => {
+      const category = categoryFor(recipe);
+      const role = mealRoles.find((item) => item.key === category) || mealRoles.find((item) => item.key === "other");
+      return `<button type="button" data-add-meal-result="${escapeHtml(context)}" data-period="${escapeHtml(period)}" data-recipe-id="${escapeHtml(recipe.id)}">
+        <strong>${escapeHtml(localize(recipe.name))}</strong>
+        <span>${escapeHtml(t(role?.label || "roleOther"))}</span>
+      </button>`;
+    }).join("");
   }
 
   function roleOptions(selected = "main") {
@@ -134,18 +140,8 @@ export function createScheduleUi({
               <span>${t("findRecipe")}</span>
               <input id="${controlId}-search" type="search" inputmode="search" autocomplete="off" data-meal-item-search="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}" placeholder="${escapeHtml(t("searchRecipes"))}" />
             </label>
-            <label>
-              <span>${t("recipeLabel")}</span>
-              <select data-add-meal-recipe="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}">
-                <option value="">${t("chooseRecipe")}</option>
-                ${recipeOptions()}
-              </select>
-            </label>
-            <label>
-              <span>${t("mealItemRole")}</span>
-              <select data-add-meal-role="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}">${roleOptions("main")}</select>
-            </label>
-            <button class="primary-action compact-button" type="button" data-add-meal-item="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}" disabled>${t("addToMealButton")}</button>
+            <small class="meal-search-hint">${t("tapRecipeToAdd")}</small>
+            <div class="meal-recipe-results" data-meal-recipe-results="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}"></div>
             <small class="meal-search-empty" data-meal-item-empty="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}" hidden>${t("noRecipeMatches")}</small>
           </div>
         </details>
@@ -309,40 +305,38 @@ export function createScheduleUi({
       search.addEventListener("input", () => {
         const context = search.dataset.mealItemSearch;
         const period = search.dataset.period;
-        const select = $$(`[data-add-meal-recipe^="${contextType}:"]`).find((control) => (
-          control.dataset.addMealRecipe === context && control.dataset.period === period
+        const results = $$(`[data-meal-recipe-results^="${contextType}:"]`).find((control) => (
+          control.dataset.mealRecipeResults === context && control.dataset.period === period
         ));
-        if (!select) return;
         const matches = matchingRecipes(search.value);
-        select.innerHTML = `<option value="">${t("chooseRecipe")}</option>${recipeOptions(search.value)}`;
-        select.value = "";
-        const addButton = $$(`[data-add-meal-item^="${contextType}:"]`).find((item) => (
-          item.dataset.addMealItem === context && item.dataset.period === period
-        ));
-        if (addButton) addButton.disabled = true;
+        if (results) results.innerHTML = recipeResults(search.value, context, period);
         const empty = $$(`[data-meal-item-empty^="${contextType}:"]`).find((item) => (
           item.dataset.mealItemEmpty === context && item.dataset.period === period
         ));
-        if (empty) empty.hidden = matches.length > 0;
+        if (empty) empty.hidden = !search.value.trim() || matches.length > 0;
       });
     });
 
-    $$(`[data-add-meal-recipe^="${contextType}:"]`).forEach((select) => {
-      select.addEventListener("change", () => {
-        const context = select.dataset.addMealRecipe;
-        const period = select.dataset.period;
-        const addButton = $$(`[data-add-meal-item^="${contextType}:"]`).find((item) => (
-          item.dataset.addMealItem === context && item.dataset.period === period
-        ));
-        const role = $$(`[data-add-meal-role^="${contextType}:"]`).find((item) => (
-          item.dataset.addMealRole === context && item.dataset.period === period
-        ));
-        const recipe = select.value ? recipeById(select.value) : null;
-        if (recipe && role) {
-          const category = categoryFor(recipe);
-          role.value = mealRoles.some((item) => item.key === category) ? category : "other";
-        }
-        if (addButton) addButton.disabled = !select.value;
+    $$(`[data-meal-recipe-results^="${contextType}:"]`).forEach((results) => {
+      results.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-add-meal-result]");
+        if (!button) return;
+        const context = button.dataset.addMealResult;
+        const period = button.dataset.period;
+        const recipe = recipeById(button.dataset.recipeId);
+        if (!recipe) return;
+        const category = categoryFor(recipe);
+        const role = mealRoles.some((item) => item.key === category) ? category : "other";
+        const key = context.split(":")[1];
+        const target = normalizeMealPlan(calendarMealForDateKey(key));
+        target.items = [...target.items, {
+          id: `meal-item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          period,
+          role,
+          sourceType: "recipe",
+          recipeId: recipe.id,
+        }];
+        await persistMealTarget(context, target);
       });
     });
 
@@ -354,30 +348,6 @@ export function createScheduleUi({
           item.dataset.addLeftoverItem === context && item.dataset.period === period
         ));
         if (addButton) addButton.disabled = !select.value;
-      });
-    });
-
-    $$(`[data-add-meal-item^="${contextType}:"]`).forEach((button) => {
-      button.addEventListener("click", async () => {
-        const context = button.dataset.addMealItem;
-        const period = button.dataset.period;
-        const recipeSelect = $$(`[data-add-meal-recipe^="${contextType}:"]`).find((item) => (
-          item.dataset.addMealRecipe === context && item.dataset.period === period
-        ));
-        const roleSelect = $$(`[data-add-meal-role^="${contextType}:"]`).find((item) => (
-          item.dataset.addMealRole === context && item.dataset.period === period
-        ));
-        if (!recipeSelect?.value) return;
-        const key = context.split(":")[1];
-        const target = normalizeMealPlan(calendarMealForDateKey(key));
-        target.items = [...target.items, {
-          id: `meal-item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          period,
-          role: roleSelect?.value || "other",
-          sourceType: "recipe",
-          recipeId: recipeSelect.value,
-        }];
-        await persistMealTarget(context, target);
       });
     });
 

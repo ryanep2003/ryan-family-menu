@@ -30,6 +30,8 @@ export function createReceiptUi({
   setInventory,
   getGroceries,
   setGroceries,
+  finishPurchasedItems = () => 0,
+  onTripFinished = () => {},
 }) {
   function renderReceiptSuggestions() {
     const panel = $("#receiptSuggestions");
@@ -73,7 +75,9 @@ export function createReceiptUi({
         .map((checkbox) => getReceiptSuggestions()[Number(checkbox.dataset.receiptSuggestion)])
         .filter(Boolean);
 
-      if (!selected.length) return;
+      const pendingReceipt = getPendingReceipt();
+      const receiptTotal = Number($("#receiptTotalInput")?.value || pendingReceipt?.total || 0);
+      if (!selected.length && !(receiptTotal > 0)) return;
 
       const matchedIds = new Set(selected.map((item) => item.matchId).filter(Boolean));
       setInventory(mergeInventory(getInventory(), selected.map((item) => inventoryItem(
@@ -86,14 +90,14 @@ export function createReceiptUi({
         getHouseholdMember()
       ))));
       setGroceries(getGroceries().filter((item) => !matchedIds.has(item.id)));
-      const pendingReceipt = getPendingReceipt();
-      if (pendingReceipt && Number($("#receiptTotalInput")?.value || pendingReceipt.total) > 0) {
+      const additionalPurchased = finishPurchasedItems();
+      if (pendingReceipt && receiptTotal > 0) {
         await addReceipt({
           ...pendingReceipt,
           store: $("#receiptStoreInput")?.value || pendingReceipt.store,
           date: $("#receiptDateInput")?.value || pendingReceipt.date,
-          total: Number($("#receiptTotalInput")?.value || pendingReceipt.total),
-          itemCount: selected.length,
+          total: receiptTotal,
+          itemCount: selected.length + additionalPurchased,
         });
       }
       setReceiptSuggestions([]);
@@ -102,16 +106,20 @@ export function createReceiptUi({
       renderReceiptSuggestions();
       renderGroceries();
       renderInventory();
+      bindGroceryControls();
       bindInventoryControls();
       await Promise.all([saveInventory(), saveGroceries()]);
+      onTripFinished();
     });
   }
 
   function bindReceiptControls() {
     $("#scanReceiptToggle").addEventListener("click", () => {
       $("#receiptScanPanel").hidden = !$("#receiptScanPanel").hidden;
-      const menu = $("#scanReceiptToggle").closest?.(".grocery-tools-menu");
-      if (menu) menu.open = false;
+      $("#scanReceiptToggle").setAttribute?.("aria-expanded", `${!$("#receiptScanPanel").hidden}`);
+      if (!$("#receiptScanPanel").hidden) {
+        $("#receiptScanPanel").scrollIntoView?.({ behavior: "smooth", block: "start" });
+      }
     });
 
     $("#receiptScanForm").addEventListener("submit", async (event) => {

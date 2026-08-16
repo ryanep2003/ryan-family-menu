@@ -123,11 +123,17 @@ Dinner history is separate from the main state so feedback can grow independentl
 
 ## Groceries
 
-A grocery item includes localized text, store, checked state, origin, recipe metadata, inventory coverage, attribution, and structured planned quantities/units.
+A grocery item includes localized text, store, checked state, origin, recipe metadata, inventory guidance, attribution, and structured planned quantities/units.
+
+Inventory guidance is deliberately explicit. `inventorySuggested` records that a name match was found, while `inventoryDecision` is `review`, `need`, or `have`. A match does not reduce the displayed planned amount or mark an item complete until a shopper chooses **Have enough**. Older rows with `inInventory: true` and no decision are treated as `review`, so potentially stale inventory cannot remain silently hidden. `inInventory` remains the backward-compatible signal for an item explicitly confirmed as already covered.
 
 Generated items also retain `mealUses`: date, meal period, recipe, batches, and servings. This provenance makes regeneration idempotent and permits shared ingredients to aggregate without double-counting.
 
 Do not change `source`, `ingredientKey`, `mealUses`, or quantity semantics without regression tests for rebuilding a plan, changing servings, shared ingredients, legacy generated rows, and months with many meal uses.
+
+At the store, `checked` means the shopper says the item was purchased. Finishing a trip removes those checked rows and merges them into home inventory. A scanned receipt may match additional rows before completion. A manually entered receipt total has no line-item knowledge, so it only moves rows the shopper checked.
+
+Receipt summaries live in shared family state and include store, date, total, item count, and attribution. They drive monthly budget totals; they are not a second inventory or grocery-item ledger.
 
 ## Inventory
 
@@ -135,7 +141,7 @@ An inventory item includes localized text, optional freeform quantity, structure
 
 Locations: pantry, fridge, freezer, household. Stock states: full, some, low, out.
 
-Inventory coverage affects generated grocery quantities. Changes to matching or amount semantics can cause households to overbuy or underbuy.
+Inventory quantities provide shopping guidance but never silently reduce or remove a generated grocery amount. Changes to matching, review, or amount semantics can cause households to overbuy or underbuy.
 
 ## Recipes
 

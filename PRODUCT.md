@@ -24,7 +24,7 @@ The shipped product currently supports:
 - Intentional leftover recording and allocation to later meals.
 - A shared recipe library with bundled and household recipes, local drafts, editing, favorites, and hiding/deletion overlays.
 - Recipe creation from photos, public links, or manual entry.
-- A grocery list generated from meal plans, with shared-ingredient aggregation, inventory coverage, meal/date attribution, and per-meal filtering.
+- A grocery list generated from meal plans, with shared-ingredient aggregation, advisory inventory matches, meal/date attribution, and per-meal shopping.
 - Home inventory by location, stock level, quantity, and expiration.
 - Receipt capture and monthly grocery-budget tracking.
 - Family profiles, food preferences, household rules, quick dinner feedback, dinner history, and deterministic recommendation ranking.
@@ -38,11 +38,11 @@ The product does not currently provide individual user accounts, verified identi
 1. **Open a household:** create an invited household or enter the private family key on a new device.
 2. **Plan food:** choose meals for a week or specific month date, compose each meal, adjust eaters, and estimate leftovers.
 3. **Prepare and hand off:** use Today to see what is planned, what should be used soon, and who is helping.
-4. **Shop:** build the grocery list from the plan, add manual items, account for inventory, and move purchased items home.
+4. **Shop:** open a planned meal directly in the grocery list, review possible inventory matches, check items while shopping, then finish the trip with an optional receipt so purchases move home and spending stays current.
 5. **Manage food at home:** track location, amount, stock, and expiration; scan photos for suggested items.
 6. **Manage recipes:** browse, search, favorite, import, scan, edit, draft, and publish household recipes.
 7. **Learn from dinner:** record a two-second outcome, optional individual reactions, and leftovers so later suggestions can improve.
-8. **Track spending:** scan or record receipt totals and compare monthly grocery spending with the household target.
+8. **Track spending:** add a receipt photo or enter the total when finishing a shopping trip, then compare monthly grocery spending with the household target.
 
 ## Product Terminology
 

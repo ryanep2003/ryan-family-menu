@@ -16,10 +16,18 @@ function escapeHtml(value) {
 
 function element() {
   const listeners = new Map();
+  const classes = new Set();
   return {
     hidden: false,
     innerHTML: "",
     textContent: "",
+    classList: {
+      contains: (name) => classes.has(name),
+      toggle(name, force) {
+        if (force) classes.add(name);
+        else classes.delete(name);
+      },
+    },
     addEventListener(type, listener) {
       listeners.set(type, listener);
     },
@@ -40,6 +48,9 @@ function harness(overrides = {}) {
     "#groceryMealFilterPanel": element({ hidden: true }),
     "#groceryMealFilter": element(),
     "#restockPurchased": element(),
+    "#finishShoppingPrompt": element(),
+    body: element(),
+    "#shoppingListSetup": element(),
   };
   const state = {
     lang: "es",
@@ -97,6 +108,8 @@ function harness(overrides = {}) {
       lunchSlot: "Almuerzo",
       dinnerSlot: "Cena",
       movePurchasedHome: "Move purchased home",
+      finishShopping: "Finish shopping",
+      finishShoppingCount: "Finish shopping ({count})",
       checkSection: "Check section",
       deleteSection: "Delete section",
       alreadyHave: "Already have",
@@ -109,6 +122,12 @@ function harness(overrides = {}) {
       addOnsSection: "Add-ons",
       manualSource: "Manual",
       alreadyAtHomeLabel: "At home",
+      possibleAtHomeLabel: "Possible match at home",
+      inventoryUpdatedOneDay: "updated 1 day ago",
+      inventoryUpdatedDays: "updated {count} days ago",
+      reviewInventoryMatch: "Review inventory match",
+      keepOnList: "Keep on list",
+      haveEnough: "Have enough",
       onShoppingList: "On shopping list",
       translationPendingShort: "Translation pending",
     }[key] || key),
@@ -174,6 +193,32 @@ test("grocery items without the active language show a pending state", () => {
 
   assert.match(elements["#groceryList"].innerHTML, /Translation pending/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, />milk</);
+});
+
+test("shopping list reveals the end-of-trip action after an item is checked", () => {
+  const { elements, state, ui } = harness();
+
+  ui.renderGroceries();
+  assert.equal(elements["#finishShoppingPrompt"].hidden, true);
+  assert.equal(elements["#restockPurchased"].textContent, "Finish shopping");
+
+  state.groceries[0].checked = true;
+  ui.renderGroceries();
+  assert.equal(elements["#finishShoppingPrompt"].hidden, false);
+  assert.equal(elements["#restockPurchased"].textContent, "Finish shopping (1)");
+});
+
+test("receipt matching prefers a checked purchase over an unchecked duplicate", () => {
+  const { ui } = harness({
+    state: {
+      groceries: [
+        { id: "unchecked", text: "lemons", checked: false, source: "manual", store: "any" },
+        { id: "checked", text: "lemons", checked: true, source: "manual", store: "any" },
+      ],
+    },
+  });
+
+  assert.equal(ui.shoppingMatchForReceiptItem("lemons")?.id, "checked");
 });
 
 test("renderGroceries explains the meals, servings, and batches behind generated items", () => {
@@ -331,6 +376,70 @@ test("check section marks every item in that grocery section", async () => {
 
   assert.equal(state.groceries.every((item) => item.checked), true);
   assert.equal(state.saveCalls, 1);
+});
+
+test("legacy inventory matches return to the active list for an explicit decision", async () => {
+  const { elements, state, ui } = harness({
+    state: {
+      lang: "en",
+      groceries: [{
+        id: "legacy-match",
+        text: { en: "4 lemons" },
+        checked: true,
+        inInventory: true,
+        source: "manual",
+        store: "any",
+      }],
+      inventory: [{ text: { en: "lemons" }, quantity: { en: "2 lemons" }, stockState: "some" }],
+    },
+  });
+
+  ui.renderGroceries();
+  assert.match(elements["#groceryList"].innerHTML, /Possible match at home/);
+  assert.match(elements["#groceryList"].innerHTML, /Keep on list/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /type="checkbox"[^>]*checked/);
+  assert.equal(ui.purchasedGroceries().length, 0);
+
+  await elements["#groceryList"].dispatch("click", {
+    closest(selector) {
+      return selector === "[data-inventory-need]"
+        ? { dataset: { inventoryNeed: "legacy-match" } }
+        : null;
+    },
+  });
+
+  assert.equal(state.groceries[0].inventoryDecision, "need");
+  assert.equal(state.groceries[0].inInventory, false);
+  assert.equal(state.groceries[0].checked, false);
+});
+
+test("a shopper can confirm an inventory match as already covered", async () => {
+  const { elements, state } = harness({
+    state: {
+      groceries: [{
+        id: "review-match",
+        text: { en: "rice", es: "arroz" },
+        checked: false,
+        inInventory: false,
+        inventorySuggested: true,
+        inventoryDecision: "review",
+        source: "manual",
+        store: "any",
+      }],
+    },
+  });
+
+  await elements["#groceryList"].dispatch("click", {
+    closest(selector) {
+      return selector === "[data-inventory-have]"
+        ? { dataset: { inventoryHave: "review-match" } }
+        : null;
+    },
+  });
+
+  assert.equal(state.groceries[0].inventoryDecision, "have");
+  assert.equal(state.groceries[0].inInventory, true);
+  assert.equal(state.groceries[0].checked, true);
 });
 
 test("renderGroceries escapes grocery ids in checkbox attributes", () => {

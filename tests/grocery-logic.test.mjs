@@ -31,7 +31,7 @@ test("inventoryMatchFor ignores low and out stock by default", () => {
   );
 });
 
-test("groceryItemsFromRecipe tags items already at home and keeps recipe context", () => {
+test("groceryItemsFromRecipe flags possible inventory matches without hiding them", () => {
   const recipe = {
     id: "lemon-chicken",
     name: { en: "Lemon Chicken", es: "Pollo al limon" },
@@ -47,8 +47,10 @@ test("groceryItemsFromRecipe tags items already at home and keeps recipe context
   assert.equal(items.length, 2);
   assert.equal(items[0].recipeId, "lemon-chicken");
   assert.deepEqual(items[0].recipeName, { en: "Lemon Chicken", es: "Pollo al limon" });
-  assert.equal(items[0].inInventory, true);
-  assert.equal(items[0].checked, true);
+  assert.equal(items[0].inInventory, false);
+  assert.equal(items[0].inventorySuggested, true);
+  assert.equal(items[0].inventoryDecision, "review");
+  assert.equal(items[0].checked, false);
   assert.deepEqual(items[0].text, { en: "4 lemons", es: "4 limones" });
   assert.equal(items[1].inInventory, false);
 });
@@ -191,7 +193,7 @@ test("rebuilding a month remains idempotent beyond twelve shared uses", () => {
   assert.equal(second[0].plannedQuantities.en, 14);
 });
 
-test("structured inventory subtracts from the total planned grocery amount", () => {
+test("structured inventory stays advisory until the shopper confirms it", () => {
   const recipe = { id: "lemonade", name: { en: "Lemonade" }, ingredients: { en: ["4 lemons"] } };
   const [planned] = groceryItemsFromRecipe(recipe, "en", [], "Family", {
     dateKey: "2026-08-13", mealSlot: "dinner", recipeId: recipe.id, recipeName: recipe.name,
@@ -201,14 +203,17 @@ test("structured inventory subtracts from the total planned grocery amount", () 
   }]);
 
   assert.equal(partial.checked, false);
-  assert.equal(partial.inInventory, true);
+  assert.equal(partial.inInventory, false);
+  assert.equal(partial.inventorySuggested, true);
+  assert.equal(partial.inventoryDecision, "review");
   assert.equal(partial.remainingQuantities.en, 2);
-  assert.deepEqual(partial.text, { en: "2 lemons" });
+  assert.deepEqual(partial.text, { en: "4 lemons" });
 
   const [covered] = applyInventoryCoverage([planned], [{
     text: { en: "lemons" }, stockState: "full", amount: 4, unit: "each",
   }]);
-  assert.equal(covered.checked, true);
+  assert.equal(covered.checked, false);
+  assert.equal(covered.inventoryDecision, "review");
   assert.equal(covered.remainingQuantities.en, 0);
 });
 

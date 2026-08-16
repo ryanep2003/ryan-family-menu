@@ -2063,7 +2063,7 @@ h3 {
 
 .view.active {
   display: block;
-  animation: view-arrival 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: view-arrival 260ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
 .section-heading {
@@ -2611,7 +2611,7 @@ h3 {
 
 .meal-item-adder-fields {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(180px, 1.2fr) minmax(110px, 0.65fr) auto;
+  grid-template-columns: 1fr;
   align-items: end;
   gap: 8px;
   padding: 10px;
@@ -2622,6 +2622,41 @@ h3 {
 
 .meal-item-adder-fields .meal-search-empty {
   grid-column: 1 / -1;
+}
+
+.meal-search-hint {
+  color: var(--muted);
+}
+
+.meal-recipe-results {
+  display: grid;
+  gap: 6px;
+}
+
+.meal-recipe-results button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+}
+
+.meal-recipe-results button:active {
+  border-color: var(--tomato);
+  background: var(--surface-attention);
+}
+
+.meal-recipe-results button span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .leftover-adder-fields {
@@ -2790,6 +2825,145 @@ h3 {
 .grocery-tools-menu {
   width: fit-content;
   margin: 14px 0 0 auto;
+}
+
+.finish-shopping-prompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 12px 0 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-success);
+  border-radius: 10px;
+  background: var(--surface-success);
+}
+
+.finish-shopping-prompt[hidden],
+.finish-shopping-panel[hidden] {
+  display: none;
+}
+
+.finish-shopping-prompt > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.finish-shopping-prompt strong {
+  color: var(--sage-dark);
+  font-size: 1rem;
+}
+
+.finish-shopping-prompt span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.finish-shopping-prompt .primary-action {
+  flex: 0 0 auto;
+}
+
+.finish-shopping-panel {
+  margin: 12px 0 18px;
+  padding: 18px;
+  border: 1px solid var(--line-success);
+  border-radius: 12px;
+  background: var(--surface-success);
+  scroll-margin-top: 16px;
+}
+
+.finish-shopping-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.finish-shopping-heading h3 {
+  max-width: 28ch;
+  margin: 3px 0 0;
+}
+
+.finish-shopping-panel > p {
+  max-width: 68ch;
+  margin: 10px 0 14px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.finish-shopping-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.finish-shopping-panel .receipt-scan-panel {
+  background: var(--surface);
+}
+
+.finish-shopping-panel .receipt-scan-panel[hidden] {
+  display: none;
+}
+
+.manual-receipt-entry {
+  margin-top: 12px;
+  border-top: 1px solid var(--line-success);
+  padding-top: 10px;
+}
+
+.manual-receipt-entry > summary {
+  min-height: 44px;
+  color: var(--tomato-dark);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.manual-receipt-entry form {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(145px, 180px) minmax(120px, 160px) auto;
+  align-items: end;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.manual-receipt-entry label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.manual-receipt-entry input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+}
+
+.shopping-list-setup {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.shopping-list-setup > summary {
+  min-height: 48px;
+  padding: 12px 14px;
+  color: var(--ink);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.shopping-list-setup-content {
+  padding: 0 12px 12px;
 }
 
 .inventory-tools-menu {
@@ -3430,10 +3604,14 @@ h3 {
   gap: 10px;
   min-height: 50px;
   padding: 9px 0;
+  border-top: 0;
+}
+
+.grocery-item-row {
   border-top: 1px solid var(--line-subtle);
 }
 
-.grocery-item:first-of-type {
+.grocery-item-row:first-of-type {
   border-top: 0;
 }
 
@@ -3480,6 +3658,21 @@ h3 {
   font-size: 0.76rem;
   font-weight: 850;
   text-transform: uppercase;
+}
+
+.inventory-review-actions {
+  display: flex;
+  gap: 8px;
+  padding: 0 0 10px 34px;
+}
+
+.inventory-review-actions button {
+  min-height: 40px;
+  padding: 7px 11px;
+}
+
+.grocery-list {
+  scroll-margin-top: 12px;
 }
 
 .checked-section .grocery-item strong,
@@ -4545,6 +4738,56 @@ li {
     padding-bottom: calc(120px + env(safe-area-inset-bottom));
   }
 
+  body.finish-shopping-visible:not(.finish-shopping-open) {
+    padding-bottom: calc(260px + env(safe-area-inset-bottom));
+  }
+
+  .finish-shopping-prompt {
+    position: fixed;
+    right: 12px;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    left: 12px;
+    z-index: 40;
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 12px;
+    box-shadow: 0 12px 30px rgba(61, 43, 27, 0.2);
+  }
+
+  .finish-shopping-prompt .primary-action {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .finish-shopping-panel {
+    padding: 16px;
+  }
+
+  .finish-shopping-heading,
+  .finish-shopping-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .finish-shopping-heading .text-button {
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .finish-shopping-heading > div {
+    grid-row: 2;
+  }
+
+  .finish-shopping-actions button,
+  .manual-receipt-entry .primary-action {
+    width: 100%;
+  }
+
+  .manual-receipt-entry form {
+    grid-template-columns: 1fr;
+  }
+
   h1 {
     font-size: 2rem;
   }
@@ -5392,5 +5635,20 @@ li {
 
   .calendar-weekdays span {
     padding: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .grocery-section {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .grocery-section-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .grocery-section-actions button {
+    width: 100%;
   }
 }

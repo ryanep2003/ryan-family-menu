@@ -175,16 +175,33 @@ export function createGroceryUi({
   }
 
   function shoppingMatchForReceiptItem(text) {
-    return getGroceries().find((item) =>
-      !item.inInventory && !item.checked && findInventoryMatch([{ text, stockState: "some" }], item.text)
-    ) || null;
+    const candidates = getGroceries().filter((item) => !isConfirmedAtHome(item));
+    return candidates.find((item) => item.checked
+      && findInventoryMatch([{ text, stockState: "some" }], item.text))
+      || candidates.find((item) => findInventoryMatch([{ text, stockState: "some" }], item.text))
+      || null;
   }
 
   function groceryAtHomeNote(item) {
-    if (item.inInventory) return "";
     const match = findInventoryMatch(getInventory(), item.text);
     if (!match) return "";
-    return `${t("alreadyAtHomeLabel")}: ${localizedTextExact(match.quantity, getLang()) || inventoryLocationLabel(match.location)}`;
+    const quantity = localizedTextExact(match.quantity, getLang())
+      || (Number(match.amount) > 0 ? `${match.amount} ${match.unit || ""}`.trim() : "");
+    const updated = new Date(match.updatedAt || match.createdAt || "");
+    const days = Number.isNaN(updated.getTime())
+      ? null
+      : Math.max(0, Math.floor((Date.now() - updated.getTime()) / 86400000));
+    const age = days === null ? "" : t(days === 1 ? "inventoryUpdatedOneDay" : "inventoryUpdatedDays").replace("{count}", days);
+    return [t("possibleAtHomeLabel"), quantity || inventoryLocationLabel(match.location), age].filter(Boolean).join(" · ");
+  }
+
+  function inventoryDecisionFor(item) {
+    if (["review", "need", "have"].includes(item.inventoryDecision)) return item.inventoryDecision;
+    return item.inInventory ? "review" : "";
+  }
+
+  function isConfirmedAtHome(item) {
+    return inventoryDecisionFor(item) === "have";
   }
 
   function inventoryShoppingNote(item) {
@@ -193,14 +210,29 @@ export function createGroceryUi({
   }
 
   function purchasedGroceries() {
-    return getGroceries().filter((item) => item.checked && !item.inInventory);
+    return getGroceries().filter((item) => item.checked
+      && inventoryDecisionFor(item) !== "review"
+      && !isConfirmedAtHome(item));
   }
 
   function renderPurchasedAction() {
     const button = $("#restockPurchased");
+    const prompt = $("#finishShoppingPrompt");
     const count = purchasedGroceries().length;
-    button.hidden = count === 0;
-    button.textContent = count ? `${t("movePurchasedHome")} (${count})` : t("movePurchasedHome");
+    const hasShoppingItems = getGroceries().some((item) => !isConfirmedAtHome(item));
+    if (button) {
+      button.hidden = !hasShoppingItems;
+      button.textContent = count
+        ? t("finishShoppingCount").replace("{count}", `${count}`)
+        : t("finishShopping");
+    }
+    const showPrompt = count > 0 && !Boolean($("body")?.classList?.contains?.("finish-shopping-open"));
+    if (prompt) prompt.hidden = !showPrompt;
+    $("body")?.classList?.toggle("finish-shopping-visible", showPrompt);
+    if (!hasShoppingItems) {
+      const panel = $("#finishShoppingPanel");
+      if (panel) panel.hidden = true;
+    }
   }
 
   function grocerySection(label, items, options = {}) {
@@ -226,19 +258,25 @@ export function createGroceryUi({
           const activity = formatItemActivity(item);
           const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
           return `
-            <label class="grocery-item">
-              <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" ${item.checked ? "checked" : ""} />
-              <span>
-                <strong${displayText === t("translationPendingShort") ? ` class="translation-placeholder"` : ""}>${escapeHtml(displayText)}</strong>
-                ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
-                ${mealUseNotes.length ? `<span class="meal-use-list" aria-label="${escapeHtml(t("groceryPlannedFor"))}">
-                  ${mealUseNotes.slice(0, 3).map((note) => `<em class="meal-use-note">${escapeHtml(note)}</em>`).join("")}
-                  ${mealUseNotes.length > 3 ? `<em class="meal-use-more">${escapeHtml(t("groceryMealUseMore").replace("{count}", `${mealUseNotes.length - 3}`))}</em>` : ""}
-                </span>` : ""}
-                ${activity ? `<em class="item-activity">${escapeHtml(activity)}</em>` : ""}
-              </span>
-              ${store ? `<small>${escapeHtml(store)}</small>` : ""}
-            </label>
+            <article class="grocery-item-row${inventoryDecisionFor(item) === "review" ? " inventory-review" : ""}">
+              <label class="grocery-item">
+                <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" ${item.checked && inventoryDecisionFor(item) !== "review" ? "checked" : ""} />
+                <span>
+                  <strong${displayText === t("translationPendingShort") ? ` class="translation-placeholder"` : ""}>${escapeHtml(displayText)}</strong>
+                  ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
+                  ${mealUseNotes.length ? `<span class="meal-use-list" aria-label="${escapeHtml(t("groceryPlannedFor"))}">
+                    ${mealUseNotes.slice(0, 3).map((note) => `<em class="meal-use-note">${escapeHtml(note)}</em>`).join("")}
+                    ${mealUseNotes.length > 3 ? `<em class="meal-use-more">${escapeHtml(t("groceryMealUseMore").replace("{count}", `${mealUseNotes.length - 3}`))}</em>` : ""}
+                  </span>` : ""}
+                  ${activity ? `<em class="item-activity">${escapeHtml(activity)}</em>` : ""}
+                </span>
+                ${store ? `<small>${escapeHtml(store)}</small>` : ""}
+              </label>
+              ${inventoryDecisionFor(item) === "review" ? `<div class="inventory-review-actions" aria-label="${escapeHtml(t("reviewInventoryMatch"))}">
+                <button class="ghost-button" type="button" data-inventory-need="${escapeHtml(item.id)}">${t("keepOnList")}</button>
+                <button class="text-button" type="button" data-inventory-have="${escapeHtml(item.id)}">${t("haveEnough")}</button>
+              </div>` : ""}
+            </article>
           `;
         }).join("")}
       </section>
@@ -250,12 +288,14 @@ export function createGroceryUi({
 
   function renderGroceries() {
     renderMealFilter();
+    const setup = $("#shoppingListSetup");
+    if (setup) setup.open = getGroceries().length === 0;
     const groceries = selectedMealFilter
       ? getGroceries().filter((item) => mealUsesFor(item).some((use) => mealFilterKey(use) === selectedMealFilter))
       : getGroceries();
-    const activeItems = groceries.filter((item) => !item.checked && !item.inInventory);
-    const inventoryItems = groceries.filter((item) => item.inInventory);
-    const checkedItems = groceries.filter((item) => item.checked && !item.inInventory);
+    const activeItems = groceries.filter((item) => inventoryDecisionFor(item) === "review" || (!item.checked && !isConfirmedAtHome(item)));
+    const inventoryItems = groceries.filter(isConfirmedAtHome);
+    const checkedItems = groceries.filter((item) => item.checked && inventoryDecisionFor(item) !== "review" && !isConfirmedAtHome(item));
     const sections = groupGroceriesBySource(activeItems);
 
     if (!groceries.length) {
@@ -289,6 +329,9 @@ export function createGroceryUi({
       const item = groceries.find((grocery) => grocery.id === checkbox.dataset.groceryId);
       if (!item) return;
       item.checked = checkbox.checked;
+      if (!checkbox.checked && isConfirmedAtHome(item)) item.inventoryDecision = "need";
+      if (checkbox.checked && item.inventorySuggested) item.inventoryDecision = "need";
+      item.inInventory = isConfirmedAtHome(item);
       touchItem(item);
       renderGroceries();
       await saveGroceries();
@@ -297,6 +340,22 @@ export function createGroceryUi({
     $("#groceryList").addEventListener("click", async (event) => {
       const checkButton = event.target.closest("[data-check-grocery-section]");
       const deleteButton = event.target.closest("[data-delete-grocery-section]");
+      const needButton = event.target.closest("[data-inventory-need]");
+      const haveButton = event.target.closest("[data-inventory-have]");
+
+      if (needButton || haveButton) {
+        event.preventDefault();
+        const id = needButton?.dataset.inventoryNeed || haveButton?.dataset.inventoryHave;
+        const item = getGroceries().find((entry) => entry.id === id);
+        if (!item) return;
+        item.inventoryDecision = haveButton ? "have" : "need";
+        item.inInventory = Boolean(haveButton);
+        item.checked = Boolean(haveButton);
+        touchItem(item);
+        renderGroceries();
+        await saveGroceries();
+        return;
+      }
 
       if (checkButton) {
         event.preventDefault();
@@ -304,6 +363,8 @@ export function createGroceryUi({
         getGroceries().forEach((item) => {
           if (ids.has(item.id)) {
             item.checked = true;
+            if (item.inventorySuggested) item.inventoryDecision = "need";
+            item.inInventory = false;
             touchItem(item);
           }
         });

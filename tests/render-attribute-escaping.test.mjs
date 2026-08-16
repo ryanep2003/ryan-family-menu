@@ -11,7 +11,7 @@ test("dashboard and schedule modules escape dynamic recipe attributes", async ()
   assert.match(dashboard, /data-plan-favorite="\$\{escapeHtml\(recipe\.id\)\}"/);
   assert.match(dashboard, /src="\$\{escapeHtml\(recipe\.photos\[0\]\)\}"/);
   assert.match(dashboard, /alt="\$\{escapeHtml\(localize\(recipe\.name\)\)\}"/);
-  assert.match(schedule, /value="\$\{escapeHtml\(recipe\.id\)\}"/);
+  assert.match(schedule, /data-recipe-id="\$\{escapeHtml\(recipe\.id\)\}"/);
   assert.match(schedule, /data-open="\$\{escapeHtml\(recipe\.id\)\}"/);
   assert.match(inventory, /src="\$\{escapeHtml\(item\.photos\[0\]\)\}"/);
   assert.match(inventory, /alt="\$\{escapeHtml\(localizedText\(item\.text, getLang\(\)\)\)\}"/);

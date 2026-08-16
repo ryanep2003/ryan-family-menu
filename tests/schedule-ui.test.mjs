@@ -29,8 +29,8 @@ function element(initial = {}) {
     addEventListener(type, listener) {
       listeners.set(type, listener);
     },
-    async dispatch(type) {
-      await listeners.get(type)?.();
+    async dispatch(type, target = this) {
+      await listeners.get(type)?.({ target });
     },
     scrollIntoView() {
       this.scrolled = true;
@@ -142,6 +142,9 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     dataset: { mealItemEmpty: "weekdate:2026-06-22", period: "dinner" },
     hidden: true,
   });
+  const weekRecipeResults = element({
+    dataset: { mealRecipeResults: "weekdate:2026-06-22", period: "dinner" },
+  });
   const weekAddButton = element({ dataset: { addMealItem: "weekdate:2026-06-22", period: "dinner" }, disabled: true });
   const weekRoleControl = element({ dataset: { addMealRole: "weekdate:2026-06-22", period: "dinner" }, value: "main" });
   const weekLeftoverSource = element({ dataset: { addLeftoverSource: "weekdate:2026-06-22", period: "lunch" }, value: "" });
@@ -186,6 +189,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
       if (selector === '[data-view-meal-groceries^="calendar:"]') return [];
       if (selector === '[data-meal-item-search^="weekdate:"]') return [weekRecipeSearch];
       if (selector === '[data-meal-item-empty^="weekdate:"]') return [weekRecipeSearchEmpty];
+      if (selector === '[data-meal-recipe-results^="weekdate:"]') return [weekRecipeResults];
       if (selector === '[data-add-meal-recipe^="weekdate:"]') return [weekRecipeControl];
       if (selector === '[data-add-meal-item^="weekdate:"]') return [weekAddButton];
       if (selector === '[data-add-meal-role^="weekdate:"]') return [weekRoleControl];
@@ -195,6 +199,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
       if (selector === '[data-add-leftover-item^="weekdate:"]') return [weekLeftoverAddButton];
       if (selector === '[data-meal-item-search^="calendar:"]') return [];
       if (selector === '[data-meal-item-empty^="calendar:"]') return [];
+      if (selector === '[data-meal-recipe-results^="calendar:"]') return [];
       if (selector === '[data-add-meal-recipe^="calendar:"]') return [];
       if (selector === '[data-add-meal-item^="calendar:"]') return [];
       if (selector === '[data-add-meal-role^="calendar:"]') return [];
@@ -272,6 +277,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     weekRecipeControl,
     weekRecipeSearch,
     weekRecipeSearchEmpty,
+    weekRecipeResults,
   };
 }
 
@@ -301,7 +307,7 @@ test("planned meal can open groceries filtered to its date and meal period", asy
 });
 
 test("one meal can hold a main, side, salad, and dessert", async () => {
-  const { state, ui, weekAddButton, weekRecipeControl, weekRoleControl } = harness();
+  const { state, ui, weekRecipeResults } = harness();
 
   ui.renderSchedule();
   for (const [recipeId, expectedRole] of [
@@ -309,11 +315,18 @@ test("one meal can hold a main, side, salad, and dessert", async () => {
     ["salad-recipe", "salad"],
     ["dessert-recipe", "dessert"],
   ]) {
-    weekRecipeControl.value = recipeId;
-    await weekRecipeControl.dispatch("change");
-    assert.equal(weekRoleControl.value, expectedRole);
-    assert.equal(weekAddButton.disabled, false);
-    await weekAddButton.dispatch("click");
+    await weekRecipeResults.dispatch("click", {
+      closest(selector) {
+        return selector === "[data-add-meal-result]" ? {
+          dataset: {
+            addMealResult: "weekdate:2026-06-22",
+            period: "dinner",
+            recipeId,
+          },
+        } : null;
+      },
+    });
+    assert.equal(state.schedule.mon.items.at(-1).role, expectedRole);
   }
 
   assert.deepEqual(state.schedule.mon.items.map(({ role, recipeId }) => [role, recipeId]), [
@@ -331,7 +344,7 @@ test("empty day keeps optional planning fields out of the first decision", () =>
   state.schedule.mon = { ...emptyMeal };
   ui.renderSchedule();
 
-  assert.match(elements["#weekDateEditor"].innerHTML, /data-add-meal-recipe="weekdate:2026-06-22"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-recipe-results="weekdate:2026-06-22"/);
   assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /meal-optional-fields/);
   assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /data-slot="handoff"/);
 });
@@ -346,18 +359,18 @@ test("meal-period planning shows breakfast, lunch, and dinner together", () => {
   assert.match(elements["#weekDateEditor"].innerHTML, /data-period="dinner"/);
   assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /data-period="lunchSalad"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /type="search"/);
-  assert.match(elements["#weekDateEditor"].innerHTML, /data-add-meal-role=/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-recipe-results=/);
 });
 
-test("recipe search narrows a meal list before selection", async () => {
-  const { ui, weekRecipeControl, weekRecipeSearch, weekRecipeSearchEmpty } = harness();
+test("recipe search shows one-tap matching results", async () => {
+  const { ui, weekRecipeResults, weekRecipeSearch, weekRecipeSearchEmpty } = harness();
 
   ui.renderSchedule();
   await weekRecipeSearch.dispatch("input");
 
-  assert.match(weekRecipeControl.innerHTML, /Another Main/);
-  assert.doesNotMatch(weekRecipeControl.innerHTML, />Main Recipe</);
-  assert.equal(weekRecipeControl.value, "");
+  assert.match(weekRecipeResults.innerHTML, /Another Main/);
+  assert.doesNotMatch(weekRecipeResults.innerHTML, />Main Recipe</);
+  assert.match(weekRecipeResults.innerHTML, /data-add-meal-result=/);
   assert.equal(weekRecipeSearchEmpty.hidden, true);
 });
 
@@ -444,7 +457,7 @@ test("calendar stays read-only until a date opens its focused editor", async () 
   await dateButtons.find((button) => button.dataset.editCalendarDate === "2026-06-24").dispatch("click");
 
   assert.equal(elements["#calendarDateEditor"].hidden, false);
-  assert.match(elements["#calendarDateEditor"].innerHTML, /data-add-meal-recipe="calendar:2026-06-24"/);
+  assert.match(elements["#calendarDateEditor"].innerHTML, /data-meal-recipe-results="calendar:2026-06-24"/);
   assert.equal(elements["#calendarDateEditor"].scrolled, true);
   assert.equal(elements["#calendarEditorHeading"].focused, true);
 });

@@ -973,6 +973,23 @@ function generatedGroceriesFromPlan(range = "week") {
   });
 }
 
+function generatedGroceriesForMeal(dateKey, mealSlot) {
+  const meal = calendarMealForDateKey(dateKey);
+  return mealRecipes(meal)
+    .filter(({ sourceType, period }) => sourceType !== "leftover" && period === mealSlot)
+    .flatMap(({ recipe, period }) => {
+      const neededServings = plannedServings(meal.servingPlans?.[period] || meal.servingPlan);
+      const batch = recipeBatchPlan(servingsForRecipe(recipe), neededServings);
+      const batches = batch?.batches || 1;
+      return recipeGroceries(recipe, "meal-plan", {
+        dateKey,
+        mealSlot: period,
+        batches,
+        servings: neededServings,
+      }, batches);
+    });
+}
+
 function manualGroceryItemsFromText(text, store) {
   return text
     .split(/\n|,|;/)
@@ -1020,6 +1037,37 @@ const purchasedGroceries = () => groceryUi.purchasedGroceries();
 const shoppingMatchForReceiptItem = (text) => groceryUi.shoppingMatchForReceiptItem(text);
 const inventoryShoppingNote = (item) => groceryUi.inventoryShoppingNote(item);
 
+function movePurchasedItemsHome() {
+  const purchased = purchasedGroceries();
+  purchased.forEach((grocery) => {
+    const existing = inventoryMatchFor(grocery.text, true);
+    if (existing) {
+      existing.stockState = "full";
+      existing.updatedAt = new Date().toISOString();
+      existing.updatedBy = householdMember;
+    } else {
+      inventory.unshift(inventoryItem(grocery.text, "", "pantry", [], "full", lang, householdMember));
+    }
+  });
+  const purchasedIds = new Set(purchased.map((item) => item.id));
+  groceries = groceries.filter((item) => !purchasedIds.has(item.id));
+  return purchased.length;
+}
+
+function closeFinishShoppingPanel() {
+  $("#finishShoppingPanel").hidden = true;
+  $("#receiptScanPanel").hidden = true;
+  $("#scanReceiptToggle").setAttribute("aria-expanded", "false");
+  document.body.classList.remove("finish-shopping-open");
+}
+
+function showHomeAfterTrip() {
+  inventoryMode = "home";
+  closeFinishShoppingPanel();
+  $("#inventoryStatus").textContent = t("movedPurchasedHome");
+  renderInventoryMode();
+}
+
 inventoryUi = createInventoryUi({
   $,
   $$,
@@ -1058,6 +1106,12 @@ const renderInventory = () => inventoryUi.renderInventory();
 const bindInventoryControls = () => inventoryUi.bindInventoryControls();
 const renderInventorySuggestions = () => inventoryUi.renderInventorySuggestions();
 
+async function addHouseholdReceipt(receipt) {
+  receipts = [normalizeReceipt({ ...receipt, updatedBy: householdMember }), ...receipts];
+  recordActivity("receipt", t("activityReceiptAdded").replace("{store}", receipt.store || t("receiptStore")));
+  await saveSharedState();
+}
+
 const receiptUi = createReceiptUi({
   $,
   $$,
@@ -1084,11 +1138,7 @@ const receiptUi = createReceiptUi({
   setPendingReceipt: (receipt) => {
     pendingReceipt = receipt;
   },
-  addReceipt: async (receipt) => {
-    receipts = [normalizeReceipt({ ...receipt, updatedBy: householdMember }), ...receipts];
-    recordActivity("receipt", t("activityReceiptAdded").replace("{store}", receipt.store || t("receiptStore")));
-    await saveSharedState();
-  },
+  addReceipt: addHouseholdReceipt,
   getLang: () => lang,
   getHouseholdMember: () => householdMember,
   updateFileInputStatus,
@@ -1100,6 +1150,8 @@ const receiptUi = createReceiptUi({
   setGroceries: (items) => {
     groceries = items;
   },
+  finishPurchasedItems: movePurchasedItemsHome,
+  onTripFinished: showHomeAfterTrip,
 });
 
 const renderReceiptSuggestions = () => receiptUi.renderReceiptSuggestions();
@@ -1303,14 +1355,26 @@ const scheduleUi = createScheduleUi({
   recipeBatchPlan,
   allRecipes,
   availableLeftoversForDate,
-  openGroceriesForMeal: (dateKey, mealSlot) => {
+  openGroceriesForMeal: async (dateKey, mealSlot) => {
+    const plannedRecipeIds = new Set(mealRecipes(calendarMealForDateKey(dateKey))
+      .filter(({ sourceType, period }) => sourceType !== "leftover" && period === mealSlot)
+      .map(({ recipe }) => recipe.id));
+    const listedRecipeIds = new Set(groceries.flatMap((item) => (item.mealUses || [])
+      .filter((use) => use.dateKey === dateKey && use.mealSlot === mealSlot)
+      .map((use) => use.recipeId)));
+    const needsIngredients = [...plannedRecipeIds].some((recipeId) => !listedRecipeIds.has(recipeId));
+    if (needsIngredients) {
+      const incoming = applyInventoryCoverage(generatedGroceriesForMeal(dateKey, mealSlot), inventory);
+      groceries = mergeGroceries(groceries, incoming);
+      recordActivity("grocery", t("activityMealGroceriesAdded"));
+      await Promise.all([saveGroceries(), saveSharedState()]);
+    }
     inventoryMode = "shopping";
     renderInventoryMode();
     groceryUi.showMeal(dateKey, mealSlot);
     setView("grocery");
     requestAnimationFrame(() => {
-      $("#groceryMealFilterPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      $("#groceryMealFilter")?.focus({ preventScroll: true });
+      $("#groceryList")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   },
   recordActivity,
@@ -1919,7 +1983,7 @@ $("#addRecipeGroceries").addEventListener("click", async () => {
   const incoming = recipeGroceries(recipeById(selectedRecipeId));
   const merged = mergeGroceries(groceries, incoming);
   const addedCount = merged.length - groceries.length;
-  const atHomeCount = incoming.filter((item) => item.inInventory).length;
+  const atHomeCount = incoming.filter((item) => item.inventorySuggested).length;
   groceries = merged;
   render();
   setDetailStatus(detailGroceriesMessage(addedCount, atHomeCount));
@@ -1987,27 +2051,57 @@ $("#clearCheckedGroceries").addEventListener("click", async () => {
 receiptUi.bindReceiptControls();
 budgetUi.bindBudgetControls();
 
-$("#restockPurchased").addEventListener("click", async () => {
-  const purchased = purchasedGroceries();
-  if (!purchased.length) return;
+$("#restockPurchased").addEventListener("click", () => {
+  $("#finishShoppingPanel").hidden = false;
+  $("#finishShoppingPrompt").hidden = true;
+  $("#manualReceiptDate").value ||= formatDateKey(new Date());
+  document.body.classList.add("finish-shopping-open");
+  $("#finishShoppingPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+});
 
-  purchased.forEach((grocery) => {
-    const existing = inventoryMatchFor(grocery.text, true);
-    if (existing) {
-      existing.stockState = "full";
-      existing.updatedAt = new Date().toISOString();
-      existing.updatedBy = householdMember;
-    } else {
-      inventory.unshift(inventoryItem(grocery.text, "", "pantry", [], "full", lang, householdMember));
-    }
-  });
-  const purchasedIds = new Set(purchased.map((item) => item.id));
-  groceries = groceries.filter((item) => !purchasedIds.has(item.id));
-  inventoryMode = "home";
-  $("#inventoryStatus").textContent = t("movedPurchasedHome");
+$("#closeFinishShopping").addEventListener("click", () => {
+  closeFinishShoppingPanel();
+  renderGroceries();
+  bindGroceryControls();
+});
+
+$("#finishWithoutReceipt").addEventListener("click", async () => {
+  if (!purchasedGroceries().length) {
+    setSyncStatus("groceries", "checkPurchasedFirst", { state: "error" });
+    return;
+  }
+
+  movePurchasedItemsHome();
+  showHomeAfterTrip();
   renderGroceries();
   renderInventory();
-  renderInventoryMode();
+  bindGroceryControls();
+  bindInventoryControls();
+  await Promise.all([saveInventory(), saveGroceries()]);
+});
+
+$("#manualReceiptForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const purchasedCount = purchasedGroceries().length;
+  if (!purchasedCount) {
+    setSyncStatus("groceries", "checkPurchasedFirst", { state: "error" });
+    return;
+  }
+
+  const total = Number($("#manualReceiptTotal").value);
+  if (!(total > 0)) return;
+
+  await addHouseholdReceipt({
+    store: $("#manualReceiptStore").value.trim(),
+    date: $("#manualReceiptDate").value || formatDateKey(new Date()),
+    total,
+    itemCount: purchasedCount,
+  });
+  movePurchasedItemsHome();
+  $("#manualReceiptForm").reset();
+  showHomeAfterTrip();
+  renderGroceries();
+  renderInventory();
   bindGroceryControls();
   bindInventoryControls();
   await Promise.all([saveInventory(), saveGroceries()]);
