@@ -38,6 +38,7 @@ GitHub main
 |---|---|---|
 | Today and handoffs | `available-food.js`, `activity-logic.js`, `family-state.js` | `dashboard-ui.js`, `handoff-ui.js`, `activity-ui.js` |
 | Meal planning and leftovers | `schedule-utils.js`, `recipes-data.js`, `recipe-utils.js` | `schedule-ui.js` |
+| Cook Along and dinner memory | `memory-logic.js`, recipe steps | `cook-along-ui.js`, `app.js` |
 | Household memory | `memory-logic.js`, `family-state.js` | `family-ui.js`, Today feedback in `app.js` |
 | Groceries | `grocery-logic.js`, versioned collection helpers | `grocery-ui.js` |
 | Inventory | `inventory-logic.js`, versioned collection helpers | `inventory-ui.js` |
@@ -79,6 +80,8 @@ Shared server helpers:
 Netlify Blobs is the production source of shared household data. The browser keeps household-scoped local fallbacks so the app can open and preserve pending work during transient failures.
 
 Shared state, groceries, inventory, and dinner history use optimistic versions. A client submits the version it last read. If another device has already written a newer version, the server returns `409` and the newest server copy. This prevents silent overwrites but does not merge simultaneous edits field by field.
+
+Shared menu and grocery conflicts now perform a small three-way merge before retrying: unchanged fields from the newest server copy are retained, while local edits and deletions are replayed. When a phone returns to the foreground, it refreshes shared menu and grocery data (throttled to avoid request loops); there is intentionally no continuous polling.
 
 Shared recipes use an index plus individual recipe records. Published recipes are appended through `POST`; recipe edits and hidden/deleted IDs are stored in family state. Unpublished drafts remain local to the browser.
 

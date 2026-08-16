@@ -34,6 +34,7 @@ import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
 import { createOnboardingUi } from "./onboarding-ui.js";
 import { createRecipeFormUi } from "./recipe-form-ui.js";
 import { createRecipeLibraryUi } from "./recipe-library-ui.js";
+import { createCookAlongUi } from "./cook-along-ui.js";
 import { createReceiptUi } from "./receipt-ui.js";
 import { recipes } from "./recipes-data.js";
 import { createScheduleUi } from "./schedule-ui.js";
@@ -43,6 +44,8 @@ import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "./sync-status.
 import { translations } from "./translations.js";
 import {
   normalizeDinnerEvents,
+  normalizeDinnerEvent,
+  upsertDinnerEvent,
   normalizeFamilyMembers,
   normalizeFamilyPreferences,
   normalizeFamilyRules,
@@ -51,6 +54,7 @@ import {
 import {
   applyVersionConflict,
   loadVersionedCollection,
+  mergeVersionedItems,
   persistVersionedCollection,
   readVersionedCollectionStorage,
   saveVersionedCollection,
@@ -100,6 +104,7 @@ let schedule = normalizeSchedule(readJsonStorage(householdStorage, "dinner-sched
 let calendarMeals = normalizeCalendar(readJsonStorage(householdStorage, "dinner-calendar", {}));
 let weekStartKey = readStringStorage(householdStorage, "dinner-week-start", currentWeekStartKey());
 let sharedStateVersion = readNumberStorage(householdStorage, "dinner-state-version", 0);
+let sharedStateBaseState = null;
 let favorites = readJsonStorage(householdStorage, "dinner-favorites", []);
 let tasks = readJsonStorage(householdStorage, "dinner-tasks", []);
 let availableFood = normalizeAvailableFood(readJsonStorage(householdStorage, "dinner-available-food", []));
@@ -116,6 +121,7 @@ const storedGroceries = readVersionedCollectionStorage(householdStorage, grocery
 const storedInventory = readVersionedCollectionStorage(householdStorage, inventoryStorageKeys);
 let groceries = storedGroceries.items;
 let groceryVersion = storedGroceries.version;
+let groceryBaseItems = storedGroceries.items;
 let inventory = storedInventory.items;
 let inventoryVersion = storedInventory.version;
 let inventorySuggestions = [];
@@ -594,7 +600,7 @@ function plannedMealsByDate() {
   return meals;
 }
 
-function availableLeftoversForDate(targetDateKey) {
+function availableLeftoversForDate(targetDateKey, targetPeriod = "") {
   const meals = plannedMealsByDate();
   const allocated = new Map();
   meals.forEach((meal) => meal.items.filter((item) => item.sourceType === "leftover").forEach((item) => {
@@ -603,18 +609,23 @@ function availableLeftoversForDate(targetDateKey) {
   }));
 
   return [...meals.entries()]
-    .filter(([dateKey]) => dateKey < targetDateKey)
+    .filter(([dateKey]) => dateKey < targetDateKey || (dateKey === targetDateKey && targetPeriod))
     .flatMap(([sourceDate, meal]) => meal.items
-      .filter((item) => item.sourceType !== "leftover")
+      .filter((item) => item.sourceType !== "leftover" && (!targetPeriod || item.period !== targetPeriod))
       .map((item) => {
+        const recipe = recipeById(item.recipeId);
+        const plan = meal.servingPlans?.[item.period] || meal.servingPlan;
+        const plannedYield = recipe
+          ? recipeBatchPlan(servingsForRecipe(recipe), plannedServings(plan))?.expectedLeftovers || 0
+          : 0;
         const produced = Number(meal.servingPlan.actualLeftovers?.[item.id]
           ?? meal.servingPlan.actualLeftovers?.[item.recipeId]
-          ?? 0);
+          ?? plannedYield);
         const availableServings = Math.max(0, produced - (allocated.get(`${sourceDate}::${item.id}`) || 0));
         return {
           sourceDate,
           itemId: item.id,
-          recipe: recipeById(item.recipeId),
+          recipe,
           availableServings,
         };
       }))
@@ -679,7 +690,28 @@ function saveSharedStateLocally() {
   }
 }
 
-async function saveSharedState() {
+function mergeSharedState(serverState, localState, baseState) {
+  const merged = { ...serverState };
+  Object.keys(localState).forEach((key) => {
+    if (key === "schedule" || key === "calendarMeals") {
+      const localMap = localState[key] || {};
+      const baseMap = baseState?.[key] || {};
+      const serverMap = serverState[key] || {};
+      const keys = new Set([...Object.keys(baseMap), ...Object.keys(localMap), ...Object.keys(serverMap)]);
+      merged[key] = Object.fromEntries([...keys].map((entry) => [
+        entry,
+        JSON.stringify(localMap[entry]) !== JSON.stringify(baseMap[entry])
+          ? localMap[entry]
+          : serverMap[entry],
+      ]).filter(([, value]) => value !== undefined));
+    } else if (JSON.stringify(localState[key]) !== JSON.stringify(baseState?.[key])) {
+      merged[key] = localState[key];
+    }
+  });
+  return merged;
+}
+
+async function saveSharedState({ retrying = false } = {}) {
   setSharedRetryAction(saveSharedState);
   saveSharedStateLocally();
   setSyncStatus("shared", "savedLocallySyncing", { state: "pending" });
@@ -693,6 +725,7 @@ async function saveSharedState() {
     sharedStateVersion = Number(data.version) || sharedStateVersion;
     if (data.state) {
       applySharedState(normalizeSharedState(data.state, currentSharedState()));
+      sharedStateBaseState = sharedStateSnapshot();
       saveSharedStateLocally();
     }
     markSynced("shared");
@@ -700,10 +733,15 @@ async function saveSharedState() {
   } catch (error) {
     console.warn(error);
     if (error.status === 409 && error.data?.state) {
+      const serverState = normalizeSharedState(error.data.state, currentSharedState());
+      const localState = sharedStateSnapshot();
+      const mergedState = mergeSharedState(serverState, localState, sharedStateBaseState || serverState);
       sharedStateVersion = Number(error.data.version) || sharedStateVersion;
-      applySharedState(normalizeSharedState(error.data.state, currentSharedState()));
+      applySharedState(normalizeSharedState(mergedState, currentSharedState()));
+      sharedStateBaseState = serverState;
       saveSharedStateLocally();
       render();
+      if (!retrying) return saveSharedState({ retrying: true });
       setSyncStatus("shared", "sharedStateConflict", { state: "error" });
       return false;
     }
@@ -738,6 +776,7 @@ async function applyLoadedSharedState(data) {
     recipeEdits: {},
     deletedRecipeIds: [],
   }));
+  sharedStateBaseState = sharedStateSnapshot();
   const rolledForward = rollWeekForwardIfNeeded();
   const compactEdits = compactRecipeEditsForSync(recipeEdits, sharedRecipes);
   const compactedDuplicateMedia = JSON.stringify(compactEdits) !== JSON.stringify(recipeEdits);
@@ -769,6 +808,18 @@ function loadSharedState({ restart = false } = {}) {
   clearAreaStatus("shared");
   return sharedStateLoader.load({ restart });
 }
+
+let lastForegroundSyncAt = 0;
+async function refreshSharedDataOnReturn() {
+  if (document.hidden) return;
+  const now = Date.now();
+  if (now - lastForegroundSyncAt < 12000) return;
+  lastForegroundSyncAt = now;
+  await Promise.allSettled([loadSharedState({ restart: true }), loadGroceries()]);
+}
+
+document.addEventListener("visibilitychange", refreshSharedDataOnReturn);
+window.addEventListener("focus", refreshSharedDataOnReturn);
 
 function persistDinnerHistoryLocally(items = dinnerEvents, version = dinnerHistoryVersion) {
   try {
@@ -1452,6 +1503,42 @@ const renderRecipes = () => recipeLibraryUi.renderRecipes();
 const renderDetail = () => recipeLibraryUi.renderDetail();
 const bindOpenButtons = () => recipeLibraryUi.bindOpenButtons();
 
+const cookAlongUi = createCookAlongUi({
+  $,
+  t,
+  localize,
+  escapeHtml,
+  getLang: () => lang,
+  saveSession: async ({ recipe, servings, leftovers, note, outcome }) => {
+    const dateKey = formatDateKey(new Date());
+    const existing = dinnerEvents.find((event) => event.dateKey === dateKey);
+    const event = normalizeDinnerEvent({
+      ...(existing || {}),
+      id: `dinner-${dateKey}`,
+      dateKey,
+      status: "cooked",
+      outcome: outcome === "made" ? "worked" : outcome,
+      items: [...(existing?.items || []).filter((item) => item.recipeId !== recipe.id), {
+        id: `cook-${recipe.id}`,
+        recipeId: recipe.id,
+        name: localize(recipe.name),
+        role: categoryFor(recipe),
+      }],
+      leftovers: { ...(existing?.leftovers || {}), [recipe.id]: Number(leftovers) || 0 },
+      note: [servings ? `Actual servings: ${servings}.` : "", note].filter(Boolean).join(" "),
+      updatedAt: new Date().toISOString(),
+      updatedBy: householdMember,
+    });
+    dinnerEvents = upsertDinnerEvent(dinnerEvents, event);
+    const feedbackOutcome = ({ loved: "loved", made: "made", mixed: "made", skip: "skip" })[outcome];
+    if (feedbackOutcome) recipeFeedback = recordRecipeOutcome(recipeFeedback, recipe.id, feedbackOutcome, householdMember, event.updatedAt);
+    recordActivity("meal", t("activityDinnerRemembered").replace("{date}", dateKey));
+    persistDinnerHistoryLocally();
+    await Promise.all([saveDinnerHistory(), saveSharedState()]);
+    render();
+  },
+});
+
 const onboardingUi = createOnboardingUi({
   $,
   $$,
@@ -1521,6 +1608,7 @@ function render() {
   renderInventorySuggestions();
   renderRecipes();
   renderDetail();
+  cookAlongUi.render();
   bindOpenButtons();
   bindGroceryControls();
   bindInventoryControls();
@@ -1576,6 +1664,7 @@ async function loadGroceries() {
       fallbackMessage: "Could not load groceries.",
       setItems: (items) => {
         groceries = items;
+        groceryBaseItems = items;
       },
       setVersion: (version) => {
         groceryVersion = version;
@@ -1590,7 +1679,7 @@ async function loadGroceries() {
   }
 }
 
-async function saveGroceries() {
+async function saveGroceries({ retrying = false } = {}) {
   setSyncStatus("groceries", "savedLocallySyncing", { state: "pending" });
   try {
     await saveVersionedCollection({
@@ -1607,10 +1696,12 @@ async function saveGroceries() {
       },
       persist: (items, version) => persistGroceriesLocally(items, version),
     });
+    groceryBaseItems = groceries;
     markSynced("groceries");
     return true;
   } catch (error) {
     console.warn(error);
+    const localGroceries = groceries;
     if (applyVersionConflict(error, {
       setItems: (items) => {
         groceries = items;
@@ -1621,6 +1712,9 @@ async function saveGroceries() {
       currentVersion: groceryVersion,
       persist: (items, version) => persistGroceriesLocally(items, version),
     })) {
+      groceries = mergeVersionedItems(localGroceries, groceryBaseItems, error.data.items);
+      persistGroceriesLocally(groceries, groceryVersion);
+      if (!retrying) return saveGroceries({ retrying: true });
       renderGroceries();
       bindGroceryControls();
       setSyncStatus("groceries", "groceryConflict", { state: "error" });
@@ -1937,6 +2031,11 @@ $("#translateSelectedRecipe").addEventListener("click", async () => {
 scheduleUi.bindScheduleControls();
 
 dashboardUi.bindDashboardControls();
+
+$("#startCooking").addEventListener("click", () => {
+  const recipe = recipeById(selectedRecipeId);
+  if (recipe) cookAlongUi.start(recipe);
+});
 
 $("#favoriteRecipe").addEventListener("click", async () => {
   $("#recipeMoreActions").open = false;

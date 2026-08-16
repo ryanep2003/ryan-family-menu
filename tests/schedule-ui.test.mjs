@@ -146,6 +146,10 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     dataset: { mealItemEmpty: "weekdate:2026-06-22", period: "dinner" },
     hidden: true,
   });
+  const weekSaveButton = element({
+    dataset: { saveMealContext: "weekdate:2026-06-22" },
+    disabled: false,
+  });
   const weekRecipeResults = element({
     dataset: { mealRecipeResults: "weekdate:2026-06-22", period: "dinner" },
   });
@@ -182,7 +186,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     .filter(({ recipe }) => recipe);
 
   const ui = createScheduleUi({
-    $: (selector) => elements[selector],
+    $: (selector) => selector === '[data-save-meal-context="weekdate:2026-06-22"]' ? weekSaveButton : elements[selector],
     $$: (selector) => {
       if (selector === "[data-planning-mode]") return [elements["#weekPlanningTab"], elements["#monthPlanningTab"]];
       if (selector === "[data-edit-week-date]") return weekButtons;
@@ -192,6 +196,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
       if (selector === '[data-meal-context^="calendar:"]') return [calendarControl];
       if (selector === '[data-view-meal-groceries^="calendar:"]') return [];
       if (selector === '[data-meal-item-search^="weekdate:"]') return [weekRecipeSearch];
+      if (selector === '[data-save-meal-context^="weekdate:"]') return [weekSaveButton];
       if (selector === '[data-meal-category-filter^="weekdate:"]') return [weekRecipeCategoryFilter];
       if (selector === '[data-meal-item-empty^="weekdate:"]') return [weekRecipeSearchEmpty];
       if (selector === '[data-meal-recipe-results^="weekdate:"]') return [weekRecipeResults];
@@ -214,6 +219,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     },
     t: (key) => ({
       mealPeriodsNote: "Plan breakfast, lunch, or dinner as needed. Shared ingredients stay grouped in Groceries.",
+      saveMealChanges: "Save changes",
       moreMealOptions: "More meal options",
       moreMealOptionsNote: "Add a side, salad, notes, or a handoff when you need them.",
     })[key] || key,
@@ -283,6 +289,7 @@ function harness({ periods = mealPeriods, leftovers = [] } = {}) {
     weekRecipeSearch,
     weekRecipeCategoryFilter,
     weekRecipeSearchEmpty,
+    weekSaveButton,
     weekRecipeResults,
   };
 }
@@ -366,6 +373,7 @@ test("meal-period planning shows breakfast, lunch, and dinner together", () => {
   assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /data-period="lunchSalad"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /type="search"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-recipe-results=/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-save-meal-context="weekdate:2026-06-22"/);
 });
 
 test("recipe search shows one-tap matching results", async () => {
@@ -388,6 +396,16 @@ test("recipe search shows one-tap matching results", async () => {
   await weekRecipeCategoryFilter.dispatch("change");
   assert.match(weekRecipeResults.innerHTML, /Dessert Recipe/);
   assert.doesNotMatch(weekRecipeResults.innerHTML, /Salad Recipe/);
+});
+
+test("week editor exposes an explicit save retry for the open day", async () => {
+  const { ui, weekSaveButton, state } = harness();
+
+  ui.renderSchedule();
+  await weekSaveButton.dispatch("click");
+
+  assert.equal(state.saveCalls, 1);
+  assert.equal(weekSaveButton.disabled, false);
 });
 
 test("handoff detail choices persist with the selected week meal", async () => {

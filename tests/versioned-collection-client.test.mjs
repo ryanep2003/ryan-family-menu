@@ -4,10 +4,21 @@ import test from "node:test";
 import {
   applyVersionConflict,
   loadVersionedCollection,
+  mergeVersionedItems,
   persistVersionedCollection,
   readVersionedCollectionStorage,
   saveVersionedCollection,
 } from "../versioned-collection-client.js";
+
+test("mergeVersionedItems keeps non-conflicting phone edits and deletions", () => {
+  const base = [{ id: "milk", quantity: 1 }, { id: "eggs", quantity: 1 }];
+  const local = [{ id: "milk", quantity: 2 }];
+  const remote = [{ id: "milk", quantity: 1 }, { id: "eggs", quantity: 2 }, { id: "bread", quantity: 1 }];
+  assert.deepEqual(mergeVersionedItems(local, base, remote), [
+    { id: "milk", quantity: 2 },
+    { id: "bread", quantity: 1 },
+  ]);
+});
 
 function storage(values = {}) {
   return {

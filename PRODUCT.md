@@ -28,6 +28,7 @@ The shipped product currently supports:
 - Home inventory by location, stock level, quantity, and expiration.
 - Receipt capture and monthly grocery-budget tracking.
 - Family profiles, food preferences, household rules, quick dinner feedback, dinner history, and deterministic recommendation ranking.
+- Cook Along mode for hands-free step-by-step preparation, simple timers, and saving actual servings, leftovers, notes, and outcomes.
 - English and Spanish interface/content support.
 - Installable mobile PWA behavior and household-scoped offline fallbacks.
 
@@ -42,7 +43,8 @@ The product does not currently provide individual user accounts, verified identi
 5. **Manage food at home:** track location, amount, stock, and expiration; scan photos for suggested items.
 6. **Manage recipes:** browse, search, favorite, import, scan, edit, draft, and publish household recipes.
 7. **Learn from dinner:** record a two-second outcome, optional individual reactions, and leftovers so later suggestions can improve.
-8. **Track spending:** add a receipt photo or enter the total when finishing a shopping trip, then compare monthly grocery spending with the household target.
+8. **Cook along:** open a recipe while preparing it, move through localized steps, start detected timers, optionally say “next,” then save what really happened.
+9. **Track spending:** add a receipt photo or enter the total when finishing a shopping trip, then compare monthly grocery spending with the household target.
 
 ## Product Terminology
 

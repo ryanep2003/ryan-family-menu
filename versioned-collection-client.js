@@ -1,5 +1,26 @@
 import { readJsonStorage, readNumberStorage } from "./storage-utils.js";
 
+function sameValue(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+export function mergeVersionedItems(localItems, baseItems, remoteItems) {
+  const local = new Map((Array.isArray(localItems) ? localItems : []).map((item) => [item?.id, item]));
+  const base = new Map((Array.isArray(baseItems) ? baseItems : []).map((item) => [item?.id, item]));
+  const remote = new Map((Array.isArray(remoteItems) ? remoteItems : []).map((item) => [item?.id, item]));
+  const ids = new Set([...base.keys(), ...local.keys(), ...remote.keys()]);
+  const merged = [];
+  ids.forEach((id) => {
+    if (!id) return;
+    const localValue = local.get(id);
+    const baseValue = base.get(id);
+    const remoteValue = remote.get(id);
+    const localChanged = !sameValue(localValue, baseValue);
+    if (localChanged ? localValue : remoteValue) merged.push(localChanged ? localValue : remoteValue);
+  });
+  return merged;
+}
+
 export function readVersionedCollectionStorage(storage, { itemsKey, versionKey }) {
   return {
     items: readJsonStorage(storage, itemsKey, []),

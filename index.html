@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=71" />
+    <link rel="stylesheet" href="styles.css?v=72" />
   </head>
   <body class="household-locked" data-view="today">
     <section class="household-gate" id="householdGate" aria-labelledby="householdGateHeading">
@@ -641,6 +641,7 @@
           <div class="detail-actions">
             <button class="primary-action" id="publishDraftRecipe" type="button" data-i18n="publishDraftRecipe" hidden>Publish draft</button>
             <button class="primary-action" id="addRecipeGroceries" type="button" aria-describedby="recipeSafetyLockReason" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
+            <button class="primary-action" id="startCooking" type="button" data-i18n="startCooking">Start cooking</button>
             <details class="detail-more-actions" id="recipeMoreActions">
               <summary data-i18n="moreActions">More actions</summary>
               <div>
@@ -651,6 +652,7 @@
             <p class="detail-action-note" id="recipeSafetyLockReason" role="status" aria-live="polite" hidden></p>
           </div>
           <p class="upload-status detail-status" id="detailStatus" role="status"></p>
+          <section class="cook-along-panel" id="cookAlongPanel" hidden aria-live="polite"></section>
           <div class="translation-state" id="recipeTranslationPanel" hidden>
             <p id="recipeTranslationStatus" role="status"></p>
             <button class="ghost-button" id="translateSelectedRecipe" type="button" data-i18n="translateRecipe">Translate this recipe</button>
@@ -879,6 +881,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=110"></script>
+    <script type="module" src="app.js?v=111"></script>
   </body>
 </html>

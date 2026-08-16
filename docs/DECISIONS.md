@@ -73,6 +73,13 @@ This is a lightweight record of architectural and product decisions that future 
 **Consequences:** Learning must stay transparent, optional, and low-friction. Add more sophisticated memory only after real household usage demonstrates the need.
 
 ## 2026-08-15 — Translate recipes only on explicit request
+## 2026-08-16 — Keep Cook Along browser-first
+
+**Decision:** Make live cooking guidance deterministic and browser-first, with an optional device speech command and no AI request in the cooking loop. Save actual servings, leftovers, notes, and a quick outcome into existing dinner memory.
+
+**Reason:** Families need a reliable, low-cost kitchen flow that works even with weak connectivity and does not add a provider call for every step.
+
+**Consequences:** Recipe steps remain the source of truth; future recommendations can use the saved structured feedback. AI can be considered later for optional enhancements, but it is not required for cooking mode.
 
 **Decision:** Changing the app language never starts recipe AI calls. A family member may explicitly translate the one selected recipe when its current-language content is missing.
 

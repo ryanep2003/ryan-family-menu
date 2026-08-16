@@ -184,6 +184,7 @@ export function createRecipeLibraryUi({
     $("#addRecipeGroceries").textContent = t("addRecipeToGroceries");
     $("#addRecipeGroceries").disabled = !contentReady;
     if ($("#markCooked")) $("#markCooked").disabled = !contentReady;
+    if ($("#startCooking")) $("#startCooking").disabled = !contentReady;
     $("#recipeSafetyLockReason").hidden = !actionLockReason;
     $("#recipeSafetyLockReason").textContent = actionLockReason;
     setDetailStatus("");

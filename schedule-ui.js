@@ -106,7 +106,7 @@ export function createScheduleUi({
   function renderMealPeriod(period, meal, context) {
     const items = (meal.items || []).filter((item) => item.period === period.key);
     const dateKey = context.split(":")[1];
-    const availableLeftovers = availableLeftoversForDate(dateKey);
+    const availableLeftovers = availableLeftoversForDate(dateKey, period.key);
     const servingPlan = meal.servingPlans?.[period.key] || meal.servingPlan;
     const neededServings = plannedServings(servingPlan);
     const controlId = `meal-${context}-${period.key}`.replace(/[^a-zA-Z0-9_-]/g, "-");
@@ -166,6 +166,7 @@ export function createScheduleUi({
         ${availableLeftovers.length ? `
           <details class="meal-item-adder leftover-item-adder">
             <summary>${t("useLeftoversInMeal").replace("{meal}", t(period.label))}</summary>
+            <p class="meal-serving-helper">${t("leftoverMealHelper")}</p>
             <div class="meal-item-adder-fields leftover-adder-fields">
               <label>
                 <span>${t("availableLeftovers")}</span>
@@ -304,18 +305,42 @@ export function createScheduleUi({
       status.textContent = t("mealChangeSaving");
       status.classList.add("pending");
     }
-    const saved = await saveSharedState();
+    await saveMealContext(context);
+  }
+
+  async function saveMealContext(context) {
+    const button = $(`[data-save-meal-context="${context}"]`);
+    if (button) button.disabled = true;
+    const status = $(`[data-meal-save-status="${context}"]`);
+    if (status) {
+      status.textContent = t("mealChangeSaving");
+      status.classList.add("pending");
+    }
+    let saved = false;
+    try {
+      saved = await saveSharedState();
+    } catch {
+      saved = false;
+    }
     const currentStatus = $(`[data-meal-save-status="${context}"]`);
     if (currentStatus) {
       currentStatus.textContent = t(saved === false ? "mealChangePending" : "mealChangeSaved");
       currentStatus.classList.toggle("pending", saved === false);
     }
+    if (button) button.disabled = false;
+    return saved;
   }
 
   function bindMealControls(contextType) {
     $$(`[data-view-meal-groceries^="${contextType}:"]`).forEach((button) => {
       button.addEventListener("click", () => {
         openGroceriesForMeal(button.dataset.viewMealGroceries.split(":")[1], button.dataset.period);
+      });
+    });
+
+    $$(`[data-save-meal-context^="${contextType}:"]`).forEach((button) => {
+      button.addEventListener("click", async () => {
+        await saveMealContext(button.dataset.saveMealContext);
       });
     });
 
@@ -403,7 +428,7 @@ export function createScheduleUi({
           item.dataset.addLeftoverServings === context && item.dataset.period === period
         ));
         const [leftoverSourceDate, leftoverSourceItemId] = `${sourceSelect?.value || ""}`.split("::");
-        const leftover = availableLeftoversForDate(context.split(":")[1]).find((entry) => (
+        const leftover = availableLeftoversForDate(context.split(":")[1], button.dataset.period).find((entry) => (
           entry.sourceDate === leftoverSourceDate && entry.itemId === leftoverSourceItemId
         ));
         if (!leftover) return;
@@ -532,8 +557,8 @@ export function createScheduleUi({
     const editorLabel = `${selectedDay[lang]} · ${rangeFormatter.format(selectedDay.date)}`;
     editor.innerHTML = `
       <div class="schedule-editor-heading">
-        <span>${t("editDay")}</span>
-        <h3 id="weekEditorHeading" tabindex="-1">${escapeHtml(editorLabel)}</h3>
+        <div><span>${t("editDay")}</span><h3 id="weekEditorHeading" tabindex="-1">${escapeHtml(editorLabel)}</h3></div>
+        <button class="ghost-button compact-button meal-save-button" type="button" data-save-meal-context="weekdate:${selectedWeekDateKey}">${t("saveMealChanges")}</button>
       </div>
       <p class="meal-save-status" role="status" data-meal-save-status="weekdate:${selectedWeekDateKey}"></p>
       ${renderMealControls(calendarMealForDateKey(selectedWeekDateKey), `weekdate:${selectedWeekDateKey}`, "")}
@@ -647,8 +672,8 @@ export function createScheduleUi({
       editor.hidden = false;
       editor.innerHTML = `
         <div class="schedule-editor-heading">
-          <span>${t("editDate")}</span>
-          <h3 id="calendarEditorHeading" tabindex="-1">${escapeHtml(dateFormatter.format(selectedDate))}</h3>
+          <div><span>${t("editDate")}</span><h3 id="calendarEditorHeading" tabindex="-1">${escapeHtml(dateFormatter.format(selectedDate))}</h3></div>
+          <button class="ghost-button compact-button meal-save-button" type="button" data-save-meal-context="calendar:${selectedCalendarDateKey}">${t("saveMealChanges")}</button>
         </div>
         <p class="meal-save-status" role="status" data-meal-save-status="calendar:${selectedCalendarDateKey}"></p>
         ${renderMealControls(selectedMeal, `calendar:${selectedCalendarDateKey}`, "")}

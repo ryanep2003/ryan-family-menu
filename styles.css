@@ -2778,7 +2778,15 @@ h3 {
 }
 
 .schedule-editor-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 14px;
+}
+
+.meal-save-button {
+  flex: 0 0 auto;
 }
 
 .schedule-editor-heading span {
@@ -5064,6 +5072,11 @@ li {
     right: 0;
     bottom: 0;
     left: 0;
+    inset-block-end: 0;
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 2px;
     width: 100%;
@@ -5703,6 +5716,36 @@ li {
   }
 }
 
+.cook-along-panel {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+.cook-along-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.cook-along-heading h3 { margin: 2px 0 0; }
+.cook-along-progress { margin: 8px 0 12px; color: var(--sage); font-weight: 800; }
+.cook-along-step { min-height: 120px; padding: 18px; border-radius: 14px; background: var(--green-wash); }
+.cook-along-step p { margin: 0; font-size: 1.12rem; line-height: 1.55; }
+.cook-along-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.cook-along-actions button { min-height: 44px; }
+.cook-along-status { min-height: 1.4em; margin: 10px 0 0; color: var(--muted); }
+.cook-along-helper { color: var(--muted); }
+.cook-along-finish { display: grid; gap: 12px; margin-top: 14px; }
+.cook-along-finish label, .cook-along-finish legend { color: var(--muted); font-weight: 800; }
+.cook-along-finish label { display: grid; gap: 6px; }
+.cook-along-finish input, .cook-along-finish textarea { width: 100%; }
+.cook-along-finish fieldset { margin: 0; padding: 0; border: 0; }
+.cook-along-outcomes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.cook-along-outcomes button { min-height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-weight: 800; }
+.cook-along-outcomes button.selected { border-color: var(--sage); background: var(--green-wash); box-shadow: inset 0 0 0 2px var(--sage); }
+@media (max-width: 600px) {
+  .cook-along-panel { padding: 14px; }
+  .cook-along-actions { display: grid; grid-template-columns: 1fr; }
+  .cook-along-actions button { width: 100%; }
+}
 @media (max-width: 380px) {
   .grocery-section {
     width: 100%;
