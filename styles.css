@@ -106,6 +106,10 @@
   .meal-diner-grid {
     grid-template-columns: repeat(3, minmax(70px, 1fr));
   }
+
+  .meal-diner-grid label:last-child {
+    grid-column: span 2;
+  }
 }
 
 * {

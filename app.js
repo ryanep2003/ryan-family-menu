@@ -87,6 +87,7 @@ import {
   normalizeSchedule,
   removeRecipeFromPlans,
   plannedServings,
+  cookingServings,
   recipeBatchPlan,
 } from "./schedule-utils.js";
 
@@ -619,7 +620,7 @@ function availableLeftoversForDate(targetDateKey, targetPeriod = "") {
         const recipe = recipeById(item.recipeId);
         const plan = meal.servingPlans?.[item.period] || meal.servingPlan;
         const plannedYield = recipe
-          ? recipeBatchPlan(servingsForRecipe(recipe), plannedServings(plan))?.expectedLeftovers || 0
+          ? recipeBatchPlan(servingsForRecipe(recipe), cookingServings(plan), plannedServings(plan))?.expectedLeftovers || 0
           : 0;
         const produced = Number(meal.servingPlan.actualLeftovers?.[item.id]
           ?? meal.servingPlan.actualLeftovers?.[item.recipeId]
@@ -1076,7 +1077,7 @@ function generatedGroceriesFromPlan(range = "week") {
       .filter(({ sourceType }) => sourceType !== "leftover")
       .flatMap(({ recipe, period }) => {
         const neededServings = plannedServings(meal.servingPlans?.[period] || meal.servingPlan);
-        const batch = recipeBatchPlan(servingsForRecipe(recipe), neededServings);
+        const batch = recipeBatchPlan(servingsForRecipe(recipe), cookingServings(meal.servingPlans?.[period] || meal.servingPlan), neededServings);
         const batches = batch?.batches || 1;
         return recipeGroceries(recipe, "meal-plan", {
           dateKey,
@@ -1094,7 +1095,7 @@ function generatedGroceriesForMeal(dateKey, mealSlot) {
     .filter(({ sourceType, period }) => sourceType !== "leftover" && period === mealSlot)
     .flatMap(({ recipe, period }) => {
       const neededServings = plannedServings(meal.servingPlans?.[period] || meal.servingPlan);
-      const batch = recipeBatchPlan(servingsForRecipe(recipe), neededServings);
+      const batch = recipeBatchPlan(servingsForRecipe(recipe), cookingServings(meal.servingPlans?.[period] || meal.servingPlan), neededServings);
       const batches = batch?.batches || 1;
       return recipeGroceries(recipe, "meal-plan", {
         dateKey,
@@ -1503,6 +1504,7 @@ const scheduleUi = createScheduleUi({
   recipeById,
   servingsForRecipe,
   plannedServings,
+  cookingServings,
   recipeBatchPlan,
   allRecipes,
   availableLeftoversForDate,

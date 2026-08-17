@@ -32,6 +32,7 @@ export function createScheduleUi({
   recipeById,
   servingsForRecipe = (recipe) => Number(recipe?.servings) || 0,
   plannedServings = (plan = {}) => (Number(plan.adults) || 2) + ((Number(plan.kids) || 2) * 0.5) + (Number(plan.guests) || 0),
+  cookingServings = plannedServings,
   recipeBatchPlan = () => null,
   allRecipes,
   availableLeftoversForDate = () => [],
@@ -198,13 +199,14 @@ export function createScheduleUi({
               ${["adults", "kids", "guests"].map((field) => `
                 <label><span>${t(`${field}Count`)}</span><input type="number" min="0" max="20" step="1" value="${servingPlan[field]}" data-meal-context="${escapeHtml(context)}" data-slot="serving-plan" data-period="${escapeHtml(period.key)}" data-serving-field="${field}" /></label>
               `).join("")}
+              <label><span>${t("extraServingsCount")}</span><input type="number" min="0" max="100" step="0.5" value="${servingPlan.extraServings || 0}" data-meal-context="${escapeHtml(context)}" data-slot="serving-plan" data-period="${escapeHtml(period.key)}" data-serving-field="extraServings" /></label>
             </div>
             <div class="meal-yield-list">
               ${items.map((item) => {
                 const recipe = recipeById(item.recipeId);
                 if (!recipe) return "";
                 const recipeYield = servingsForRecipe(recipe);
-                const batch = recipeBatchPlan(recipeYield, neededServings);
+                const batch = recipeBatchPlan(recipeYield, cookingServings(servingPlan), neededServings);
                 return `<div class="meal-yield-row">
                   <strong>${escapeHtml(localize(recipe.name))}</strong>
                   ${item.sourceType === "leftover"

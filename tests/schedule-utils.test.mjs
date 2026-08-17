@@ -12,6 +12,7 @@ import {
   normalizeMealServingPlans,
   normalizeSchedule,
   normalizeServingPlan,
+  cookingServings,
   plannedServings,
   recipeBatchPlan,
   removeRecipeFromPlans,
@@ -19,9 +20,10 @@ import {
 
 test("serving plans default to two adults and two kids", () => {
   const plan = normalizeServingPlan();
-  assert.deepEqual(plan, { adults: 2, kids: 2, guests: 0, actualLeftovers: {} });
+  assert.deepEqual(plan, { adults: 2, kids: 2, guests: 0, extraServings: 0, actualLeftovers: {} });
   assert.equal(plannedServings(plan), 3);
   assert.equal(plannedServings({ adults: 2, kids: 1, guests: 2 }), 4.5);
+  assert.equal(cookingServings({ adults: 2, kids: 0, guests: 0, extraServings: 3 }), 5);
 });
 
 test("meal periods inherit legacy counts and can diverge safely", () => {
@@ -29,9 +31,9 @@ test("meal periods inherit legacy counts and can diverge safely", () => {
     servingPlan: { adults: 1, kids: 2, guests: 1 },
     servingPlans: { lunch: { adults: 2, kids: 0, guests: 0 } },
   });
-  assert.deepEqual(plans.breakfast, { adults: 1, kids: 2, guests: 1, actualLeftovers: {} });
-  assert.deepEqual(plans.lunch, { adults: 2, kids: 0, guests: 0, actualLeftovers: {} });
-  assert.deepEqual(plans.dinner, { adults: 1, kids: 2, guests: 1, actualLeftovers: {} });
+  assert.deepEqual(plans.breakfast, { adults: 1, kids: 2, guests: 1, extraServings: 0, actualLeftovers: {} });
+  assert.deepEqual(plans.lunch, { adults: 2, kids: 0, guests: 0, extraServings: 0, actualLeftovers: {} });
+  assert.deepEqual(plans.dinner, { adults: 1, kids: 2, guests: 1, extraServings: 0, actualLeftovers: {} });
 });
 
 test("leftover meal items preserve their exact source and allocation", () => {
@@ -63,6 +65,7 @@ test("leftover meal items preserve their exact source and allocation", () => {
 test("recipe batch planning rounds up to quarter batches and estimates leftovers", () => {
   assert.deepEqual(recipeBatchPlan(4, 5), { batches: 1.25, cookedServings: 5, expectedLeftovers: 0 });
   assert.deepEqual(recipeBatchPlan(6, 4), { batches: 0.75, cookedServings: 4.5, expectedLeftovers: 0.5 });
+  assert.deepEqual(recipeBatchPlan(4, 5, 2), { batches: 1.25, cookedServings: 5, expectedLeftovers: 3 });
   assert.equal(recipeBatchPlan(0, 4), null);
 });
 

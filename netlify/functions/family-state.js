@@ -111,6 +111,9 @@ function cleanMeal(value) {
     adults: cleanCount(plan?.adults, 2),
     kids: cleanCount(plan?.kids, 2),
     guests: cleanCount(plan?.guests, 0),
+    extraServings: Number.isFinite(Number(plan?.extraServings))
+      ? Math.min(100, Math.max(0, Math.round(Number(plan.extraServings) * 2) / 2))
+      : 0,
   });
   return {
     mealItemsVersion: 1,

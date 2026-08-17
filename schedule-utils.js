@@ -143,6 +143,7 @@ export const defaultServingPlan = {
   adults: 2,
   kids: 2,
   guests: 0,
+  extraServings: 0,
   actualLeftovers: {},
 };
 
@@ -165,6 +166,7 @@ export function normalizeServingPlan(value) {
     adults: boundedCount(source.adults, defaultServingPlan.adults),
     kids: boundedCount(source.kids, defaultServingPlan.kids),
     guests: boundedCount(source.guests, defaultServingPlan.guests),
+    extraServings: boundedServings(source.extraServings, defaultServingPlan.extraServings),
     actualLeftovers,
   };
 }
@@ -183,7 +185,12 @@ export function plannedServings(value) {
   return plan.adults + (plan.kids * 0.5) + plan.guests;
 }
 
-export function recipeBatchPlan(recipeServings, neededServings) {
+export function cookingServings(value) {
+  const plan = normalizeServingPlan(value);
+  return plannedServings(plan) + plan.extraServings;
+}
+
+export function recipeBatchPlan(recipeServings, neededServings, consumedServings = neededServings) {
   const recipeYield = Number(recipeServings);
   const needed = Number(neededServings);
   if (!(recipeYield > 0) || !(needed > 0)) return null;
@@ -192,7 +199,7 @@ export function recipeBatchPlan(recipeServings, neededServings) {
   return {
     batches,
     cookedServings,
-    expectedLeftovers: Math.max(0, Math.round((cookedServings - needed) * 4) / 4),
+    expectedLeftovers: Math.max(0, Math.round((cookedServings - Number(consumedServings || 0)) * 4) / 4),
   };
 }
 

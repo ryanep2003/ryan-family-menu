@@ -118,3 +118,13 @@ This is a lightweight record of architectural and product decisions that future 
 **Alternatives considered:** Relying on the in-state activity feed, storing every full state forever, or silently accepting all last-writer-wins saves.
 
 **Consequences:** Audit history is bounded and best-effort; it is not a legal-grade event log. Restore is explicit and creates a new version. The separate record adds one small Blob write per shared-state save, so it must remain bounded and must not be polled.
+
+## 2026-08-17 — Plan cooking quantity separately from meal attendance
+
+**Decision:** Keep serving counts per meal period, and add an optional `extraServings` value that represents portions intentionally cooked for a later meal. Grocery and yield calculations use the cooking quantity, while leftover availability subtracts only the portions consumed by the current meal.
+
+**Reason:** A family may cook one recipe once for a smaller lunch and reuse the planned leftovers for dinner. Treating lunch and dinner as two independent cooking events overstates groceries; treating them as one attendance count underestimates what must be prepared.
+
+**Alternatives considered:** Requiring duplicate recipe entries, inferring leftovers from matching recipes later in the day, or making the whole day use one serving count.
+
+**Consequences:** The planner must explain the extra-portion field clearly and families still explicitly add a planned leftover to a later meal. Existing meal records remain compatible because the new field defaults to zero.

@@ -93,6 +93,7 @@ A meal also stores:
 - dinner pace: quick, standard, no-cooking, or blank;
 - handoff flags and details;
 - default and per-period serving plans;
+- optional `extraServings` on each period plan for portions intentionally cooked for a later meal;
 - actual leftovers keyed by meal-item ID.
 
 Legacy fields such as `breakfast`, `lunch`, `lunchSalad`, `dinner`, `main`, `side`, and `salad` remain synchronized so older clients and household records keep working. Do not remove or reinterpret them casually.

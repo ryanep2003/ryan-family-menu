@@ -119,6 +119,15 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     },
     value: "1",
   });
+  const weekExtraServingControl = element({
+    dataset: {
+      mealContext: "weekdate:2026-06-22",
+      slot: "serving-plan",
+      period: "lunch",
+      servingField: "extraServings",
+    },
+    value: "3",
+  });
   const weekActualLeftoverControl = element({
     dataset: {
       mealContext: "weekdate:2026-06-22",
@@ -191,7 +200,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
       if (selector === "[data-planning-mode]") return [elements["#weekPlanningTab"], elements["#monthPlanningTab"]];
       if (selector === "[data-edit-week-date]") return weekButtons;
       if (selector === "[data-edit-calendar-date]") return dateButtons;
-      if (selector === '[data-meal-context^="weekdate:"]') return [weekHandoffControl, weekServingControl, weekActualLeftoverControl];
+      if (selector === '[data-meal-context^="weekdate:"]') return [weekHandoffControl, weekServingControl, weekExtraServingControl, weekActualLeftoverControl];
       if (selector === '[data-view-meal-groceries^="weekdate:"]') return [weekGroceryButton];
       if (selector === '[data-meal-context^="calendar:"]') return [calendarControl];
       if (selector === '[data-view-meal-groceries^="calendar:"]') return [];
@@ -222,6 +231,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
       saveMealChanges: "Save changes",
       moreMealOptions: "More meal options",
       moreMealOptionsNote: "Add a side, salad, notes, or a handoff when you need them.",
+      extraServingsCount: "Extra servings for later",
     })[key] || key,
     escapeHtml,
     localize: (value) => value,
@@ -281,6 +291,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     weekHandoffControl,
     weekGroceryButton,
     weekServingControl,
+    weekExtraServingControl,
     weekActualLeftoverControl,
     weekLeftoverSource,
     weekLeftoverServings,
@@ -431,6 +442,15 @@ test("each meal period can adjust its own family serving count", async () => {
 
   assert.equal(state.schedule.mon.servingPlans.lunch.adults, 1);
   assert.equal(state.schedule.mon.servingPlans.dinner.adults, 2);
+});
+
+test("a meal period can reserve extra portions for a later meal", async () => {
+  const { state, ui, weekExtraServingControl } = harness();
+
+  ui.renderSchedule();
+  await weekExtraServingControl.dispatch("change");
+
+  assert.equal(state.schedule.mon.servingPlans.lunch.extraServings, 3);
 });
 
 test("actual leftovers attach to the exact cooked item", async () => {
