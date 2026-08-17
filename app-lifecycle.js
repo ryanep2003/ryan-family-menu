@@ -79,13 +79,30 @@ export function registerServiceWorker({ $, onUpdateAvailable }) {
   if (!("serviceWorker" in navigator)) return;
 
   let hadController = Boolean(navigator.serviceWorker.controller);
+  let registrationRef = null;
+  let lastUpdateCheck = 0;
+  const updateCheckWindow = 5 * 60 * 1000;
+
+  function checkForUpdate() {
+    if (!registrationRef) return;
+    const now = Date.now();
+    if (now - lastUpdateCheck < updateCheckWindow) return;
+    lastUpdateCheck = now;
+    registrationRef.update().catch(() => {
+      // A suspended or offline device can fail this check; the cached app remains usable.
+    });
+  }
+
   navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (hadController) onUpdateAvailable();
     hadController = true;
   });
 
   navigator.serviceWorker.register("service-worker.js").then((registration) => {
-    registration.update();
+    registrationRef = registration;
+    checkForUpdate();
+    window.addEventListener("focus", checkForUpdate);
+    window.addEventListener("online", checkForUpdate);
     if (registration.waiting && navigator.serviceWorker.controller) {
       onUpdateAvailable();
     }
