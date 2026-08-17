@@ -108,3 +108,13 @@ This is a lightweight record of architectural and product decisions that future 
 **Alternatives considered:** Keeping receipt upload in a tools menu, requiring a receipt for every trip, and automatically moving every unchecked list item into inventory.
 
 **Consequences:** Receipt upload remains directly available from the Shopping header even when nothing has been checked. Checked rows are the authoritative purchased set when no detailed receipt is available. Receipt recognition may match additional items. Finishing removes purchased rows, updates home inventory, and records a receipt total when supplied without introducing a new persisted schema.
+
+## 2026-08-17 — Keep a bounded recovery trail for shared menus
+
+**Decision:** Write a separate, household-scoped audit record for successful shared-state saves. Retain recent change events and prior menu snapshots, block an accidental empty overwrite, and require an explicit Clear week or restore action when removing a plan is intentional.
+
+**Reason:** A stale browser or competing phone could replace a populated plan with an empty copy, while the existing activity feed only described recent actions and could be overwritten with the rest of state. Families need a simple way to understand what changed and recover a prior menu without exposing raw storage or adding a large history system.
+
+**Alternatives considered:** Relying on the in-state activity feed, storing every full state forever, or silently accepting all last-writer-wins saves.
+
+**Consequences:** Audit history is bounded and best-effort; it is not a legal-grade event log. Restore is explicit and creates a new version. The separate record adds one small Blob write per shared-state save, so it must remain bounded and must not be polled.

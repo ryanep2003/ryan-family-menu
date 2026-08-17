@@ -19,6 +19,8 @@ import { createDashboardUi } from "./dashboard-ui.js";
 import { createBudgetUi } from "./budget-ui.js";
 import { normalizeBudgetSettings, normalizeReceipt, normalizeReceipts } from "./budget-logic.js";
 import { createActivityUi } from "./activity-ui.js";
+import { createAuditUi } from "./audit-ui.js";
+import { normalizeAuditEvents, normalizeStateSnapshots } from "./audit-logic.js";
 import { createFamilyUi } from "./family-ui.js";
 import { activityEntry, normalizeActivity } from "./activity-logic.js";
 import { addAvailableFood, normalizeAvailableFood } from "./available-food.js";
@@ -130,6 +132,7 @@ let pendingReceipt = null;
 let budgetSettings = normalizeBudgetSettings(readJsonStorage(householdStorage, "dinner-budget-settings", {}));
 let receipts = normalizeReceipts(readJsonStorage(householdStorage, "dinner-receipts", []));
 let activity = normalizeActivity(readJsonStorage(householdStorage, "dinner-activity", []));
+let auditHistory = { events: [], snapshots: [] };
 let familyMembers = normalizeFamilyMembers(readJsonStorage(householdStorage, "dinner-family-members", []));
 let familyPreferences = normalizeFamilyPreferences(readJsonStorage(householdStorage, "dinner-family-preferences", []), familyMembers);
 let familyRules = normalizeFamilyRules(readJsonStorage(householdStorage, "dinner-family-rules", {}));
@@ -713,8 +716,9 @@ function mergeSharedState(serverState, localState, baseState) {
 
 let sharedSaveInFlight = null;
 let sharedSaveQueued = false;
+let sharedSaveQueuedOptions = null;
 
-async function performSaveSharedState({ retrying = false } = {}) {
+async function performSaveSharedState({ retrying = false, allowEmptySchedule = false, auditAction = "" } = {}) {
   setSharedRetryAction(saveSharedState);
   saveSharedStateLocally();
   setSyncStatus("shared", "savedLocallySyncing", { state: "pending" });
@@ -722,7 +726,13 @@ async function performSaveSharedState({ retrying = false } = {}) {
   try {
     const data = await putJson(
       "/.netlify/functions/family-state",
-      { state: sharedStateSnapshot(), version: sharedStateVersion },
+      {
+        state: sharedStateSnapshot(),
+        version: sharedStateVersion,
+        actor: householdMember,
+        auditAction,
+        allowEmptySchedule,
+      },
       "Could not save shared family state."
     );
     sharedStateVersion = Number(data.version) || sharedStateVersion;
@@ -735,6 +745,15 @@ async function performSaveSharedState({ retrying = false } = {}) {
     return true;
   } catch (error) {
     console.warn(error);
+    if (error.status === 409 && error.data?.code === "empty-overwrite-blocked" && error.data?.state) {
+      sharedStateVersion = Number(error.data.version) || sharedStateVersion;
+      applySharedState(normalizeSharedState(error.data.state, currentSharedState()));
+      sharedStateBaseState = sharedStateSnapshot();
+      saveSharedStateLocally();
+      render();
+      setSyncStatus("shared", "emptyOverwriteBlocked", { state: "error" });
+      return false;
+    }
     if (error.status === 409 && error.data?.state) {
       const serverState = normalizeSharedState(error.data.state, currentSharedState());
       const localState = sharedStateSnapshot();
@@ -744,7 +763,7 @@ async function performSaveSharedState({ retrying = false } = {}) {
       sharedStateBaseState = serverState;
       saveSharedStateLocally();
       render();
-      if (!retrying) return performSaveSharedState({ retrying: true });
+      if (!retrying) return performSaveSharedState({ retrying: true, allowEmptySchedule, auditAction });
       setSyncStatus("shared", "sharedStateConflict", { state: "error" });
       return false;
     }
@@ -756,6 +775,7 @@ async function performSaveSharedState({ retrying = false } = {}) {
 async function saveSharedState(options = {}) {
   if (sharedSaveInFlight && !options.retrying) {
     sharedSaveQueued = true;
+    sharedSaveQueuedOptions = { ...options };
     await sharedSaveInFlight;
     return true;
   }
@@ -768,7 +788,9 @@ async function saveSharedState(options = {}) {
     sharedSaveInFlight = null;
     if (sharedSaveQueued) {
       sharedSaveQueued = false;
-      await saveSharedState();
+      const queuedOptions = sharedSaveQueuedOptions || {};
+      sharedSaveQueuedOptions = null;
+      await saveSharedState(queuedOptions);
     }
   }
 }
@@ -1266,6 +1288,42 @@ const budgetUi = createBudgetUi({
 const renderBudget = () => budgetUi.renderBudget();
 const activityUi = createActivityUi({ $, t, escapeHtml, getActivity: () => activity });
 const renderActivity = () => activityUi.renderActivity();
+const auditUi = createAuditUi({
+  $, t, escapeHtml,
+  getHistory: () => auditHistory,
+  onRestore: restoreAuditSnapshot,
+});
+const renderAuditHistory = () => auditUi.render();
+
+async function loadAuditHistory() {
+  try {
+    const data = await getJson("/.netlify/functions/family-audit", "Could not load household change history.");
+    auditHistory = {
+      events: normalizeAuditEvents(data.events),
+      snapshots: normalizeStateSnapshots(data.snapshots),
+    };
+    renderAuditHistory();
+    return true;
+  } catch (error) {
+    console.warn(error);
+    return false;
+  }
+}
+
+async function restoreAuditSnapshot(snapshotId) {
+  const snapshot = auditHistory.snapshots.find((item) => item.id === snapshotId);
+  if (!snapshot) return;
+  if (!window.confirm(t("restoreMenuConfirm"))) return;
+  const restored = normalizeSharedState({
+    weekStart: snapshot.weekStart,
+    schedule: snapshot.schedule,
+    calendarMeals: snapshot.calendarMeals,
+  }, currentSharedState());
+  applySharedState(restored);
+  render();
+  await saveSharedState({ allowEmptySchedule: true, auditAction: "restore-menu" });
+  setSyncStatus("shared", "menuRestored", { state: "success" });
+}
 
 function renderSmartSuggestions() {
   const suggestions = [];
@@ -1639,6 +1697,7 @@ function render() {
   renderGroceries();
   renderBudget();
   renderActivity();
+  renderAuditHistory();
   familyUi.renderFamily();
   familyUi.renderTodayFeedback();
   renderInventory();
@@ -2337,6 +2396,7 @@ registerServiceWorker({ $, onUpdateAvailable: showAppUpdateNotice });
 setupLocalizedFileInputs();
 render();
 loadSharedRecipes().then(() => loadSharedState());
+loadAuditHistory();
 loadDinnerHistory();
 loadGroceries();
 loadInventory();

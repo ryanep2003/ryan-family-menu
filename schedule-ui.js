@@ -762,7 +762,7 @@ export function createScheduleUi({
       setCalendarMeals(nextCalendarMeals);
       render();
       setScheduleStatus("");
-      await saveSharedState();
+      await saveSharedState({ allowEmptySchedule: true, auditAction: "clear-week" });
     });
 
     $("#previousMonth").addEventListener("click", () => {

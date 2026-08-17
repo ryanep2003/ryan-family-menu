@@ -4,10 +4,13 @@ import { jsonResponse, readJsonRequest } from "./_http.js";
 import { hasVersionConflict, nextVersionedRecord, versionedRecord } from "./_versioned-record.js";
 import { cleanLocalizedText, hasLocalizedContent } from "../../localized-data.js";
 import { normalizeRecipeFeedback } from "../../family-state.js";
+import { auditEvent, hasPlannedMeals, normalizeAuditEvents, normalizeStateSnapshots, stateSnapshot } from "../../audit-logic.js";
 import { normalizeDinnerPace, normalizeFamilyMembers, normalizeFamilyPreferences, normalizeFamilyRules } from "../../memory-logic.js";
 
 const STORE_NAME = "family-menu-state";
+const AUDIT_STORE_NAME = "family-menu-audit";
 const STATE_KEY = "shared-state";
+const AUDIT_KEY = "history";
 const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const MEAL_KEYS = ["breakfast", "lunch", "lunchSalad", "dinner", "main", "side", "salad", "notes"];
 const MAX_CALENDAR_DAYS = 730;
@@ -32,6 +35,15 @@ const MEAL_ROLES = ["main", "side", "salad", "dessert", "sauce", "drink", "other
 
 function cleanText(value, maxLength) {
   return `${value || ""}`.trim().slice(0, maxLength);
+}
+
+function auditRecord(value) {
+  return {
+    events: normalizeAuditEvents(value?.events),
+    snapshots: normalizeStateSnapshots(value?.snapshots),
+    version: Number(value?.version) || 0,
+    updatedAt: typeof value?.updatedAt === "string" ? value.updatedAt : "",
+  };
 }
 
 function cleanPhoto(value) {
@@ -324,7 +336,44 @@ export default async (request) => {
       }, 409);
     }
 
-    const record = nextVersionedRecord("state", cleanState(payload.state), current.version);
+    const nextState = cleanState(payload.state);
+    if (hasPlannedMeals(current.state) && !hasPlannedMeals(nextState) && payload.allowEmptySchedule !== true) {
+      return jsonResponse({
+        error: "This change would remove every planned meal. Confirm Clear week before replacing the shared menu.",
+        code: "empty-overwrite-blocked",
+        state: current.state,
+        version: current.version,
+        updatedAt: current.updatedAt,
+      }, 409);
+    }
+    const nextVersion = current.version + 1;
+    const record = nextVersionedRecord("state", nextState, current.version);
+    try {
+      const auditStore = getStore(AUDIT_STORE_NAME);
+      const auditKey = householdDataKey(access.household.id, AUDIT_KEY);
+      const previousAudit = auditRecord(await auditStore.get(auditKey, { type: "json" }));
+      const updatedAt = record.updatedAt;
+      const actor = cleanText(payload.actor, 80) || "Family";
+      const event = auditEvent({
+        action: cleanText(payload.auditAction, 80) || (payload.allowEmptySchedule ? "clear-week" : "state-updated"),
+        actor,
+        updatedAt,
+        version: nextVersion,
+        before: current.state || {},
+        after: nextState,
+      });
+      const snapshot = current.state
+        ? stateSnapshot({ state: current.state, actor, version: current.version, updatedAt: current.updatedAt || updatedAt })
+        : null;
+      await auditStore.setJSON(auditKey, {
+        events: [event, ...previousAudit.events],
+        snapshots: snapshot ? [snapshot, ...previousAudit.snapshots] : previousAudit.snapshots,
+        version: previousAudit.version + 1,
+        updatedAt,
+      });
+    } catch (auditError) {
+      console.warn("Could not write household audit history", auditError);
+    }
     await store.setJSON(stateKey, record);
     return jsonResponse(record);
   }

@@ -3218,6 +3218,41 @@ h3 {
   overflow: auto;
 }
 
+#householdHistory {
+  display: grid;
+  gap: 2px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.household-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line-subtle);
+}
+
+.household-history-item > div {
+  display: grid;
+  gap: 2px;
+}
+
+.household-history-item strong,
+.household-history-item span {
+  font-size: 0.78rem;
+}
+
+.household-history-item span {
+  color: var(--muted);
+}
+
+.household-history-restore .text-button {
+  flex: 0 0 auto;
+  font-size: 0.76rem;
+}
+
 .household-activity-item {
   display: grid;
   grid-template-columns: 10px minmax(0, 1fr);

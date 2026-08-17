@@ -57,6 +57,7 @@ The serverless endpoints are in `netlify/functions/`:
 |---|---|---|
 | `households` | GET, POST, PUT | Open, create, or rename a household; optional legacy migration |
 | `family-state` | GET, PUT | Schedule, calendar, favorites, tasks, available food, budget, activity, family memory, recipe edits, and deletions |
+| `family-audit` | GET | Bounded household menu-change events and recoverable prior menu snapshots written by `family-state` |
 | `dinner-history` | GET, PUT | Versioned dinner feedback/history |
 | `groceries` | GET, PUT | Versioned shared grocery list |
 | `inventory` | GET, PUT | Versioned shared inventory |

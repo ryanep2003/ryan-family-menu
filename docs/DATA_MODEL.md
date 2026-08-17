@@ -29,6 +29,7 @@ The household profile lookup is the exception: it is keyed by a SHA-256 digest o
 | `family-menu-groceries` | `items` | Versioned grocery list |
 | `family-menu-inventory` | `items` | Versioned inventory |
 | `family-menu-recipes` | `recipe-index`, `recipe:<id>`, legacy `recipes` | Shared recipe index and records |
+| `family-menu-audit` | `history` | Bounded household menu-change events and recoverable prior menu snapshots |
 
 `householdDataKey()` wraps every record key except household access profiles.
 
@@ -71,6 +72,10 @@ Important fields:
 - `deletedRecipeIds`: recipes hidden from the household library.
 
 The record has collection limits and a three-megabyte request cap. A new field must be added to both the browser snapshot/normalizer/local persistence and the server sanitizer.
+
+## Household audit history
+
+The `family-menu-audit` record is separate from editable shared state so a stale or empty browser save cannot erase the recovery trail. It contains bounded arrays of `events` (actor, time, version, action, and changed dates) and `snapshots` (the prior schedule/calendar meal plan). The server keeps at most 200 events and 30 snapshots. Reading requires the same household key as the main menu. Restoring a snapshot writes a new shared-state version and creates another audit entry; it never deletes history.
 
 ## Meal Record
 
