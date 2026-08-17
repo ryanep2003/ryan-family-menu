@@ -216,15 +216,18 @@ function cleanBudgetSettings(value) {
 
 function cleanReceipt(item) {
   const total = Math.min(100000, Math.max(0, Math.round(Number(item?.total || 0) * 100) / 100));
-  if (!(total > 0)) return null;
+  const itemCount = Math.min(500, Math.max(0, Math.round(Number(item?.itemCount) || 0)));
+  const store = cleanText(item.store, 120) || "Store";
+  if (!(total > 0) && itemCount < 1 && store === "Store") return null;
   return {
     id: cleanText(item.id, 160) || `receipt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     date: /^\d{4}-\d{2}-\d{2}$/.test(item.date) ? item.date : new Date().toISOString().slice(0, 10),
-    store: cleanText(item.store, 120) || "Store",
+    store,
     subtotal: Math.min(100000, Math.max(0, Math.round(Number(item.subtotal || 0) * 100) / 100)),
     tax: Math.min(100000, Math.max(0, Math.round(Number(item.tax || 0) * 100) / 100)),
     total,
-    itemCount: Math.min(500, Math.max(0, Math.round(Number(item.itemCount) || 0))),
+    totalEstimated: item?.totalEstimated === true,
+    itemCount,
     createdAt: cleanText(item.createdAt, 40),
     updatedBy: cleanText(item.updatedBy, 80),
   };

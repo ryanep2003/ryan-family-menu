@@ -33,6 +33,16 @@ export function createReceiptUi({
   finishPurchasedItems = () => 0,
   onTripFinished = () => {},
 }) {
+  let queuedReceiptFiles = [];
+
+  function showQueuedPhotoCount() {
+    const status = $("#receiptScanPhotoInputFileStatus");
+    if (!status) return;
+    status.textContent = queuedReceiptFiles.length
+      ? t("filesSelected").replace("{count}", queuedReceiptFiles.length)
+      : t("noFilesSelected");
+  }
+
   function renderReceiptSuggestions() {
     const panel = $("#receiptSuggestions");
     if (!panel) return;
@@ -76,7 +86,8 @@ export function createReceiptUi({
         .filter(Boolean);
 
       const pendingReceipt = getPendingReceipt();
-      const receiptTotal = Number($("#receiptTotalInput")?.value || pendingReceipt?.total || 0);
+      const manualTotal = $("#receiptTotalInput")?.value?.trim() || "";
+      const receiptTotal = Number(manualTotal || pendingReceipt?.total || 0);
       if (!selected.length && !(receiptTotal > 0)) return;
 
       const matchedIds = new Set(selected.map((item) => item.matchId).filter(Boolean));
@@ -91,12 +102,13 @@ export function createReceiptUi({
       ))));
       setGroceries(getGroceries().filter((item) => !matchedIds.has(item.id)));
       const additionalPurchased = finishPurchasedItems();
-      if (pendingReceipt && receiptTotal > 0) {
+      if (pendingReceipt) {
         await addReceipt({
           ...pendingReceipt,
           store: $("#receiptStoreInput")?.value || pendingReceipt.store,
           date: $("#receiptDateInput")?.value || pendingReceipt.date,
           total: receiptTotal,
+          totalEstimated: !manualTotal && pendingReceipt.totalEstimated === true,
           itemCount: selected.length + additionalPurchased,
         });
       }
@@ -126,7 +138,9 @@ export function createReceiptUi({
       event.preventDefault();
       const photoInput = $("#receiptScanPhotoInput");
       const cameraInput = $("#receiptScanCameraInput");
-      const files = [...(photoInput?.files || []), ...(cameraInput?.files || [])];
+      const files = queuedReceiptFiles.length
+        ? queuedReceiptFiles
+        : [...(photoInput?.files || []), ...(cameraInput?.files || [])];
       if (!files.length) return;
 
       const submitButton = $("#receiptScanForm .primary-action");
@@ -141,7 +155,13 @@ export function createReceiptUi({
         });
         const result = await recognizeReceipt(images);
         const items = Array.isArray(result) ? result : result.items;
-        setPendingReceipt(Array.isArray(result) ? null : result.receipt);
+        const parsedReceipt = Array.isArray(result) ? null : result.receipt;
+        setPendingReceipt(parsedReceipt || {
+          store: "",
+          date: new Date().toISOString().slice(0, 10),
+          total: 0,
+          itemCount: items.length,
+        });
         setReceiptSuggestions(items.map((item) => {
           const match = shoppingMatchForReceiptItem(item.text);
           return {
@@ -152,7 +172,9 @@ export function createReceiptUi({
         }));
         if (photoInput) photoInput.value = "";
         if (cameraInput) cameraInput.value = "";
+        queuedReceiptFiles = [];
         updateFileInputStatus(photoInput);
+        showQueuedPhotoCount();
         renderReceiptSuggestions();
         if (getReceiptSuggestions().length) clearGroceryStatus();
         else setGroceryStatus("receiptScanEmpty");
@@ -164,6 +186,17 @@ export function createReceiptUi({
       } finally {
         submitButton.disabled = false;
       }
+    });
+
+    [$("#receiptScanPhotoInput"), $("#receiptScanCameraInput")].filter(Boolean).forEach((input) => {
+      input.addEventListener("change", () => {
+        queuedReceiptFiles = [...queuedReceiptFiles, ...(input.files || [])];
+        // Camera capture returns one file and replaces the previous selection.
+        // Keep the files in our queue so families can take both sides of a
+        // long receipt before pressing Read receipt photos.
+        input.value = "";
+        showQueuedPhotoCount();
+      });
     });
   }
 

@@ -764,7 +764,10 @@ async function performSaveSharedState({ retrying = false, allowEmptySchedule = f
       saveSharedStateLocally();
       render();
       if (!retrying) return performSaveSharedState({ retrying: true, allowEmptySchedule, auditAction });
-      setSyncStatus("shared", "sharedStateConflict", { state: "error" });
+      // A second conflict can be caused by this same phone refreshing while a
+      // save is in flight. Keep the change recoverable without presenting it
+      // as proof that another person edited the menu.
+      setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
       return false;
     }
     setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });

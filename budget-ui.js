@@ -14,7 +14,7 @@ export function createBudgetUi({ $, $$, t, escapeHtml, getBudgetSettings, setBud
     $("#receiptHistory").innerHTML = summary.receipts.length
       ? summary.receipts.map((receipt) => `<article class="receipt-history-item">
           <div><strong>${escapeHtml(receipt.store)}</strong><span>${escapeHtml(receipt.date)} · ${receipt.itemCount} ${t("receiptItemsShort")}</span></div>
-          <strong>${escapeHtml(money(receipt.total))}</strong>
+          <strong>${receipt.total > 0 ? escapeHtml(receipt.totalEstimated ? `${money(receipt.total)} · ${t("receiptTotalCalculated")}` : money(receipt.total)) : escapeHtml(t("receiptTotalMissing"))}</strong>
           <button class="text-button" type="button" data-remove-receipt="${escapeHtml(receipt.id)}">${t("remove")}</button>
         </article>`).join("")
       : `<p class="empty-state">${t("receiptHistoryEmpty")}</p>`;

@@ -20,6 +20,7 @@ export function normalizeReceipt(value) {
     subtotal: cleanMoney(source.subtotal),
     tax: cleanMoney(source.tax),
     total: cleanMoney(source.total),
+    totalEstimated: source.totalEstimated === true,
     itemCount: Math.min(500, Math.max(0, Math.round(Number(source.itemCount) || 0))),
     createdAt: `${source.createdAt || new Date().toISOString()}`.slice(0, 40),
     updatedBy: `${source.updatedBy || ""}`.trim().slice(0, 80),
@@ -28,7 +29,7 @@ export function normalizeReceipt(value) {
 
 export function normalizeReceipts(value) {
   return Array.isArray(value)
-    ? value.map(normalizeReceipt).filter((receipt) => receipt.total > 0).slice(0, 500)
+    ? value.map(normalizeReceipt).filter((receipt) => receipt.total > 0 || receipt.itemCount > 0 || receipt.store !== "Store").slice(0, 500)
     : [];
 }
 

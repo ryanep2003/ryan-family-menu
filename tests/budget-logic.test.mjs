@@ -10,6 +10,7 @@ test("budget settings and receipts sanitize money and dates", () => {
   assert.equal(receipt.total, 45.22);
   assert.equal(receipt.itemCount, 9);
   assert.equal(normalizeReceipts([{ total: 0 }, receipt]).length, 1);
+  assert.equal(normalizeReceipts([{ total: 0, itemCount: 4, store: "Publix" }]).length, 1);
 });
 
 test("monthly budget summarizes spent and remaining from receipt history", () => {
