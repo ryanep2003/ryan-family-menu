@@ -74,6 +74,12 @@
               <input id="currentHouseholdKey" type="password" readonly />
             </label>
             <button class="ghost-button" id="copyHouseholdKey" type="button">Copy family key</button>
+            <details class="household-activity">
+              <summary>Rotate family key</summary>
+              <p class="field-note">Use the owner rotation code to revoke the old key and create a new one.</p>
+              <label><span>Rotation code</span><input id="householdRotationCode" type="password" autocomplete="off" /></label>
+              <button class="ghost-button" id="rotateHouseholdKey" type="button">Create new family key</button>
+            </details>
             <button class="primary-action" id="openFamily" type="button" data-i18n="openFamily">Family &amp; preferences</button>
             <details class="household-activity" id="householdHistory">
               <summary data-i18n="recentActivity">Recent activity</summary>

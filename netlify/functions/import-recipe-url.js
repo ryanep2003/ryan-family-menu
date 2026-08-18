@@ -58,6 +58,19 @@ export function safeUrl(value) {
   }
 }
 
+async function safeUrlForFetch(value) {
+  const url = safeUrl(value);
+  if (!url) return null;
+  try {
+    const { lookup } = await import("node:dns/promises");
+    const addresses = await lookup(url.hostname, { all: true, verbatim: true });
+    if (!addresses.length || addresses.some(({ address }) => isBlockedHost(address))) return null;
+  } catch {
+    return null;
+  }
+  return url;
+}
+
 export async function readLimitedText(response, maxBytes) {
   const contentLength = Number(response.headers.get("content-length") || 0);
   if (contentLength > maxBytes) return null;
@@ -280,7 +293,7 @@ async function recipeFromTextWithAi(text, url, html) {
 }
 
 async function imageAsDataUrl(imageUrl) {
-  const url = safeUrl(imageUrl);
+  const url = await safeUrlForFetch(imageUrl);
   if (!url) return "";
 
   try {
@@ -316,7 +329,7 @@ export default async (request) => {
   const { payload, error } = await readJsonRequest(request, { maxBytes: MAX_REQUEST_BYTES });
   if (error) return error;
 
-  const url = safeUrl(payload.url);
+  const url = await safeUrlForFetch(payload.url);
   if (!url) return jsonResponse({ error: "Enter a valid public recipe URL." }, 400);
 
   const page = await fetch(url, {

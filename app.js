@@ -2398,6 +2398,23 @@ $("#inventoryScanForm").addEventListener("submit", async (event) => {
 $("#retrySharedState").addEventListener("click", async () => {
   if (sharedRetryAction) await sharedRetryAction();
 });
+
+$("#rotateHouseholdKey")?.addEventListener("click", async () => {
+  const code = $("#householdRotationCode")?.value.trim();
+  if (!code) return;
+  const button = $("#rotateHouseholdKey");
+  button.disabled = true;
+  try {
+    const data = await putJson("/.netlify/functions/households", { rotateKey: true, rotationCode: code }, "Could not rotate the family key.");
+    localStorage.setItem("family-menu-household-key", data.key);
+    $("#currentHouseholdKey").value = data.key;
+    $("#householdMenuStatus").textContent = "New family key created. Share it privately with trusted household members.";
+  } catch (error) {
+    $("#householdMenuStatus").textContent = error.message || "Could not rotate the family key.";
+  } finally {
+    button.disabled = false;
+  }
+});
 $("#retryGroceries").addEventListener("click", saveGroceries);
 $("#retryInventory").addEventListener("click", saveInventory);
 
