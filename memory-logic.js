@@ -224,12 +224,12 @@ function recipeSearchText(recipe) {
   return values.filter((value) => typeof value === "string").join(" ").toLocaleLowerCase();
 }
 
-export function recommendationForRecipe(recipe, { events = [], members = [], preferences = [], rules = defaultFamilyRules, recipeFeedback = {}, dateKey = "" } = {}) {
-  const normalizedMembers = normalizeFamilyMembers(members);
-  const normalizedPreferences = normalizeFamilyPreferences(preferences, normalizedMembers);
-  const normalizedRules = normalizeFamilyRules(rules);
+export function recommendationForRecipe(recipe, { events = [], members = [], preferences = [], rules = defaultFamilyRules, recipeFeedback = {}, dateKey = "", normalizedContext = null } = {}) {
+  const normalizedMembers = normalizedContext?.members || normalizeFamilyMembers(members);
+  const normalizedPreferences = normalizedContext?.preferences || normalizeFamilyPreferences(preferences, normalizedMembers);
+  const normalizedRules = normalizedContext?.rules || normalizeFamilyRules(rules);
   const text = recipeSearchText(recipe);
-  const matchingEvents = normalizeDinnerEvents(events).filter((event) => event.items.some((item) => item.recipeId === recipe?.id));
+  const matchingEvents = (normalizedContext?.events || normalizeDinnerEvents(events)).filter((event) => event.items.some((item) => item.recipeId === recipe?.id));
   const reasons = [];
   let score = 0;
   const blocked = normalizedPreferences.filter((preference) => preference.kind === "restriction")
@@ -253,9 +253,8 @@ export function recommendationForRecipe(recipe, { events = [], members = [], pre
     score += 8;
     reasons.push("reliable");
   }
-  matchingEvents.forEach((event) => {
-    score += ({ loved: 5, worked: 2, mixed: -1, skip: -7, "not-made": 0 }[event.outcome] || 0);
-  });
+  const historyScore = matchingEvents.reduce((total, event) => total + ({ loved: 5, worked: 2, mixed: -1, skip: -7, "not-made": 0 }[event.outcome] || 0), 0);
+  score += matchingEvents.length ? historyScore / Math.min(matchingEvents.length, 5) : 0;
   const legacy = recipeFeedback?.[recipe?.id];
   if (legacy) score += (Number(legacy.loved) || 0) * 2 + (Number(legacy.repeat) || 0) - (Number(legacy.skip) || 0) * 4;
   if (!matchingEvents.length && (Number(legacy?.loved) || 0) > 0) reasons.push("liked");
@@ -272,7 +271,12 @@ export function recommendationForRecipe(recipe, { events = [], members = [], pre
 }
 
 export function rankedRecipes(recipes, context = {}) {
-  return recipes.map((recipe) => ({ recipe, recommendation: recommendationForRecipe(recipe, context) }))
+  const normalizedMembers = normalizeFamilyMembers(context.members);
+  const normalizedPreferences = normalizeFamilyPreferences(context.preferences, normalizedMembers);
+  const normalizedRules = normalizeFamilyRules(context.rules);
+  const normalizedEvents = normalizeDinnerEvents(context.events);
+  const rankedContext = { ...context, normalizedContext: { members: normalizedMembers, preferences: normalizedPreferences, rules: normalizedRules, events: normalizedEvents } };
+  return recipes.map((recipe) => ({ recipe, recommendation: recommendationForRecipe(recipe, rankedContext) }))
     .filter(({ recommendation }) => !recommendation.blocked)
     .sort((a, b) => b.recommendation.score - a.recommendation.score || `${a.recipe?.id}`.localeCompare(`${b.recipe?.id}`));
 }

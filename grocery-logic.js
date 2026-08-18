@@ -14,9 +14,11 @@ function fractionValue(value) {
   return denominator ? numerator / denominator : 0;
 }
 
+const UNICODE_FRACTIONS = { "¼": "1/4", "½": "1/2", "¾": "3/4", "⅐": "1/7", "⅑": "1/9", "⅒": "1/10", "⅓": "1/3", "⅔": "2/3", "⅕": "1/5", "⅖": "2/5", "⅗": "3/5", "⅘": "4/5", "⅙": "1/6", "⅚": "5/6", "⅛": "1/8", "⅜": "3/8", "⅝": "5/8", "⅞": "7/8" };
+
 export function parseIngredientAmount(value) {
-  const text = cleanIngredientForGrocery(value);
-  const match = text.match(/^(?:(\d+)\s+)?(\d+\/\d+|\d+(?:\.\d+)?)\s+(.+)$/);
+  const text = cleanIngredientForGrocery(value).replace(/[¼½¾⅐⅑⅒⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]/g, (fraction) => ` ${UNICODE_FRACTIONS[fraction]}`);
+  const match = text.match(/^(?:(\d+)\s+)?(\d+(?:\/\d+|\.\d+)?)(?:\s*[-–]\s*\d+(?:\/\d+|\.\d+)?)?\s+(.+)$/);
   if (!match) return { quantity: 0, remainder: text };
   const whole = Number(match[1] || 0);
   const amount = match[2].includes("/") ? fractionValue(match[2]) : Number(match[2]);
@@ -212,7 +214,14 @@ export function mergeGroceries(existing, incoming) {
 
 export function replacePlannedGroceries(existing, generated) {
   const retained = existing.filter((item) => !["meal-plan", "week-plan"].includes(item.source));
-  return [...retained, ...mergeGroceries([], generated)];
+  const previous = new Map(existing
+    .filter((item) => ["meal-plan", "week-plan"].includes(item.source) && item.ingredientKey)
+    .map((item) => [item.ingredientKey, item]));
+  const rebuilt = mergeGroceries([], generated).map((item) => {
+    const old = previous.get(item.ingredientKey);
+    return old ? { ...item, checked: Boolean(old.checked), inInventory: Boolean(old.inInventory), inventoryDecision: old.inventoryDecision || item.inventoryDecision, inventorySuggested: Boolean(old.inventorySuggested || item.inventorySuggested), updatedBy: old.updatedBy || item.updatedBy, updatedAt: old.updatedAt || item.updatedAt } : item;
+  });
+  return [...retained, ...rebuilt];
 }
 
 export function applyInventoryCoverage(items, inventory) {

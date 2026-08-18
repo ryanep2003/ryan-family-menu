@@ -26,8 +26,11 @@ test("versionedRecord reads wrapped records with metadata", () => {
   });
 });
 
-test("hasVersionConflict ignores missing legacy client versions", () => {
-  assert.equal(hasVersionConflict(undefined, 4), false);
+test("hasVersionConflict fails closed for missing or invalid client versions", () => {
+  assert.equal(hasVersionConflict(undefined, 4), true);
+  assert.equal(hasVersionConflict(null, 4), true);
+  assert.equal(hasVersionConflict("", 4), true);
+  assert.equal(hasVersionConflict("not-a-version", 4), true);
   assert.equal(hasVersionConflict("4", 4), false);
   assert.equal(hasVersionConflict(3, 4), true);
 });

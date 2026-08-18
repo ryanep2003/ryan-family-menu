@@ -147,7 +147,7 @@ export function createDashboardUi({
         getLang,
       });
     }
-    if (handoffNote) handoffNote.value = localizedText(meal.notes, getLang());
+    if (handoffNote && globalThis.document?.activeElement !== handoffNote) handoffNote.value = localizedText(meal.notes, getLang());
     renderAvailableFood();
     const toBuy = getGroceries().filter((item) => !item.checked && !item.inInventory).length;
     $("#todayGrocerySummary").textContent = `${toBuy} ${t("itemsToBuy")}`;

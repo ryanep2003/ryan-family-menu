@@ -1,6 +1,7 @@
 import { requireHouseholdAccess } from "./_household.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
 import { cleanImageDataUrl, openAiErrorMessage, outputTextFromResponse, parseJsonObject } from "./_openai.js";
+import { checkAiUsage } from "./_ai-usage.js";
 
 const MAX_IMAGES = 3;
 const MAX_IMAGE_BYTES = 700000;
@@ -37,6 +38,8 @@ export default async (request) => {
 
   const access = await requireHouseholdAccess(request);
   if (access.error) return access.error;
+  const usage = await checkAiUsage(access.household.id, "recipe");
+  if (!usage.allowed) return usage.response;
 
   if (!process.env.OPENAI_API_KEY) {
     return jsonResponse({ error: "Missing OPENAI_API_KEY in Netlify environment variables." }, 500);

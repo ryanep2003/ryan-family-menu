@@ -57,6 +57,8 @@ import {
   applyVersionConflict,
   loadVersionedCollection,
   mergeVersionedItems,
+  cloneVersionedItems,
+  cloneVersionedValue,
   persistVersionedCollection,
   readVersionedCollectionStorage,
   saveVersionedCollection,
@@ -103,7 +105,8 @@ const householdStorage = createHouseholdStorage(localStorage, household.id);
 let lang = supportedLang(readStringStorage(localStorage, "dinner-lang", "en"));
 let householdMember = cleanHouseholdMember(readStringStorage(householdStorage, "dinner-household-member", "Family")) || "Family";
 let selectedRecipeId = "meatballs";
-let schedule = normalizeSchedule(readJsonStorage(householdStorage, "dinner-schedule", null));
+const storedSchedule = readJsonStorage(householdStorage, "dinner-schedule", null);
+let schedule = normalizeSchedule(storedSchedule || Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])));
 let calendarMeals = normalizeCalendar(readJsonStorage(householdStorage, "dinner-calendar", {}));
 let weekStartKey = readStringStorage(householdStorage, "dinner-week-start", currentWeekStartKey());
 let sharedStateVersion = readNumberStorage(householdStorage, "dinner-state-version", 0);
@@ -124,9 +127,10 @@ const storedGroceries = readVersionedCollectionStorage(householdStorage, grocery
 const storedInventory = readVersionedCollectionStorage(householdStorage, inventoryStorageKeys);
 let groceries = storedGroceries.items;
 let groceryVersion = storedGroceries.version;
-let groceryBaseItems = storedGroceries.items;
+let groceryBaseItems = cloneVersionedItems(storedGroceries.items);
 let inventory = storedInventory.items;
 let inventoryVersion = storedInventory.version;
+let inventoryBaseItems = cloneVersionedItems(storedInventory.items);
 let inventorySuggestions = [];
 let receiptSuggestions = [];
 let pendingReceipt = null;
@@ -501,7 +505,8 @@ function localize(value) {
 
 function localizeExact(value) {
   const text = localizedTextExact(value, lang);
-  return textMatchesLanguage(text, lang) ? text : "";
+  if (text && textMatchesLanguage(text, lang)) return text;
+  return localizedText(value, lang);
 }
 
 function escapeHtml(value) {
@@ -555,7 +560,6 @@ async function navigateWeek(offset) {
   visibleMonth = new Date(`${weekStartKey}T12:00:00`);
   visibleMonth.setDate(1);
   render();
-  await saveSharedState();
 }
 
 async function goToCurrentWeek() {
@@ -566,7 +570,6 @@ async function goToCurrentWeek() {
   visibleMonth = new Date(`${weekStartKey}T12:00:00`);
   visibleMonth.setDate(1);
   render();
-  await saveSharedState();
 }
 
 function rollWeekForwardIfNeeded() {
@@ -739,17 +742,21 @@ async function performSaveSharedState({ retrying = false, allowEmptySchedule = f
     sharedStateVersion = Number(data.version) || sharedStateVersion;
     if (data.state) {
       applySharedState(normalizeSharedState(data.state, currentSharedState()));
-      sharedStateBaseState = sharedStateSnapshot();
+      sharedStateBaseState = cloneVersionedValue(sharedStateSnapshot());
       saveSharedStateLocally();
     }
     markSynced("shared");
     return true;
   } catch (error) {
     console.warn(error);
+    if (error.status === 413) {
+      setSyncStatus("shared", "sharedMenuTooLarge", { state: "error" });
+      return false;
+    }
     if (error.status === 409 && error.data?.code === "empty-overwrite-blocked" && error.data?.state) {
       sharedStateVersion = Number(error.data.version) || sharedStateVersion;
       applySharedState(normalizeSharedState(error.data.state, currentSharedState()));
-      sharedStateBaseState = sharedStateSnapshot();
+      sharedStateBaseState = cloneVersionedValue(sharedStateSnapshot());
       saveSharedStateLocally();
       render();
       setSyncStatus("shared", "emptyOverwriteBlocked", { state: "error" });
@@ -761,7 +768,7 @@ async function performSaveSharedState({ retrying = false, allowEmptySchedule = f
       const mergedState = mergeSharedState(serverState, localState, sharedStateBaseState || serverState);
       sharedStateVersion = Number(error.data.version) || sharedStateVersion;
       applySharedState(normalizeSharedState(mergedState, currentSharedState()));
-      sharedStateBaseState = serverState;
+      sharedStateBaseState = cloneVersionedValue(serverState);
       saveSharedStateLocally();
       render();
       if (!retrying) return performSaveSharedState({ retrying: true, allowEmptySchedule, auditAction });
@@ -825,7 +832,7 @@ async function applyLoadedSharedState(data) {
     recipeEdits: {},
     deletedRecipeIds: [],
   }));
-  sharedStateBaseState = sharedStateSnapshot();
+  sharedStateBaseState = cloneVersionedValue(sharedStateSnapshot());
   const rolledForward = rollWeekForwardIfNeeded();
   const compactEdits = compactRecipeEditsForSync(recipeEdits, sharedRecipes);
   const compactedDuplicateMedia = JSON.stringify(compactEdits) !== JSON.stringify(recipeEdits);
@@ -1107,8 +1114,11 @@ function generatedGroceriesForMeal(dateKey, mealSlot) {
 }
 
 function manualGroceryItemsFromText(text, store) {
-  return text
-    .split(/\n|,|;/)
+  const source = `${text || ""}`;
+  const parts = source.includes("\n") || source.includes(";")
+    ? source.split(/\n|;/)
+    : source.split(/,(?!\s*\d+(?:%|\s*%))/);
+  return parts
     .map((item) => cleanIngredientForGrocery(item))
     .filter(Boolean)
     .map((item) => groceryItem(item, {
@@ -1158,9 +1168,8 @@ function movePurchasedItemsHome() {
   purchased.forEach((grocery) => {
     const existing = inventoryMatchFor(grocery.text, true);
     if (existing) {
-      existing.stockState = "full";
-      existing.updatedAt = new Date().toISOString();
-      existing.updatedBy = householdMember;
+      const nextExisting = { ...existing, stockState: "full", updatedAt: new Date().toISOString(), updatedBy: householdMember };
+      inventory = inventory.map((item) => item.id === existing.id ? nextExisting : item);
     } else {
       inventory.unshift(inventoryItem(grocery.text, "", "pantry", [], "full", lang, householdMember));
     }
@@ -1765,7 +1774,7 @@ async function loadGroceries() {
       fallbackMessage: "Could not load groceries.",
       setItems: (items) => {
         groceries = items;
-        groceryBaseItems = items;
+        groceryBaseItems = cloneVersionedItems(items);
       },
       setVersion: (version) => {
         groceryVersion = version;
@@ -1797,7 +1806,7 @@ async function saveGroceries({ retrying = false } = {}) {
       },
       persist: (items, version) => persistGroceriesLocally(items, version),
     });
-    groceryBaseItems = groceries;
+    groceryBaseItems = cloneVersionedItems(groceries);
     markSynced("groceries");
     return true;
   } catch (error) {
@@ -1834,6 +1843,7 @@ async function loadInventory() {
       fallbackMessage: "Could not load inventory.",
       setItems: (items) => {
         inventory = items;
+        inventoryBaseItems = cloneVersionedItems(items);
       },
       setVersion: (version) => {
         inventoryVersion = version;
@@ -1848,7 +1858,7 @@ async function loadInventory() {
   }
 }
 
-async function saveInventory() {
+async function saveInventory({ retrying = false } = {}) {
   setSyncStatus("inventory", "savedLocallySyncing", { state: "pending" });
   try {
     await saveVersionedCollection({
@@ -1865,10 +1875,12 @@ async function saveInventory() {
       },
       persist: (items, version) => persistInventoryLocally(items, version),
     });
+    inventoryBaseItems = cloneVersionedItems(inventory);
     markSynced("inventory");
     return true;
   } catch (error) {
     console.warn(error);
+    const localInventory = inventory;
     if (applyVersionConflict(error, {
       setItems: (items) => {
         inventory = items;
@@ -1879,6 +1891,9 @@ async function saveInventory() {
       currentVersion: inventoryVersion,
       persist: (items, version) => persistInventoryLocally(items, version),
     })) {
+      inventory = mergeVersionedItems(localInventory, inventoryBaseItems, error.data.items);
+      persistInventoryLocally(inventory, inventoryVersion);
+      if (!retrying) return saveInventory({ retrying: true });
       renderInventory();
       bindInventoryControls();
       setSyncStatus("inventory", "inventoryConflict", { state: "error" });
@@ -2401,7 +2416,12 @@ registerServiceWorker({ $, onUpdateAvailable: showAppUpdateNotice });
 setupLocalizedFileInputs();
 render();
 loadSharedRecipes().then(() => loadSharedState());
-loadAuditHistory();
+$("#householdHistory")?.addEventListener("toggle", (event) => {
+  if (event.target.open && !event.target.dataset.loaded) {
+    event.target.dataset.loaded = "true";
+    loadAuditHistory();
+  }
+});
 loadDinnerHistory();
 loadGroceries();
 loadInventory();

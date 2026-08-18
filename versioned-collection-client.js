@@ -1,5 +1,15 @@
 import { readJsonStorage, readNumberStorage } from "./storage-utils.js";
 
+// Persisted household data is JSON-shaped. Keep conflict baselines detached
+// from live UI objects so in-place UI edits cannot rewrite the baseline.
+export function cloneVersionedValue(value) {
+  return value == null ? value : JSON.parse(JSON.stringify(value));
+}
+
+export function cloneVersionedItems(items) {
+  return cloneVersionedValue(Array.isArray(items) ? items : []);
+}
+
 function sameValue(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }

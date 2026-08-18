@@ -191,14 +191,16 @@ export function cookingServings(value) {
 }
 
 export function recipeBatchPlan(recipeServings, neededServings, consumedServings = neededServings) {
-  const recipeYield = Number(recipeServings);
+  const suppliedYield = Number(recipeServings);
   const needed = Number(neededServings);
-  if (!(recipeYield > 0) || !(needed > 0)) return null;
+  if (!(needed > 0)) return null;
+  const recipeYield = suppliedYield > 0 ? suppliedYield : 4;
   const batches = Math.ceil((needed / recipeYield) * 4) / 4;
   const cookedServings = batches * recipeYield;
   return {
     batches,
     cookedServings,
+    ...(suppliedYield > 0 ? {} : { assumedYield: true }),
     expectedLeftovers: Math.max(0, Math.round((cookedServings - Number(consumedServings || 0)) * 4) / 4),
   };
 }

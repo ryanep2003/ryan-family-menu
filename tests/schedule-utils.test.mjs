@@ -66,7 +66,7 @@ test("recipe batch planning rounds up to quarter batches and estimates leftovers
   assert.deepEqual(recipeBatchPlan(4, 5), { batches: 1.25, cookedServings: 5, expectedLeftovers: 0 });
   assert.deepEqual(recipeBatchPlan(6, 4), { batches: 0.75, cookedServings: 4.5, expectedLeftovers: 0.5 });
   assert.deepEqual(recipeBatchPlan(4, 5, 2), { batches: 1.25, cookedServings: 5, expectedLeftovers: 3 });
-  assert.equal(recipeBatchPlan(0, 4), null);
+  assert.equal(recipeBatchPlan(0, 4).assumedYield, true);
 });
 
 test("formatDateKey and currentWeekStartKey use local noon week boundaries", () => {

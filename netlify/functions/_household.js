@@ -68,3 +68,12 @@ export async function updateHouseholdProfile(key, profile) {
   await store.setJSON(`${PROFILE_PREFIX}${householdKeyDigest(key)}`, next);
   return next;
 }
+
+export async function rotateHouseholdKey(currentKey, profile) {
+  const nextKey = createHouseholdKey();
+  const store = await householdStore();
+  const next = { ...profile, updatedAt: new Date().toISOString() };
+  await store.setJSON(`${PROFILE_PREFIX}${householdKeyDigest(nextKey)}`, next);
+  await store.delete(`${PROFILE_PREFIX}${householdKeyDigest(currentKey)}`);
+  return { key: nextKey, profile: next };
+}

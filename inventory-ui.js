@@ -68,6 +68,7 @@ export function createInventoryUi({
   }
 
   function renderInventory() {
+    if (globalThis.document?.activeElement?.closest?.("#inventoryList")) return;
     const inventory = getInventory();
     const inventoryFilter = getInventoryFilter();
     const inventoryQuery = canonicalText($("#inventorySearch")?.value || "").trim().toLowerCase();
@@ -165,16 +166,18 @@ export function createInventoryUi({
         const id = control.dataset.inventoryAmount || control.dataset.inventoryUnit || control.dataset.inventoryExpiration;
         const item = getInventory().find((entry) => entry.id === id);
         if (!item) return;
+        const nextItem = { ...item };
         if (control.dataset.inventoryAmount) {
-          item.amount = Math.min(10000, Math.max(0, Number(control.value) || 0));
-          if (item.amount === 0) item.stockState = "out";
-          else if (item.stockState === "out") item.stockState = "some";
+          nextItem.amount = Math.min(10000, Math.max(0, Number(control.value) || 0));
+          if (nextItem.amount === 0) nextItem.stockState = "out";
+          else if (nextItem.stockState === "out") nextItem.stockState = "some";
         } else if (control.dataset.inventoryUnit) {
-          item.unit = control.value;
+          nextItem.unit = control.value;
         } else {
-          item.expiresOn = /^\d{4}-\d{2}-\d{2}$/.test(control.value) ? control.value : "";
+          nextItem.expiresOn = /^\d{4}-\d{2}-\d{2}$/.test(control.value) ? control.value : "";
         }
-        touchItem(item);
+        touchItem(nextItem);
+        setInventory(getInventory().map((entry) => entry.id === item.id ? nextItem : entry));
         renderInventory();
         bindInventoryControls();
         await saveInventory();
@@ -185,8 +188,9 @@ export function createInventoryUi({
       select.addEventListener("change", async () => {
         const item = getInventory().find((entry) => entry.id === select.dataset.stockState);
         if (!item) return;
-        item.stockState = select.value;
-        touchItem(item);
+        const nextItem = { ...item, stockState: select.value };
+        touchItem(nextItem);
+        setInventory(getInventory().map((entry) => entry.id === item.id ? nextItem : entry));
         renderInventory();
         bindInventoryControls();
         await saveInventory();
@@ -197,15 +201,15 @@ export function createInventoryUi({
       button.addEventListener("click", async () => {
         const item = getInventory().find((entry) => entry.id === button.dataset.addInventoryToShopping);
         if (!item) return;
-        item.stockState = "out";
-        touchItem(item);
+        const nextItem = { ...item, stockState: "out" };
+        touchItem(nextItem);
+        setInventory(getInventory().map((entry) => entry.id === item.id ? nextItem : entry));
         const groceries = getGroceries();
         const matchingGrocery = groceries.find((entry) => canonicalText(entry.text).toLowerCase() === canonicalText(item.text).toLowerCase());
         if (matchingGrocery) {
-          matchingGrocery.checked = false;
-          matchingGrocery.inInventory = false;
-          matchingGrocery.source = "inventory-restock";
-          touchItem(matchingGrocery);
+          const nextGrocery = { ...matchingGrocery, checked: false, inInventory: false, source: "inventory-restock" };
+          touchItem(nextGrocery);
+          setGroceries(groceries.map((entry) => entry.id === matchingGrocery.id ? nextGrocery : entry));
         } else {
           setGroceries([groceryItem(item.text, {
             source: "inventory-restock",

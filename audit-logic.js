@@ -1,5 +1,5 @@
 const MAX_AUDIT_EVENTS = 200;
-const MAX_STATE_SNAPSHOTS = 30;
+const MAX_STATE_SNAPSHOTS = 10;
 
 function cleanText(value, maxLength = 240) {
   return `${value || ""}`.trim().slice(0, maxLength);

@@ -38,6 +38,13 @@ export function createCookAlongUi({ $, t, localize, escapeHtml, getLang = () => 
   function render() {
     const panel = $("#cookAlongPanel");
     if (!panel) return;
+    const active = globalThis.document?.activeElement;
+    const finishForm = panel.querySelector("[data-cook-finish]");
+    const draft = active && finishForm?.contains(active) ? {
+      servings: finishForm.elements.servings?.value || "",
+      leftovers: finishForm.elements.leftovers?.value || "",
+      note: finishForm.elements.note?.value || "",
+    } : null;
     if (!recipe) {
       panel.hidden = true;
       panel.innerHTML = "";
@@ -77,6 +84,16 @@ export function createCookAlongUi({ $, t, localize, escapeHtml, getLang = () => 
       <p class="cook-along-status" role="status" aria-live="polite"></p>
     `;
     bind();
+    if (draft) {
+      const nextForm = panel.querySelector("[data-cook-finish]");
+      if (nextForm) {
+        nextForm.elements.servings.value = draft.servings;
+        nextForm.elements.leftovers.value = draft.leftovers;
+        nextForm.elements.note.value = draft.note;
+        const field = nextForm.elements[active.name] || nextForm.elements.note;
+        field?.focus?.();
+      }
+    }
   }
 
   function bind() {

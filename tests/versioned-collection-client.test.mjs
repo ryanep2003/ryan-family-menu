@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   applyVersionConflict,
+  cloneVersionedItems,
   loadVersionedCollection,
   mergeVersionedItems,
   persistVersionedCollection,
@@ -17,6 +18,15 @@ test("mergeVersionedItems keeps non-conflicting phone edits and deletions", () =
   assert.deepEqual(mergeVersionedItems(local, base, remote), [
     { id: "milk", quantity: 2 },
     { id: "bread", quantity: 1 },
+  ]);
+});
+
+test("cloned conflict baseline detects an in-place UI edit", () => {
+  const base = [{ id: "milk", checked: false }];
+  const local = cloneVersionedItems(base);
+  local[0].checked = true;
+  assert.deepEqual(mergeVersionedItems(local, base, [{ id: "milk", checked: false }]), [
+    { id: "milk", checked: true },
   ]);
 });
 

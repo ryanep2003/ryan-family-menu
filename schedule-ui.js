@@ -211,7 +211,7 @@ export function createScheduleUi({
                   <strong>${escapeHtml(localize(recipe.name))}</strong>
                   ${item.sourceType === "leftover"
                     ? `<span>${escapeHtml(t("leftoverServingPlan").replace("{count}", item.servings || 0))}</span>`
-                    : batch ? `<span>${escapeHtml(t("yieldPlan")
+                    : batch ? `<span>${escapeHtml((batch.assumedYield ? `${t("yieldAssumed")} ` : "") + t("yieldPlan")
                       .replace("{yield}", recipeYield)
                       .replace("{batches}", batch.batches)
                       .replace("{leftovers}", batch.expectedLeftovers))}</span>` : `<span class="meal-yield-missing">${t("yieldMissing")}</span>`}

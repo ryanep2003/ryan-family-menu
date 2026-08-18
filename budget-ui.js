@@ -10,7 +10,8 @@ export function createBudgetUi({ $, $$, t, escapeHtml, getBudgetSettings, setBud
     $("#budgetRemaining").textContent = summary.target ? money(Math.abs(summary.remaining)) : "—";
     $("#budgetRemainingLabel").textContent = t(summary.remaining < 0 ? "budgetOver" : "budgetRemaining");
     $("#budgetProgress").style.width = `${summary.percent}%`;
-    $("#monthlyBudgetInput").value = summary.target || "";
+    const budgetInput = $("#monthlyBudgetInput");
+    if (globalThis.document?.activeElement !== budgetInput) budgetInput.value = summary.target || "";
     $("#receiptHistory").innerHTML = summary.receipts.length
       ? summary.receipts.map((receipt) => `<article class="receipt-history-item">
           <div><strong>${escapeHtml(receipt.store)}</strong><span>${escapeHtml(receipt.date)} · ${receipt.itemCount} ${t("receiptItemsShort")}</span></div>
@@ -32,15 +33,16 @@ export function createBudgetUi({ $, $$, t, escapeHtml, getBudgetSettings, setBud
   }
 
   function bindReceiptRemoval() {
-    $$("[data-remove-receipt]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        setReceipts(getReceipts().filter((receipt) => receipt.id !== button.dataset.removeReceipt));
-        renderBudget();
-        bindReceiptRemoval();
-        await saveSharedState();
-      });
+    const history = $("#receiptHistory");
+    if (!history || history.dataset.bound) return;
+    history.dataset.bound = "true";
+    history.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-remove-receipt]");
+      if (!button) return;
+      setReceipts(getReceipts().filter((receipt) => receipt.id !== button.dataset.removeReceipt));
+      renderBudget();
+      await saveSharedState();
     });
   }
-
   return { bindBudgetControls, renderBudget };
 }

@@ -5,6 +5,7 @@ import {
   householdAccessKey,
   householdDataKey,
   requireHouseholdAccess,
+  rotateHouseholdKey,
   updateHouseholdProfile,
 } from "./_household.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
@@ -82,6 +83,12 @@ export default async (request) => {
     if (access.error) return access.error;
     const { payload, error } = await readJsonRequest(request, { maxBytes: MAX_REQUEST_BYTES });
     if (error) return error;
+    if (payload.rotateKey) {
+      const expected = process.env.HOUSEHOLD_ROTATION_CODE || "";
+      if (!expected || payload.rotationCode !== expected) return jsonResponse({ error: "Household key rotation is not authorized." }, 401);
+      const rotated = await rotateHouseholdKey(householdAccessKey(request), access.household);
+      return jsonResponse({ household: rotated.profile, key: rotated.key });
+    }
     const name = cleanHouseholdName(payload.name);
     if (!name) return jsonResponse({ error: "Household name is required." }, 400);
     const household = await updateHouseholdProfile(householdAccessKey(request), { ...access.household, name });

@@ -80,6 +80,11 @@ async function readRecipes(store, householdId) {
 async function writeRecipe(store, recipe, householdId) {
   const indexKey = householdDataKey(householdId, INDEX_KEY);
   const index = (await store.get(indexKey, { type: "json" }).catch(() => [])) || [];
+  if (!index.some((entry) => entry?.id === recipe.id) && index.length >= MAX_RECIPES) {
+    const error = new Error("Recipe library limit reached");
+    error.code = "recipe-limit";
+    throw error;
+  }
   const nextIndex = [
       {
         id: recipe.id,
@@ -122,6 +127,7 @@ export default async (request) => {
       await writeRecipe(store, recipe, access.household.id);
     } catch (error) {
       console.error(error);
+      if (error.code === "recipe-limit") return jsonResponse({ error: "Your recipe library is full. Remove a recipe before adding another." }, 409);
       return jsonResponse({ error: "Could not save recipe" }, 500);
     }
 

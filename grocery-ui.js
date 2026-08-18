@@ -328,11 +328,12 @@ export function createGroceryUi({
       const groceries = getGroceries();
       const item = groceries.find((grocery) => grocery.id === checkbox.dataset.groceryId);
       if (!item) return;
-      item.checked = checkbox.checked;
-      if (!checkbox.checked && isConfirmedAtHome(item)) item.inventoryDecision = "need";
-      if (checkbox.checked && item.inventorySuggested) item.inventoryDecision = "need";
-      item.inInventory = isConfirmedAtHome(item);
-      touchItem(item);
+      const nextItem = { ...item, checked: checkbox.checked };
+      if (!checkbox.checked && isConfirmedAtHome(item)) nextItem.inventoryDecision = "need";
+      if (checkbox.checked && item.inventorySuggested) nextItem.inventoryDecision = "need";
+      nextItem.inInventory = isConfirmedAtHome(item);
+      touchItem(nextItem);
+      setGroceries(groceries.map((entry) => entry.id === item.id ? nextItem : entry));
       renderGroceries();
       await saveGroceries();
     });
@@ -348,10 +349,9 @@ export function createGroceryUi({
         const id = needButton?.dataset.inventoryNeed || haveButton?.dataset.inventoryHave;
         const item = getGroceries().find((entry) => entry.id === id);
         if (!item) return;
-        item.inventoryDecision = haveButton ? "have" : "need";
-        item.inInventory = Boolean(haveButton);
-        item.checked = Boolean(haveButton);
-        touchItem(item);
+        const nextItem = { ...item, inventoryDecision: haveButton ? "have" : "need", inInventory: Boolean(haveButton), checked: Boolean(haveButton) };
+        touchItem(nextItem);
+        setGroceries(getGroceries().map((entry) => entry.id === item.id ? nextItem : entry));
         renderGroceries();
         await saveGroceries();
         return;
@@ -360,14 +360,13 @@ export function createGroceryUi({
       if (checkButton) {
         event.preventDefault();
         const ids = new Set(checkButton.dataset.checkGrocerySection.split("|").filter(Boolean));
-        getGroceries().forEach((item) => {
-          if (ids.has(item.id)) {
-            item.checked = true;
-            if (item.inventorySuggested) item.inventoryDecision = "need";
-            item.inInventory = false;
-            touchItem(item);
-          }
-        });
+        setGroceries(getGroceries().map((item) => {
+          if (!ids.has(item.id)) return item;
+          const nextItem = { ...item, checked: true, inInventory: false };
+          if (item.inventorySuggested) nextItem.inventoryDecision = "need";
+          touchItem(nextItem);
+          return nextItem;
+        }));
         renderGroceries();
         await saveGroceries();
         return;

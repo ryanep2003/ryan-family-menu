@@ -218,6 +218,7 @@ function cleanBudgetSettings(value) {
 }
 
 function cleanReceipt(item) {
+  if (!item || typeof item !== "object") return null;
   const total = Math.min(100000, Math.max(0, Math.round(Number(item?.total || 0) * 100) / 100));
   const itemCount = Math.min(500, Math.max(0, Math.round(Number(item?.itemCount) || 0)));
   const store = cleanText(item.store, 120) || "Store";

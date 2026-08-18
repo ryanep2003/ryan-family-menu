@@ -12,6 +12,7 @@ const MAX_REQUEST_BYTES = 250000;
 const MEAL_SLOTS = ["breakfast", "lunch", "dinner"];
 
 export function cleanItem(item) {
+  if (!item || typeof item !== "object") return null;
   const text = cleanLocalizedText(item.text, 220);
   if (!hasLocalizedContent(text)) return null;
   const store = ["any", "publix", "whole-foods", "costco"].includes(item.store) ? item.store : "any";

@@ -409,6 +409,14 @@ export function createRecipeFormUi({
       else $("#stepsInput").focus();
       return;
     }
+    const servingsInput = $("#servingsInput");
+    if (servingsInput && !(Number(servingsInput.value) > 0)) {
+      status.textContent = t("recipeYieldRequired");
+      status.classList.add("error");
+      openRecipeDetails();
+      servingsInput.focus();
+      return;
+    }
 
     const submitButton = $("#uploadForm .primary-action");
     submitButton.disabled = true;

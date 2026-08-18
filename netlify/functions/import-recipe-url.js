@@ -1,6 +1,7 @@
 import { requireHouseholdAccess } from "./_household.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
 import { outputTextFromResponse, parseJsonObject } from "./_openai.js";
+import { checkAiUsage } from "./_ai-usage.js";
 
 const MODEL = process.env.OPENAI_MODEL || "gpt-5.4-mini";
 const MAX_REQUEST_BYTES = 4000;
@@ -30,6 +31,18 @@ function isBlockedHost(hostname) {
   const host = `${hostname || ""}`.toLowerCase().replace(/^\[|\]$/g, "");
   if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local")) return true;
   if (host === "::1" || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80:")) return true;
+  if (/^\d+$/.test(host)) {
+    const value = Number(host);
+    if (Number.isSafeInteger(value) && value >= 0 && value <= 0xffffffff) {
+      const first = value >>> 24;
+      const second = (value >>> 16) & 255;
+      if (first === 0 || first === 10 || first === 127 || first === 169 && second === 254 || first === 192 && second === 168 || first === 172 && second >= 16 && second <= 31) return true;
+    }
+  }
+  if (host.startsWith("::ffff:")) {
+    const mapped = host.slice(7);
+    if (isBlockedHost(mapped)) return true;
+  }
   return /^(0\.|10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(host);
 }
 
@@ -37,6 +50,7 @@ export function safeUrl(value) {
   try {
     const url = new URL(value);
     if (!["http:", "https:"].includes(url.protocol)) return null;
+    if (url.port && !["80", "443"].includes(url.port)) return null;
     if (isBlockedHost(url.hostname)) return null;
     return url;
   } catch {
@@ -296,6 +310,8 @@ export default async (request) => {
 
   const access = await requireHouseholdAccess(request);
   if (access.error) return access.error;
+  const usage = await checkAiUsage(access.household.id, "url");
+  if (!usage.allowed) return usage.response;
 
   const { payload, error } = await readJsonRequest(request, { maxBytes: MAX_REQUEST_BYTES });
   if (error) return error;

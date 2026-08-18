@@ -128,3 +128,29 @@ This is a lightweight record of architectural and product decisions that future 
 **Alternatives considered:** Requiring duplicate recipe entries, inferring leftovers from matching recipes later in the day, or making the whole day use one serving count.
 
 **Consequences:** The planner must explain the extra-portion field clearly and families still explicitly add a planned leftover to a later meal. Existing meal records remain compatible because the new field defaults to zero.
+
+## 2026-08-17 — Keep conflict baselines immutable and merge collections
+
+**Decision:** Keep detached snapshots for grocery, inventory, and shared-state conflict baselines. Apply local edits immutably where possible, and merge inventory conflicts with the same optimistic-concurrency path as groceries before retrying once.
+
+**Reason:** Shared UI objects must not alias the baseline used to detect local changes. Without a detached baseline, concurrent grocery edits can be silently discarded; inventory previously replaced the local copy wholesale on conflict.
+
+**Alternatives considered:** Last-write-wins replacement, forcing users to reload and re-enter changes, or introducing a new realtime database.
+
+**Consequences:** Concurrent edits are retained when they touch different records, conflicts remain visible after a repeated collision, and the existing versioned Blob storage remains authoritative.
+
+## 2026-08-17 — Bound AI scans per household
+
+**Decision:** Keep a small household/day/route usage counter in a separate Blob store and cap AI-powered scans at 30 per route per day.
+
+**Reason:** A shared bearer key must not allow an accidental or malicious scan loop to create an unbounded model bill.
+
+**Consequences:** Normal family use remains unaffected; a household receives a clear 429 response after the cap. Counters are additive and do not change existing household records.
+
+## 2026-08-17 — Make missing recipe yields explicit
+
+**Decision:** Publishing a new recipe requires a yield when the field is available, while older recipes without a yield use a visibly labeled four-serving planning assumption.
+
+**Reason:** Silent zero-yield math made servings, groceries, and leftovers look functional while doing nothing.
+
+**Consequences:** Existing recipes remain readable and usable; families can correct the assumption by editing the yield.

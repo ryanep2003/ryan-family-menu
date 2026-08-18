@@ -45,7 +45,7 @@ Shared state, dinner history, groceries, and inventory use this compatibility en
 }
 ```
 
-The data field is `state` for family state and `items` for the three collections. Older unwrapped values are read as version zero. Writers submit the last version they observed; a mismatch returns `409` and the newest server copy.
+The data field is `state` for family state and `items` for the three collections. Older unwrapped values are read as version zero. Writers submit the last version they observed; a mismatch returns `409` and the newest server copy. Versioned writes fail closed when the client omits or sends an invalid version, so an unknown client cannot overwrite a newer household record.
 
 Do not remove legacy-envelope support until existing household data has been inspected and explicitly migrated.
 

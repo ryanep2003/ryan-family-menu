@@ -15,8 +15,9 @@ export function versionedRecord(saved, dataKey) {
 }
 
 export function hasVersionConflict(incomingVersion, currentVersion) {
+  if (incomingVersion === undefined || incomingVersion === null || incomingVersion === "") return true;
   const parsed = Number(incomingVersion);
-  return Number.isFinite(parsed) && parsed !== currentVersion;
+  return !Number.isFinite(parsed) || parsed !== currentVersion;
 }
 
 export function nextVersionedRecord(dataKey, value, currentVersion) {

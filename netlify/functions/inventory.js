@@ -18,6 +18,7 @@ function cleanPhoto(value) {
 }
 
 export function cleanItem(item) {
+  if (!item || typeof item !== "object") return null;
   const text = cleanLocalizedText(item.text, 220);
   if (!hasLocalizedContent(text)) return null;
   const location = ["pantry", "fridge", "freezer", "household"].includes(item.location)
