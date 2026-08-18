@@ -47,6 +47,8 @@ Shared state, dinner history, groceries, and inventory use this compatibility en
 
 The data field is `state` for family state and `items` for the three collections. Older unwrapped values are read as version zero. Writers submit the last version they observed; a mismatch returns `409` and the newest server copy. Versioned writes fail closed when the client omits or sends an invalid version, so an unknown client cannot overwrite a newer household record.
 
+Receipts and activity now also have household-scoped versioned ledger records (`family-ledger`, keys `household:{id}:receipts` and `household:{id}:activity`). The browser dual-reads legacy shared-state fields and adopts them into the ledger on first successful load. New shared-state writes omit these growing arrays; legacy readers remain compatible while households transition.
+
 Do not remove legacy-envelope support until existing household data has been inspected and explicitly migrated.
 
 ## Main Shared State

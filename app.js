@@ -137,6 +137,8 @@ let pendingReceipt = null;
 let budgetSettings = normalizeBudgetSettings(readJsonStorage(householdStorage, "dinner-budget-settings", {}));
 let receipts = normalizeReceipts(readJsonStorage(householdStorage, "dinner-receipts", []));
 let activity = normalizeActivity(readJsonStorage(householdStorage, "dinner-activity", []));
+let receiptsVersion = readNumberStorage(householdStorage, "dinner-receipts-version", 0);
+let activityVersion = readNumberStorage(householdStorage, "dinner-activity-version", 0);
 let auditHistory = { events: [], snapshots: [] };
 let familyMembers = normalizeFamilyMembers(readJsonStorage(householdStorage, "dinner-family-members", []));
 let familyPreferences = normalizeFamilyPreferences(readJsonStorage(householdStorage, "dinner-family-preferences", []), familyMembers);
@@ -650,8 +652,6 @@ function sharedStateSnapshot() {
     availableFood,
     recipeFeedback,
     budgetSettings,
-    receipts,
-    activity,
     familyMembers,
     familyPreferences,
     familyRules,
@@ -662,6 +662,45 @@ function sharedStateSnapshot() {
 
 function currentSharedState() {
   return { weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, budgetSettings, receipts, activity, familyMembers, familyPreferences, familyRules, recipeEdits, deletedRecipeIds };
+}
+
+function persistLedger(kind, items, version) {
+  householdStorage.setItem(`dinner-${kind}`, JSON.stringify(items));
+  householdStorage.setItem(`dinner-${kind}-version`, `${Number(version) || 0}`);
+}
+
+async function loadLedger(kind) {
+  try {
+    const data = await getJson(`/.netlify/functions/family-ledger?kind=${kind}`, "Could not load household history.");
+    const items = kind === "receipts" ? normalizeReceipts(data.items) : normalizeActivity(data.items);
+    const version = Number(data.version) || 0;
+    const legacyItems = kind === "receipts" ? receipts : activity;
+    if (kind === "receipts") { receipts = items.length ? items : legacyItems; receiptsVersion = version; }
+    else { activity = items.length ? items : legacyItems; activityVersion = version; }
+    persistLedger(kind, items, version);
+    if (!items.length && legacyItems.length) await saveLedger(kind);
+    render();
+  } catch (error) { console.warn(error); }
+}
+
+async function saveLedger(kind, retrying = false) {
+  const items = kind === "receipts" ? receipts : activity;
+  const version = kind === "receipts" ? receiptsVersion : activityVersion;
+  try {
+    const data = await putJson(`/.netlify/functions/family-ledger?kind=${kind}`, { items, version }, "Could not save household history.");
+    if (kind === "receipts") receiptsVersion = Number(data.version) || version;
+    else activityVersion = Number(data.version) || version;
+    persistLedger(kind, items, kind === "receipts" ? receiptsVersion : activityVersion);
+    return true;
+  } catch (error) {
+    if (error.status === 409 && Array.isArray(error.data?.items) && !retrying) {
+      if (kind === "receipts") { receipts = normalizeReceipts([...receipts, ...error.data.items]); receiptsVersion = Number(error.data.version) || version; }
+      else { activity = normalizeActivity([...activity, ...error.data.items]); activityVersion = Number(error.data.version) || version; }
+      return saveLedger(kind, true);
+    }
+    console.warn(error);
+    return false;
+  }
 }
 
 function recordActivity(type, label) {
@@ -794,7 +833,11 @@ async function saveSharedState(options = {}) {
 
   sharedSaveInFlight = performSaveSharedState(options);
   try {
-    return await sharedSaveInFlight;
+    const result = await sharedSaveInFlight;
+    if (result) {
+      await Promise.all([saveLedger("activity"), saveLedger("receipts")]);
+    }
+    return result;
   } finally {
     sharedSaveInFlight = null;
     if (sharedSaveQueued) {
@@ -2432,7 +2475,7 @@ registerServiceWorker({ $, onUpdateAvailable: showAppUpdateNotice });
 
 setupLocalizedFileInputs();
 render();
-loadSharedRecipes().then(() => loadSharedState());
+loadSharedRecipes().then(() => loadSharedState()).then(() => Promise.all([loadLedger("receipts"), loadLedger("activity")]));
 $("#householdHistory")?.addEventListener("toggle", (event) => {
   if (event.target.open && !event.target.dataset.loaded) {
     event.target.dataset.loaded = "true";

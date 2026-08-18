@@ -154,3 +154,11 @@ This is a lightweight record of architectural and product decisions that future 
 **Reason:** Silent zero-yield math made servings, groceries, and leftovers look functional while doing nothing.
 
 **Consequences:** Existing recipes remain readable and usable; families can correct the assumption by editing the yield.
+
+## 2026-08-18 — Move growing receipts and activity into a versioned ledger
+
+**Decision:** Keep the existing shared-state fields readable for migration, but write new receipts and activity to separate household-scoped versioned ledger records. The browser adopts legacy arrays when the ledger is empty.
+
+**Reason:** Receipts and activity were making every menu save and load larger over time, pushing the shared record toward its request limit.
+
+**Consequences:** Existing households migrate on first online load without destructive rewriting. The ledger adds bounded writes for history changes, while meal planning remains in the shared-state record.
