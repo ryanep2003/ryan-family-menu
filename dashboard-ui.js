@@ -41,6 +41,9 @@ export function createDashboardUi({
   handoffOptions = [],
   getSelectedRecipeId,
   setSelectedRecipeId,
+  openFocusedDinnerPlan = () => setView("schedule"),
+  selectTodayStory = () => ({}),
+  getRecipeMemory = () => ({}),
 }) {
   function todayDateKey() {
     return formatDateKey(new Date());
@@ -55,6 +58,31 @@ export function createDashboardUi({
 
   function todaysMealPlan() {
     return calendarMealForDateKey(todayDateKey());
+  }
+
+  function memoryCopy(memory = {}) {
+    memory = memory || {};
+    const list = new Intl.ListFormat(getLang() === "es" ? "es" : "en", { style: "long", type: "conjunction" });
+    if (memory.fact === "everyoneAte") return t("memoryEveryoneAte");
+    if (memory.fact === "liked" && memory.likedNames?.length) {
+      return t("memoryPeopleLiked").replace("{names}", list.format(memory.likedNames));
+    }
+    if (memory.fact === "skipped" && memory.skippedNames?.length) {
+      return t("memoryPeopleSkipped").replace("{names}", list.format(memory.skippedNames));
+    }
+    if (memory.fact === "familyLoved") return t("memoryFamilyLoved");
+    return "";
+  }
+
+  function memoryWhen(memory = {}) {
+    memory = memory || {};
+    if (!memory.lastMade) return "";
+    const made = new Date(`${memory.lastMade}T12:00:00`);
+    const today = new Date(`${todayDateKey()}T12:00:00`);
+    const days = Math.max(0, Math.round((today.getTime() - made.getTime()) / 86400000));
+    if (days === 0) return t("memoryMadeToday");
+    if (days === 1) return t("memoryMadeYesterday");
+    return t("memoryMadeDaysAgo").replace("{count}", `${days}`);
   }
 
   function availableFoodLabel(key, options) {
@@ -98,30 +126,58 @@ export function createDashboardUi({
     }));
     const dinnerItem = recipesForMeal.find(({ period, role }) => period === "dinner" && role === "main")
       || recipesForMeal.find(({ period }) => period === "dinner");
-    const primaryItem = dinnerItem || recipesForMeal[0];
-    const mainRecipe = primaryItem?.recipe || null;
-    const dinnerRecipe = dinnerItem?.recipe || null;
+    const mainRecipe = dinnerItem?.recipe || null;
+    const story = selectTodayStory({
+      recipe: mainRecipe,
+      meal,
+      memory: mainRecipe ? getRecipeMemory(mainRecipe.id) : null,
+      dateLabel: new Intl.DateTimeFormat(getLang() === "es" ? "es-US" : "en-US", { weekday: "long", month: "long", day: "numeric" }).format(new Date()),
+    });
     const backdrop = $("#todayBackdrop");
+    const todayImage = $("#todayImage");
     const backdropSrc = mainRecipe?.photos?.[0] || "";
     $("#todayBand").classList.toggle("empty", !mainRecipe);
+    $("#todayBand").classList.toggle("has-photo", Boolean(backdropSrc));
+    if (todayImage) todayImage.hidden = !backdropSrc;
     backdrop.hidden = !backdropSrc;
-    if (backdropSrc) backdrop.src = backdropSrc;
+    if (backdropSrc) {
+      backdrop.src = backdropSrc;
+      backdrop.alt = localize(mainRecipe.name);
+    }
     else backdrop.removeAttribute("src");
-    $("#todayRecipeName").textContent = mainRecipe ? localize(mainRecipe.name) : t("noMealSet");
-    const todayKicker = $("#todayKicker");
-    if (todayKicker) todayKicker.textContent = dinnerRecipe ? t("tonight") : recipesForMeal.length ? t("todayMeals") : t("tonight");
-    $("#todayMeta").textContent = recipesForMeal.length
-      ? `${t(recipesForMeal.length === 1 ? "plannedRecipeOne" : "plannedRecipeMany").replace("{count}", recipesForMeal.length)}${mealHasWarning(meal) ? ` · ${t("allergyBadge")}` : ""}`
-      : t("planTonightNote");
-    $("#todayMealList").innerHTML = recipesForMeal
-      .map(({ period, role, recipe }) => `
-        <button type="button" data-open="${escapeHtml(recipe.id)}">
-          <span>${t(`${period}Slot`)} · ${t(`role${role[0].toUpperCase()}${role.slice(1)}`)}</span>
-          <strong>${escapeHtml(localize(recipe.name))}</strong>
-          ${recipe.allergyWarning ? `<em>${t("allergyBadge")}</em>` : ""}
-        </button>
-      `)
-      .join("");
+    $("#todayRecipeName").textContent = mainRecipe ? localize(mainRecipe.name) : t("nothingForTonight");
+    $("#todayMeta").textContent = mainRecipe
+      ? [story.servings ? t("tonightServes").replace("{count}", story.servings) : "", mealHasWarning(meal) ? t("allergyBadge") : ""].filter(Boolean).join(" · ")
+      : t("nothingForTonightNote");
+    const storyDate = $("#todayDate");
+    if (storyDate) storyDate.textContent = story.dateLabel;
+    const memory = $("#todayMemory");
+    const memoryFact = memoryCopy(story.memory);
+    const memoryDate = memoryWhen(story.memory);
+    if (memory) {
+      if ($("#todayMemoryFact")) $("#todayMemoryFact").textContent = memoryFact;
+      if ($("#todayMemoryWhen")) $("#todayMemoryWhen").textContent = memoryDate;
+      memory.hidden = !memoryFact && !memoryDate;
+    }
+    const dinnerCompanions = recipesForMeal
+      .filter((item) => item.period === "dinner" && item.itemId !== dinnerItem?.itemId)
+      .map(({ recipe }) => localize(recipe.name));
+    const mealList = $("#todayMealList");
+    mealList.textContent = dinnerCompanions.length
+      ? `${t("servedWith")} ${dinnerCompanions.join(" · ")}`
+      : "";
+    mealList.hidden = !dinnerCompanions.length;
+
+    const beforeText = localizedText(meal.notes, getLang()).trim();
+    const before = $("#todayBefore");
+    if ($("#todayBeforeText")) $("#todayBeforeText").textContent = beforeText;
+    if (before) before.hidden = !beforeText;
+    const after = $("#todayAfter");
+    const afterText = story.extraServings > 0
+      ? t("extraForTomorrow").replace("{count}", `${story.extraServings}`)
+      : "";
+    if ($("#todayAfterText")) $("#todayAfterText").textContent = afterText;
+    if (after) after.hidden = !afterText;
     const handoffOptionsElement = $("#todayHandoffOptions");
     const handoffDetailsElement = $("#todayHandoffDetails");
     const handoffNote = $("#todayHandoffNote");
@@ -148,12 +204,21 @@ export function createDashboardUi({
       });
     }
     if (handoffNote && globalThis.document?.activeElement !== handoffNote) handoffNote.value = localizedText(meal.notes, getLang());
+    const activeHandoff = handoffOptions.filter((option) => meal.handoff?.[option.key]);
+    const handoffSummary = $("#todayHandoffSummary");
+    if (handoffSummary) {
+      handoffSummary.textContent = beforeText
+        ? t("handoffSaved")
+        : activeHandoff.length
+          ? activeHandoff.map((option) => t(option.label)).join(" · ")
+          : t("handoffAdd");
+    }
     renderAvailableFood();
     const toBuy = getGroceries().filter((item) => !item.checked && !item.inInventory).length;
     $("#todayGrocerySummary").textContent = `${toBuy} ${t("itemsToBuy")}`;
     $("#todayInventorySummary").textContent = `${getInventory().filter((item) => item.stockState !== "out").length} ${t("itemsAtHome")}`;
     $("#cookToday").disabled = false;
-    $("#cookToday").textContent = t(mainRecipe ? "cookButton" : "planTonight");
+    $("#cookToday").textContent = mainRecipe ? t("cookButton") : t("planDinner");
   }
 
   function taskAssigneeLabel(assignee) {
@@ -298,7 +363,7 @@ export function createDashboardUi({
         || items.find(({ period }) => period === "dinner")
         || items[0];
       if (!dinnerItem) {
-        setView("schedule");
+        openFocusedDinnerPlan(todayDateKey());
         return;
       }
       setSelectedRecipeId(dinnerItem.recipe.id);

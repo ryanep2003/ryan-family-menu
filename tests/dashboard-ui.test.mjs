@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { createDashboardUi } from "../dashboard-ui.js";
+import { selectTodayStory } from "../almanac-selectors.js";
 import { handoffOptions } from "../schedule-utils.js";
 
 function element() {
@@ -37,10 +38,20 @@ function element() {
 function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
   const elements = Object.fromEntries([
     "todayRecipeName",
+    "todayDate",
     "todayBand",
+    "todayImage",
     "todayBackdrop",
     "todayMeta",
     "todayMealList",
+    "todayMemory",
+    "todayMemoryFact",
+    "todayMemoryWhen",
+    "todayBefore",
+    "todayBeforeText",
+    "todayAfter",
+    "todayAfterText",
+    "todayHandoffSummary",
     "todayGrocerySummary",
     "todayInventorySummary",
     "todayHandoffOptions",
@@ -60,12 +71,18 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
     "recipeDetail",
     "detailName",
   ].map((id) => [id, element()]));
-  const meal = mealOverride || { main: "main", side: "side", salad: "", notes: "" };
+  const meal = mealOverride || {
+    main: "main",
+    side: "side",
+    salad: "",
+    notes: "",
+    servingPlans: { dinner: { adults: 2, kids: 2, guests: 0, extraServings: 0 } },
+  };
   const recipes = {
     main: { id: "main", name: "Main recipe", photos: ["main.jpg"], allergyWarning: "" },
     side: { id: "side", name: "Side recipe", photos: ["side.jpg"], allergyWarning: "" },
   };
-  const events = { view: "", selected: "", rendered: 0 };
+  const events = { view: "", selected: "", rendered: 0, focusedDate: "" };
 
   const ui = createDashboardUi({
     $: (selector) => elements[selector.slice(1)],
@@ -75,6 +92,15 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
       plannedRecipeMany: "{count} planned recipes",
       noMealSet: "No meal set yet.",
       cookButton: "Cook this",
+      planDinner: "Plan dinner",
+      nothingForTonight: "Nothing planned for tonight.",
+      nothingForTonightNote: "Choose one meal and bring tonight into focus.",
+      tonightServes: "Serves {count}",
+      servedWith: "With",
+      handoffAdd: "Leave a note for the next cook",
+      handoffSaved: "Handoff saved",
+      memoryEveryoneAte: "Everyone ate this last time.",
+      memoryMadeDaysAgo: "{count} days ago.",
       planTonight: "Plan tonight",
       planTonightNote: "Choose a recipe and bring tonight into focus.",
       leftoversPlanned: "Leftovers planned",
@@ -121,7 +147,13 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
     categoryLabel: () => "Mains",
     mealRecipes: () => ["main", "side"]
       .filter((key) => meal[key])
-      .map((key) => ({ key, recipe: recipes[meal[key]] })),
+      .map((key) => ({
+        key,
+        itemId: `item-${key}`,
+        period: "dinner",
+        role: key,
+        recipe: recipes[meal[key]],
+      })),
     mealHasWarning: () => false,
     calendarMealForDateKey: () => meal,
     recipeById: (id) => recipes[id],
@@ -151,17 +183,29 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
     setSelectedRecipeId: (id) => {
       events.selected = id;
     },
+    openFocusedDinnerPlan: (dateKey) => {
+      events.focusedDate = dateKey;
+    },
+    selectTodayStory,
+    getRecipeMemory: () => ({
+      lastMade: "2026-07-01",
+      fact: "everyoneAte",
+      likedNames: [],
+      skippedNames: [],
+    }),
   });
 
   return { elements, events, ui };
 }
 
-test("Today uses natural pluralized meal copy", () => {
+test("Today presents one dinner, its family memory, and its companions", () => {
   const { elements, ui } = dashboardFixture();
 
   ui.renderToday();
 
-  assert.equal(elements.todayMeta.textContent, "2 planned recipes");
+  assert.equal(elements.todayMeta.textContent, "Serves 3");
+  assert.equal(elements.todayMealList.textContent, "With Side recipe");
+  assert.equal(elements.todayMemoryFact.textContent, "Everyone ate this last time.");
   assert.equal(elements.todayBackdrop.src, "main.jpg");
   assert.equal(elements.cookToday.textContent, "Cook this");
 });
@@ -256,9 +300,9 @@ test("empty Today offers a direct planning action", () => {
 
   assert.equal(elements.todayBand.classList.contains("empty"), true);
   assert.equal(elements.todayBackdrop.hidden, true);
-  assert.equal(elements.todayMeta.textContent, "Choose a recipe and bring tonight into focus.");
-  assert.equal(elements.cookToday.textContent, "Plan tonight");
+  assert.equal(elements.todayMeta.textContent, "Choose one meal and bring tonight into focus.");
+  assert.equal(elements.cookToday.textContent, "Plan dinner");
 
   elements.cookToday.handlers.click();
-  assert.equal(events.view, "schedule");
+  assert.equal(events.focusedDate, "2026-07-10");
 });

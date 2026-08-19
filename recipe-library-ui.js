@@ -28,6 +28,7 @@ export function createRecipeLibraryUi({
   onRecipeOpen = () => {},
   canTranslateRecipe = () => false,
   isRecipeTranslationPending = () => false,
+  getRecipeMemory = () => ({}),
   setView,
 }) {
   let lastLibraryButton = null;
@@ -55,6 +56,26 @@ export function createRecipeLibraryUi({
     if (translated) return { text: translated, fallback: false };
     const fallback = localize(value);
     return { text: fallback, fallback: Boolean(fallback) };
+  }
+
+  function memoryCopy(memory = {}) {
+    const list = new Intl.ListFormat(getLang() === "es" ? "es" : "en", { style: "long", type: "conjunction" });
+    if (memory.fact === "everyoneAte") return t("memoryEveryoneAte");
+    if (memory.fact === "liked" && memory.likedNames?.length) return t("memoryPeopleLiked").replace("{names}", list.format(memory.likedNames));
+    if (memory.fact === "skipped" && memory.skippedNames?.length) return t("memoryPeopleSkipped").replace("{names}", list.format(memory.skippedNames));
+    if (memory.fact === "familyLoved") return t("memoryFamilyLoved");
+    return "";
+  }
+
+  function memoryWhen(memory = {}) {
+    if (!memory.lastMade) return "";
+    const made = new Date(`${memory.lastMade}T12:00:00`);
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    const days = Math.max(0, Math.round((today.getTime() - made.getTime()) / 86400000));
+    if (days === 0) return t("memoryMadeToday");
+    if (days === 1) return t("memoryMadeYesterday");
+    return t("memoryMadeDaysAgo").replace("{count}", `${days}`);
   }
 
   function recipeCardMarkup(recipe, index, { pick = false, plannedIds = new Set() } = {}) {
@@ -162,10 +183,22 @@ export function createRecipeLibraryUi({
     if ($("#recipeOutcomePanel")) $("#recipeOutcomePanel").hidden = true;
     $("#editRecipeForm").hidden = true;
     $("#detailName").textContent = nameDisplay.text || t("translationPendingShort");
-    $("#detailMeta").textContent = metaDisplay.text;
     const servings = servingsForRecipe(recipe);
+    $("#detailMeta").textContent = [
+      servings ? t("tonightServes").replace("{count}", `${servings}`) : "",
+      metaDisplay.text,
+    ].filter(Boolean).join(" · ");
+    const memory = getRecipeMemory(recipe.id);
     if ($("#detailServings")) {
-      $("#detailServings").textContent = servings ? t("recipeServes").replace("{count}", servings) : t("recipeYieldUnknown");
+      $("#detailServings").textContent = "";
+      $("#detailServings").hidden = true;
+    }
+    if ($("#detailMemory")) {
+      const fact = memoryCopy(memory);
+      const when = memoryWhen(memory);
+      if ($("#detailMemoryFact")) $("#detailMemoryFact").textContent = fact;
+      if ($("#detailMemoryWhen")) $("#detailMemoryWhen").textContent = when;
+      $("#detailMemory").hidden = !fact && !when;
     }
     $("#allergyWarning").hidden = !warning;
     $("#allergyWarning").textContent = warning;
@@ -183,9 +216,12 @@ export function createRecipeLibraryUi({
       ? stepsDisplay.lines.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
       : `<li class="translation-placeholder">${t("translationPendingShort")}</li>`;
     $("#familyNotes").textContent = displayText(recipe.notes).text || (contentReady ? "" : t("translationPendingShort"));
-    $("#photoStrip").innerHTML = recipe.photos
+    const photos = Array.isArray(recipe.photos) ? recipe.photos : [];
+    $("#photoStrip").innerHTML = photos
       .map((src, index) => `<img src="${escapeHtml(src)}" alt="${escapeHtml(`${nameDisplay.text || t("translationPendingShort")} ${t("sourcePhoto")} ${index + 1}`)}" loading="lazy" decoding="async" />`)
       .join("");
+    if ($("#recipePhotoRegion")) $("#recipePhotoRegion").hidden = photos.length === 0;
+    $("#recipeDetail").classList.toggle("has-photos", photos.length > 0);
     const isFavorite = getFavorites().includes(recipe.id);
     $("#favoriteRecipe").textContent = t(isFavorite ? "removeFavorite" : "addFavorite");
     $("#favoriteRecipe").setAttribute("aria-pressed", `${isFavorite}`);
@@ -194,6 +230,7 @@ export function createRecipeLibraryUi({
     $("#addRecipeGroceries").disabled = !contentReady;
     if ($("#markCooked")) $("#markCooked").disabled = !contentReady;
     if ($("#startCooking")) $("#startCooking").disabled = !contentReady;
+    if ($("#startCooking")) $("#startCooking").textContent = t("cookButton");
     $("#recipeSafetyLockReason").hidden = !actionLockReason;
     $("#recipeSafetyLockReason").textContent = actionLockReason;
     setDetailStatus("");

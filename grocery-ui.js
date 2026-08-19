@@ -22,6 +22,7 @@ export function createGroceryUi({
 }) {
   let controlsBound = false;
   let selectedMealFilter = "";
+  let selectedRecipeFilter = "";
 
   function mealFilterKey(use) {
     const dateKey = /^\d{4}-\d{2}-\d{2}$/.test(use?.dateKey) ? use.dateKey : "";
@@ -103,6 +104,21 @@ export function createGroceryUi({
       ...options.map(({ key, use }) => `<option value="${escapeHtml(key)}">${escapeHtml(mealFilterLabel(use))}</option>`),
     ].join("");
     select.value = options.some(({ key }) => key === selectedMealFilter) ? selectedMealFilter : "";
+    const context = $("#shoppingContext");
+    const selected = options.find(({ key }) => key === selectedMealFilter);
+    const selectedRecipe = selectedRecipeFilter
+      ? allRecipes().find((recipe) => recipe.id === selectedRecipeFilter)
+      : null;
+    if (context) {
+      context.textContent = selectedRecipe
+        ? t("shoppingForRecipe").replace("{recipe}", localize(selectedRecipe.name))
+        : selected
+        ? mealFilterLabel(selected.use)
+        : t("shoppingContextAll");
+    }
+    const showAll = $("#shoppingShowAll");
+    if (showAll) showAll.hidden = !selectedRecipeFilter && !selectedMealFilter;
+    $("#shoppingPanel")?.classList?.toggle("recipe-context", Boolean(selectedRecipeFilter));
   }
 
   function touchItem(item) {
@@ -237,24 +253,22 @@ export function createGroceryUi({
 
   function grocerySection(label, items, options = {}) {
     const sectionIds = items.map((item) => item.id).join("|");
+    const groupUseNotes = [...new Set(items.flatMap((item) => mealUsesFor(item).map(groceryMealUseNote)))];
     const content = `
       <section class="grocery-section${options.checkedSection ? " checked-section" : ""}">
         <div class="grocery-section-header">
-          ${options.collapsed ? "" : `<h3>${escapeHtml(label)}</h3>`}
-          <div class="grocery-section-actions">
-            ${options.checkedSection ? "" : `<button class="text-button" type="button" data-check-grocery-section="${escapeHtml(sectionIds)}">${t("checkSection")}</button>`}
-            <button class="text-button" type="button" data-delete-grocery-section="${escapeHtml(sectionIds)}">${t("deleteSection")}</button>
-          </div>
+          ${options.collapsed ? "" : `<div><h3>${escapeHtml(label)}</h3>${groupUseNotes.length ? `<p>${groupUseNotes.slice(0, 3).map((note) => escapeHtml(note)).join(" · ")}${groupUseNotes.length > 3 ? ` · ${escapeHtml(t("groceryMealUseMore").replace("{count}", `${groupUseNotes.length - 3}`))}` : ""}</p>` : ""}</div>`}
+          <details class="grocery-section-menu">
+            <summary>${t("listTools")}</summary>
+            <div class="grocery-section-actions">
+              ${options.checkedSection ? "" : `<button class="text-button" type="button" data-check-grocery-section="${escapeHtml(sectionIds)}">${t("checkSection")}</button>`}
+              <button class="text-button" type="button" data-delete-grocery-section="${escapeHtml(sectionIds)}">${t("deleteSection")}</button>
+            </div>
+          </details>
         </div>
         ${items.map((item) => {
           const displayText = groceryDisplayText(item);
           const atHomeNote = groceryAtHomeNote(item);
-          const mealUseNotes = mealUsesFor(item)
-            .sort((left, right) => {
-              if (!selectedMealFilter) return 0;
-              return Number(mealFilterKey(right) === selectedMealFilter) - Number(mealFilterKey(left) === selectedMealFilter);
-            })
-            .map(groceryMealUseNote);
           const activity = formatItemActivity(item);
           const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
           return `
@@ -264,10 +278,6 @@ export function createGroceryUi({
                 <span>
                   <strong${displayText === t("translationPendingShort") ? ` class="translation-placeholder"` : ""}>${escapeHtml(displayText)}</strong>
                   ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
-                  ${mealUseNotes.length ? `<span class="meal-use-list" aria-label="${escapeHtml(t("groceryPlannedFor"))}">
-                    ${mealUseNotes.slice(0, 3).map((note) => `<em class="meal-use-note">${escapeHtml(note)}</em>`).join("")}
-                    ${mealUseNotes.length > 3 ? `<em class="meal-use-more">${escapeHtml(t("groceryMealUseMore").replace("{count}", `${mealUseNotes.length - 3}`))}</em>` : ""}
-                  </span>` : ""}
                   ${activity ? `<em class="item-activity">${escapeHtml(activity)}</em>` : ""}
                 </span>
                 ${store ? `<small>${escapeHtml(store)}</small>` : ""}
@@ -292,7 +302,10 @@ export function createGroceryUi({
     if (setup) setup.open = getGroceries().length === 0;
     const groceries = selectedMealFilter
       ? getGroceries().filter((item) => mealUsesFor(item).some((use) => mealFilterKey(use) === selectedMealFilter))
-      : getGroceries();
+      : selectedRecipeFilter
+        ? getGroceries().filter((item) => item.recipeId === selectedRecipeFilter
+          || mealUsesFor(item).some((use) => use.recipeId === selectedRecipeFilter))
+        : getGroceries();
     const activeItems = groceries.filter((item) => inventoryDecisionFor(item) === "review" || (!item.checked && !isConfirmedAtHome(item)));
     const inventoryItems = groceries.filter(isConfirmedAtHome);
     const checkedItems = groceries.filter((item) => item.checked && inventoryDecisionFor(item) !== "review" && !isConfirmedAtHome(item));
@@ -318,6 +331,12 @@ export function createGroceryUi({
 
     $("#groceryMealFilter")?.addEventListener("change", (event) => {
       selectedMealFilter = event.target.value;
+      selectedRecipeFilter = "";
+      renderGroceries();
+    });
+    $("#shoppingShowAll")?.addEventListener("click", () => {
+      selectedMealFilter = "";
+      selectedRecipeFilter = "";
       renderGroceries();
     });
 
@@ -394,7 +413,13 @@ export function createGroceryUi({
     purchasedGroceries,
     renderGroceries,
     showMeal(dateKey, mealSlot) {
+      selectedRecipeFilter = "";
       selectedMealFilter = mealFilterKey({ dateKey, mealSlot });
+      renderGroceries();
+    },
+    showRecipe(recipeId) {
+      selectedMealFilter = "";
+      selectedRecipeFilter = `${recipeId || ""}`;
       renderGroceries();
     },
     shoppingMatchForReceiptItem,

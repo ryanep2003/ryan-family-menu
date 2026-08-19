@@ -1,239 +1,75 @@
 ---
 name: Ryan Family Menu
-description: A warm, fast shared home food system for families and caretakers.
-colors:
-  ink: "#28221d"
-  muted: "#6d6258"
-  paper: "#f4ecdf"
-  surface: "#fffaf2"
-  line: "#d7c8b5"
-  tomato: "#aa3b2e"
-  tomato-deep: "#7f2b22"
-  sage: "#3f664f"
-  sage-deep: "#294738"
-  gold: "#d6a53c"
-  peach: "#efb59b"
-  white: "#ffffff"
-typography:
-  display:
-    fontFamily: "Iowan Old Style, Baskerville, Times New Roman, serif"
-    fontSize: "2.4rem"
-    fontWeight: 700
-    lineHeight: 1
-    letterSpacing: "0"
-  headline:
-    fontFamily: "Iowan Old Style, Baskerville, Times New Roman, serif"
-    fontSize: "1.65rem"
-    fontWeight: 700
-    lineHeight: 1.08
-  title:
-    fontFamily: "Iowan Old Style, Baskerville, Times New Roman, serif"
-    fontSize: "1rem"
-    fontWeight: 700
-  body:
-    fontFamily: "Avenir Next, Avenir, Segoe UI, sans-serif"
-    fontSize: "1rem"
-    fontWeight: 400
-    lineHeight: 1.48
-  label:
-    fontFamily: "Avenir Next, Avenir, Segoe UI, sans-serif"
-    fontSize: "0.78rem"
-    fontWeight: 800
-    letterSpacing: "0.08em"
-rounded:
-  compact: "6px"
-  control: "8px"
-  panel: "12px"
-  pill: "999px"
-spacing:
-  xs: "4px"
-  sm: "8px"
-  md: "12px"
-  lg: "16px"
-  xl: "24px"
-  xxl: "28px"
-components:
-  button-primary:
-    backgroundColor: "{colors.tomato}"
-    textColor: "{colors.white}"
-    rounded: "{rounded.control}"
-    padding: "0 16px"
-    height: "44px"
-  button-primary-hover:
-    backgroundColor: "{colors.tomato-deep}"
-    textColor: "{colors.white}"
-    rounded: "{rounded.control}"
-  button-secondary:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.control}"
-    padding: "0 16px"
-    height: "44px"
-  input:
-    backgroundColor: "{colors.white}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.control}"
-    padding: "10px 12px"
-    height: "44px"
-  chip-selected:
-    backgroundColor: "{colors.sage}"
-    textColor: "{colors.white}"
-    rounded: "{rounded.pill}"
-    padding: "0 14px"
-    height: "38px"
+description: The Living Almanac — a quiet, shared record of a family's food life.
 ---
 
-# Design System: Ryan Family Menu
+# Design System: The Living Almanac
 
-## Overview
+## Product point of view
 
-**Creative North Star: "The Shared Kitchen Table"**
+Ryan Family Menu is organized around what the family is eating, what happened before, and what should happen next—not a set of administrative features. The interface should feel observant, intimate, calm, and exact. Ordinary family content must look considered without requiring perfect recipe photography.
 
-Ryan Family Menu should feel like the dependable center of a busy household: warm enough to feel personal, structured enough to keep everyone coordinated, and direct enough to use with one hand in a kitchen or grocery aisle. The interface is a task-focused product, so familiar controls, concise language, and immediate feedback take priority over decoration.
+The current implementation applies this direction to the connected Today → Plan → Recipe → Shop slice. Other surfaces retain functional compatibility until their dedicated redesign.
 
-The visual system combines practical density with food-rooted color. Tomato marks consequential actions, sage organizes categories and successful states, and pantry neutrals keep long recipes and lists readable. English and Spanish must receive equal layout consideration; controls grow or wrap instead of truncating translated text.
+## Tokens
 
-The product must never feel corporate, stodgy, or old. It rejects enterprise SaaS dashboard styling, stiff admin-tool density, and dated family-organizer ornament. Mobile is the primary operating environment, while desktop provides more breathing room without changing the interaction vocabulary.
+| Role | Value |
+| --- | --- |
+| Ground | #F1F2EE |
+| Paper | #FFFFFF |
+| Ink | #171916 |
+| Secondary text | #62675F |
+| Rules | #D7DAD2 |
+| Primary action | #2947B8 |
+| Memory | #DDE6A9 |
+| Attention | #C85F36 |
+| Success | #3E6B52 |
+| Restriction / danger | #A33A35 |
 
-**Key Characteristics:**
-
-- Warm, capable, and household-centered.
-- Fast, familiar controls with strong 44-48px touch targets.
-- Restrained color reserved for action, organization, and status.
-- Bilingual and mobile-first by construction.
-- Compact 8px geometry with clear, purposeful hierarchy.
-
-## Colors
-
-The Tomato & Sage palette takes its cues from food and the home without becoming rustic or decorative.
-
-### Primary
-
-- **Action Tomato** (`colors.tomato`): Primary calls to action, current-day emphasis, and high-value links.
-- **Deep Tomato** (`colors.tomato-deep`): Hover states, low-stock overlap warnings, and stronger action emphasis.
-
-### Secondary
-
-- **Organizing Sage** (`colors.sage`): Section labels, selected inventory filters, category cues, and successful status text.
-- **Provision Gold** (`colors.gold`): Favorites, low-stock states, and calendar exceptions that require attention without signaling danger.
-
-### Neutral
-
-- **Espresso Ink** (`colors.ink`): Primary text, active navigation, and the strongest structural rules.
-- **Pantry Muted** (`colors.muted`): Secondary descriptions, metadata, inactive controls, and supporting labels.
-- **Pantry Paper** (`colors.paper`): The application background.
-- **Counter Surface** (`colors.surface`): Controls, cards, and working panels.
-- **Cupboard Line** (`colors.line`): Borders, dividers, and field boundaries.
-- **Clean White** (`colors.white`): Input interiors and text on saturated controls.
-
-### Semantic States
-
-The CSS token layer keeps repeated workflow states consistent. Use these roles instead of introducing new one-off colors:
-
-- `surface-success` / `line-success`: inventory and sync confirmation.
-- `surface-attention` / `line-attention` / `attention-ink`: low-stock, favorite, and review-needed states.
-- `surface-danger` / `danger-ink` / `danger-strong`: safety warnings, errors, and destructive actions.
-- `surface-notice` / `surface-muted` / `surface-elevated`: update notices, quiet controls, and elevated working surfaces.
-- `on-accent`: readable text on tomato, sage, or dark navigation surfaces.
-
-A new value should be added here only when it represents a reusable semantic role.
-
-**The One Tomato Rule.** Tomato is functional, never decorative. Use it for the primary action or the most important active state, not as ambient page color.
-
-**The Semantic Pantry Rule.** Sage means organization or success, gold means attention, and tomato-deep means urgency. Never swap these roles for visual variety.
+Use the eight-step spacing scale only: 4, 8, 12, 16, 24, 32, 48, and 64px. Geometry is square by default; controls use 8px radius and temporary sheets or media use 16px. There are no resting shadows. Elevation is reserved for real temporary overlays.
 
 ## Typography
 
-**Display Font:** Iowan Old Style with Baskerville and Times fallbacks
-**Body Font:** Avenir Next with Avenir and Segoe UI fallbacks
+Use the system sans stack for control, data, navigation, instructions, and labels. Use the editorial serif stack (Iowan Old Style, Palatino, Georgia fallback) for page, recipe, and story headings.
 
-**Character:** Editorial serif headings make the interface feel like a family recipe book, while a clear humanist sans-serif keeps planning, shopping, and form controls fast. The contrast is purposeful: family memory for orientation, utility for action.
+Default to sentence case. Hierarchy comes from scale, placement, contrast, and whitespace rather than uppercase or heavy weight. Quantities, dates, servings, timers, and money should use tabular numerals when a surface displays them.
 
-### Hierarchy
+## Layout and interaction
 
-- **Display** (`typography.display`): The app title only; reduce to 1.85rem on narrow screens.
-- **Headline** (`typography.headline`): View and recipe headings; reduce to 1.4rem on narrow screens.
-- **Title** (`typography.title`): Card titles, group headings, and compact content labels.
-- **Body** (`typography.body`): Recipes, list content, help text, and form values; cap prose near 70 characters when layout permits.
-- **Label** (`typography.label`): Short section labels and category cues. Uppercase is allowed only for brief navigational or organizational labels, never paragraphs.
+- Mobile is the primary design surface. The header is deliberately compact and the four core destinations sit in a safe-area-aware bottom bar: Today, Plan, Shop, Library.
+- Desktop increases measure and breathing room; it does not turn the mobile composition into a dashboard.
+- Prefer flat lists and rules over nested rounded cards.
+- One action may be visually primary in a task. For a recipe that action is Cook; adding ingredients to shopping is secondary.
+- Advanced planning, house maintenance, and history use progressive disclosure or live below the primary task—not in its first decision.
+- A temporary action bar may be sticky when saving the focused day plan or finishing a shopping trip.
 
-**The Two-Voice Rule.** Use the editorial serif only for brand, view, recipe, and grouping headings. Keep labels, controls, data, navigation, and recipe instructions in the humanist sans-serif. Never introduce script or novelty fonts.
+## Temporal grammar
 
-**The Translation-Fit Rule.** Never reduce type below the documented scale to force Spanish text into an English-sized control. Wrap or expand the component instead.
+The Living Almanac composes household food around time rather than feature categories:
 
-## Elevation
+- **Past:** one or two factual memories that explain what happened before. These read as part of the family record, not as a colored insight component.
+- **Before:** the next preparation or handoff that makes tonight easier.
+- **Tonight:** the meal, the people eating, and the amount being made. This is the visual and emotional center.
+- **After:** what tonight creates for tomorrow, such as planned extra servings or a covered lunch.
 
-The system is flat by default and uses tonal layering plus borders for structure. Shadows are reserved for elements that genuinely sit above the page: the featured meal image, update notice, open inventory tools, favorite marker, and selected recipe detail. Elevation communicates hierarchy or temporary overlap, never generic polish.
+Not every state needs all four moments. Empty and low-history states remain quiet instead of filling the page with placeholders.
 
-### Shadow Vocabulary
+Today opens on the meal, memory, and next practical action. `Today → Plan dinner` is a focused decision flow containing only dinner choice, eaters, serving adjustments, optional extras, optional handoff, and save. Comprehensive week and month planning remain a separate Plan destination.
 
-- **Featured lift** (`0 16px 36px rgba(61, 43, 27, 0.12)`): Featured meal imagery and floating inventory tools only.
-- **Detail lift** (`0 8px 24px rgba(61, 43, 27, 0.08)`): The selected recipe detail when it must separate from the library.
-- **Control lift** (`0 1px 5px rgba(61, 43, 27, 0.12)`): Selected segmented controls only.
-- **Marker lift** (`0 2px 8px rgba(37, 33, 29, 0.18)`): Small floating markers such as favorites.
+Recipe detail owns its page as a working document; library statistics and management chrome disappear while reading. Shopping begins with the physical list and groups meal provenance once when possible. Receipt, budget, inventory, and bulk tools remain available but recede from the recipe-to-shopping task.
 
-**The Purposeful Lift Rule.** A resting card or form section stays flat. Add elevation only when the element is featured, selected, sticky, or temporarily overlapping other content.
+## Family memory
 
-## Components
+Memory cues are embedded facts, never an AI gimmick. They may state only what stored records support, such as a last-made date or a recorded household response. The UI never labels these facts AI insight, uses sparkles, or invents preferences.
 
-Components should feel tactile and direct: obvious targets, compact corners, plain-language labels, and no ornamental complexity.
+## Accessibility and resilience
 
-### Buttons
+Keep semantic elements, 44px minimum touch targets, visible focus, English/Spanish parity, reduced-motion support, and existing offline/sync behavior. Do not trade a stable local/shared state for a prettier transient screen.
 
-- **Shape:** Compact rounded rectangle (`rounded.control`) with a minimum 44px touch height; mobile primary and secondary actions expand to full width when stacked.
-- **Primary:** Action Tomato background, Clean White text, heavy label weight, and horizontal `spacing.lg` padding.
-- **Hover / Focus:** Hover deepens to Deep Tomato. Keyboard focus must remain visibly distinct and may not rely on color alone.
-- **Secondary / Ghost:** Counter Surface background, Cupboard Line border, and Espresso Ink text.
-- **Text action:** Transparent background with Action Tomato or Pantry Muted text; use only when the action is clearly secondary.
+## Implementation rules
 
-### Chips
-
-- **Style:** Full-pill geometry for compact categories and filters only. Category chips use a pale sage field; warning chips use a pale tomato field.
-- **State:** Selected inventory filters use Organizing Sage with Clean White text. Unselected filters remain transparent with a Cupboard Line border.
-
-### Cards / Containers
-
-- **Corner Style:** Compact 8px corners for standard cards and 12px only for the recipe edit panel and photo previews.
-- **Background:** Counter Surface over Pantry Paper.
-- **Shadow Strategy:** Flat by default; follow the Purposeful Lift Rule.
-- **Border:** One Cupboard Line boundary. Do not combine a standard card border with a broad decorative shadow.
-- **Internal Padding:** Usually 14-18px, increasing to 26px only for the featured meal band.
-
-### Inputs / Fields
-
-- **Style:** Clean White field, Cupboard Line stroke, 8px corners, Espresso Ink value text, and a minimum 44px height.
-- **Focus:** Provide an unmistakable keyboard focus indicator with sufficient contrast; never remove the browser outline without replacing it.
-- **Error / Disabled:** Errors use dark tomato text with a pale tomato field. Disabled actions remain legible and clearly unavailable; loading controls may use reduced opacity while retaining their label.
-
-### Navigation
-
-- **Desktop:** Four equal-width bordered tabs with Counter Surface backgrounds; the active tab uses Espresso Ink with Clean White text. Add recipe is a persistent tomato action in the app header rather than a hidden secondary route.
-- **Mobile:** The same four core destinations become a fixed bottom navigation with safe-area padding and 48px minimum targets. Add recipe remains a persistent header action, and labels stay short or wrap safely in both English and Spanish.
-- **Language:** EN/ES uses a two-option segmented control in the header and selected recipe detail. The active language uses the same Espresso Ink selected-state vocabulary as navigation.
-
-### Recipe Card and Detail
-
-Recipe cards use image-led, compact summaries in an auto-fitting library grid. Selecting a recipe opens one focused detail surface with its language control and actions in immediate reach. Edit fields remain hidden until edit mode is explicitly entered; browsing and editing must never look like the same state.
-
-## Do's and Don'ts
-
-### Do:
-
-- **Do** preserve the Shared Kitchen Table character: warm, capable, direct, and useful in a real kitchen or store.
-- **Do** maintain minimum 44px controls and 48px mobile navigation targets.
-- **Do** design English and Spanish together, allowing translated labels to wrap or expand.
-- **Do** use Action Tomato for the highest-value action, Organizing Sage for organization or success, and Provision Gold for non-danger attention.
-- **Do** keep common controls visually consistent across Today, Week, Groceries, Recipes, and Add.
-- **Do** collapse multi-column forms and detail layouts to one column at the 780px mobile breakpoint.
-- **Do** use imagery for real recipes and featured meals, not as generic decoration.
-
-### Don't:
-
-- **Don't** make the product feel corporate, stodgy, or old.
-- **Don't** imitate enterprise SaaS dashboards, stiff admin tools, or dated family organizer software.
-- **Don't** introduce ornamental cards, glassmorphism, gradient text, decorative grid backgrounds, or broad soft shadows on every container.
-- **Don't** use display fonts in labels, buttons, recipe data, or navigation.
-- **Don't** truncate Spanish or shrink it below the established type scale to match English.
-- **Don't** invent different button, field, card, or selected-state styles for individual views.
-- **Don't** hide core household workflows behind modals when inline or progressive disclosure works.
-- **Don't** use colored side-stripe borders as a decorative accent; safety messaging must use a complete border and clear semantic background.
+1. Keep styles.css ordered as tokens, foundation, primitives, shell/navigation, screen layouts, responsive rules, then state/interaction.
+2. Preserve behavior hooks and IDs while changing presentation.
+3. Add a view-model selector only when it keeps persisted/domain state out of rendering decisions.
+4. Do not introduce generic food placeholders. A photo-less recipe must still look deliberate.
+5. Do not use color as section navigation; color communicates action, memory, or semantic state.

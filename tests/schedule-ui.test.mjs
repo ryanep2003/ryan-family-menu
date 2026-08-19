@@ -95,6 +95,9 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     "#calendarAgenda": element(),
     "#calendarDateEditor": element({ hidden: true }),
     "#calendarEditorHeading": element(),
+    "#focusedDinnerPanel": element({ hidden: true }),
+    "#comprehensivePlanner": element(),
+    "#planningModeSwitch": element(),
   };
   const weekButtons = weekDates().map(({ dateKey }) => element({ dataset: { editWeekDate: dateKey } }));
   const dateButtons = calendarDates().map((dateKey) => element({ dataset: { editCalendarDate: dateKey } }));
@@ -232,6 +235,15 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
       moreMealOptions: "More meal options",
       moreMealOptionsNote: "Add a side, salad, notes, or a handoff when you need them.",
       extraServingsCount: "Extra servings for later",
+      planDinner: "Plan dinner",
+      backToToday: "Back to Today",
+      dinnerOnDate: "{date} dinner",
+      eatingTonight: "Eating tonight",
+      adjustHeadcount: "Adjust who is eating",
+      fullServings: "{count} full servings",
+      makeExtraTomorrow: "Make extra for tomorrow",
+      handoffAdd: "Leave a note for the next cook",
+      whatShouldWeHave: "What should we have?",
     })[key] || key,
     escapeHtml,
     localize: (value) => value,
@@ -278,6 +290,12 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     getCurrentWeekStartKey: () => "2026-06-22",
     getVisibleMonth: () => new Date("2026-06-01T12:00:00"),
     setVisibleMonth: () => {},
+    getFamilyMembers: () => [
+      { id: "eric", name: "Eric", role: "adult", active: true },
+      { id: "alyson", name: "Alyson", role: "adult", active: true },
+      { id: "theo", name: "Theo", role: "child", active: true },
+      { id: "pierce", name: "Pierce", role: "child", active: true },
+    ],
   });
 
   return {
@@ -320,6 +338,25 @@ test("week planning renders seven summaries with one focused editor", () => {
   assert.match(elements["#weekDateEditor"].innerHTML, /More meal options/);
   assert.match(elements["#weekDateEditor"].innerHTML, /flexibleMealBuilderNote/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-view-meal-groceries="weekdate:2026-06-22"/);
+});
+
+test("Today can open a focused dinner decision without week administration", () => {
+  const { elements, ui } = harness();
+
+  ui.openFocusedDinner("2026-06-22");
+
+  assert.equal(elements["#focusedDinnerPanel"].hidden, false);
+  assert.equal(elements["#comprehensivePlanner"].hidden, true);
+  assert.equal(elements["#planningModeSwitch"].hidden, true);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Main Recipe/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Eating tonight/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Eric · Alyson · Theo · Pierce/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make extra for tomorrow/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Previous week|Next week|Breakfast|Lunch|Clear week/);
+
+  ui.closeFocusedDinner();
+  assert.equal(elements["#focusedDinnerPanel"].hidden, true);
+  assert.equal(elements["#comprehensivePlanner"].hidden, false);
 });
 
 test("planned meal can open groceries filtered to its date and meal period", async () => {

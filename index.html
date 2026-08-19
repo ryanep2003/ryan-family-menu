@@ -3,14 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#f4ecdf" />
+    <meta name="theme-color" content="#F1F2EE" />
     <title>Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=75" />
+    <link rel="stylesheet" href="styles.css?v=135" />
   </head>
   <body class="household-locked" data-view="today">
+    <!--
+      THESIS: The Living Almanac makes a family's food life feel remembered, not managed.
+      OWN-WORLD: Quiet paper, exact rules, calm blue action, and bright memory marks replace dashboard chrome.
+      STORY: Tonight is the opening record; a meal, a practical next move, and one remembered detail lead each view.
+      FIRST VIEWPORT: At 390px, dinner or its decisive empty state appears before product controls and administration.
+      FORM: Flat working lists and typeset documents carry the product; temporary sheets alone gain elevation.
+      FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+    -->
     <section class="household-gate" id="householdGate" aria-labelledby="householdGateHeading">
       <div class="household-gate-panel">
         <div class="household-gate-brand" aria-hidden="true">F</div>
@@ -60,7 +68,7 @@
         <span class="brand-mark" aria-hidden="true">F</span>
         <div>
           <p class="eyebrow"><span id="householdName">Family</span> · <span data-i18n="eyebrow">Family Menu</span></p>
-          <h1 data-i18n="title">Tonight, made simple.</h1>
+          <h1>Ryan Family Menu</h1>
         </div>
       </div>
       <div class="header-actions">
@@ -89,7 +97,7 @@
               <button class="ghost-button" id="rotateHouseholdKey" type="button">Create new family key</button>
             </details>
             <button class="primary-action" id="openFamily" type="button" data-i18n="openFamily">Family &amp; preferences</button>
-            <details class="household-activity" id="householdHistory">
+            <details class="household-activity" id="householdHistoryPanel">
               <summary data-i18n="recentActivity">Recent activity</summary>
               <div id="householdActivity"></div>
             </details>
@@ -125,9 +133,9 @@
     <main>
       <nav class="tabs" aria-label="Views" data-i18n-aria-label="viewsLabel">
         <button type="button" class="active" data-view="today" data-i18n="todayTab">Today</button>
-        <button type="button" data-view="schedule" data-i18n="scheduleTab">Week</button>
-        <button type="button" data-view="grocery" data-i18n="groceryTab">Groceries</button>
-        <button type="button" data-view="recipes" data-i18n="recipesTab">Recipes</button>
+        <button type="button" data-view="schedule" data-i18n="planTab">Plan</button>
+        <button type="button" data-view="grocery" data-i18n="shopTab">Shop</button>
+        <button type="button" data-view="recipes" data-i18n="libraryTab">Library</button>
       </nav>
 
       <div class="sync-status-row app-sync-status">
@@ -170,15 +178,31 @@
             </button>
           </div>
         </section>
-        <section class="today-band" id="todayBand">
-          <img class="today-backdrop" id="todayBackdrop" src="assets/meatballs-2.webp" alt="" />
-          <div class="today-band-copy">
-            <p class="section-label" id="todayKicker" data-i18n="tonight">Tonight</p>
-            <h2 id="todayRecipeName">A 100% Chance of Meatballs</h2>
-            <p id="todayMeta">1 planned item</p>
-            <div class="today-meal-list" id="todayMealList"></div>
+        <section class="today-story" id="todayBand" aria-labelledby="todayRecipeName">
+          <div class="today-story-main">
+            <p class="today-date" id="todayDate"></p>
+            <h2 id="todayRecipeName">Nothing planned for tonight.</h2>
+            <p class="today-serving-line" id="todayMeta"></p>
+            <div class="today-companions" id="todayMealList" hidden></div>
+            <div class="today-memory-record" id="todayMemory" hidden>
+              <p id="todayMemoryFact"></p>
+              <p id="todayMemoryWhen"></p>
+            </div>
+            <div class="today-temporal-notes">
+              <div class="today-temporal-note" id="todayBefore" hidden>
+                <span data-i18n="beforeDinner">Before dinner</span>
+                <p id="todayBeforeText"></p>
+              </div>
+              <div class="today-temporal-note" id="todayAfter" hidden>
+                <span data-i18n="afterDinner">After tonight</span>
+                <p id="todayAfterText"></p>
+              </div>
+            </div>
+            <button class="primary-action" id="cookToday" type="button" data-i18n="cookButton">Cook</button>
           </div>
-          <button class="primary-action" id="cookToday" type="button" data-i18n="cookButton">Cook this</button>
+          <figure class="today-image" id="todayImage" hidden>
+            <img class="today-backdrop" id="todayBackdrop" src="assets/meatballs-2.webp" alt="" />
+          </figure>
         </section>
 
         <section class="dinner-feedback" id="dinnerFeedback" aria-live="polite" hidden></section>
@@ -190,22 +214,20 @@
           <div id="smartSuggestionList"></div>
         </section>
 
-        <section class="family-handoff" id="todayHandoff" aria-labelledby="todayHandoffHeading">
-          <div class="handoff-heading">
-            <div>
-              <p class="section-label" data-i18n="handoffKicker">Family handoff</p>
-              <h2 id="todayHandoffHeading" data-i18n="handoffHeading">Make the next meal easier</h2>
-            </div>
-            <button class="text-action" type="button" data-view-target="schedule" data-i18n="handoffSeeWeek">See this week</button>
+        <details class="today-handoff" id="todayHandoff">
+          <summary>
+            <span id="todayHandoffSummary" data-i18n="handoffAdd">Leave a note for the next cook</span>
+            <small data-i18n="editHandoff">Edit handoff</small>
+          </summary>
+          <div class="today-handoff-editor">
+            <div class="handoff-options" id="todayHandoffOptions"></div>
+            <div id="todayHandoffDetails"></div>
+            <label class="handoff-note" for="todayHandoffNote">
+              <span data-i18n="handoffNoteLabel">Note for the next cook (optional)</span>
+              <textarea id="todayHandoffNote" rows="2" maxlength="500" data-i18n-placeholder="handoffNotePlaceholder" placeholder="Save two portions for tomorrow's lunch..."></textarea>
+            </label>
           </div>
-          <p class="handoff-helper" data-i18n="handoffHelper">Mark what the family should remember when plans change.</p>
-          <div class="handoff-options" id="todayHandoffOptions"></div>
-          <div id="todayHandoffDetails"></div>
-          <label class="handoff-note" for="todayHandoffNote">
-            <span data-i18n="handoffNoteLabel">Note for the next cook (optional)</span>
-            <textarea id="todayHandoffNote" rows="2" maxlength="500" data-i18n-placeholder="handoffNotePlaceholder" placeholder="Save two portions for tomorrow's lunch..."></textarea>
-          </label>
-        </section>
+        </details>
 
         <details class="today-tools">
           <summary>
@@ -347,7 +369,10 @@
       </section>
 
       <section class="view" id="scheduleView">
-        <div class="planning-mode-switch" role="tablist" aria-label="Planning view" data-i18n-aria-label="planningViewLabel">
+        <section class="focused-dinner" id="focusedDinnerPanel" hidden></section>
+
+        <div id="comprehensivePlanner">
+        <div class="planning-mode-switch" id="planningModeSwitch" role="tablist" aria-label="Planning view" data-i18n-aria-label="planningViewLabel">
           <button class="active" id="weekPlanningTab" type="button" role="tab" aria-controls="weekPlanningPanel" aria-selected="true" data-planning-mode="week" data-i18n="planByWeek">Week</button>
           <button id="monthPlanningTab" type="button" role="tab" aria-controls="monthPlanningPanel" aria-selected="false" data-planning-mode="month" data-i18n="planByMonth">Month</button>
         </div>
@@ -355,9 +380,9 @@
         <div id="weekPlanningPanel" role="tabpanel" aria-labelledby="weekPlanningTab">
           <div class="section-heading view-banner week-banner">
             <div>
-              <p class="view-kicker" data-i18n="weekKicker">The family table</p>
+              <p class="view-kicker">Plan</p>
               <h2 id="weekTitle" tabindex="-1" data-i18n="weekHeading">This week</h2>
-              <p class="section-note" data-i18n="weekRepeatsNote">Choose a day to plan every meal and course.</p>
+              <p class="section-note">Choose one day, then build only what needs planning.</p>
             </div>
             <div class="week-actions">
               <div class="week-navigation" role="group" aria-label="Week navigation" data-i18n-aria-label="weekNavigationLabel">
@@ -394,6 +419,7 @@
           </div>
           <section class="schedule-editor calendar-date-editor" id="calendarDateEditor" hidden></section>
         </div>
+        </div>
       </section>
 
       <section class="view" id="groceryView">
@@ -405,10 +431,10 @@
         <div id="shoppingPanel" role="tabpanel" aria-labelledby="shoppingModeTab">
           <div class="section-heading grocery-heading view-banner grocery-banner">
             <div>
-              <p class="view-kicker" data-i18n="groceryLabel">Shared grocery list</p>
-              <h2 data-i18n="groceryHeading">Shopping list</h2>
+              <h2 data-i18n="shoppingTitle">Shopping</h2>
+              <p class="shopping-context" id="shoppingContext" data-i18n="shoppingContextAll">Everything the family needs.</p>
+              <button class="text-action shopping-show-all" id="shoppingShowAll" type="button" data-i18n="shoppingShowAll" hidden>Show everything</button>
             </div>
-            <button class="primary-action receipt-upload-button" id="quickReceiptUpload" type="button" data-i18n="uploadReceipt">Upload receipt</button>
           </div>
           <section class="finish-shopping-prompt" id="finishShoppingPrompt" hidden>
             <div>
@@ -522,8 +548,9 @@
             </details>
           </section>
           <details class="grocery-tools-menu">
-            <summary data-i18n="listTools">List tools</summary>
+            <summary data-i18n="shoppingUtilities">Receipts and list tools</summary>
             <div>
+              <button class="ghost-button receipt-upload-button" id="quickReceiptUpload" type="button" data-i18n="uploadReceipt">Upload receipt</button>
               <button class="text-button" id="clearCheckedGroceries" type="button" data-i18n="clearChecked">Clear checked</button>
             </div>
           </details>
@@ -645,26 +672,29 @@
             <div class="detail-title-group">
               <button class="text-action detail-back" id="closeRecipeDetail" type="button" data-i18n="backToRecipes">Back to recipes</button>
               <div>
-              <p class="section-label" data-i18n="selectedRecipe">Selected recipe</p>
                 <h2 id="detailName" tabindex="-1">A 100% Chance of Meatballs</h2>
                 <p id="detailMeta">Makes 18 meatballs · 1 hour · Mess 2/4</p>
                 <p class="detail-servings" id="detailServings"></p>
+                <div class="detail-memory-record" id="detailMemory" hidden>
+                  <p id="detailMemoryFact"></p>
+                  <p id="detailMemoryWhen"></p>
+                </div>
               </div>
-            </div>
-            <div class="segmented detail-language-toggle" aria-label="Language" data-i18n-aria-label="languageLabel">
-              <button type="button" data-lang="en">EN</button>
-              <button type="button" data-lang="es">ES</button>
             </div>
           </div>
           <div class="detail-actions">
             <button class="primary-action" id="publishDraftRecipe" type="button" data-i18n="publishDraftRecipe" hidden>Publish draft</button>
-            <button class="primary-action" id="addRecipeGroceries" type="button" aria-describedby="recipeSafetyLockReason" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
             <button class="primary-action" id="startCooking" type="button" data-i18n="startCooking">Start cooking</button>
+            <button class="ghost-button" id="addRecipeGroceries" type="button" aria-describedby="recipeSafetyLockReason" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
             <details class="detail-more-actions" id="recipeMoreActions">
               <summary data-i18n="moreActions">More actions</summary>
               <div>
                 <button class="ghost-button" id="editRecipe" type="button" data-i18n="editRecipe">Edit recipe</button>
                 <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
+                <div class="segmented detail-language-toggle" aria-label="Language" data-i18n-aria-label="languageLabel">
+                  <button type="button" data-lang="en">EN</button>
+                  <button type="button" data-lang="es">ES</button>
+                </div>
               </div>
             </details>
             <p class="detail-action-note" id="recipeSafetyLockReason" role="status" aria-live="polite" hidden></p>
@@ -741,7 +771,7 @@
               <p id="familyNotes"></p>
             </article>
 
-            <aside>
+            <aside id="recipePhotoRegion" hidden>
               <h3 data-i18n="sourcePhotos">Source photos</h3>
               <div class="photo-strip" id="photoStrip"></div>
             </aside>
@@ -899,6 +929,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=133"></script>
+    <script type="module" src="app.js?v=135"></script>
   </body>
 </html>

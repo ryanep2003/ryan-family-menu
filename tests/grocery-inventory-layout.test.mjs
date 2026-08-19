@@ -7,147 +7,141 @@ const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 const inventoryUi = await readFile(new URL("../inventory-ui.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 
-test("grocery list appears before occasional list tools", () => {
-  assert.ok(
-    html.indexOf('id="groceryList"') < html.indexOf('class="grocery-tools-menu"'),
-    "the active shopping list should precede receipt and generation utilities"
-  );
+test("shopping keeps the active list before occasional utility controls", () => {
+  assert.ok(html.indexOf('id="groceryList"') < html.indexOf('class="grocery-tools-menu"'));
+  assert.ok(html.indexOf('id="groceryList"') < html.indexOf('class="monthly-budget"'));
+  assert.ok(styles.includes(".grocery-list { margin-top: 0; }"));
 });
 
-test("shopping completion keeps receipt capture at the end of the trip", () => {
-  const finishPanel = html.indexOf('id="finishShoppingPanel"');
-  const groceryList = html.indexOf('id="groceryList"');
-  const listTools = html.indexOf('class="grocery-tools-menu"');
-  assert.ok(finishPanel > -1 && finishPanel < groceryList);
-  assert.ok(groceryList < listTools);
-  assert.match(html, /id="scanReceiptToggle"[^>]*data-i18n="addReceiptPhoto"/);
-  assert.match(html, /id="manualReceiptForm"[\s\S]*id="manualReceiptTotal"[\s\S]*data-i18n="saveReceiptAndFinish"/);
+test("shopping completion and receipt capture remain available", () => {
+  assert.ok(html.includes('id="finishShoppingPanel"') && html.includes('id="scanReceiptToggle"'));
+  assert.ok(html.includes('id="manualReceiptForm"') && html.includes('id="manualReceiptTotal"'));
+  assert.ok(app.includes("#finishWithoutReceipt") && app.includes("movePurchasedItemsHome()"));
+  assert.ok(styles.includes(".finish-shopping-prompt { display: flex"));
   assert.doesNotMatch(html, /class="grocery-tools-menu"[\s\S]*id="scanReceiptToggle"/);
-  assert.match(app, /#finishWithoutReceipt[\s\S]*movePurchasedItemsHome\(\)/);
-  assert.match(styles, /\.view\.active\s*\{[\s\S]*animation: view-arrival[^;]*backwards;/);
 });
 
-test("receipt upload is always available without checking grocery items first", () => {
-  assert.match(html, /class="primary-action receipt-upload-button" id="quickReceiptUpload"[^>]*data-i18n="uploadReceipt"/);
-  assert.ok(html.indexOf('id="quickReceiptUpload"') < html.indexOf('id="groceryList"'));
-  assert.match(app, /#quickReceiptUpload[\s\S]*openFinishShopping\(\{ showReceipt: true \}\)/);
-  assert.match(app, /showReceipt[\s\S]*#receiptScanPanel[\s\S]*hidden = false/);
-  assert.match(styles, /\.grocery-banner \.receipt-upload-button\s*\{[\s\S]*min-width: 148px/);
+test("receipt upload remains available without preceding the working list", () => {
+  assert.match(html, /class="ghost-button receipt-upload-button" id="quickReceiptUpload"[^>]*data-i18n="uploadReceipt"/);
+  assert.ok(html.indexOf('id="quickReceiptUpload"') > html.indexOf('id="groceryList"'));
+  assert.ok(app.includes("#quickReceiptUpload") && app.includes("openFinishShopping({ showReceipt: true })"));
+  assert.ok(app.includes("showReceipt") && app.includes("#receiptScanPanel"));
 });
 
-test("inventory maintenance uses one progressive disclosure", () => {
+test("inventory remains a progressive-disclosure maintenance surface", () => {
   assert.match(html, /class="inventory-tools-menu"/);
-  assert.match(html, /data-i18n="inventoryManageShort"/);
   assert.match(html, /class="inventory-tools">\s*<details>/);
-});
-
-test("mobile inventory filtering keeps status visible and consolidates locations", () => {
   assert.match(html, /id="inventoryLocationFilter"/);
-  assert.match(app, /inventoryLocationFilter.+addEventListener\("change"/s);
-  assert.match(app, /let inventoryFilter = "all"/);
-  assert.match(html, /class="active"[^>]*data-inventory-filter="all"/);
-  assert.match(styles, /\.inventory-filters \.location-filter\s*{\s*display: none;/);
-  assert.match(styles, /\.inventory-location-filter\s*{\s*display: grid;/);
-  assert.match(styles, /\.inventory-filter-bar\s*{[\s\S]*grid-template-columns: minmax\(0, 1fr\);/);
-  assert.match(styles, /\.inventory-filters\s*{[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
-});
-
-test("mobile inventory rows reserve a full line for readable stock controls", () => {
-  assert.match(styles, /\.inventory-item-main\s*{[\s\S]*grid-template-areas:[\s\S]*"copy menu"[\s\S]*"stock stock"/);
-  assert.match(styles, /\.inventory-stock-control\s*{[\s\S]*grid-template-columns: auto minmax\(132px, 160px\)/);
-  assert.match(styles, /\.stock-select\s*{[\s\S]*min-width: 132px;/);
-});
-
-test("inventory search and restock actions preserve the maintenance context", () => {
-  assert.match(html, /id="inventorySearch"[^>]*type="search"/);
-  assert.match(app, /inventorySearch.+addEventListener\("input"/s);
+  assert.ok(app.includes("inventoryLocationFilter") && app.includes('addEventListener("change"'));
   assert.match(inventoryUi, /#inventoryStatus.+addedToShopping/);
+});
+
+test("inventory controls retain practical touch targets", () => {
+  assert.match(styles, /input, select, textarea\s*\{[\s\S]*?width: 100%;[\s\S]*?min-height: 44px;/);
+  assert.ok(styles.includes("min-height: 44px"));
+  assert.match(html, /data-inventory-filter="all"/);
+  assert.match(html, /id="inventoryLocationFilter"/);
+});
+
+test("inventory maintenance does not replace shopping context", () => {
+  assert.match(html, /id="inventorySearch"[^>]*type="search"/);
+  assert.ok(app.includes("inventorySearch") && app.includes('addEventListener("input"'));
   assert.doesNotMatch(inventoryUi, /setInventoryMode\("shopping"\)/);
 });
 
-test("mobile navigation keeps recipe creation inside Recipes", () => {
-  assert.doesNotMatch(html, /data-view="add"/);
-  assert.match(html, /id="addRecipeFromLibrary"/);
-  assert.match(html, /id="globalAddRecipe"[^>]*data-i18n="addTab"[^>]*data-i18n-aria-label="addRecipe"/);
-  assert.match(html, /id="backToRecipeLibrary"/);
-  assert.match(styles, /\.tabs\s*{[\s\S]*grid-template-columns: repeat\(4, 1fr\)/);
-  assert.match(app, /viewName === "add" \? "recipes" : viewName/);
-  assert.match(app, /#globalAddRecipe/);
-  assert.match(app, /addButton\.classList\.toggle\("active", active\)/);
-});
-
-test("mobile content clears the fixed navigation with a safe bottom buffer", () => {
-  assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*html\s*\{[\s\S]*scroll-padding-bottom: calc\(144px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(144px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(html, /styles\.css\?v=75/);
+test("mobile shell preserves room for the fixed four-view navigation", () => {
+  assert.ok(styles.includes("padding: 0 var(--space-4) calc(88px + env(safe-area-inset-bottom))"));
+  assert.ok(styles.includes(".tabs { position: fixed") && styles.includes("grid-template-columns: repeat(4, 1fr)"));
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="sharedSyncStatusPanel"[^>]*hidden/);
-  assert.match(html, /id="sharedSyncStatusPanel"[\s\S]*?id="sharedStateStatus"[\s\S]*?id="retrySharedState"/);
   assert.match(html, /id="recipeSyncStatusPanel"[^>]*hidden/);
+  assert.match(html, /id="sharedSyncStatusPanel"[\s\S]*?id="sharedStateStatus"[\s\S]*?id="retrySharedState"/);
   assert.match(html, /id="recipeSyncStatusPanel"[\s\S]*?id="recipeSyncStatus"[\s\S]*?id="retryRecipes"/);
-  assert.doesNotMatch(html, /class="sync-status-row app-sync-status"[\s\S]*?id="sharedStateStatus"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
   assert.match(html, /id="copyWeekForward"/);
-  assert.match(styles, /\.schedule-editor\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(styles, /\.recipe-detail\s*\{[\s\S]*scroll-margin-bottom: calc\(112px \+ env\(safe-area-inset-bottom\)\)/);
-  assert.match(styles, /\.recipe-card > :not\(img, \.favorite-pill\)\s*\{[\s\S]*min-width: 0;[\s\S]*max-width: 100%/);
-  assert.match(styles, /\.recipe-card h3\s*\{[\s\S]*overflow-wrap: anywhere/);
 });
 
-test("meal-linked grocery controls collapse safely on mobile", () => {
+test("the new core navigation keeps the existing route mapping intact", () => {
+  assert.match(html, /data-view="schedule" data-i18n="planTab"/);
+  assert.match(html, /data-view="grocery" data-i18n="shopTab"/);
+  assert.match(html, /data-view="recipes" data-i18n="libraryTab"/);
+  assert.ok(app.includes('viewName === "add" ? "recipes" : viewName'));
+});
+
+test("the compact mobile shell keeps account actions separate from content", () => {
+  assert.match(styles, /\.app-header\s*\{[\s\S]*?min-height: 64px;/);
+  assert.match(styles, /\.household-menu-panel\s*\{[\s\S]*?position: absolute;/);
+  assert.doesNotMatch(styles, /@media\s*\(max-width:[^)]*\)[\s\S]*?\.segmented\s*\{[^}]*display:\s*none/);
+});
+
+test("meal-linked shopping stays concise and mobile-friendly", () => {
   assert.match(html, /id="groceryMealFilterPanel"[^>]*hidden/);
   assert.match(html, /id="groceryMealFilter"/);
   assert.match(html, /value="next3"[^>]*data-i18n="groceryRangeNext3"/);
   assert.match(html, /value="nextWeek"[^>]*data-i18n="groceryRangeNextWeek"/);
-  assert.match(styles, /\.grocery-meal-filter\s*\{[\s\S]*grid-template-columns: minmax\(220px, 1fr\) minmax\(210px, 280px\)/);
-  assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*\.grocery-meal-filter,[\s\S]*grid-template-columns: 1fr/);
-  assert.match(styles, /\.grocery-meal-filter select\s*\{[\s\S]*max-width: 100%/);
-  assert.match(styles, /\.meal-builder-period-meta \.meal-grocery-link\s*\{[\s\S]*min-height: 44px/);
+  assert.ok(styles.includes(".grocery-meal-filter { display: flex"));
+  assert.match(styles, /@media \(max-width: 699px\)[\s\S]*?\.grocery-meal-filter, \.finish-shopping-prompt \{ display: grid; \}/);
+  assert.ok(styles.includes(".grocery-meal-filter select { max-width: 17rem; }"));
 });
 
-test("dinner feedback lives on Today and keeps details optional", () => {
+test("shopping retains every supported planning range", () => {
+  for (const range of ["week", "next3", "nextWeek", "next14", "month"]) {
+    assert.match(html, new RegExp(`value="${range}"`));
+  }
+  assert.match(html, /id="generateGroceries"/);
+});
+
+test("Today keeps the meal, memory, and next actions ahead of household utilities", () => {
   assert.match(html, /id="dinnerFeedback"[^>]*hidden/);
-  assert.doesNotMatch(html, /id="markCooked"/);
-  assert.match(styles, /\.dinner-outcome-options\s*\{[\s\S]*grid-template-columns: repeat\(5/);
-  assert.match(styles, /\.dinner-feedback-details\s*\{/);
+  assert.ok(html.indexOf('id="todayMemory"') < html.indexOf('class="today-tools"'));
+  assert.ok(html.indexOf('id="todayBefore"') < html.indexOf('class="today-tools"'));
+  assert.match(html, /<details class="today-handoff"[\s\S]*id="todayHandoffSummary"/);
+  assert.match(styles, /\.today-memory-record, \.detail-memory-record\s*\{[\s\S]*?border-left:/);
 });
 
-test("update notices stay in document flow instead of covering app content", () => {
+test("household attribution remains available for any family", () => {
+  assert.match(html, /id="householdMemberInput"/);
+  assert.match(html, /id="householdMemberSuggestions"/);
+  assert.ok(app.includes("cleanHouseholdMember"));
+  assert.match(html, /id="setupFamilyMembers"/);
+});
+
+test("Today has an explicit empty-state path to planning", () => {
+  assert.match(html, /id="cookToday"[^>]*data-i18n="cookButton"/);
+  assert.match(html, /data-view="schedule" data-i18n="planTab"/);
+  assert.match(html, /id="focusedDinnerPanel"[^>]*hidden/);
+  assert.match(styles, /\.today-story\s*\{/);
+  assert.match(app, /openFocusedDinnerPlan:[\s\S]*scheduleUi\.openFocusedDinner/);
+});
+
+test("transient update notices have clear safe-area clearance", () => {
   const noticeRule = styles.match(/\.app-update-notice\s*\{([^}]*)\}/)?.[1] || "";
-  assert.match(noticeRule, /position: relative;/);
-  assert.doesNotMatch(noticeRule, /position: sticky;/);
+  assert.match(noticeRule, /position: fixed;/);
+  assert.match(noticeRule, /bottom: calc\(80px \+ env\(safe-area-inset-bottom\)\);/);
 });
 
-test("mobile header reserves rows for optional install controls", () => {
-  assert.match(styles, /@media \(max-width: 780px\)[\s\S]*\.header-actions\s*\{[\s\S]*display: grid;[\s\S]*grid-template-columns: minmax\(0, 1fr\) minmax\(0, 1fr\) auto;/);
-  assert.match(styles, /\.install-prompt\s*\{[\s\S]*grid-column: 1 \/ -1;[\s\S]*grid-row: 2;/);
-  assert.match(styles, /@media \(max-width: 360px\)[\s\S]*\.shell-add-button\s*\{[\s\S]*grid-row: 2;/);
+test("every id in the application shell is unique", () => {
+  const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
+  assert.equal(new Set(ids).size, ids.length);
 });
 
-test("mobile sync status keeps the family member control compact and labeled", () => {
-  assert.match(html, /id="householdMemberPicker"[^>]*hidden[\s\S]*?<span data-i18n="usingAsShort">Using as<\/span>[\s\S]*?<select id="householdMemberInput"[^>]+aria-label="Using as"/);
-  assert.match(html, /id="setupFamilyMembers"[^>]*data-i18n="openFamily"/);
-  assert.match(styles, /\.app-sync-status \.household-member-global \{[\s\S]*?display: flex;[\s\S]*?margin: 0 0 0 auto;/);
-  assert.match(styles, /\.app-sync-status \.household-member-global select\s*\{[\s\S]*?width: min\(132px, 38vw\);/);
-  assert.match(styles, /\.app-sync-status \.setup-family-members\s*\{[\s\S]*?min-height: 44px;/);
+test("recipe detail owns the page instead of appearing under library chrome", () => {
+  assert.match(styles, /#recipesView\.detail-open \.recipe-banner[^}]*display: none/);
+  assert.match(html, /id="recipePhotoRegion"[^>]*hidden/);
 });
 
-test("Today keeps secondary household coordination behind one clear disclosure", () => {
-  assert.match(html, /<details class="today-tools">[\s\S]*data-i18n="todayToolsHeading"[\s\S]*id="todayAvailableFood"[\s\S]*class="today-dashboard"/);
-  assert.match(styles, /\.today-tools > summary\s*\{[\s\S]*min-height: 56px;/);
-});
-
-test("task attribution accepts members from any household", () => {
-  assert.match(html, /id="taskAssigneeInput"[^>]*type="text"[^>]*list="householdMemberSuggestions"/);
-  assert.doesNotMatch(html, /id="taskAssigneeInput"[\s\S]*?<option value="alyson"/);
-});
-
-test("file inputs use localized picker controls", () => {
+test("file inputs remain usable through localized picker controls", () => {
   assert.match(html, /id="receiptScanPhotoInput"[^>]*data-file-action="choosePhotos"/);
   assert.match(html, /id="receiptScanCameraInput"[^>]*capture="environment"[^>]*data-file-action="takePhoto"/);
   assert.match(html, /id="photoCameraInput"[^>]*data-file-action="takePhoto"/);
-  assert.match(app, /function setupLocalizedFileInputs\(\)/);
-  assert.match(app, /button\.addEventListener\("click", \(\) => input\.click\(\)\)/);
-  assert.match(styles, /\.localized-file-input input\[type="file"\]/);
+  assert.ok(app.includes("function setupLocalizedFileInputs()"));
+  assert.ok(app.includes('button.addEventListener("click", () => input.click())'));
+  assert.ok(styles.includes(".localized-file-input input[type=file]"));
+});
+
+test("recipe creation remains reachable from the Library route", () => {
+  assert.match(html, /id="addRecipeFromLibrary"/);
+  assert.match(html, /id="backToRecipeLibrary"/);
+  assert.ok(app.includes("#globalAddRecipe"));
 });

@@ -44,6 +44,7 @@ import { createSharedStateLoader } from "./shared-state-loader.js";
 import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage-utils.js";
 import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "./sync-status.js";
 import { translations } from "./translations.js";
+import { selectRecipeMemory, selectTodayStory } from "./almanac-selectors.js";
 import {
   normalizeDinnerEvents,
   normalizeDinnerEvent,
@@ -1669,6 +1670,12 @@ const dashboardUi = createDashboardUi({
   setSelectedRecipeId: (id) => {
     selectedRecipeId = id;
   },
+  openFocusedDinnerPlan: (dateKey) => {
+    setView("schedule");
+    scheduleUi.openFocusedDinner(dateKey);
+  },
+  selectTodayStory: (input) => selectTodayStory(input),
+  getRecipeMemory: (recipeId) => selectRecipeMemory(recipeId, dinnerEvents, familyMembers),
 });
 
 const todaysMealPlan = () => dashboardUi.todaysMealPlan();
@@ -1750,6 +1757,11 @@ const scheduleUi = createScheduleUi({
   setVisibleMonth: (month) => {
     visibleMonth = month;
   },
+  getFamilyMembers: () => familyMembers,
+  onFocusedDinnerComplete: () => {
+    setView("today");
+    renderToday();
+  },
 });
 
 const renderSchedule = () => scheduleUi.renderSchedule();
@@ -1785,6 +1797,7 @@ const recipeLibraryUi = createRecipeLibraryUi({
     categoryFilter = filter;
   },
   setDetailStatus,
+  getRecipeMemory: (recipeId) => selectRecipeMemory(recipeId, dinnerEvents, familyMembers),
   onRecipeOpen: loadRecipeDetail,
   canTranslateRecipe: (recipeId, targetLang) => {
     const recipe = rawRecipeById(recipeId);
@@ -2376,11 +2389,15 @@ $("#inventorySearch").addEventListener("input", () => {
 });
 
 $$(".tabs button").forEach((button) => {
-  button.addEventListener("click", () => setView(button.dataset.view));
+  button.addEventListener("click", () => {
+    if (button.dataset.view === "schedule") scheduleUi.closeFocusedDinner();
+    setView(button.dataset.view);
+  });
 });
 
 $$('[data-view-target]').forEach((button) => {
   button.addEventListener("click", () => {
+    if (button.dataset.viewTarget === "schedule") scheduleUi.closeFocusedDinner();
     setView(button.dataset.viewTarget);
     if (button.dataset.inventoryTarget) {
       inventoryMode = button.dataset.inventoryTarget;
@@ -2480,15 +2497,20 @@ $("#publishDraftRecipe").addEventListener("click", async () => {
 });
 
 $("#addRecipeGroceries").addEventListener("click", async () => {
-  const incoming = recipeGroceries(recipeById(selectedRecipeId));
+  const recipeId = selectedRecipeId;
+  const incoming = recipeGroceries(recipeById(recipeId));
   const merged = mergeGroceries(groceries, incoming);
   const addedCount = merged.length - groceries.length;
   const atHomeCount = incoming.filter((item) => item.inventorySuggested).length;
   groceries = merged;
   render();
-  setDetailStatus(detailGroceriesMessage(addedCount, atHomeCount));
+  inventoryMode = "shopping";
+  renderInventoryMode();
+  groceryUi.showRecipe(recipeId);
+  setView("grocery");
+  $("#groceryStatus").textContent = detailGroceriesMessage(addedCount, atHomeCount);
   const saved = await saveGroceries();
-  if (!saved) setDetailStatus(t("recipeGroceriesError"), true);
+  if (!saved) $("#groceryStatus").textContent = t("recipeGroceriesError");
 });
 
 recipeFormUi.bind();
@@ -2722,7 +2744,7 @@ registerServiceWorker({ $, onUpdateAvailable: showAppUpdateNotice });
 setupLocalizedFileInputs();
 render();
 loadSharedRecipes().then(() => loadSharedState()).then(() => loadSchedule()).then(() => Promise.all([loadLedger("receipts"), loadLedger("activity")]));
-$("#householdHistory")?.addEventListener("toggle", (event) => {
+$("#householdHistoryPanel")?.addEventListener("toggle", (event) => {
   if (event.target.open && !event.target.dataset.loaded) {
     event.target.dataset.loaded = "true";
     loadAuditHistory();

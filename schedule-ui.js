@@ -52,10 +52,16 @@ export function createScheduleUi({
   getCurrentWeekStartKey,
   getVisibleMonth,
   setVisibleMonth,
+  getFamilyMembers = () => [],
+  onFocusedDinnerComplete = () => {},
 }) {
   let selectedWeekDateKey = "";
   let selectedCalendarDateKey = "";
   let planningMode = "week";
+  let focusedDinnerDateKey = "";
+  let focusedDinnerDraft = null;
+  let focusedDinnerChoosing = false;
+  let focusedDinnerSearch = "";
 
   function renderPlanningMode() {
     const weekPanel = $("#weekPlanningPanel");
@@ -99,6 +105,224 @@ export function createScheduleUi({
         <span class="category-pill">${escapeHtml(t(role?.label || "roleOther"))}</span>
       </button>`;
     }).join("");
+  }
+
+  function focusedDinnerItem(meal) {
+    const items = normalizeMealPlan(meal).items || [];
+    return items.find((item) => item.period === "dinner" && item.role === "main")
+      || items.find((item) => item.period === "dinner")
+      || null;
+  }
+
+  function focusedEatingCopy(plan = {}) {
+    const members = getFamilyMembers().filter((member) => member?.active !== false);
+    const adults = members.filter((member) => member.role === "adult");
+    const kids = members.filter((member) => member.role === "child");
+    const adultCount = Number(plan.adults) || 0;
+    const kidCount = Number(plan.kids) || 0;
+    const guestCount = Number(plan.guests) || 0;
+    if (adults.length === adultCount && kids.length === kidCount && members.length) {
+      const names = members.map((member) => member.name).filter(Boolean);
+      if (guestCount) names.push(t(guestCount === 1 ? "oneGuest" : "guestCount").replace("{count}", `${guestCount}`));
+      return names.join(" · ");
+    }
+    return [
+      t(adultCount === 1 ? "oneAdult" : "adultCount").replace("{count}", `${adultCount}`),
+      t(kidCount === 1 ? "oneChild" : "childCount").replace("{count}", `${kidCount}`),
+      guestCount ? t(guestCount === 1 ? "oneGuest" : "guestCount").replace("{count}", `${guestCount}`) : "",
+    ].filter(Boolean).join(" · ");
+  }
+
+  function focusedSearchMarkup() {
+    const matches = matchingRecipes(focusedDinnerSearch, "all").slice(0, 8);
+    return `
+      <label class="focused-dinner-search">
+        <span>${t("whatShouldWeHave")}</span>
+        <input id="focusedDinnerSearch" type="search" autocomplete="off" inputmode="search" value="${escapeHtml(focusedDinnerSearch)}" placeholder="${escapeHtml(t("recipeSearchPlaceholder"))}" />
+      </label>
+      <div class="focused-recipe-results" id="focusedDinnerResults">
+        ${matches.map((recipe) => `
+          <button type="button" data-focused-recipe="${escapeHtml(recipe.id)}">
+            <span>${escapeHtml(localize(recipe.name))}</span>
+            <small>${escapeHtml(localize(recipe.short || recipe.meta) || t("chooseRecipe"))}</small>
+          </button>
+        `).join("")}
+        ${focusedDinnerSearch && !matches.length ? `<p>${t("noRecipeMatches")}</p>` : ""}
+      </div>
+    `;
+  }
+
+  function renderFocusedDinner() {
+    const panel = $("#focusedDinnerPanel");
+    const planner = $("#comprehensivePlanner");
+    const switcher = $("#planningModeSwitch");
+    if (!panel || !planner) return;
+    const active = Boolean(focusedDinnerDateKey && focusedDinnerDraft);
+    panel.setAttribute?.("aria-label", t("planDinner"));
+    panel.hidden = !active;
+    planner.hidden = active;
+    if (switcher) switcher.hidden = active;
+    if (!active) {
+      panel.innerHTML = "";
+      return;
+    }
+
+    const meal = normalizeMealPlan(focusedDinnerDraft);
+    const dinnerItem = focusedDinnerItem(meal);
+    const recipe = dinnerItem ? recipeById(dinnerItem.recipeId) : null;
+    const dinnerPlan = meal.servingPlans?.dinner || meal.servingPlan;
+    const date = new Date(`${focusedDinnerDateKey}T12:00:00`);
+    const dateLabel = new Intl.DateTimeFormat(getLang() === "es" ? "es-US" : "en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    }).format(date);
+    const servings = plannedServings(dinnerPlan);
+    const extra = Number(dinnerPlan.extraServings) || 0;
+    const choosing = focusedDinnerChoosing || !recipe;
+
+    panel.innerHTML = `
+      <header class="focused-dinner-header">
+        <button class="text-action" id="cancelFocusedDinner" type="button">${t("backToToday")}</button>
+        <p>${escapeHtml(t("dinnerOnDate").replace("{date}", dateLabel))}</p>
+      </header>
+      <form id="focusedDinnerForm">
+        <div class="focused-dinner-decision">
+          ${choosing ? focusedSearchMarkup() : `
+            <div class="focused-selected-meal">
+              <h2 id="focusedDinnerHeading">${escapeHtml(localize(recipe.name))}</h2>
+              ${localize(recipe.short || recipe.meta) ? `<p>${escapeHtml(localize(recipe.short || recipe.meta))}</p>` : ""}
+              <button class="text-action" id="changeFocusedDinner" type="button">${t("chooseAnotherMeal")}</button>
+            </div>
+          `}
+        </div>
+        ${recipe ? `
+          <div class="focused-dinner-confirmation">
+            <section class="focused-eating" aria-labelledby="focusedEatingHeading">
+              <h3 id="focusedEatingHeading">${t("eatingTonight")}</h3>
+              <p id="focusedEatingNames">${escapeHtml(focusedEatingCopy(dinnerPlan))}</p>
+              <p class="focused-serving-summary" id="focusedServingSummary">${escapeHtml(t("fullServings").replace("{count}", `${servings}`))}</p>
+              <details>
+                <summary>${t("adjustHeadcount")}</summary>
+                <div class="focused-headcount-grid">
+                  <label><span>${t("adultsCount")}</span><input type="number" min="0" max="20" value="${dinnerPlan.adults}" data-focused-serving="adults" /></label>
+                  <label><span>${t("kidsCount")}</span><input type="number" min="0" max="20" value="${dinnerPlan.kids}" data-focused-serving="kids" /></label>
+                  <label><span>${t("guestsCount")}</span><input type="number" min="0" max="20" value="${dinnerPlan.guests}" data-focused-serving="guests" /></label>
+                </div>
+              </details>
+            </section>
+            <details class="focused-option" ${extra ? "open" : ""}>
+              <summary>${extra ? escapeHtml(t("extraPlanned").replace("{count}", `${extra}`)) : t("makeExtraTomorrow")}</summary>
+              <label><span>${t("extraServingsCount")}</span><input type="number" min="0" max="100" step="0.5" value="${extra}" data-focused-serving="extraServings" /></label>
+            </details>
+            <details class="focused-option" ${meal.notes ? "open" : ""}>
+              <summary>${meal.notes ? t("handoffSaved") : t("handoffAdd")}</summary>
+              <label><span>${t("handoffNoteLabel")}</span><textarea id="focusedDinnerNote" rows="3" maxlength="500" placeholder="${escapeHtml(t("handoffNotePlaceholder"))}">${escapeHtml(typeof meal.notes === "string" ? meal.notes : meal.notes?.[getLang()] || meal.notes?.en || "")}</textarea></label>
+            </details>
+          </div>
+          <div class="focused-dinner-action">
+            <p id="focusedDinnerStatus" role="status"></p>
+            <button class="primary-action" type="submit">${t("planDinner")}</button>
+          </div>
+        ` : ""}
+      </form>
+    `;
+
+    $("#cancelFocusedDinner")?.addEventListener("click", () => closeFocusedDinner({ navigate: true }));
+    $("#changeFocusedDinner")?.addEventListener("click", () => {
+      focusedDinnerChoosing = true;
+      focusedDinnerSearch = "";
+      renderFocusedDinner();
+      $("#focusedDinnerSearch")?.focus();
+    });
+    $("#focusedDinnerSearch")?.addEventListener("input", (event) => {
+      focusedDinnerSearch = event.target.value;
+      const results = $("#focusedDinnerResults");
+      if (results) {
+        const matches = matchingRecipes(focusedDinnerSearch, "all").slice(0, 8);
+        results.innerHTML = matches.map((match) => `
+          <button type="button" data-focused-recipe="${escapeHtml(match.id)}">
+            <span>${escapeHtml(localize(match.name))}</span>
+            <small>${escapeHtml(localize(match.short || match.meta) || t("chooseRecipe"))}</small>
+          </button>
+        `).join("") || (focusedDinnerSearch ? `<p>${t("noRecipeMatches")}</p>` : "");
+        bindFocusedRecipeChoices();
+      }
+    });
+    bindFocusedRecipeChoices();
+    $$('[data-focused-serving]').forEach((control) => {
+      control.addEventListener("change", () => {
+        const next = normalizeMealPlan(focusedDinnerDraft);
+        const nextPlan = {
+          ...(next.servingPlans?.dinner || next.servingPlan),
+          [control.dataset.focusedServing]: Number(control.value),
+        };
+        next.servingPlans = { ...next.servingPlans, dinner: nextPlan };
+        next.servingPlan = { ...next.servingPlan, ...nextPlan };
+        focusedDinnerDraft = normalizeMealPlan(next);
+        renderFocusedDinner();
+      });
+    });
+    $("#focusedDinnerNote")?.addEventListener("input", (event) => {
+      const next = normalizeMealPlan(focusedDinnerDraft);
+      next.notes = event.target.value;
+      focusedDinnerDraft = next;
+    });
+    $("#focusedDinnerForm")?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!focusedDinnerItem(focusedDinnerDraft)) return;
+      const button = event.target.querySelector('button[type="submit"]');
+      if (button) button.disabled = true;
+      const status = $("#focusedDinnerStatus");
+      if (status) status.textContent = t("mealChangeSaving");
+      await persistMealTarget(`calendar:${focusedDinnerDateKey}`, focusedDinnerDraft);
+      focusedDinnerDateKey = "";
+      focusedDinnerDraft = null;
+      focusedDinnerChoosing = false;
+      focusedDinnerSearch = "";
+      onFocusedDinnerComplete();
+    });
+  }
+
+  function bindFocusedRecipeChoices() {
+    $$('[data-focused-recipe]').forEach((button) => {
+      button.addEventListener("click", () => {
+        const recipe = recipeById(button.dataset.focusedRecipe);
+        if (!recipe) return;
+        const next = normalizeMealPlan(focusedDinnerDraft);
+        const existingMain = focusedDinnerItem(next);
+        next.items = next.items.filter((item) => !(item.period === "dinner" && item.id === existingMain?.id));
+        next.items.push({
+          id: existingMain?.id || `meal-item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          period: "dinner",
+          role: "main",
+          sourceType: "recipe",
+          recipeId: recipe.id,
+        });
+        focusedDinnerDraft = normalizeMealPlan(next);
+        focusedDinnerChoosing = false;
+        focusedDinnerSearch = "";
+        renderFocusedDinner();
+      });
+    });
+  }
+
+  function openFocusedDinner(dateKey) {
+    focusedDinnerDateKey = /^\d{4}-\d{2}-\d{2}$/.test(dateKey || "") ? dateKey : formatDateKey(new Date());
+    focusedDinnerDraft = normalizeMealPlan(calendarMealForDateKey(focusedDinnerDateKey));
+    focusedDinnerChoosing = !focusedDinnerItem(focusedDinnerDraft);
+    focusedDinnerSearch = "";
+    renderFocusedDinner();
+    globalThis.requestAnimationFrame?.(() => $(focusedDinnerChoosing ? "#focusedDinnerSearch" : "#focusedDinnerHeading")?.focus?.({ preventScroll: true }));
+  }
+
+  function closeFocusedDinner({ navigate = false } = {}) {
+    focusedDinnerDateKey = "";
+    focusedDinnerDraft = null;
+    focusedDinnerChoosing = false;
+    focusedDinnerSearch = "";
+    renderFocusedDinner();
+    if (navigate) onFocusedDinnerComplete();
   }
 
   function roleOptions(selected = "main") {
@@ -520,6 +744,11 @@ export function createScheduleUi({
   }
 
   function renderSchedule() {
+    if (focusedDinnerDateKey) {
+      renderFocusedDinner();
+      return;
+    }
+    renderFocusedDinner();
     renderPlanningMode();
     const grid = $("#scheduleGrid");
     const weekDates = activeWeekDateKeys();
@@ -795,7 +1024,10 @@ export function createScheduleUi({
 
   return {
     bindScheduleControls,
+    closeFocusedDinner,
+    openFocusedDinner,
     renderCalendar,
+    renderFocusedDinner,
     renderSchedule,
   };
 }

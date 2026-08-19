@@ -178,3 +178,13 @@ This is a lightweight record of architectural and product decisions that future 
 **Reason:** Receipts and activity were making every menu save and load larger over time, pushing the shared record toward its request limit.
 
 **Consequences:** Existing households migrate on first online load without destructive rewriting. The ledger adds bounded writes for history changes, while meal planning remains in the shared-state record.
+
+## 2026-08-19 — Use The Living Almanac as the presentation system
+
+**Decision:** Re-art-direct the app around a quiet, time-aware presentation system called The Living Almanac. The initial release applies it only to Today, Plan, Recipe, and Shop; existing domain state, persistence, APIs, and household access remain unchanged.
+
+**Reason:** The previous visual system had accumulated competing cards, dense shell controls, and feature-category hierarchy. The product needs to make tonight's meal, the next practical action, and reliable family memory feel more important than administration.
+
+**Alternatives considered:** Incrementally restyling the existing card system, replacing the backend with a new product architecture, and redesigning every screen in one release.
+
+**Consequences:** Presentation-only selectors may derive concise memory cues from existing records. `styles.css` has a deliberate token-to-state structure and the service worker pre-caches the new selector module. Unredesigned screens remain functionally accessible and will receive their own intentional passes later.
