@@ -113,9 +113,9 @@ export function createRecipeLibraryUi({
       .join("");
     $("#recipePicksEmpty").hidden = picks.length > 0;
     $("#recipeList").innerHTML = catalogStatus === "loading"
-      ? `<p class="empty-state">${t("recipeCatalogLoading")}</p>`
+      ? `<p class="empty-state">${t("recipeCatalogLoading")}<br><button class="ghost-button compact-button" type="button" data-retry-recipe-catalog>${t("retrySync")}</button></p>`
       : catalogStatus === "unavailable"
-        ? `<p class="empty-state">${t("recipeCatalogUnavailable")}</p>`
+        ? `<p class="empty-state">${t("recipeCatalogUnavailable")}<br><button class="ghost-button compact-button" type="button" data-retry-recipe-catalog>${t("retrySync")}</button></p>`
         : filtered.map((recipe, index) => recipeCardMarkup(recipe, index)).join("");
     if (!filtered.length) {
       $("#recipeList").innerHTML = `<p class="empty-state">${t("noMatchingRecipes")}</p>`;

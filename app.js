@@ -119,8 +119,12 @@ let tasks = readJsonStorage(householdStorage, "dinner-tasks", []);
 let availableFood = normalizeAvailableFood(readJsonStorage(householdStorage, "dinner-available-food", []));
 let recipeFeedback = normalizeRecipeFeedback(readJsonStorage(householdStorage, "dinner-recipe-feedback", {}));
 let drafts = readJsonStorage(householdStorage, "dinner-drafts", []);
-let sharedRecipes = [];
-let sharedRecipesStatus = "loading";
+const recipeCatalogStorageKey = "dinner-shared-recipe-catalog";
+const recipeCatalogFetchedAtKey = "dinner-shared-recipe-catalog-fetched-at";
+const recipeCatalogTtlMs = 2 * 60 * 1000;
+let sharedRecipes = readJsonStorage(householdStorage, recipeCatalogStorageKey, []);
+if (!Array.isArray(sharedRecipes)) sharedRecipes = [];
+let sharedRecipesStatus = Array.isArray(sharedRecipes) && sharedRecipes.length ? "ready" : "loading";
 let recipeEdits = readJsonStorage(householdStorage, "dinner-recipe-edits", {});
 let deletedRecipeIds = readJsonStorage(householdStorage, "dinner-deleted-recipes", []);
 let importedRecipePhotos = [];
@@ -343,6 +347,20 @@ function seedRecipeCatalogRecord(recipe) {
       es: (recipe.steps?.es || []).join("\n"),
     },
   };
+}
+
+function persistRecipeCatalog(items) {
+  try {
+    const cacheable = items.map((recipe) => ({
+      ...recipe,
+      photos: (recipe.photos || []).filter((photo) => !`${photo}`.startsWith("data:image/")),
+      cardPhoto: `${recipe.cardPhoto || ""}`.startsWith("data:image/") ? "" : recipe.cardPhoto || "",
+    }));
+    householdStorage.setItem(recipeCatalogStorageKey, JSON.stringify(cacheable));
+    householdStorage.setItem(recipeCatalogFetchedAtKey, `${Date.now()}`);
+  } catch {
+    console.warn("Recipe catalog could not be cached on this device.");
+  }
 }
 
 function recipeById(id) {
@@ -1938,7 +1956,14 @@ async function loadSharedRecipes({ restart = false } = {}) {
     recipeRetryAttempt = 0;
   }
   if (recipeLoadInFlight) return recipeLoadInFlight;
-  sharedRecipesStatus = "loading";
+  const cachedAt = Number(readStringStorage(householdStorage, recipeCatalogFetchedAtKey, "0"));
+  const hasFreshCache = sharedRecipes.length && cachedAt && Date.now() - cachedAt < recipeCatalogTtlMs;
+  if (hasFreshCache && !restart) {
+    sharedRecipesStatus = "ready";
+    render();
+    return true;
+  }
+  if (!sharedRecipes.length) sharedRecipesStatus = "loading";
   render();
   clearAreaStatus("recipes");
   recipeLoadInFlight = (async () => {
@@ -1948,6 +1973,7 @@ async function loadSharedRecipes({ restart = false } = {}) {
       const catalog = new Map(recipes.map((recipe) => [recipe.id, seedRecipeCatalogRecord(recipe)]));
       remoteRecipes.forEach((recipe) => catalog.set(recipe.id, recipe));
       sharedRecipes = [...catalog.values()];
+      persistRecipeCatalog(sharedRecipes);
       sharedRecipesStatus = "ready";
       recipeRetryAttempt = 0;
       if (recipeRetryTimer) window.clearTimeout(recipeRetryTimer);
@@ -1956,7 +1982,7 @@ async function loadSharedRecipes({ restart = false } = {}) {
       return true;
     } catch (error) {
       console.warn(error);
-      sharedRecipesStatus = "unavailable";
+      sharedRecipesStatus = sharedRecipes.length ? "ready" : "unavailable";
       scheduleRecipeRetry();
       return false;
     } finally {
@@ -2624,6 +2650,9 @@ $("#retrySharedState").addEventListener("click", async () => {
 });
 
 $("#retryRecipes").addEventListener("click", () => loadSharedRecipes({ restart: true }));
+document.addEventListener("click", (event) => {
+  if (event.target.closest("[data-retry-recipe-catalog]")) loadSharedRecipes({ restart: true });
+});
 
 $("#rotateHouseholdKey")?.addEventListener("click", async () => {
   const code = $("#householdRotationCode")?.value.trim();
