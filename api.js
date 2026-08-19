@@ -9,10 +9,14 @@ async function parseJson(response) {
   return response.json().catch(() => ({}));
 }
 
-export async function getJson(url, fallbackMessage) {
+export async function getJson(url, fallbackMessage, { timeoutMs = 15000 } = {}) {
+  const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const timeout = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : 0;
   const response = await fetch(url, {
     headers: jsonHeaders(),
+    ...(controller ? { signal: controller.signal } : {}),
   });
+  if (timeout) window.clearTimeout(timeout);
   const data = await parseJson(response);
 
   if (!response.ok) {

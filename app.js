@@ -1943,7 +1943,7 @@ async function loadSharedRecipes({ restart = false } = {}) {
   clearAreaStatus("recipes");
   recipeLoadInFlight = (async () => {
     try {
-      const data = await getJson("/.netlify/functions/recipes", "Could not load shared recipes.");
+      const data = await getJson("/.netlify/functions/recipes", "Could not load shared recipes.", { timeoutMs: 15000 });
       const remoteRecipes = Array.isArray(data.recipes) ? data.recipes : [];
       const catalog = new Map(recipes.map((recipe) => [recipe.id, seedRecipeCatalogRecord(recipe)]));
       remoteRecipes.forEach((recipe) => catalog.set(recipe.id, recipe));
