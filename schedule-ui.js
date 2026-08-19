@@ -39,6 +39,7 @@ export function createScheduleUi({
   openGroceriesForMeal = () => {},
   copyCurrentWeekToNextWeek,
   saveSharedState,
+  saveSchedule = saveSharedState,
   recordActivity = () => {},
   render,
   getLang,
@@ -320,7 +321,7 @@ export function createScheduleUi({
     }
     let saved = false;
     try {
-      saved = await saveSharedState();
+      saved = await saveSchedule();
     } catch {
       saved = false;
     }
@@ -704,7 +705,7 @@ export function createScheduleUi({
         delete nextCalendarMeals[button.dataset.useWeeklyPlan];
         setCalendarMeals(nextCalendarMeals);
         render();
-        await saveSharedState();
+        await saveSchedule();
       });
     });
   }
@@ -764,7 +765,7 @@ export function createScheduleUi({
       setCalendarMeals(nextCalendarMeals);
       render();
       setScheduleStatus("");
-      await saveSharedState({ allowEmptySchedule: true, auditAction: "clear-week" });
+      await saveSchedule({ allowEmptySchedule: true });
     });
 
     $("#previousMonth").addEventListener("click", () => {

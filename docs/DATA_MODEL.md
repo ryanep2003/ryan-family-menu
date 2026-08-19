@@ -25,6 +25,7 @@ The household profile lookup is the exception: it is keyed by a SHA-256 digest o
 |---|---|---|
 | `family-menu-households` | `access:<key-digest>` | Household profile: ID, name, created and updated timestamps |
 | `family-menu-state` | `shared-state` | Main shared family-state record |
+| `family-menu-state` | `schedule` | Versioned meal-plan record (schedule, calendar overrides, week start) |
 | `family-menu-dinner-history` | `events` | Versioned dinner history |
 | `family-menu-groceries` | `items` | Versioned grocery list |
 | `family-menu-inventory` | `items` | Versioned inventory |
@@ -58,7 +59,7 @@ The main record is created by `sharedStateSnapshot()` in `family-state.js` and c
 Important fields:
 
 - `weekStart`: visible week anchor.
-- `schedule`: seven recurring/effective day records keyed `mon` through `sun`.
+- `schedule`: seven recurring/effective day records keyed `mon` through `sun`. New clients read and write this through the household-scoped `schedule` record so meal edits do not compete with unrelated profile, budget, or recipe edits. The legacy `shared-state` schedule remains readable during the transition; do not delete it until all old clients are retired.
 - `calendarMeals`: date-specific meal records keyed `YYYY-MM-DD`, capped at 730 days.
 - `favorites`: recipe IDs.
 - `tasks`: shared household tasks.

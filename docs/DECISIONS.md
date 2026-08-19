@@ -2,6 +2,22 @@
 
 This is a lightweight record of architectural and product decisions that future contributors should not reverse accidentally. Add an entry only when a decision changes enduring structure, data meaning, access, deployment, or a significant product constraint.
 
+## 2026-08-19 — Keep shared-recipe recovery separate from the main menu banner
+
+**Decision:** Treat the household recipe catalog as its own read path with bounded retries and a dedicated recovery status in the Household menu. Do not let a failed shared-recipe request silently look like a complete 12-recipe library, and do not place sync errors in the main planning surface.
+
+**Reason:** Bundled recipes are offline defaults, while published household recipes are remote records. Mixing their failure states made a device appear to lose recipes and made the shared-sync banner disruptive.
+
+**Consequences:** Existing recipe IDs and Blob records remain unchanged. The next architecture phase can migrate schedule and other shared domains independently without coupling recipe recovery to the full menu snapshot.
+
+## 2026-08-19 — Isolate meal planning from the full household snapshot
+
+**Decision:** Add a versioned household `schedule` record for recurring plans, calendar overrides, and the visible week anchor. New clients use it for meal-plan reads and writes; the legacy fields remain in `shared-state` for backward compatibility.
+
+**Reason:** Meal edits were competing with unrelated household changes and producing repeated conflict/retry messages. A smaller domain record reduces the collision surface without requiring a risky storage migration.
+
+**Consequences:** Existing records are preserved and older clients can still read the legacy snapshot. Future domains can be separated incrementally. The transition must not delete or reinterpret the legacy schedule fields.
+
 ## 2026-08-15 — Keep the current lightweight stack
 
 **Decision:** Continue using framework-free HTML/CSS/JavaScript, Netlify Functions, and Netlify Blobs rather than introducing a frontend framework, traditional server, or relational database preemptively.

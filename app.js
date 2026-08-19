@@ -111,6 +111,9 @@ let calendarMeals = normalizeCalendar(readJsonStorage(householdStorage, "dinner-
 let weekStartKey = readStringStorage(householdStorage, "dinner-week-start", currentWeekStartKey());
 let sharedStateVersion = readNumberStorage(householdStorage, "dinner-state-version", 0);
 let sharedStateBaseState = null;
+let scheduleVersion = readNumberStorage(householdStorage, "dinner-schedule-version", 0);
+let scheduleBase = null;
+let scheduleSaveInFlight = null;
 let favorites = readJsonStorage(householdStorage, "dinner-favorites", []);
 let tasks = readJsonStorage(householdStorage, "dinner-tasks", []);
 let availableFood = normalizeAvailableFood(readJsonStorage(householdStorage, "dinner-available-food", []));
@@ -215,7 +218,8 @@ function setupLocalizedFileInputs() {
 }
 
 const syncAreas = {
-  shared: { status: "#sharedStateStatus", retry: "#retrySharedState" },
+  shared: { status: "#sharedStateStatus", retry: "#retrySharedState", panel: "#sharedSyncStatusPanel" },
+  recipes: { status: "#recipeSyncStatus", retry: "#retryRecipes", panel: "#recipeSyncStatusPanel" },
   groceries: { status: "#groceryStatus", retry: "#retryGroceries" },
   inventory: { status: "#inventoryStatus", retry: "#retryInventory" },
 };
@@ -232,7 +236,9 @@ function setSyncStatus(area, key, { state = "success", canRetry = false, syncedA
   if (!elements) return;
   const status = $(elements.status);
   const retryButton = $(elements.retry);
+  const panel = elements.panel ? $(elements.panel) : null;
   if (!status) return;
+  if (panel) panel.hidden = false;
   if (retryButton) {
     const retryKey = syncRetryLabel(area, key);
     retryButton.dataset.i18n = retryKey;
@@ -255,6 +261,8 @@ function clearAreaStatus(area) {
   const elements = syncAreas[area];
   if (!elements) return;
   const status = $(elements.status);
+  const panel = elements.panel ? $(elements.panel) : null;
+  if (panel) panel.hidden = true;
   if (status) {
     delete status.dataset.syncKey;
     delete status.dataset.syncTime;
@@ -733,6 +741,98 @@ function saveSharedStateLocally() {
   };
   if (!persistSharedState(householdStorage, localState, sharedStateVersion)) {
     console.warn("Shared menu local cache is full; continuing with the live household copy.");
+  }
+}
+
+function persistScheduleLocally() {
+  try {
+    householdStorage.setItem("dinner-schedule", JSON.stringify(schedule));
+    householdStorage.setItem("dinner-calendar", JSON.stringify(calendarMeals));
+    householdStorage.setItem("dinner-week-start", weekStartKey);
+    householdStorage.setItem("dinner-schedule-version", `${scheduleVersion}`);
+  } catch {
+    console.warn("Meal plan could not be cached on this device.");
+  }
+}
+
+function mergeSchedule(server, local, base) {
+  const mergeMap = (serverMap = {}, localMap = {}, baseMap = {}) => {
+    const keys = new Set([...Object.keys(serverMap), ...Object.keys(localMap), ...Object.keys(baseMap)]);
+    return Object.fromEntries([...keys].map((key) => [
+      key,
+      JSON.stringify(localMap[key]) !== JSON.stringify(baseMap[key]) ? localMap[key] : serverMap[key],
+    ]).filter(([, value]) => value !== undefined));
+  };
+  return {
+    schedule: mergeMap(server.schedule, local.schedule, base?.schedule),
+    calendarMeals: mergeMap(server.calendarMeals, local.calendarMeals, base?.calendarMeals),
+    weekStartKey: local.weekStartKey !== base?.weekStartKey ? local.weekStartKey : server.weekStartKey,
+  };
+}
+
+function applyScheduleRecord(data) {
+  const next = data?.schedule && data.schedule.schedule ? data.schedule : data;
+  schedule = normalizeSchedule(next?.schedule || schedule);
+  calendarMeals = normalizeCalendar(next?.calendarMeals || calendarMeals);
+  if (next?.weekStartKey) weekStartKey = next.weekStartKey;
+  scheduleVersion = Number(data?.version) || 0;
+  scheduleBase = cloneVersionedValue({ schedule, calendarMeals, weekStartKey });
+  persistScheduleLocally();
+}
+
+async function saveSchedule({ retrying = false, allowEmptySchedule = false } = {}) {
+  setSharedRetryAction(() => saveSchedule({ retrying: false }));
+  if (scheduleSaveInFlight && !retrying) return scheduleSaveInFlight;
+  const local = { schedule, calendarMeals, weekStartKey };
+  persistScheduleLocally();
+  const run = (async () => {
+    try {
+      const data = await putJson("/.netlify/functions/schedule", {
+        ...local,
+        version: scheduleVersion,
+        actor: householdMember,
+        allowEmptySchedule,
+      }, "Could not save the meal plan.");
+      applyScheduleRecord(data);
+      clearAreaStatus("shared");
+      await saveLedger("activity");
+      return true;
+    } catch (error) {
+      if (error.status === 409 && !retrying) {
+        const server = {
+          schedule: normalizeSchedule(error.data?.schedule),
+          calendarMeals: normalizeCalendar(error.data?.calendarMeals),
+          weekStartKey: error.data?.weekStartKey || weekStartKey,
+        };
+        const merged = mergeSchedule(server, local, scheduleBase || server);
+        schedule = normalizeSchedule(merged.schedule);
+        calendarMeals = normalizeCalendar(merged.calendarMeals);
+        weekStartKey = merged.weekStartKey || weekStartKey;
+        scheduleVersion = Number(error.data?.version) || scheduleVersion;
+        scheduleBase = cloneVersionedValue(server);
+        persistScheduleLocally();
+        render();
+        return saveSchedule({ retrying: true, allowEmptySchedule });
+      }
+      setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
+      return false;
+    }
+  })();
+  scheduleSaveInFlight = run;
+  try { return await run; } finally { scheduleSaveInFlight = null; }
+}
+
+async function loadSchedule() {
+  setSharedRetryAction(() => loadSchedule());
+  try {
+    const data = await getJson("/.netlify/functions/schedule", "Could not load the meal plan.");
+    applyScheduleRecord(data);
+    render();
+    return true;
+  } catch (error) {
+    console.warn(error);
+    setSyncStatus("shared", "sharedMenuUnavailable", { state: "error", canRetry: true });
+    return false;
   }
 }
 
@@ -1589,6 +1689,7 @@ const scheduleUi = createScheduleUi({
     return result;
   },
   saveSharedState,
+  saveSchedule,
   render,
   getLang: () => lang,
   getSchedule: () => schedule,
@@ -1793,16 +1894,50 @@ function setView(viewName) {
   }
 }
 
-async function loadSharedRecipes() {
-  try {
-    const data = await getJson("/.netlify/functions/recipes", "Could not load shared recipes.");
-    sharedRecipes = Array.isArray(data.recipes) ? data.recipes : [];
-    render();
-    return true;
-  } catch (error) {
-    console.warn(error);
-    return false;
+let recipeLoadInFlight = null;
+let recipeRetryTimer = 0;
+let recipeRetryAttempt = 0;
+const recipeRetryDelays = [2000, 10000];
+
+function scheduleRecipeRetry() {
+  const delay = recipeRetryDelays[recipeRetryAttempt];
+  if (delay === undefined) {
+    setSyncStatus("recipes", "sharedRecipesUnavailable", { state: "error", canRetry: true });
+    return;
   }
+  recipeRetryAttempt += 1;
+  recipeRetryTimer = window.setTimeout(() => {
+    recipeRetryTimer = 0;
+    loadSharedRecipes();
+  }, delay);
+}
+
+async function loadSharedRecipes({ restart = false } = {}) {
+  if (restart) {
+    if (recipeRetryTimer) window.clearTimeout(recipeRetryTimer);
+    recipeRetryTimer = 0;
+    recipeRetryAttempt = 0;
+  }
+  if (recipeLoadInFlight) return recipeLoadInFlight;
+  clearAreaStatus("recipes");
+  recipeLoadInFlight = (async () => {
+    try {
+      const data = await getJson("/.netlify/functions/recipes", "Could not load shared recipes.");
+      sharedRecipes = Array.isArray(data.recipes) ? data.recipes : [];
+      recipeRetryAttempt = 0;
+      if (recipeRetryTimer) window.clearTimeout(recipeRetryTimer);
+      recipeRetryTimer = 0;
+      render();
+      return true;
+    } catch (error) {
+      console.warn(error);
+      scheduleRecipeRetry();
+      return false;
+    } finally {
+      recipeLoadInFlight = null;
+    }
+  })();
+  return recipeLoadInFlight;
 }
 
 async function saveSharedRecipe(recipe) {
@@ -2442,6 +2577,8 @@ $("#retrySharedState").addEventListener("click", async () => {
   if (sharedRetryAction) await sharedRetryAction();
 });
 
+$("#retryRecipes").addEventListener("click", () => loadSharedRecipes({ restart: true }));
+
 $("#rotateHouseholdKey")?.addEventListener("click", async () => {
   const code = $("#householdRotationCode")?.value.trim();
   if (!code) return;
@@ -2464,6 +2601,7 @@ $("#retryInventory").addEventListener("click", saveInventory);
 window.addEventListener("online", () => {
   const retries = [];
   if (!$("#retrySharedState").hidden && sharedRetryAction) retries.push(sharedRetryAction());
+  if (!$("#retryRecipes").hidden) retries.push(loadSharedRecipes({ restart: true }));
   if (!$("#retryGroceries").hidden) retries.push(saveGroceries());
   if (!$("#retryInventory").hidden) retries.push(saveInventory());
   if (dinnerHistoryPending) retries.push(saveDinnerHistory());
@@ -2475,7 +2613,7 @@ registerServiceWorker({ $, onUpdateAvailable: showAppUpdateNotice });
 
 setupLocalizedFileInputs();
 render();
-loadSharedRecipes().then(() => loadSharedState()).then(() => Promise.all([loadLedger("receipts"), loadLedger("activity")]));
+loadSharedRecipes().then(() => loadSharedState()).then(() => loadSchedule()).then(() => Promise.all([loadLedger("receipts"), loadLedger("activity")]));
 $("#householdHistory")?.addEventListener("toggle", (event) => {
   if (event.target.open && !event.target.dataset.loaded) {
     event.target.dataset.loaded = "true";

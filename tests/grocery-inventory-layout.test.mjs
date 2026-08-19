@@ -81,6 +81,11 @@ test("mobile content clears the fixed navigation with a safe bottom buffer", () 
   assert.match(styles, /@media \(max-width: 780px\)\s*\{[\s\S]*body\s*\{[\s\S]*padding-bottom: calc\(144px \+ env\(safe-area-inset-bottom\)\)/);
   assert.match(html, /styles\.css\?v=75/);
   assert.match(html, /class="sync-status-row app-sync-status"/);
+  assert.match(html, /id="sharedSyncStatusPanel"[^>]*hidden/);
+  assert.match(html, /id="sharedSyncStatusPanel"[\s\S]*?id="sharedStateStatus"[\s\S]*?id="retrySharedState"/);
+  assert.match(html, /id="recipeSyncStatusPanel"[^>]*hidden/);
+  assert.match(html, /id="recipeSyncStatusPanel"[\s\S]*?id="recipeSyncStatus"[\s\S]*?id="retryRecipes"/);
+  assert.doesNotMatch(html, /class="sync-status-row app-sync-status"[\s\S]*?id="sharedStateStatus"/);
   assert.match(html, /id="previousWeek"/);
   assert.match(html, /id="nextWeek"/);
   assert.match(html, /id="copyWeekForward"/);

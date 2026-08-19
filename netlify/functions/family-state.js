@@ -148,12 +148,12 @@ function cleanMeal(value) {
   };
 }
 
-function cleanSchedule(value) {
+export function cleanSchedule(value) {
   const source = value && typeof value === "object" ? value : {};
   return Object.fromEntries(DAY_KEYS.map((day) => [day, cleanMeal(source[day]) ]));
 }
 
-function cleanCalendar(value) {
+export function cleanCalendar(value) {
   if (!value || typeof value !== "object") return {};
 
   return Object.fromEntries(

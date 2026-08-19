@@ -74,6 +74,14 @@
               <input id="currentHouseholdKey" type="password" readonly />
             </label>
             <button class="ghost-button" id="copyHouseholdKey" type="button">Copy family key</button>
+            <div class="household-sync-status sync-status-row" id="sharedSyncStatusPanel" hidden>
+              <p class="upload-status" id="sharedStateStatus" role="status"></p>
+              <button class="ghost-button sync-retry" id="retrySharedState" type="button" data-i18n="retrySync" hidden>Retry sync</button>
+            </div>
+            <div class="household-sync-status sync-status-row" id="recipeSyncStatusPanel" hidden>
+              <p class="upload-status" id="recipeSyncStatus" role="status"></p>
+              <button class="ghost-button sync-retry" id="retryRecipes" type="button" data-i18n="retrySync" hidden>Retry sync</button>
+            </div>
             <details class="household-activity">
               <summary>Rotate family key</summary>
               <p class="field-note">Use the owner rotation code to revoke the old key and create a new one.</p>
@@ -123,8 +131,6 @@
       </nav>
 
       <div class="sync-status-row app-sync-status">
-        <p class="upload-status" id="sharedStateStatus" role="status"></p>
-        <button class="ghost-button sync-retry" id="retrySharedState" type="button" data-i18n="retrySync" hidden>Retry sync</button>
         <div class="household-member-global">
           <label class="household-member-picker" id="householdMemberPicker" for="householdMemberInput" hidden>
             <span data-i18n="usingAsShort">Using as</span>
@@ -893,6 +899,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=121"></script>
+    <script type="module" src="app.js?v=124"></script>
   </body>
 </html>
