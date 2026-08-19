@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { compactRecipeForCatalog } from "../recipe-catalog-utils.js";
 import { getJson } from "../api.js";
+import { readFile } from "node:fs/promises";
 
 test("compact catalog keeps cooking fields and removes embedded photos", () => {
   const full = {
@@ -55,4 +56,11 @@ test("getJson timeout remains active while a response body is stalled", async ()
     getJson("/slow", "Recipe catalog timed out", { timeoutMs: 10 }),
     /Recipe catalog timed out/
   );
+});
+
+test("recipe endpoint keeps a bounded full-detail read alongside compact catalog mode", async () => {
+  const source = await readFile(new URL("../netlify/functions/recipes.js", import.meta.url), "utf8");
+  assert.match(source, /params\.get\("id"\)/);
+  assert.match(source, /params\.get\("view"\)/);
+  assert.match(source, /Recipe not found/);
 });

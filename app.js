@@ -1785,6 +1785,7 @@ const recipeLibraryUi = createRecipeLibraryUi({
     categoryFilter = filter;
   },
   setDetailStatus,
+  onRecipeOpen: loadRecipeDetail,
   canTranslateRecipe: (recipeId, targetLang) => {
     const recipe = rawRecipeById(recipeId);
     return Boolean(
@@ -1939,6 +1940,7 @@ function setView(viewName) {
 }
 
 let recipeLoadInFlight = null;
+const recipeDetailInFlight = new Map();
 let recipeLoadGeneration = 0;
 let recipeRetryTimer = 0;
 let recipeRetryAttempt = 0;
@@ -2001,6 +2003,26 @@ async function loadSharedRecipes({ restart = false } = {}) {
     }
   })();
   return recipeLoadInFlight;
+}
+
+async function loadRecipeDetail(id) {
+  if (!id || recipeDetailInFlight.has(id)) return recipeDetailInFlight.get(id);
+  const request = getJson(`/.netlify/functions/recipes?id=${encodeURIComponent(id)}`, "Could not load recipe details.", { timeoutMs: 15000 })
+    .then((data) => {
+      if (!data?.recipe || data.recipe.id !== id) return false;
+      const index = sharedRecipes.findIndex((recipe) => recipe.id === id);
+      if (index < 0) return false;
+      sharedRecipes = [...sharedRecipes.slice(0, index), data.recipe, ...sharedRecipes.slice(index + 1)];
+      renderDetail();
+      return true;
+    })
+    .catch((error) => {
+      console.warn(error);
+      return false;
+    })
+    .finally(() => recipeDetailInFlight.delete(id));
+  recipeDetailInFlight.set(id, request);
+  return request;
 }
 
 async function saveSharedRecipe(recipe) {

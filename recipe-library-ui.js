@@ -25,6 +25,7 @@ export function createRecipeLibraryUi({
   getCategoryFilter,
   setCategoryFilter,
   setDetailStatus,
+  onRecipeOpen = () => {},
   canTranslateRecipe = () => false,
   isRecipeTranslationPending = () => false,
   setView,
@@ -209,6 +210,7 @@ export function createRecipeLibraryUi({
         $("#recipeDetail").hidden = false;
         $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
         $("#detailName").focus({ preventScroll: true });
+        onRecipeOpen(button.dataset.open);
       });
     });
   }

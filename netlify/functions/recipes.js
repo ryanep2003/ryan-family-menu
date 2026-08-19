@@ -109,7 +109,13 @@ export default async (request) => {
   if (request.method === "GET") {
     try {
       const recipes = await readRecipes(store, access.household.id);
-      const view = new URL(request.url).searchParams.get("view");
+      const params = new URL(request.url).searchParams;
+      const view = params.get("view");
+      const id = params.get("id");
+      if (id) {
+        const recipe = recipes.find((item) => item?.id === id);
+        return recipe ? jsonResponse({ recipe }) : jsonResponse({ error: "Recipe not found" }, 404);
+      }
       return jsonResponse({ recipes: view === "catalog" ? recipes.map(compactRecipeForCatalog).filter(Boolean) : recipes });
     } catch (error) {
       console.error(error);
