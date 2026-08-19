@@ -3,6 +3,15 @@ function safeCardPhoto(value) {
   return /^assets\/[a-z0-9-]+\.(?:jpe?g|webp)$/i.test(value.trim()) ? value.trim() : "";
 }
 
+function textFromLegacy(value) {
+  if (typeof value === "string") return { en: value, es: value };
+  if (!value || typeof value !== "object") return { en: "", es: "" };
+  return Object.fromEntries(["en", "es"].map((lang) => [
+    lang,
+    Array.isArray(value[lang]) ? value[lang].filter((line) => typeof line === "string").join("\n") : `${value[lang] || ""}`,
+  ]));
+}
+
 export function compactRecipeForCatalog(recipe) {
   if (!recipe || typeof recipe !== "object") return null;
   const compact = {
@@ -10,8 +19,8 @@ export function compactRecipeForCatalog(recipe) {
     name: recipe.name,
     category: recipe.category,
     servings: recipe.servings,
-    ingredientsText: recipe.ingredientsText,
-    stepsText: recipe.stepsText,
+    ingredientsText: recipe.ingredientsText || textFromLegacy(recipe.ingredients),
+    stepsText: recipe.stepsText || textFromLegacy(recipe.steps),
     allergyWarning: recipe.allergyWarning,
     notes: recipe.notes,
     createdAt: recipe.createdAt,

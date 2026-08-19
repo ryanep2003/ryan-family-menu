@@ -28,6 +28,18 @@ test("compact catalog keeps cooking fields and removes embedded photos", () => {
   assert.ok(JSON.stringify(compact).length < JSON.stringify(full).length);
 });
 
+test("compact catalog normalizes legacy ingredient and step arrays", async () => {
+  const { compactRecipeForCatalog } = await import("../recipe-catalog-utils.js?legacy-test");
+  const compact = compactRecipeForCatalog({
+    id: "shared-legacy",
+    name: { en: "Legacy soup", es: "Sopa antigua" },
+    ingredients: { en: ["1 onion"], es: ["1 cebolla"] },
+    steps: { en: ["Cook"], es: ["Cocinar"] },
+  });
+  assert.equal(compact.ingredientsText.en, "1 onion");
+  assert.equal(compact.stepsText.es, "Cocinar");
+});
+
 test("getJson timeout remains active while a response body is stalled", async () => {
   globalThis.localStorage = { getItem: () => "" };
   globalThis.fetch = async (_url, options) => ({

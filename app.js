@@ -120,7 +120,7 @@ let availableFood = normalizeAvailableFood(readJsonStorage(householdStorage, "di
 let recipeFeedback = normalizeRecipeFeedback(readJsonStorage(householdStorage, "dinner-recipe-feedback", {}));
 let drafts = readJsonStorage(householdStorage, "dinner-drafts", []);
 const recipeCatalogStorageKey = "dinner-shared-recipe-catalog";
-const recipeCatalogCacheSchemaVersion = 2;
+const recipeCatalogCacheSchemaVersion = 3;
 const recipeCatalogTtlMs = 2 * 60 * 1000;
 const recipeCatalogCache = readJsonStorage(householdStorage, recipeCatalogStorageKey, null);
 let sharedRecipes = recipeCatalogCache?.schemaVersion === recipeCatalogCacheSchemaVersion && Array.isArray(recipeCatalogCache.recipes)
