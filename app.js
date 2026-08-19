@@ -120,10 +120,13 @@ let availableFood = normalizeAvailableFood(readJsonStorage(householdStorage, "di
 let recipeFeedback = normalizeRecipeFeedback(readJsonStorage(householdStorage, "dinner-recipe-feedback", {}));
 let drafts = readJsonStorage(householdStorage, "dinner-drafts", []);
 const recipeCatalogStorageKey = "dinner-shared-recipe-catalog";
-const recipeCatalogFetchedAtKey = "dinner-shared-recipe-catalog-fetched-at";
+const recipeCatalogCacheSchemaVersion = 2;
 const recipeCatalogTtlMs = 2 * 60 * 1000;
-let sharedRecipes = readJsonStorage(householdStorage, recipeCatalogStorageKey, []);
-if (!Array.isArray(sharedRecipes)) sharedRecipes = [];
+const recipeCatalogCache = readJsonStorage(householdStorage, recipeCatalogStorageKey, null);
+let sharedRecipes = recipeCatalogCache?.schemaVersion === recipeCatalogCacheSchemaVersion && Array.isArray(recipeCatalogCache.recipes)
+  ? recipeCatalogCache.recipes : [];
+let recipeCatalogFetchedAt = recipeCatalogCache?.schemaVersion === recipeCatalogCacheSchemaVersion
+  ? Number(new Date(recipeCatalogCache.fetchedAt).getTime()) || 0 : 0;
 let sharedRecipesStatus = Array.isArray(sharedRecipes) && sharedRecipes.length ? "ready" : "loading";
 let recipeEdits = readJsonStorage(householdStorage, "dinner-recipe-edits", {});
 let deletedRecipeIds = readJsonStorage(householdStorage, "dinner-deleted-recipes", []);
@@ -356,8 +359,12 @@ function persistRecipeCatalog(items) {
       photos: (recipe.photos || []).filter((photo) => !`${photo}`.startsWith("data:image/")),
       cardPhoto: `${recipe.cardPhoto || ""}`.startsWith("data:image/") ? "" : recipe.cardPhoto || "",
     }));
-    householdStorage.setItem(recipeCatalogStorageKey, JSON.stringify(cacheable));
-    householdStorage.setItem(recipeCatalogFetchedAtKey, `${Date.now()}`);
+    recipeCatalogFetchedAt = Date.now();
+    householdStorage.setItem(recipeCatalogStorageKey, JSON.stringify({
+      schemaVersion: recipeCatalogCacheSchemaVersion,
+      recipes: cacheable,
+      fetchedAt: new Date(recipeCatalogFetchedAt).toISOString(),
+    }));
   } catch {
     console.warn("Recipe catalog could not be cached on this device.");
   }
@@ -1932,6 +1939,7 @@ function setView(viewName) {
 }
 
 let recipeLoadInFlight = null;
+let recipeLoadGeneration = 0;
 let recipeRetryTimer = 0;
 let recipeRetryAttempt = 0;
 const recipeRetryDelays = [2000, 10000];
@@ -1955,9 +1963,10 @@ async function loadSharedRecipes({ restart = false } = {}) {
     recipeRetryTimer = 0;
     recipeRetryAttempt = 0;
   }
-  if (recipeLoadInFlight) return recipeLoadInFlight;
-  const cachedAt = Number(readStringStorage(householdStorage, recipeCatalogFetchedAtKey, "0"));
-  const hasFreshCache = sharedRecipes.length && cachedAt && Date.now() - cachedAt < recipeCatalogTtlMs;
+  if (restart) recipeLoadGeneration += 1;
+  if (recipeLoadInFlight && !restart) return recipeLoadInFlight;
+  const generation = recipeLoadGeneration;
+  const hasFreshCache = sharedRecipes.length && recipeCatalogFetchedAt && Date.now() - recipeCatalogFetchedAt < recipeCatalogTtlMs;
   if (hasFreshCache && !restart) {
     sharedRecipesStatus = "ready";
     render();
@@ -1968,7 +1977,8 @@ async function loadSharedRecipes({ restart = false } = {}) {
   clearAreaStatus("recipes");
   recipeLoadInFlight = (async () => {
     try {
-      const data = await getJson("/.netlify/functions/recipes", "Could not load shared recipes.", { timeoutMs: 15000 });
+      const data = await getJson("/.netlify/functions/recipes?view=catalog", "Could not load shared recipes.", { timeoutMs: 15000 });
+      if (generation !== recipeLoadGeneration) return false;
       const remoteRecipes = Array.isArray(data.recipes) ? data.recipes : [];
       const catalog = new Map(recipes.map((recipe) => [recipe.id, seedRecipeCatalogRecord(recipe)]));
       remoteRecipes.forEach((recipe) => catalog.set(recipe.id, recipe));
@@ -1982,11 +1992,12 @@ async function loadSharedRecipes({ restart = false } = {}) {
       return true;
     } catch (error) {
       console.warn(error);
+      if (generation !== recipeLoadGeneration) return false;
       sharedRecipesStatus = sharedRecipes.length ? "ready" : "unavailable";
       scheduleRecipeRetry();
       return false;
     } finally {
-      recipeLoadInFlight = null;
+      if (generation === recipeLoadGeneration) recipeLoadInFlight = null;
     }
   })();
   return recipeLoadInFlight;

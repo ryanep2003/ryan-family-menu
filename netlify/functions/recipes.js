@@ -2,6 +2,7 @@ import { getStore } from "@netlify/blobs";
 import { householdDataKey, requireHouseholdAccess } from "./_household.js";
 import { jsonResponse, readJsonRequest } from "./_http.js";
 import { cleanLocalizedText, hasLocalizedContent, localizedText } from "../../localized-data.js";
+import { compactRecipeForCatalog } from "../../recipe-catalog-utils.js";
 
 const STORE_NAME = "family-menu-recipes";
 const RECIPES_KEY = "recipes";
@@ -61,6 +62,7 @@ export function cleanRecipe(input) {
   };
 }
 
+
 async function readRecipes(store, householdId) {
   const indexKey = householdDataKey(householdId, INDEX_KEY);
   const legacyRecipesKey = householdDataKey(householdId, RECIPES_KEY);
@@ -107,7 +109,8 @@ export default async (request) => {
   if (request.method === "GET") {
     try {
       const recipes = await readRecipes(store, access.household.id);
-      return jsonResponse({ recipes });
+      const view = new URL(request.url).searchParams.get("view");
+      return jsonResponse({ recipes: view === "catalog" ? recipes.map(compactRecipeForCatalog).filter(Boolean) : recipes });
     } catch (error) {
       console.error(error);
       return jsonResponse({ error: "Could not load recipes" }, 500);

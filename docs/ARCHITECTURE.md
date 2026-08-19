@@ -27,6 +27,8 @@ GitHub main
 - `index.html`: household gate and all main views.
 - `app.js`: application bootstrap, in-memory state, persistence orchestration, navigation, shared rendering, and domain-module composition.
 - `styles.css`: design tokens, component styling, responsive layout, PWA-safe bottom navigation, and motion preferences.
+
+Recipe catalog reads use `/.netlify/functions/recipes?view=catalog`, a text-only household-scoped response that omits embedded source photos. The browser stores a versioned, household-scoped stale-while-revalidate cache and keeps cached recipes visible when a refresh fails. The unqualified recipes endpoint remains available for older clients and full recipe writes.
 - `translations.js`: English and Spanish interface strings. Both languages must expose the same keys.
 - `DESIGN.md`: authoritative visual and interaction guidance.
 
