@@ -171,7 +171,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
   const weekLeftoverServings = element({ dataset: { addLeftoverServings: "weekdate:2026-06-22", period: "lunch" }, value: "1" });
   const weekLeftoverAddButton = element({ dataset: { addLeftoverItem: "weekdate:2026-06-22", period: "lunch" }, disabled: true });
   const recipes = [
-    { id: "main-recipe", name: "Main Recipe", category: "main" },
+    { id: "main-recipe", name: "Main Recipe", category: "main", cardPhoto: "assets/card-lemon-chicken.webp" },
     { id: "another-main", name: "Another Main", category: "main" },
     { id: "side-recipe", name: "Side Recipe", category: "side" },
     { id: "salad-recipe", name: "Salad Recipe", meta: "Fresh greens", category: "salad" },
@@ -357,6 +357,18 @@ test("Today can open a focused dinner decision without week administration", () 
   ui.closeFocusedDinner();
   assert.equal(elements["#focusedDinnerPanel"].hidden, true);
   assert.equal(elements["#comprehensivePlanner"].hidden, false);
+});
+
+test("focused dinner search uses lazy compact imagery and keeps no-image results composed", () => {
+  const { elements, state, ui } = harness();
+  state.schedule.mon = { ...emptyMeal };
+
+  ui.openFocusedDinner("2026-06-22");
+
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /class="focused-recipe-result has-image"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /src="assets\/card-lemon-chicken\.webp"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /loading="lazy" decoding="async"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /class="focused-recipe-result"[^>]*data-focused-recipe="another-main"/);
 });
 
 test("planned meal can open groceries filtered to its date and meal period", async () => {

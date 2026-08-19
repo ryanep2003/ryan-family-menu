@@ -98,6 +98,7 @@ test("Today keeps the meal, memory, and next actions ahead of household utilitie
   assert.ok(html.indexOf('id="todayBefore"') < html.indexOf('class="today-tools"'));
   assert.match(html, /<details class="today-handoff"[\s\S]*id="todayHandoffSummary"/);
   assert.match(styles, /\.today-memory-record, \.detail-memory-record\s*\{[\s\S]*?border-left:/);
+  assert.match(styles, /\.dinner-outcome-options button\s*\{[\s\S]*?min-height: 44px;/);
 });
 
 test("household attribution remains available for any family", () => {
@@ -129,6 +130,10 @@ test("every id in the application shell is unique", () => {
 test("recipe detail owns the page instead of appearing under library chrome", () => {
   assert.match(styles, /#recipesView\.detail-open \.recipe-banner[^}]*display: none/);
   assert.match(html, /id="recipePhotoRegion"[^>]*hidden/);
+});
+
+test("the household library opens to the complete catalog instead of hiding it behind a disclosure", () => {
+  assert.match(html, /<details class="recipe-browse" id="recipeBrowse" open>/);
 });
 
 test("file inputs remain usable through localized picker controls", () => {

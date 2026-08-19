@@ -45,6 +45,7 @@ import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage
 import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "./sync-status.js";
 import { translations } from "./translations.js";
 import { selectRecipeMemory, selectTodayStory } from "./almanac-selectors.js";
+import { recipesFromCatalogResponse } from "./recipe-catalog-utils.js";
 import {
   normalizeDinnerEvents,
   normalizeDinnerEvent,
@@ -68,7 +69,6 @@ import {
   categoryFor,
   categoryLabel as localizedCategoryLabel,
   compactRecipeEditsForSync,
-  recipeById as findRecipeById,
   recipeToEditableUpload as recipeToEditable,
   servingsForRecipe,
   uploadToRecipe,
@@ -121,7 +121,7 @@ let availableFood = normalizeAvailableFood(readJsonStorage(householdStorage, "di
 let recipeFeedback = normalizeRecipeFeedback(readJsonStorage(householdStorage, "dinner-recipe-feedback", {}));
 let drafts = readJsonStorage(householdStorage, "dinner-drafts", []);
 const recipeCatalogStorageKey = "dinner-shared-recipe-catalog";
-const recipeCatalogCacheSchemaVersion = 3;
+const recipeCatalogCacheSchemaVersion = 4;
 const recipeCatalogTtlMs = 2 * 60 * 1000;
 const recipeCatalogCache = readJsonStorage(householdStorage, recipeCatalogStorageKey, null);
 let sharedRecipes = recipeCatalogCache?.schemaVersion === recipeCatalogCacheSchemaVersion && Array.isArray(recipeCatalogCache.recipes)
@@ -327,30 +327,15 @@ function offerUndo(message, undo) {
 
 function allRecipes() {
   return visibleRecipes({
-    // Seed content is only an offline compatibility fallback. Once the
-    // household catalog is loaded, it is normalized into the same catalog as
-    // every recipe the family has added.
-    seedRecipes: sharedRecipesStatus === "ready" ? [] : recipes,
+    // Bundled examples are never a substitute for the household catalog.
+    // Exact-ID compatibility for old meal plans is handled by recipeById.
+    seedRecipes: [],
     sharedRecipes,
     drafts,
     recipeEdits,
     deletedRecipeIds,
     localize,
   });
-}
-
-function seedRecipeCatalogRecord(recipe) {
-  return {
-    ...recipe,
-    ingredientsText: {
-      en: (recipe.ingredients?.en || []).join("\n"),
-      es: (recipe.ingredients?.es || []).join("\n"),
-    },
-    stepsText: {
-      en: (recipe.steps?.en || []).join("\n"),
-      es: (recipe.steps?.es || []).join("\n"),
-    },
-  };
 }
 
 function persistRecipeCatalog(items) {
@@ -372,7 +357,11 @@ function persistRecipeCatalog(items) {
 }
 
 function recipeById(id) {
-  return findRecipeById(allRecipes(), id, recipes);
+  const visible = allRecipes();
+  return visible.find((recipe) => recipe.id === id)
+    || recipes.find((recipe) => recipe.id === id)
+    || visible[0]
+    || null;
 }
 
 function draftById(id) {
@@ -1994,10 +1983,7 @@ async function loadSharedRecipes({ restart = false } = {}) {
     try {
       const data = await getJson("/.netlify/functions/recipes?view=catalog", "Could not load shared recipes.", { timeoutMs: 15000 });
       if (generation !== recipeLoadGeneration) return false;
-      const remoteRecipes = Array.isArray(data.recipes) ? data.recipes : [];
-      const catalog = new Map(recipes.map((recipe) => [recipe.id, seedRecipeCatalogRecord(recipe)]));
-      remoteRecipes.forEach((recipe) => catalog.set(recipe.id, recipe));
-      sharedRecipes = [...catalog.values()];
+      sharedRecipes = recipesFromCatalogResponse(data.recipes);
       persistRecipeCatalog(sharedRecipes);
       sharedRecipesStatus = "ready";
       recipeRetryAttempt = 0;
@@ -2010,6 +1996,7 @@ async function loadSharedRecipes({ restart = false } = {}) {
       if (generation !== recipeLoadGeneration) return false;
       sharedRecipesStatus = sharedRecipes.length ? "ready" : "unavailable";
       scheduleRecipeRetry();
+      render();
       return false;
     } finally {
       if (generation === recipeLoadGeneration) recipeLoadInFlight = null;

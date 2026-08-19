@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { compactRecipeForCatalog } from "../recipe-catalog-utils.js";
+import { compactRecipeForCatalog, recipesFromCatalogResponse } from "../recipe-catalog-utils.js";
 import { getJson } from "../api.js";
 import { readFile } from "node:fs/promises";
 
@@ -63,4 +63,34 @@ test("recipe endpoint keeps a bounded full-detail read alongside compact catalog
   assert.match(source, /params\.get\("id"\)/);
   assert.match(source, /params\.get\("view"\)/);
   assert.match(source, /Recipe not found/);
+});
+
+test("household catalog responses never receive bundled fallback recipes", () => {
+  const householdRecipes = Array.from({ length: 60 }, (_, index) => ({
+    id: `shared-${index + 1}`,
+    name: { en: `Family recipe ${index + 1}` },
+  }));
+  const catalog = recipesFromCatalogResponse(householdRecipes);
+  assert.equal(catalog.length, 60);
+  assert.deepEqual(catalog.map(({ id }) => id), householdRecipes.map(({ id }) => id));
+  assert.equal(recipesFromCatalogResponse([]).length, 0);
+  assert.equal(recipesFromCatalogResponse(null).length, 0);
+  assert.equal(catalog.some(({ id }) => id === "lemon-chicken"), false);
+});
+
+test("catalog response removes invalid and duplicate records without adding substitutes", () => {
+  const catalog = recipesFromCatalogResponse([
+    { id: "shared-one", name: { en: "First" } },
+    null,
+    { id: "", name: { en: "Invalid" } },
+    { id: "shared-one", name: { en: "Newest copy" } },
+  ]);
+  assert.deepEqual(catalog, [{ id: "shared-one", name: { en: "Newest copy" } }]);
+});
+
+test("browser catalog loader does not merge bundled recipes into a household response", async () => {
+  const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
+  assert.match(source, /sharedRecipes = recipesFromCatalogResponse\(data\.recipes\)/);
+  assert.doesNotMatch(source, /new Map\(recipes\.map/);
+  assert.match(source, /seedRecipes: \[\]/);
 });

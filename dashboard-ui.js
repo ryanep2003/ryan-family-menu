@@ -1,5 +1,6 @@
 import { localizedText, updateLocalizedText } from "./localized-data.js";
 import { renderHandoffDetails } from "./handoff-ui.js";
+import { cardPhotoFor, cardPhotoIsGenerated } from "./recipe-utils.js";
 import {
   addAvailableFood,
   availableFoodFreshness,
@@ -135,9 +136,19 @@ export function createDashboardUi({
     });
     const backdrop = $("#todayBackdrop");
     const todayImage = $("#todayImage");
-    const backdropSrc = mainRecipe?.photos?.[0] || "";
+    const backdropSrc = mainRecipe && !cardPhotoIsGenerated(mainRecipe)
+      ? cardPhotoFor(mainRecipe)
+      : "";
     $("#todayBand").classList.toggle("empty", !mainRecipe);
+    $("#todayBand").classList.toggle("is-empty", !mainRecipe);
     $("#todayBand").classList.toggle("has-photo", Boolean(backdropSrc));
+    const today = new Date();
+    const dayName = new Intl.DateTimeFormat(getLang() === "es" ? "es-US" : "en-US", { weekday: "short" })
+      .format(today)
+      .replace(/\.$/, "");
+    if ($("#todayDayName")) $("#todayDayName").textContent = dayName;
+    if ($("#todayDayNumber")) $("#todayDayNumber").textContent = new Intl.NumberFormat(getLang() === "es" ? "es" : "en").format(today.getDate());
+    if ($("#todayDateMark")) $("#todayDateMark").hidden = Boolean(backdropSrc);
     if (todayImage) todayImage.hidden = !backdropSrc;
     backdrop.hidden = !backdropSrc;
     if (backdropSrc) {

@@ -1,5 +1,6 @@
 import { allLocalizedText, localizedText, updateLocalizedText } from "./localized-data.js";
 import { renderHandoffDetails } from "./handoff-ui.js";
+import { cardPhotoFor, cardPhotoIsGenerated } from "./recipe-utils.js";
 
 export function createScheduleUi({
   $,
@@ -97,7 +98,9 @@ export function createScheduleUi({
     return matches.slice(0, 12).map((recipe) => {
       const category = categoryFor(recipe);
       const role = mealRoles.find((item) => item.key === category) || mealRoles.find((item) => item.key === "other");
-      return `<button type="button" data-add-meal-result="${escapeHtml(context)}" data-period="${escapeHtml(period)}" data-recipe-id="${escapeHtml(recipe.id)}">
+      const hasPhoto = !cardPhotoIsGenerated(recipe);
+      return `<button class="meal-recipe-result${hasPhoto ? " has-image" : ""}" type="button" data-add-meal-result="${escapeHtml(context)}" data-period="${escapeHtml(period)}" data-recipe-id="${escapeHtml(recipe.id)}">
+        ${hasPhoto ? `<img src="${escapeHtml(cardPhotoFor(recipe))}" alt="" loading="lazy" decoding="async" />` : ""}
         <span class="meal-recipe-result-copy">
           <strong>${escapeHtml(localize(recipe.name))}</strong>
           ${localize(recipe.short || recipe.meta) ? `<small>${escapeHtml(localize(recipe.short || recipe.meta))}</small>` : ""}
@@ -141,12 +144,16 @@ export function createScheduleUi({
         <input id="focusedDinnerSearch" type="search" autocomplete="off" inputmode="search" value="${escapeHtml(focusedDinnerSearch)}" placeholder="${escapeHtml(t("recipeSearchPlaceholder"))}" />
       </label>
       <div class="focused-recipe-results" id="focusedDinnerResults">
-        ${matches.map((recipe) => `
-          <button type="button" data-focused-recipe="${escapeHtml(recipe.id)}">
-            <span>${escapeHtml(localize(recipe.name))}</span>
-            <small>${escapeHtml(localize(recipe.short || recipe.meta) || t("chooseRecipe"))}</small>
+        ${matches.map((recipe) => {
+          const hasPhoto = !cardPhotoIsGenerated(recipe);
+          return `
+          <button class="focused-recipe-result${hasPhoto ? " has-image" : ""}" type="button" data-focused-recipe="${escapeHtml(recipe.id)}">
+            ${hasPhoto ? `<img src="${escapeHtml(cardPhotoFor(recipe))}" alt="" loading="lazy" decoding="async" />` : ""}
+            <span class="focused-recipe-copy"><strong>${escapeHtml(localize(recipe.name))}</strong>
+            <small>${escapeHtml(localize(recipe.short || recipe.meta) || t("chooseRecipe"))}</small></span>
           </button>
-        `).join("")}
+        `;
+        }).join("")}
         ${focusedDinnerSearch && !matches.length ? `<p>${t("noRecipeMatches")}</p>` : ""}
       </div>
     `;

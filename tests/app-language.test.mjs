@@ -44,3 +44,8 @@ test("English and Spanish expose the same translation keys", () => {
   assert.equal(translations.es.categoryLabel, "Categoría");
   assert.match(translations.es.sharedStateError, /teléfono.*sincronizarán.*esté en línea/);
 });
+
+test("offline collection status never exposes an internal translation key", () => {
+  assert.equal(translations.en.usingSavedCopy, "Offline. Changes will sync when the connection returns.");
+  assert.equal(translations.es.usingSavedCopy, "Sin conexión. Los cambios se sincronizarán cuando vuelva la conexión.");
+});

@@ -105,7 +105,10 @@ function harness(overrides = {}) {
   const ui = createRecipeLibraryUi({
     $: (selector) => elements[selector],
     $$: (selector) => selector === "[data-open]" ? overrides.openButtons || [] : [],
-    t: (key) => key,
+    t: (key) => ({
+      recipeCount: "{count} recipes",
+      recipeCountFiltered: "Showing {count} of {total}",
+    })[key] || key,
     escapeHtml,
     localize: (value) => {
       if (typeof value === "string") return value;
@@ -123,7 +126,7 @@ function harness(overrides = {}) {
     getLang: () => overrides.lang || "en",
     getFavorites: () => [],
     getPlannedRecipeIds: () => overrides.plannedRecipeIds || [],
-    allRecipes: () => [recipe],
+    allRecipes: () => overrides.recipes || [recipe],
     recipeById: () => recipe,
     draftById: () => null,
     getSelectedRecipeId: () => recipe.id,
@@ -135,6 +138,7 @@ function harness(overrides = {}) {
     setDetailStatus: () => {},
     canTranslateRecipe: () => overrides.canTranslate ?? (overrides.lang === "es"),
     isRecipeTranslationPending: () => Boolean(overrides.translationPending),
+    getRecipeCatalogStatus: () => overrides.catalogStatus || "ready",
     setView: () => {},
   });
 
@@ -168,6 +172,39 @@ test("renderRecipes keeps the picks shelf empty when there are no favorites or p
 
   assert.equal(elements["#recipePicksList"].innerHTML, "");
   assert.equal(elements["#recipePicksEmpty"].hidden, false);
+});
+
+test("catalog loading, unavailable, and genuinely empty states remain distinct", () => {
+  const loading = harness({ catalogStatus: "loading", recipes: [] });
+  loading.ui.renderRecipes();
+  assert.match(loading.elements["#recipeList"].innerHTML, /recipeCatalogLoading/);
+  assert.match(loading.elements["#recipeList"].innerHTML, /data-retry-recipe-catalog/);
+
+  const unavailable = harness({ catalogStatus: "unavailable", recipes: [] });
+  unavailable.ui.renderRecipes();
+  assert.match(unavailable.elements["#recipeList"].innerHTML, /recipeCatalogUnavailable/);
+  assert.doesNotMatch(unavailable.elements["#recipeList"].innerHTML, /recipeCatalogEmpty/);
+
+  const empty = harness({ catalogStatus: "ready", recipes: [] });
+  empty.ui.renderRecipes();
+  assert.match(empty.elements["#recipeList"].innerHTML, /recipeCatalogEmpty/);
+  assert.match(empty.elements["#recipeList"].innerHTML, /recipeCatalogEmptyNote/);
+  assert.doesNotMatch(empty.elements["#recipeList"].innerHTML, /noMatchingRecipes/);
+});
+
+test("a loaded household catalog reports and renders every returned recipe", () => {
+  const recipes = Array.from({ length: 60 }, (_, index) => ({
+    id: `shared-${index}`,
+    name: { en: `Recipe ${index}` },
+    category: "main",
+    ingredients: { en: ["ingredient"] },
+    steps: { en: ["step"] },
+    notes: { en: "" },
+  }));
+  const { elements, ui } = harness({ recipes });
+  ui.renderRecipes();
+  assert.equal((elements["#recipeList"].innerHTML.match(/class="recipe-card/g) || []).length, 60);
+  assert.match(elements["#recipeCount"].textContent, /60/);
 });
 
 test("Spanish recipe search includes source-language fallback text", () => {

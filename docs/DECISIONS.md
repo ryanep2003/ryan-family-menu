@@ -2,6 +2,14 @@
 
 This is a lightweight record of architectural and product decisions that future contributors should not reverse accidentally. Add an entry only when a decision changes enduring structure, data meaning, access, deployment, or a significant product constraint.
 
+## 2026-08-19 — Bundled recipes are compatibility records, not household catalog data
+
+**Decision:** The recipe library and planning search display only household catalog records and local drafts. Bundled examples may resolve an exact legacy recipe ID from an older meal plan, but they are never merged into a household catalog response or shown as a fallback library.
+
+**Reason:** A successful empty or unavailable household response had been represented as a 12-recipe library, hiding the real state and making a family’s catalog appear to lose recipes.
+
+**Consequences:** Loading, unavailable, genuinely empty, and loaded catalog states remain distinct. The household-scoped browser catalog cache moved to schema version 4 to discard contaminated local projections; no Netlify Blob record or persisted recipe contract changed.
+
 ## 2026-08-19 — Keep shared-recipe recovery separate from the main menu banner
 
 **Decision:** Treat the household recipe catalog as its own read path with bounded retries and a dedicated recovery status in the Household menu. Do not let a failed shared-recipe request silently look like a complete 12-recipe library, and do not place sync errors in the main planning surface.

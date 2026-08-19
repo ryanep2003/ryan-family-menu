@@ -140,7 +140,10 @@ export function createRecipeLibraryUi({
         ? `<p class="empty-state">${t("recipeCatalogUnavailable")}<br><button class="ghost-button compact-button" type="button" data-retry-recipe-catalog>${t("retrySync")}</button></p>`
         : filtered.map((recipe, index) => recipeCardMarkup(recipe, index)).join("");
     if (catalogStatus === "ready" && !filtered.length) {
-      $("#recipeList").innerHTML = `<p class="empty-state">${t("noMatchingRecipes")}</p>`;
+      const catalogIsEmpty = recipes.length === 0 && !search && categoryFilter === "all";
+      $("#recipeList").innerHTML = catalogIsEmpty
+        ? `<div class="empty-state recipe-catalog-empty"><strong>${t("recipeCatalogEmpty")}</strong><span>${t("recipeCatalogEmptyNote")}</span></div>`
+        : `<p class="empty-state">${t("noMatchingRecipes")}</p>`;
     }
   }
 

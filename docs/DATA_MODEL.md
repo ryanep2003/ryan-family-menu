@@ -36,7 +36,7 @@ The household profile lookup is the exception: it is keyed by a SHA-256 digest o
 
 ### Recipe catalog reads
 
-Recipe records remain unchanged and are still stored under the household-scoped index and `recipe:<id>` keys. The browser’s catalog cache is a separate local household-scoped envelope with `schemaVersion: 2`, `recipes`, and `fetchedAt`; it deliberately excludes embedded `data:image/` media. The `?view=catalog` endpoint is a read-only compact projection for startup. The existing full recipe response remains available for older clients, and no production record migration is required.
+Recipe records remain unchanged and are still stored under the household-scoped index and `recipe:<id>` keys. The browser’s catalog cache is a separate local household-scoped envelope with `schemaVersion: 4`, `recipes`, and `fetchedAt`; it deliberately excludes embedded `data:image/` media. Version 4 invalidates earlier browser caches that may have mixed bundled examples into a household response. The `?view=catalog` endpoint is a read-only compact projection for startup. The existing full recipe response remains available for older clients, and no production record migration is required.
 
 ## Versioned Record Envelope
 

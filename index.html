@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=135" />
+    <link rel="stylesheet" href="styles.css?v=137" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -199,6 +199,10 @@
               </div>
             </div>
             <button class="primary-action" id="cookToday" type="button" data-i18n="cookButton">Cook</button>
+          </div>
+          <div class="today-date-mark" id="todayDateMark" aria-hidden="true">
+            <span id="todayDayName"></span>
+            <strong id="todayDayNumber"></strong>
           </div>
           <figure class="today-image" id="todayImage" hidden>
             <img class="today-backdrop" id="todayBackdrop" src="assets/meatballs-2.webp" alt="" />
@@ -525,28 +529,27 @@
               </section>
             </div>
           </details>
-          <section class="monthly-budget" aria-labelledby="budgetHeading">
-            <div class="monthly-budget-heading">
-              <div>
-                <p class="section-label" data-i18n="budgetLabel">Grocery budget</p>
-                <h3 id="budgetHeading" data-i18n="budgetHeading">This month</h3>
-              </div>
+          <details class="monthly-budget" aria-labelledby="budgetHeading">
+            <summary>
+              <span id="budgetHeading" data-i18n="budgetHeading">This month</span>
+              <strong id="budgetSpent">$0.00</strong>
+            </summary>
+            <div class="monthly-budget-content">
               <form id="budgetForm">
                 <label><span data-i18n="monthlyBudgetTarget">Monthly target</span><input id="monthlyBudgetInput" type="number" min="0" max="100000" step="1" inputmode="decimal" placeholder="$800" /></label>
                 <button class="ghost-button" type="submit" data-i18n="saveBudget">Save</button>
               </form>
+              <div class="budget-metrics">
+                <div><span data-i18n="budgetTarget">Target</span><strong id="budgetTarget">Not set</strong></div>
+                <div><span id="budgetRemainingLabel" data-i18n="budgetRemaining">Remaining</span><strong id="budgetRemaining">—</strong></div>
+              </div>
+              <div class="budget-progress-track" aria-hidden="true"><span id="budgetProgress"></span></div>
+              <details class="receipt-history">
+                <summary data-i18n="receiptHistory">Receipt history</summary>
+                <div id="receiptHistory"></div>
+              </details>
             </div>
-            <div class="budget-metrics">
-              <div><span data-i18n="budgetSpent">Spent</span><strong id="budgetSpent">$0.00</strong></div>
-              <div><span data-i18n="budgetTarget">Target</span><strong id="budgetTarget">Not set</strong></div>
-              <div><span id="budgetRemainingLabel" data-i18n="budgetRemaining">Remaining</span><strong id="budgetRemaining">—</strong></div>
-            </div>
-            <div class="budget-progress-track" aria-hidden="true"><span id="budgetProgress"></span></div>
-            <details class="receipt-history">
-              <summary data-i18n="receiptHistory">Receipt history</summary>
-              <div id="receiptHistory"></div>
-            </details>
-          </section>
+          </details>
           <details class="grocery-tools-menu">
             <summary data-i18n="shoppingUtilities">Receipts and list tools</summary>
             <div>
@@ -788,7 +791,7 @@
           <div class="recipe-list recipe-picks-list" id="recipePicksList"></div>
           <p class="empty-state compact" id="recipePicksEmpty" data-i18n="recipePicksEmpty" hidden>Favorite a recipe or plan one in Week to see it here.</p>
         </section>
-        <details class="recipe-browse" id="recipeBrowse">
+        <details class="recipe-browse" id="recipeBrowse" open>
           <summary>
             <span data-i18n="browseAllRecipes">Browse all recipes</span>
             <small data-i18n="browseAllRecipesNote">Search and filter the full library.</small>
@@ -929,6 +932,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=135"></script>
+    <script type="module" src="app.js?v=137"></script>
   </body>
 </html>

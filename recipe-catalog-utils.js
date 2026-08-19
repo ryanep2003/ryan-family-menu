@@ -31,3 +31,13 @@ export function compactRecipeForCatalog(recipe) {
     || Boolean(typeof recipe.cardPhoto === "string" && recipe.cardPhoto.startsWith("data:image/"));
   return compact;
 }
+
+export function recipesFromCatalogResponse(value) {
+  if (!Array.isArray(value)) return [];
+  const byId = new Map();
+  value.forEach((recipe) => {
+    if (!recipe || typeof recipe !== "object" || typeof recipe.id !== "string" || !recipe.id.trim()) return;
+    byId.set(recipe.id, recipe);
+  });
+  return [...byId.values()];
+}

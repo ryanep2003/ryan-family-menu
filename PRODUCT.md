@@ -22,7 +22,7 @@ The shipped product currently supports:
 - Flexible meal composition using mains, sides, salads, desserts, sauces, drinks, and other recipe roles.
 - Per-meal serving plans for adults, children, and guests, with batch and leftover estimates.
 - Intentional leftover recording and allocation to later meals.
-- A shared recipe library with bundled and household recipes, local drafts, editing, favorites, and hiding/deletion overlays.
+- A shared household recipe library with local drafts, editing, favorites, and hiding/deletion overlays. Bundled examples exist only for exact-ID compatibility with older meal plans and are never presented as the household catalog.
 - Recipe creation from photos, public links, or manual entry.
 - A grocery list generated from meal plans, with shared-ingredient aggregation, advisory inventory matches, meal/date attribution, and per-meal shopping.
 - Home inventory by location, stock level, quantity, and expiration.
