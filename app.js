@@ -18,7 +18,7 @@ import {
 import { createDashboardUi } from "./dashboard-ui.js";
 import { createBudgetUi } from "./budget-ui.js";
 import { normalizeBudgetSettings, normalizeReceipt, normalizeReceipts } from "./budget-logic.js";
-import { createActivityUi } from "./activity-ui.js";
+import { createActivityUi } from "./activity-ui.js?v=132";
 import { createAuditUi } from "./audit-ui.js";
 import { normalizeAuditEvents, normalizeStateSnapshots } from "./audit-logic.js";
 import { createFamilyUi } from "./family-ui.js";
