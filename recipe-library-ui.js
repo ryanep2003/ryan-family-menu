@@ -17,6 +17,7 @@ export function createRecipeLibraryUi({
   allRecipes,
   recipeById,
   draftById,
+  getRecipeCatalogStatus = () => "ready",
   getSelectedRecipeId,
   setSelectedRecipeId,
   getRecipeSearch,
@@ -80,7 +81,8 @@ export function createRecipeLibraryUi({
   function renderRecipes() {
     const search = getRecipeSearch().trim().toLowerCase();
     const categoryFilter = getCategoryFilter();
-    const recipes = allRecipes();
+    const catalogStatus = getRecipeCatalogStatus();
+    const recipes = catalogStatus === "ready" ? allRecipes() : [];
     const filtered = recipes.filter((recipe) => {
       const categoryMatch = categoryFilter === "all" || categoryFor(recipe) === categoryFilter;
       const haystack = [
@@ -99,16 +101,22 @@ export function createRecipeLibraryUi({
         || Number(favoriteIds.has(right.id)) - Number(favoriteIds.has(left.id))
       ));
 
-    $("#recipeCount").textContent = t(filtered.length === recipes.length ? "recipeCount" : "recipeCountFiltered")
-      .replace("{count}", filtered.length)
-      .replace("{total}", recipes.length);
+    $("#recipeCount").textContent = catalogStatus === "loading"
+      ? t("recipeCatalogLoading")
+      : catalogStatus === "unavailable"
+        ? t("recipeCatalogUnavailable").replace("{count}", recipes.length)
+        : t(filtered.length === recipes.length ? "recipeCount" : "recipeCountFiltered")
+          .replace("{count}", filtered.length)
+          .replace("{total}", recipes.length);
     $("#recipePicksList").innerHTML = picks.slice(0, 6)
       .map((recipe, index) => recipeCardMarkup(recipe, index, { pick: true, plannedIds }))
       .join("");
     $("#recipePicksEmpty").hidden = picks.length > 0;
-    $("#recipeList").innerHTML = filtered
-      .map((recipe, index) => recipeCardMarkup(recipe, index))
-      .join("");
+    $("#recipeList").innerHTML = catalogStatus === "loading"
+      ? `<p class="empty-state">${t("recipeCatalogLoading")}</p>`
+      : catalogStatus === "unavailable"
+        ? `<p class="empty-state">${t("recipeCatalogUnavailable")}</p>`
+        : filtered.map((recipe, index) => recipeCardMarkup(recipe, index)).join("");
     if (!filtered.length) {
       $("#recipeList").innerHTML = `<p class="empty-state">${t("noMatchingRecipes")}</p>`;
     }

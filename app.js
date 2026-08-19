@@ -120,6 +120,7 @@ let availableFood = normalizeAvailableFood(readJsonStorage(householdStorage, "di
 let recipeFeedback = normalizeRecipeFeedback(readJsonStorage(householdStorage, "dinner-recipe-feedback", {}));
 let drafts = readJsonStorage(householdStorage, "dinner-drafts", []);
 let sharedRecipes = [];
+let sharedRecipesStatus = "loading";
 let recipeEdits = readJsonStorage(householdStorage, "dinner-recipe-edits", {});
 let deletedRecipeIds = readJsonStorage(householdStorage, "dinner-deleted-recipes", []);
 let importedRecipePhotos = [];
@@ -318,13 +319,30 @@ function offerUndo(message, undo) {
 
 function allRecipes() {
   return visibleRecipes({
-    seedRecipes: recipes,
+    // Seed content is only an offline compatibility fallback. Once the
+    // household catalog is loaded, it is normalized into the same catalog as
+    // every recipe the family has added.
+    seedRecipes: sharedRecipesStatus === "ready" ? [] : recipes,
     sharedRecipes,
     drafts,
     recipeEdits,
     deletedRecipeIds,
     localize,
   });
+}
+
+function seedRecipeCatalogRecord(recipe) {
+  return {
+    ...recipe,
+    ingredientsText: {
+      en: (recipe.ingredients?.en || []).join("\n"),
+      es: (recipe.ingredients?.es || []).join("\n"),
+    },
+    stepsText: {
+      en: (recipe.steps?.en || []).join("\n"),
+      es: (recipe.steps?.es || []).join("\n"),
+    },
+  };
 }
 
 function recipeById(id) {
@@ -1726,6 +1744,7 @@ const recipeLibraryUi = createRecipeLibraryUi({
   getPlannedRecipeIds: () => [...new Set(Object.values(schedule)
     .flatMap((meal) => normalizeMealPlan(meal).items.map((item) => item.recipeId)))],
   allRecipes,
+  getRecipeCatalogStatus: () => sharedRecipesStatus,
   recipeById,
   draftById,
   getSelectedRecipeId: () => selectedRecipeId,
@@ -1919,11 +1938,17 @@ async function loadSharedRecipes({ restart = false } = {}) {
     recipeRetryAttempt = 0;
   }
   if (recipeLoadInFlight) return recipeLoadInFlight;
+  sharedRecipesStatus = "loading";
+  render();
   clearAreaStatus("recipes");
   recipeLoadInFlight = (async () => {
     try {
       const data = await getJson("/.netlify/functions/recipes", "Could not load shared recipes.");
-      sharedRecipes = Array.isArray(data.recipes) ? data.recipes : [];
+      const remoteRecipes = Array.isArray(data.recipes) ? data.recipes : [];
+      const catalog = new Map(recipes.map((recipe) => [recipe.id, seedRecipeCatalogRecord(recipe)]));
+      remoteRecipes.forEach((recipe) => catalog.set(recipe.id, recipe));
+      sharedRecipes = [...catalog.values()];
+      sharedRecipesStatus = "ready";
       recipeRetryAttempt = 0;
       if (recipeRetryTimer) window.clearTimeout(recipeRetryTimer);
       recipeRetryTimer = 0;
@@ -1931,6 +1956,7 @@ async function loadSharedRecipes({ restart = false } = {}) {
       return true;
     } catch (error) {
       console.warn(error);
+      sharedRecipesStatus = "unavailable";
       scheduleRecipeRetry();
       return false;
     } finally {
@@ -2114,6 +2140,20 @@ async function translateRecipeContent(recipe, sourceLang, targetLang) {
   return data.recipe || {};
 }
 
+function translationResultReady(recipe, translated, targetLang) {
+  if (targetLang !== "es") return true;
+  const required = [
+    ["name", recipe?.name],
+    ["ingredientsText", recipe?.ingredientsText],
+    ["stepsText", recipe?.stepsText],
+  ];
+  if (required.some(([field, source]) => source && !translated?.[field])) return false;
+  if (required.some(([field, source]) => source && !textMatchesLanguage(translated[field], targetLang))) return false;
+  return ["allergyWarning", "notes"].every((field) => (
+    !recipe?.[field] || !translated?.[field] || textMatchesLanguage(translated[field], targetLang)
+  ));
+}
+
 async function backfillRecipeLocale(recipeId, targetLang) {
   const recipe = rawRecipeById(recipeId);
   if (!recipe || !rawRecipeNeedsLocale(recipe, targetLang)) return true;
@@ -2121,7 +2161,13 @@ async function backfillRecipeLocale(recipeId, targetLang) {
   const sourceLang = recipeTranslationSourceLang(recipe, targetLang);
   if (!sourceLang || sourceLang === targetLang) return false;
 
-  const translated = await translateRecipeContent(recipe, sourceLang, targetLang);
+  let translated = await translateRecipeContent(recipe, sourceLang, targetLang);
+  if (!translationResultReady(recipe, translated, targetLang)) {
+    translated = await translateRecipeContent(recipe, sourceLang, targetLang);
+  }
+  if (!translationResultReady(recipe, translated, targetLang)) {
+    throw new Error(t("recipeTranslationIncomplete"));
+  }
   const nextEdit = mergeTranslatedRecipeEdit(recipe, translated, targetLang);
   const draftIndex = drafts.findIndex((draft) => draft.id === recipeId);
 

@@ -70,4 +70,7 @@ test("recipe writes and AI scan endpoints carry language-aware content", async (
   assert.doesNotMatch(app, /queueRecipeBackfillForCurrentLanguage/);
   assert.match(app, /\$\("#translateSelectedRecipe"\)\.addEventListener\("click", async \(\) =>/);
   assert.match(app, /await backfillRecipeLocale\(recipeId, targetLang\)/);
+  assert.match(app, /function translationResultReady\(recipe, translated, targetLang\)/);
+  assert.match(app, /if \(!translationResultReady\(recipe, translated, targetLang\)\) \{\s*translated = await translateRecipeContent/);
+  assert.match(app, /recipeTranslationIncomplete/);
 });
