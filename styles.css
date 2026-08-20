@@ -368,8 +368,11 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .meal-save-button { border-color: color-mix(in srgb, var(--blue) 55%, var(--rule)); color: var(--blue); }
 .meal-picker { display: grid; gap: var(--space-5); }
 .meal-search-tools label, .meal-diner-grid label, .meal-optional-grid label { display: grid; gap: var(--space-2); }
-.meal-builder { display: grid; border-top: 1px solid var(--rule); }
-.meal-builder-period { padding: var(--space-5) 0; border-bottom: 1px solid var(--rule); }
+.meal-builder { display: grid; gap: var(--space-3); }
+.meal-builder-period { padding: var(--space-5) var(--space-4); border: 1px solid var(--rule); }
+.period-breakfast { background: linear-gradient(100deg, color-mix(in srgb, var(--memory) 30%, var(--paper)), var(--paper)); }
+.period-lunch { background: linear-gradient(100deg, color-mix(in srgb, var(--attention) 8%, var(--paper)), var(--paper)); }
+.period-dinner { background: linear-gradient(100deg, color-mix(in srgb, var(--attention) 16%, var(--paper)), var(--paper)); }
 .meal-builder-period-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); }
 .meal-builder-period-heading h4 { font-family: var(--font-reading); font-size: 1.55rem; font-weight: 500; }
 .meal-builder-period-meta { display: flex; gap: var(--space-3); color: var(--muted); font-size: .82rem; }
@@ -396,8 +399,6 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .meal-recipe-result .recipe-photo-shell, .focused-recipe-result .recipe-photo-shell { width: 48px; height: 48px; border-radius: var(--radius-control); }
 .focused-recipe-result .recipe-photo-shell { width: 56px; height: 56px; }
 .recipe-photo-shell img { width: 100%; height: 100%; object-fit: cover; }
-.period-dinner { position: relative; padding-left: var(--space-4); }
-.period-dinner::before { position: absolute; top: var(--space-5); bottom: var(--space-5); left: 0; width: 3px; background: var(--attention); content: ""; }
 
 /* 5c. Recipe as a working document */
 #recipesView.detail-open .recipe-banner, #recipesView.detail-open .recipe-picks, #recipesView.detail-open .recipe-browse { display: none; }
