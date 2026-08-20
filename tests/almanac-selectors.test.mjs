@@ -53,3 +53,14 @@ test("Living Almanac stylesheet uses only declared custom properties", async () 
   assert.match(css, /--ground: #F1F2EE/);
   assert.match(css, /--blue: #2947B8/);
 });
+
+test("Living Almanac page atmosphere stays connected to the semantic palette", async () => {
+  const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
+
+  for (const view of ["today", "schedule", "grocery", "recipes"]) {
+    assert.match(css, new RegExp(`body\\[data-view="${view}"\\]`));
+  }
+  assert.match(css, /--page-wash-primary: color-mix\(in srgb, var\(--memory\)/);
+  assert.match(css, /\.recipe-banner::before[\s\S]*background: color-mix\(in srgb, var\(--attention\)/);
+  assert.doesNotMatch(css, /\.recipe-banner::before[\s\S]{0,300}content:\s*["']R["']/);
+});

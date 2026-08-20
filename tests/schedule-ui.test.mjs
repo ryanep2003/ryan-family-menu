@@ -236,6 +236,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
       moreMealOptions: "More meal options",
       moreMealOptionsNote: "Add a side, salad, notes, or a handoff when you need them.",
       extraServingsCount: "Extra servings for later",
+      periodServingPlanSummary: "Servings and leftovers for {meal}",
       planDinner: "Plan dinner",
       backToToday: "Back to Today",
       dinnerOnDate: "{date} dinner",
@@ -507,6 +508,16 @@ test("each meal period can adjust its own family serving count", async () => {
 
   assert.equal(state.schedule.mon.servingPlans.lunch.adults, 1);
   assert.equal(state.schedule.mon.servingPlans.dinner.adults, 2);
+});
+
+test("lunch and dinner expose the same servings and leftovers planning", () => {
+  const { elements, state, ui } = harness();
+  state.schedule.mon = normalizeMealPlan({ lunch: "main-recipe", dinner: "another-main" });
+
+  ui.renderSchedule();
+
+  assert.match(elements["#weekDateEditor"].innerHTML, /Servings and leftovers for lunchSlot/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /Servings and leftovers for dinnerSlot/);
 });
 
 test("a meal period can reserve extra portions for a later meal", async () => {

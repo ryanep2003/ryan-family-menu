@@ -444,12 +444,13 @@ export function createScheduleUi({
         ` : ""}
         ${items.length ? `
           <details class="meal-serving-plan period-serving-plan">
-            <summary>${escapeHtml(t("cookingForSummary")
+            <summary>${escapeHtml(t("periodServingPlanSummary").replace("{meal}", t(period.label)))}</summary>
+            <p class="meal-serving-helper">${t("periodServingPlanHelper").replace("{meal}", t(period.label))}</p>
+            <p class="meal-serving-current">${escapeHtml(t("cookingForSummary")
               .replace("{adults}", servingPlan.adults)
               .replace("{kids}", servingPlan.kids)
               .replace("{guests}", servingPlan.guests)
-              .replace("{servings}", neededServings))}</summary>
-            <p class="meal-serving-helper">${t("periodServingPlanHelper").replace("{meal}", t(period.label))}</p>
+              .replace("{servings}", neededServings))}</p>
             <div class="meal-diner-grid">
               ${["adults", "kids", "guests"].map((field) => `
                 <label><span>${t(`${field}Count`)}</span><input type="number" min="0" max="20" step="1" value="${servingPlan[field]}" data-meal-context="${escapeHtml(context)}" data-slot="serving-plan" data-period="${escapeHtml(period.key)}" data-serving-field="${field}" /></label>
