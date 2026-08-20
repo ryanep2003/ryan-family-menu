@@ -272,11 +272,14 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .meal-item-adder-fields, .meal-search-tools, .meal-diner-grid, .meal-optional-grid { display: grid; gap: var(--space-3); }
 .meal-item-adder-fields { position: relative; }
 .meal-recipe-results { display: none; }
-.meal-recipe-results.is-open:not(:empty) { display: grid; max-height: 25rem; overflow-y: auto; padding: 0 var(--space-3); border: 1px solid var(--rule); border-radius: var(--radius-control); background: var(--paper); box-shadow: 0 14px 30px rgba(23,25,22,.11); }
-.meal-recipe-results button { display: grid; grid-template-columns: minmax(0, 1fr) auto; min-height: 68px; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border: 0; border-bottom: 1px solid var(--rule); background: transparent; color: var(--ink); text-align: left; }
+.meal-recipe-results.is-open:not(:empty) { display: block; max-height: 25rem; overflow-y: auto; padding: 0 var(--space-3); border: 1px solid var(--rule); border-radius: var(--radius-control); background: var(--paper); box-shadow: 0 14px 30px rgba(23,25,22,.11); }
+.meal-recipe-results button { display: grid; width: 100%; height: auto; grid-template-columns: minmax(0, 1fr) auto; min-height: 68px; align-items: start; gap: var(--space-3); padding: var(--space-3) 0; border: 0; border-bottom: 1px solid var(--rule); background: transparent; color: var(--ink); text-align: left; }
 .meal-recipe-results button.has-image { grid-template-columns: 48px minmax(0, 1fr) auto; }
 .meal-search-state { padding: var(--space-4) 0; color: var(--muted); }
 .meal-recipe-result-copy { display: grid; min-width: 0; gap: 2px; }
+.meal-recipe-result-copy strong { line-height: 1.3; }
+.meal-recipe-result-copy small { display: -webkit-box; overflow: hidden; line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.meal-recipe-result .category-pill { align-self: start; padding-top: 2px; white-space: nowrap; }
 .meal-save-button { position: static; }
 .recipe-photo-shell { display: block; overflow: hidden; background: color-mix(in srgb, var(--attention) 7%, var(--ground)); }
 .recipe-photo-shell:not(.is-loaded)::after { display: block; width: 100%; height: 100%; background: linear-gradient(110deg, transparent 20%, rgba(255,255,255,.55) 45%, transparent 70%); content: ""; animation: media-wait 1.4s ease-in-out infinite; }
@@ -317,8 +320,10 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 #familyNotes { max-width: 38rem; color: var(--muted); line-height: 1.7; }
 .photo-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr)); gap: var(--space-2); }
 .photo-strip img { width: 100%; aspect-ratio: 4 / 3; border-radius: var(--radius-sheet); object-fit: cover; }
-.recipe-banner { position: relative; overflow: hidden; padding: var(--space-5) var(--space-5) var(--space-6); border-top: 3px solid var(--attention); background: color-mix(in srgb, var(--attention) 6%, var(--paper)); }
-.recipe-banner::after { position: absolute; right: var(--space-4); bottom: -2.4rem; color: color-mix(in srgb, var(--attention) 18%, transparent); font-family: var(--font-reading); font-size: 11rem; line-height: 1; content: "R"; pointer-events: none; }
+.recipe-banner { position: relative; overflow: hidden; padding: var(--space-5) var(--space-5) var(--space-6); border-top: 3px solid var(--attention); background: linear-gradient(118deg, color-mix(in srgb, var(--attention) 7%, var(--paper)) 0 58%, color-mix(in srgb, var(--memory) 24%, var(--paper)) 100%); }
+.recipe-banner::before, .recipe-banner::after { position: absolute; border: 1px solid; border-radius: 50%; content: ""; pointer-events: none; }
+.recipe-banner::before { right: -3.5rem; bottom: -5.5rem; width: 12rem; height: 12rem; border-color: color-mix(in srgb, var(--attention) 28%, transparent); }
+.recipe-banner::after { right: 4rem; bottom: -4.5rem; width: 7.5rem; height: 7.5rem; border-color: color-mix(in srgb, var(--success) 24%, transparent); }
 .recipe-banner > * { position: relative; z-index: 1; }
 .recipe-picks { padding: var(--space-7) 0; border-top: 0; }
 .recipe-list { display: grid; margin-top: var(--space-4); border-top: 1px solid var(--rule); }

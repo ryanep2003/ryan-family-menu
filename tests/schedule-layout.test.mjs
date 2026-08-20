@@ -9,3 +9,9 @@ test("week planning preserves readable day records on narrow screens", () => {
   assert.match(styles, /\.schedule-grid\s*\{[\s\S]*overflow-x: auto;/s);
   assert.match(styles, /\.week-day-summary\s*\{[\s\S]*min-width: 8rem;/s);
 });
+
+test("mobile recipe search rows keep their natural height inside the scroll menu", () => {
+  assert.match(styles, /\.meal-recipe-results\.is-open:not\(:empty\)\s*\{[^}]*display: block;/s);
+  assert.match(styles, /\.meal-recipe-results button\s*\{[^}]*height: auto;/s);
+  assert.match(styles, /\.meal-recipe-result-copy small\s*\{[^}]*-webkit-line-clamp: 2;/s);
+});
