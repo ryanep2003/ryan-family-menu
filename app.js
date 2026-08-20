@@ -1534,7 +1534,8 @@ function renderSmartSuggestions() {
   });
   if (!mealHasContent(calendarMealForDateKey(tomorrowKey))) {
     const hasMemory = dinnerEvents.length || familyPreferences.length;
-    const recommendation = hasMemory ? rankedRecipes(allRecipes(), {
+    const dinnerCandidates = allRecipes().filter((recipe) => categoryFor(recipe) === "main");
+    const recommendation = hasMemory ? rankedRecipes(dinnerCandidates, {
       events: dinnerEvents,
       members: familyMembers,
       preferences: familyPreferences,
@@ -1602,6 +1603,22 @@ function renderTranslations() {
     $("#taskAssigneeInput").value = householdMember;
   }
   renderFileInputStatuses();
+}
+
+function hydrateOpenRecipeLocale() {
+  const recipeId = selectedRecipeId;
+  const recipe = rawRecipeById(recipeId);
+  if (!recipe || !rawRecipeNeedsLocale(recipe, lang)) return;
+  const key = `${recipeId}:${lang}`;
+  if (recipeTranslationInFlight.has(key)) return;
+  recipeTranslationInFlight.add(key);
+  renderDetail();
+  backfillRecipeLocale(recipeId, lang)
+    .catch((error) => console.warn("Could not prepare recipe translation.", error))
+    .finally(() => {
+      recipeTranslationInFlight.delete(key);
+      if (selectedRecipeId === recipeId && lang === key.split(":")[1]) renderDetail();
+    });
 }
 
 function showAppUpdateNotice() {
@@ -1710,6 +1727,7 @@ const dashboardUi = createDashboardUi({
   renderDetail: () => {
     renderDetail();
     $("#recipesView").classList.add("detail-open");
+    hydrateOpenRecipeLocale();
   },
   setView,
   getLang: () => lang,
@@ -1865,13 +1883,9 @@ const recipeLibraryUi = createRecipeLibraryUi({
   setDetailStatus,
   getRecipeMemory: (recipeId) => selectRecipeMemory(recipeId, dinnerEvents, familyMembers),
   onRecipeMediaRendered: queueRecipePhotoHydration,
-  onRecipeOpen: loadRecipeDetail,
-  canTranslateRecipe: (recipeId, targetLang) => {
-    const recipe = rawRecipeById(recipeId);
-    return Boolean(
-      rawRecipeNeedsLocale(recipe, targetLang)
-      && recipeTranslationSourceLang(recipe, targetLang)
-    );
+  onRecipeOpen: async (recipeId) => {
+    await loadRecipeDetail(recipeId);
+    hydrateOpenRecipeLocale();
   },
   isRecipeTranslationPending: (recipeId, targetLang) => recipeTranslationInFlight.has(`${recipeId}:${targetLang}`),
   setView,
@@ -1987,6 +2001,7 @@ function render() {
   renderInventorySuggestions();
   renderRecipes();
   renderDetail();
+  if ($("#recipesView").classList.contains("detail-open")) hydrateOpenRecipeLocale();
   cookAlongUi.render();
   bindOpenButtons();
   bindGroceryControls();
@@ -2481,33 +2496,6 @@ $$("[data-scroll-to]").forEach((button) => {
   button.addEventListener("click", () => {
     $(`#${button.dataset.scrollTo}`).scrollIntoView({ behavior: "smooth", block: "start" });
   });
-});
-
-$("#translateSelectedRecipe").addEventListener("click", async () => {
-  const recipeId = selectedRecipeId;
-  const targetLang = lang;
-  const key = `${recipeId}:${targetLang}`;
-  if (recipeTranslationInFlight.has(key)) return;
-
-  recipeTranslationInFlight.add(key);
-  renderDetail();
-  setDetailStatus(t("translatingRecipe"));
-  let resultMessage = "";
-  let resultIsError = false;
-
-  try {
-    const saved = await backfillRecipeLocale(recipeId, targetLang);
-    resultMessage = t(saved ? "recipeTranslationReady" : "recipeTranslationSaveError");
-    resultIsError = !saved;
-  } catch (error) {
-    console.warn(error);
-    resultMessage = error.message ? `${t("recipeTranslationError")} ${error.message}` : t("recipeTranslationError");
-    resultIsError = true;
-  } finally {
-    recipeTranslationInFlight.delete(key);
-    renderDetail();
-    setDetailStatus(resultMessage, resultIsError);
-  }
 });
 
 scheduleUi.bindScheduleControls();

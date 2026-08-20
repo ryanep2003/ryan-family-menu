@@ -67,9 +67,10 @@ test("recipe writes and AI scan endpoints carry language-aware content", async (
   assert.match(receiptScan, /const outputLanguage = cleanLanguage\(payload\.lang\)/);
   assert.match(translateRecipe, /Translate this family recipe from/);
   assert.match(app, /"\/\.netlify\/functions\/translate-recipe"/);
-  assert.doesNotMatch(app, /queueRecipeBackfillForCurrentLanguage/);
-  assert.match(app, /\$\("#translateSelectedRecipe"\)\.addEventListener\("click", async \(\) =>/);
-  assert.match(app, /await backfillRecipeLocale\(recipeId, targetLang\)/);
+  assert.match(app, /function hydrateOpenRecipeLocale\(\)/);
+  assert.match(app, /backfillRecipeLocale\(recipeId, lang\)/);
+  assert.match(app, /recipeTranslationInFlight\.has\(key\)/);
+  assert.doesNotMatch(app, /translateSelectedRecipe/);
   assert.match(app, /function translationResultReady\(recipe, translated, targetLang\)/);
   assert.match(app, /if \(!translationResultReady\(recipe, translated, targetLang\)\) \{\s*translated = await translateRecipeContent/);
   assert.match(app, /recipeTranslationIncomplete/);

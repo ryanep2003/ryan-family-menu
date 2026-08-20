@@ -50,7 +50,9 @@ test("inventory maintenance does not replace shopping context", () => {
 });
 
 test("mobile shell preserves room for the fixed four-view navigation", () => {
-  assert.ok(styles.includes("padding: 0 var(--space-4) calc(88px + env(safe-area-inset-bottom))"));
+  assert.ok(styles.includes("--bottom-nav-space: calc(76px + env(safe-area-inset-bottom))"));
+  assert.ok(styles.includes("padding: 0 var(--space-4) calc(var(--bottom-nav-space) + var(--space-6))"));
+  assert.ok(styles.includes("env(safe-area-inset-top)"));
   assert.ok(styles.includes(".tabs { position: fixed") && styles.includes("grid-template-columns: repeat(4, 1fr)"));
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="sharedSyncStatusPanel"[^>]*hidden/);

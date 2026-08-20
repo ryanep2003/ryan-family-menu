@@ -26,7 +26,6 @@ export function createRecipeLibraryUi({
   setCategoryFilter,
   setDetailStatus,
   onRecipeOpen = () => {},
-  canTranslateRecipe = () => false,
   isRecipeTranslationPending = () => false,
   getRecipeMemory = () => ({}),
   onRecipeMediaRendered = () => {},
@@ -189,9 +188,8 @@ export function createRecipeLibraryUi({
     const actionLockReason = hasWarning && !warningTranslated
       ? t("safetyActionsLocked")
       : contentReady ? "" : t("recipeDetailsRequired");
-    const canTranslate = canTranslateRecipe(recipe.id, getLang());
     const translationPending = isRecipeTranslationPending(recipe.id, getLang());
-    const showTranslationState = canTranslate || !contentReady;
+    const showTranslationState = translationPending || !contentReady || usingFallback;
     $("#recipeDetail").classList.remove("editing");
     $("#recipeMoreActions").open = false;
     if ($("#recipeOutcomePanel")) $("#recipeOutcomePanel").hidden = true;
@@ -218,11 +216,8 @@ export function createRecipeLibraryUi({
     $("#allergyWarning").textContent = warning;
     $("#recipeTranslationPanel").hidden = !showTranslationState;
     $("#recipeTranslationStatus").textContent = usingFallback
-      ? t("translationFallbackDetail")
+      ? translationPending ? t("translatingRecipe") : t("translationFallbackDetail")
       : contentReady ? "" : t("translationPendingDetail");
-    $("#translateSelectedRecipe").hidden = !canTranslate;
-    $("#translateSelectedRecipe").disabled = translationPending;
-    $("#translateSelectedRecipe").textContent = t(translationPending ? "translatingRecipe" : "translateRecipe");
     $("#ingredientList").innerHTML = ingredientsDisplay.lines.length
       ? ingredientsDisplay.lines.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
       : `<li class="translation-placeholder">${t("translationPendingShort")}</li>`;

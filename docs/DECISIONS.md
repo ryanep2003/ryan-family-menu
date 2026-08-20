@@ -96,7 +96,6 @@ This is a lightweight record of architectural and product decisions that future 
 
 **Consequences:** Learning must stay transparent, optional, and low-friction. Add more sophisticated memory only after real household usage demonstrates the need.
 
-## 2026-08-15 — Translate recipes only on explicit request
 ## 2026-08-16 — Keep Cook Along browser-first
 
 **Decision:** Make live cooking guidance deterministic and browser-first, with an optional device speech command and no AI request in the cooking loop. Save actual servings, leftovers, notes, and a quick outcome into existing dinner memory.
@@ -105,13 +104,15 @@ This is a lightweight record of architectural and product decisions that future 
 
 **Consequences:** Recipe steps remain the source of truth; future recommendations can use the saved structured feedback. AI can be considered later for optional enhancements, but it is not required for cooking mode.
 
-**Decision:** Changing the app language never starts recipe AI calls. A family member may explicitly translate the one selected recipe when its current-language content is missing.
+## 2026-08-20 — Keep global language changes bounded to the open recipe
 
-**Reason:** The former render-time queue could fan one language switch out into many OpenAI calls and shared-state writes, creating avoidable cost and version conflicts.
+**Decision:** Changing the app language updates all interface copy immediately. If the currently open recipe lacks that language, the app may translate that one recipe automatically; it never translates the whole library or a background batch.
 
-**Alternatives considered:** Automatically translating the full library, translating a fixed background batch, and removing AI translation entirely.
+**Reason:** The language control needs to apply to the recipe being read, but a render-time queue could fan one language switch out into many OpenAI calls and shared-state writes, creating avoidable cost and version conflicts.
 
-**Consequences:** One translation action produces at most one provider call and one shared-state save. Original recipe content remains readable as a fallback, existing translations are preserved, and safety actions remain locked when a required warning is untranslated.
+**Alternatives considered:** Automatically translating the full library, translating a fixed background batch, requiring an additional recipe-level action, and removing AI translation entirely.
+
+**Consequences:** A language change while a recipe is open produces at most one provider call and one shared-state save for that recipe and locale. Original recipe content remains readable as a fallback, existing translations are preserved, and safety actions remain locked when a required warning is untranslated.
 
 ## 2026-08-16 — The shopping list is authoritative at the store
 

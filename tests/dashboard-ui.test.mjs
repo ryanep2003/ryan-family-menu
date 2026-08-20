@@ -37,7 +37,8 @@ function element() {
 
 function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
   const elements = Object.fromEntries([
-    "todayRecipeName",
+    "todayMealsHeading",
+    "todayMealsList",
     "todayDate",
     "todayBand",
     "todayImage",
@@ -45,8 +46,6 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
     "todayDateMark",
     "todayDayName",
     "todayDayNumber",
-    "todayMeta",
-    "todayMealList",
     "todayMemory",
     "todayMemoryFact",
     "todayMemoryWhen",
@@ -84,6 +83,7 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
   const recipes = {
     main: { id: "main", name: "Main recipe", photos: ["main.jpg"], allergyWarning: "" },
     side: { id: "side", name: "Side recipe", photos: ["side.jpg"], allergyWarning: "" },
+    lunch: { id: "lunch", name: "Green Monster Salad", photos: [], allergyWarning: "" },
   };
   const events = { view: "", selected: "", rendered: 0, focusedDate: "" };
 
@@ -142,21 +142,27 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
       itemsAtHome: "items at home",
       mainSlot: "Main",
       sideSlot: "Side",
+      breakfastSlot: "Breakfast",
+      lunchSlot: "Lunch",
+      dinnerSlot: "Dinner",
+      mealPeriodEmpty: "Nothing planned for this meal yet.",
     })[key] || key,
     escapeHtml: (value) => value,
     localize: (value) => value,
     formatDateKey: () => "2026-07-10",
     categoryFor: () => "main",
     categoryLabel: () => "Mains",
-    mealRecipes: () => ["main", "side"]
-      .filter((key) => meal[key])
-      .map((key) => ({
-        key,
-        itemId: `item-${key}`,
-        period: "dinner",
-        role: key,
-        recipe: recipes[meal[key]],
-      })),
+    mealRecipes: () => Array.isArray(meal.items)
+      ? meal.items.map((item) => ({ ...item, itemId: item.id, recipe: recipes[item.recipeId] })).filter((item) => item.recipe)
+      : ["main", "side"]
+        .filter((key) => meal[key])
+        .map((key) => ({
+          key,
+          itemId: `item-${key}`,
+          period: "dinner",
+          role: key,
+          recipe: recipes[meal[key]],
+        })),
     mealHasWarning: () => false,
     calendarMealForDateKey: () => meal,
     recipeById: (id) => recipes[id],
@@ -206,8 +212,6 @@ test("Today presents one dinner, its family memory, and its companions", () => {
 
   ui.renderToday();
 
-  assert.equal(elements.todayMeta.textContent, "Serves 3");
-  assert.equal(elements.todayMealList.textContent, "With Side recipe");
   assert.equal(elements.todayMemoryFact.textContent, "Everyone ate this last time.");
   assert.equal(elements.todayBackdrop.src, "main.jpg");
   assert.equal(elements.cookToday.textContent, "Cook this");
@@ -303,9 +307,27 @@ test("empty Today offers a direct planning action", () => {
 
   assert.equal(elements.todayBand.classList.contains("empty"), true);
   assert.equal(elements.todayBackdrop.hidden, true);
-  assert.equal(elements.todayMeta.textContent, "Choose one meal and bring tonight into focus.");
-  assert.equal(elements.cookToday.textContent, "Plan dinner");
+  assert.equal(elements.cookToday.hidden, true);
+  assert.match(elements.todayMealsList.innerHTML, /Dinner[\s\S]*Nothing planned for this meal yet|Dinner[\s\S]*Nothing planned for tonight/);
+  assert.match(elements.todayMealsList.innerHTML, /Plan dinner/);
 
-  elements.cookToday.handlers.click();
+  elements.todayMealsList.handlers.click({ target: { closest: (selector) => selector === "[data-plan-today-period]" ? { dataset: { planTodayPeriod: "dinner" } } : null } });
   assert.equal(events.focusedDate, "2026-07-10");
+});
+
+test("Today keeps a planned lunch visible when dinner is open", () => {
+  const { elements, ui } = dashboardFixture({
+    mealOverride: {
+      items: [{ id: "lunch-1", period: "lunch", role: "salad", recipeId: "lunch" }],
+      notes: "",
+    },
+  });
+
+  ui.renderToday();
+
+  assert.match(elements.todayMealsList.innerHTML, /Lunch/);
+  assert.match(elements.todayMealsList.innerHTML, /Green Monster Salad/);
+  assert.match(elements.todayMealsList.innerHTML, /<span>Lunch<\/span>[\s\S]*Green Monster Salad/);
+  assert.match(elements.todayMealsList.innerHTML, /<span>Dinner<\/span>[\s\S]*Nothing planned for tonight[\s\S]*Plan dinner/);
+  assert.equal(elements.cookToday.hidden, true);
 });

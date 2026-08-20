@@ -136,7 +136,6 @@ function harness(overrides = {}) {
     getCategoryFilter: () => "all",
     setCategoryFilter: () => {},
     setDetailStatus: () => {},
-    canTranslateRecipe: () => overrides.canTranslate ?? (overrides.lang === "es"),
     isRecipeTranslationPending: () => Boolean(overrides.translationPending),
     getRecipeCatalogStatus: () => overrides.catalogStatus || "ready",
     setView: () => {},
@@ -299,7 +298,7 @@ test("opening and closing a recipe preserves predictable focus", async () => {
   assert.equal(elements["#recipesView"].classList.values.has("detail-open"), false);
 });
 
-test("Spanish detail uses source content while translation is pending", () => {
+test("Spanish detail uses source content while global translation is prepared", () => {
   const { elements, ui } = harness({ lang: "es" });
 
   ui.renderDetail();
@@ -311,27 +310,24 @@ test("Spanish detail uses source content while translation is pending", () => {
   assert.equal(elements["#markCooked"].disabled, false);
   assert.equal(elements["#recipeTranslationPanel"].hidden, false);
   assert.match(elements["#recipeTranslationStatus"].textContent, /translationFallbackDetail/);
-  assert.equal(elements["#translateSelectedRecipe"].hidden, false);
-  assert.equal(elements["#translateSelectedRecipe"].disabled, false);
-  assert.equal(elements["#translateSelectedRecipe"].textContent, "translateRecipe");
 });
 
-test("explicit recipe translation shows one visible pending action", () => {
+test("global recipe translation shows a pending status without a second action", () => {
   const { elements, ui } = harness({ lang: "es", translationPending: true });
 
   ui.renderDetail();
 
   assert.equal(elements["#recipeTranslationPanel"].hidden, false);
-  assert.equal(elements["#translateSelectedRecipe"].disabled, true);
-  assert.equal(elements["#translateSelectedRecipe"].textContent, "translatingRecipe");
+  assert.equal(elements["#recipeTranslationStatus"].textContent, "translatingRecipe");
 });
 
-test("complete translated recipe does not offer another AI translation", () => {
+test("complete translated recipe does not show translation controls", () => {
   const { elements, ui } = harness({
     lang: "es",
-    canTranslate: false,
     recipe: {
       name: { en: "Recipe", es: "Receta" },
+      meta: { en: "Meta", es: "Detalle" },
+      short: { en: "Short", es: "Breve" },
       ingredients: { en: ["one"], es: ["uno"] },
       steps: { en: ["cook"], es: ["cocinar"] },
       notes: { en: "note", es: "nota" },
@@ -341,7 +337,6 @@ test("complete translated recipe does not offer another AI translation", () => {
   ui.renderDetail();
 
   assert.equal(elements["#recipeTranslationPanel"].hidden, true);
-  assert.equal(elements["#translateSelectedRecipe"].hidden, true);
 });
 
 test("missing Spanish safety warning keeps cooking actions disabled", () => {

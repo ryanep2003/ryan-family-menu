@@ -488,22 +488,9 @@ export function createScheduleUi({
     return `
       ${label ? `<strong>${escapeHtml(label)}</strong>` : ""}
       <div class="meal-picker">
-        <label class="dinner-pace-control">
-          <span class="dinner-pace-copy">
-            <strong>${t("dinnerPaceLabel")}</strong>
-            <small>${t("dinnerPaceHelper")}</small>
-          </span>
-          <select data-meal-context="${escapeHtml(context)}" data-slot="dinner-pace">
-            <option value=""${!meal.dinnerPace ? " selected" : ""}>${t("dinnerPaceUnset")}</option>
-            <option value="quick"${meal.dinnerPace === "quick" ? " selected" : ""}>${t("dinnerPaceQuick")}</option>
-            <option value="standard"${meal.dinnerPace === "standard" ? " selected" : ""}>${t("dinnerPaceStandard")}</option>
-            <option value="no-cooking"${meal.dinnerPace === "no-cooking" ? " selected" : ""}>${t("dinnerPaceNoCooking")}</option>
-          </select>
-        </label>
         <div class="meal-builder">
           ${mealPeriods.map((period) => renderMealPeriod(period, meal, context)).join("")}
         </div>
-        <p class="meal-period-helper">${t("flexibleMealBuilderNote")}</p>
         ${(recipesForMeal.length || hasOptionalContent) ? `
           <details class="meal-optional-fields"${hasOptionalContent ? " open" : ""}>
             <summary>${t("moreMealOptions")}</summary>
@@ -773,8 +760,6 @@ export function createScheduleUi({
           target.items = target.items.map((item) => item.id === control.dataset.itemId
             ? { ...item, role: control.value }
             : item);
-        } else if (slot === "dinner-pace") {
-          target.dinnerPace = control.value;
         }
         await persistMealTarget(context, target);
       });
@@ -815,8 +800,6 @@ export function createScheduleUi({
           >
             <span>${escapeHtml(label)}</span>
             <strong class="${mealHasWarning(meal) ? "has-warning" : ""}">${escapeHtml(mealSummary(meal))}</strong>
-            ${meal.dinnerPace ? `<span class="dinner-pace-badge">${escapeHtml(t(`dinnerPace${meal.dinnerPace === "no-cooking" ? "NoCooking" : meal.dinnerPace[0].toUpperCase() + meal.dinnerPace.slice(1)}`))}</span>` : ""}
-            <small>${t("editDay")}</small>
           </button>
         `;
       })

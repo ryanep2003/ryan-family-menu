@@ -219,7 +219,7 @@ test("mealHasContent recognizes breakfast and lunch plans", () => {
   assert.equal(mealHasContent({ ...emptyMeal, lunchSalad: "greens" }), true);
 });
 
-test("dinner pace persists and can make a no-cooking day visible", () => {
+test("legacy dinner pace remains compatible without driving the planner UI", () => {
   const meal = normalizeMealPlan({ dinnerPace: "no-cooking" });
   assert.equal(meal.dinnerPace, "no-cooking");
   assert.equal(mealHasContent(meal), true);

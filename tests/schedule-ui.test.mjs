@@ -338,7 +338,7 @@ test("week planning renders seven summaries with one focused editor", () => {
   assert.match(elements["#weekDateEditor"].innerHTML, /data-item-id="legacy-dinner-main-0-main-recipe"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-slot="handoff"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /More meal options/);
-  assert.match(elements["#weekDateEditor"].innerHTML, /flexibleMealBuilderNote/);
+  assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /dinner-pace|Dinner pace/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-view-meal-groceries="weekdate:2026-06-22"/);
 });
 

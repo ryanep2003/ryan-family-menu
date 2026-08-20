@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=141" />
+    <link rel="stylesheet" href="styles.css?v=142" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -178,12 +178,11 @@
             </button>
           </div>
         </section>
-        <section class="today-story" id="todayBand" aria-labelledby="todayRecipeName">
+        <section class="today-story" id="todayBand" aria-labelledby="todayMealsHeading">
           <div class="today-story-main">
             <p class="today-date" id="todayDate"></p>
-            <h2 id="todayRecipeName">Nothing planned for tonight.</h2>
-            <p class="today-serving-line" id="todayMeta"></p>
-            <div class="today-companions" id="todayMealList" hidden></div>
+            <h2 id="todayMealsHeading" data-i18n="todayMeals">Today's meals</h2>
+            <div class="today-meals" id="todayMealsList"></div>
             <div class="today-memory-record" id="todayMemory" hidden>
               <p id="todayMemoryFact"></p>
               <p id="todayMemoryWhen"></p>
@@ -386,7 +385,6 @@
             <div>
               <p class="view-kicker">Plan</p>
               <h2 id="weekTitle" tabindex="-1" data-i18n="weekHeading">This week</h2>
-              <p class="section-note">Choose one day, then build only what needs planning.</p>
             </div>
             <div class="week-actions">
               <div class="week-navigation" role="group" aria-label="Week navigation" data-i18n-aria-label="weekNavigationLabel">
@@ -694,10 +692,6 @@
               <div>
                 <button class="ghost-button" id="editRecipe" type="button" data-i18n="editRecipe">Edit recipe</button>
                 <button class="ghost-button favorite-button" id="favoriteRecipe" type="button" aria-pressed="false" data-i18n="addFavorite">Add favorite</button>
-                <div class="segmented detail-language-toggle" aria-label="Language" data-i18n-aria-label="languageLabel">
-                  <button type="button" data-lang="en">EN</button>
-                  <button type="button" data-lang="es">ES</button>
-                </div>
               </div>
             </details>
             <p class="detail-action-note" id="recipeSafetyLockReason" role="status" aria-live="polite" hidden></p>
@@ -706,7 +700,6 @@
           <section class="cook-along-panel" id="cookAlongPanel" hidden aria-live="polite"></section>
           <div class="translation-state" id="recipeTranslationPanel" hidden>
             <p id="recipeTranslationStatus" role="status"></p>
-            <button class="ghost-button" id="translateSelectedRecipe" type="button" data-i18n="translateRecipe">Translate this recipe</button>
           </div>
 
           <form class="upload-panel edit-recipe-panel" id="editRecipeForm" hidden>
@@ -932,6 +925,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=141"></script>
+    <script type="module" src="app.js?v=142"></script>
   </body>
 </html>
