@@ -63,4 +63,12 @@ test("Living Almanac page atmosphere stays connected to the semantic palette", a
   assert.match(css, /--page-wash-primary: color-mix\(in srgb, var\(--memory\)/);
   assert.match(css, /\.recipe-banner::before[\s\S]*background: color-mix\(in srgb, var\(--attention\)/);
   assert.doesNotMatch(css, /\.recipe-banner::before[\s\S]{0,300}content:\s*["']R["']/);
+  const recipeBannerRule = css.match(/\.recipe-banner\s*\{([^}]*)\}/)?.[1] || "";
+  const recipeBannerAfterRule = css.match(/\.recipe-banner::after\s*\{([^}]*)\}/)?.[1] || "";
+  const recipePicksEmptyRule = css.match(/\.recipe-picks #recipePicksEmpty\s*\{([^}]*)\}/)?.[1] || "";
+  assert.doesNotMatch(recipeBannerRule, /border-top/);
+  assert.doesNotMatch(recipeBannerAfterRule, /border\s*:/);
+  assert.doesNotMatch(recipePicksEmptyRule, /border-left/);
+  assert.match(css, /\.dinner-feedback\s*\{[\s\S]*linear-gradient/);
+  assert.match(css, /\.today-tools > summary\s*\{[\s\S]*linear-gradient/);
 });

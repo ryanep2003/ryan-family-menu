@@ -47,20 +47,20 @@ body {
   line-height: 1.5;
 }
 body[data-view="today"] {
-  --page-wash-primary: color-mix(in srgb, var(--memory) 22%, var(--ground));
-  --page-wash-secondary: color-mix(in srgb, var(--success) 5%, var(--ground));
+  --page-wash-primary: color-mix(in srgb, var(--memory) 30%, var(--ground));
+  --page-wash-secondary: color-mix(in srgb, var(--success) 8%, var(--ground));
 }
 body[data-view="schedule"] {
-  --page-wash-primary: color-mix(in srgb, var(--attention) 12%, var(--ground));
-  --page-wash-secondary: color-mix(in srgb, var(--memory) 9%, var(--ground));
+  --page-wash-primary: color-mix(in srgb, var(--attention) 18%, var(--ground));
+  --page-wash-secondary: color-mix(in srgb, var(--memory) 14%, var(--ground));
 }
 body[data-view="grocery"] {
-  --page-wash-primary: color-mix(in srgb, var(--blue) 7%, var(--ground));
-  --page-wash-secondary: color-mix(in srgb, var(--success) 7%, var(--ground));
+  --page-wash-primary: color-mix(in srgb, var(--blue) 11%, var(--ground));
+  --page-wash-secondary: color-mix(in srgb, var(--success) 11%, var(--ground));
 }
 body[data-view="recipes"], body[data-view="add"] {
-  --page-wash-primary: color-mix(in srgb, var(--memory) 24%, var(--ground));
-  --page-wash-secondary: color-mix(in srgb, var(--attention) 8%, var(--ground));
+  --page-wash-primary: color-mix(in srgb, var(--memory) 32%, var(--ground));
+  --page-wash-secondary: color-mix(in srgb, var(--attention) 12%, var(--ground));
 }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
@@ -214,7 +214,13 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .handoff-note { display: grid; gap: var(--space-2); }
 .handoff-note > span { color: var(--muted); font-size: .82rem; }
 .smart-suggestions, .dinner-feedback { max-width: var(--reading-width); margin-top: var(--space-6); }
-.dinner-feedback { padding: var(--space-5) 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.dinner-feedback {
+  padding: var(--space-6) var(--space-4);
+  border: 0;
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--attention) 12%, transparent), transparent 48%),
+    linear-gradient(135deg, color-mix(in srgb, var(--attention) 10%, var(--paper)), color-mix(in srgb, var(--memory) 12%, var(--paper)));
+}
 .dinner-feedback-heading { display: flex; align-items: start; justify-content: space-between; gap: var(--space-4); }
 .dinner-feedback-heading h2 { font-size: clamp(2rem, 7vw, 3.3rem); }
 .dinner-feedback-heading p { max-width: 34rem; margin-top: var(--space-2); color: var(--muted); }
@@ -224,16 +230,82 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .dinner-outcome-options button:hover { border-color: var(--ink); }
 .dinner-outcome-options button[aria-pressed="true"] { border-color: var(--success); background: color-mix(in srgb, var(--success) 8%, var(--paper)); color: var(--success); }
 .dinner-feedback > details { margin-top: var(--space-3); }
-.smart-suggestions { padding: var(--space-5) 0; border-bottom: 1px solid var(--rule); }
+.smart-suggestions {
+  padding: var(--space-6) var(--space-4);
+  border: 0;
+  background:
+    radial-gradient(circle at 0 100%, color-mix(in srgb, var(--memory) 32%, transparent), transparent 50%),
+    linear-gradient(120deg, color-mix(in srgb, var(--memory) 22%, var(--paper)), color-mix(in srgb, var(--success) 7%, var(--paper)));
+}
 .smart-suggestions h2 { font-size: 1.6rem; }
 #smartSuggestionList { display: grid; margin-top: var(--space-4); border-top: 1px solid var(--rule); }
 #smartSuggestionList button { display: grid; min-height: 56px; gap: var(--space-1); padding: var(--space-3) 0; border: 0; border-bottom: 1px solid var(--rule); background: transparent; color: var(--ink); text-align: left; }
 #smartSuggestionList span { color: var(--muted); }
-.today-tools { margin-top: var(--space-6); }
+.today-tools {
+  margin-top: var(--space-6);
+  border-top: 0;
+  background: color-mix(in srgb, var(--blue) 5%, var(--paper));
+}
+.today-tools > summary {
+  display: grid;
+  min-height: 60px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-4);
+  background: linear-gradient(105deg, color-mix(in srgb, var(--blue) 10%, var(--paper)), color-mix(in srgb, var(--memory) 22%, var(--paper)));
+}
+.today-tools > summary small { color: var(--muted); font-weight: 500; line-height: 1.35; }
+.today-tools-content { display: grid; gap: 0; }
+.available-food-panel, .today-panel { padding: var(--space-6) var(--space-4); }
+.available-food-panel {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--memory) 28%, var(--paper)), color-mix(in srgb, var(--success) 6%, var(--paper)));
+}
+.available-food-panel h2, .today-panel h2 { font-size: clamp(2.1rem, 9vw, 3.25rem); }
+.available-food-panel .section-note { max-width: 32rem; margin-top: var(--space-2); }
+.available-food-list { margin-top: var(--space-4); }
+.available-food-add { margin-top: var(--space-4); }
+.available-food-add form { display: grid; gap: var(--space-3); padding: var(--space-3) 0 var(--space-5); }
+.available-food-add label { display: grid; gap: var(--space-1); }
+.available-food-add label > span { color: var(--muted); font-size: .78rem; }
+.today-shortcuts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--rule); }
+.today-shortcuts button {
+  display: grid;
+  min-height: 72px;
+  align-content: center;
+  justify-items: start;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 0;
+  background: color-mix(in srgb, var(--blue) 8%, var(--paper));
+  color: var(--ink);
+  text-align: left;
+}
+.today-shortcuts button:last-child { background: color-mix(in srgb, var(--success) 9%, var(--paper)); }
+.today-shortcuts button span { color: var(--muted); font-size: .78rem; }
+.today-shortcuts button strong { font-family: var(--font-reading); font-size: 1.25rem; font-weight: 500; line-height: 1.2; }
+.today-dashboard { display: grid; }
+.today-panel:first-child {
+  background: linear-gradient(140deg, color-mix(in srgb, var(--blue) 8%, var(--paper)), color-mix(in srgb, var(--paper) 82%, transparent));
+}
+.today-panel:last-child {
+  background: linear-gradient(140deg, color-mix(in srgb, var(--attention) 9%, var(--paper)), color-mix(in srgb, var(--memory) 16%, var(--paper)));
+}
+.today-panel .panel-heading { display: flex; align-items: start; justify-content: space-between; gap: var(--space-3); }
+.task-add { display: grid; gap: var(--space-2); margin-top: var(--space-4); }
+.task-add .primary-action { justify-self: start; }
+.task-list, .favorite-list { margin-top: var(--space-4); }
+.today-panel .text-action { justify-content: flex-start; margin: var(--space-3) 0 0 -14px; }
 
 /* 5b. Focused dinner decision */
 .focused-dinner { max-width: 42rem; margin: 0 auto; }
-.focused-dinner-header { display: grid; gap: var(--space-5); padding: 0 0 var(--space-6); }
+.focused-dinner-header {
+  display: grid;
+  gap: var(--space-5);
+  margin-inline: calc(var(--space-4) * -1);
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  background: linear-gradient(125deg, color-mix(in srgb, var(--attention) 12%, var(--paper)), color-mix(in srgb, var(--memory) 18%, var(--paper)));
+}
 .focused-dinner-header .text-action { justify-self: start; margin-left: -14px; }
 .focused-dinner-header p { color: var(--muted); font-size: .92rem; font-variant-numeric: tabular-nums; }
 .focused-dinner-decision { min-width: 0; }
@@ -266,6 +338,7 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 /* Comprehensive planning remains separate from the focused Today flow. */
 .planning-mode-switch { margin-bottom: var(--space-5); }
 .view-banner { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); padding: 0 0 var(--space-5); border-bottom: 1px solid var(--rule); }
+.week-banner { padding: var(--space-5); border-bottom: 0; background: linear-gradient(125deg, color-mix(in srgb, var(--attention) 10%, var(--paper)), color-mix(in srgb, var(--memory) 18%, var(--paper))); }
 .view-banner h2 { margin-top: var(--space-2); }
 .week-actions { display: grid; gap: var(--space-2); }
 .week-navigation { display: flex; gap: var(--space-2); }
@@ -274,7 +347,7 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .week-day-summary { display: flex; min-width: 8rem; min-height: 136px; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 0; background: var(--paper); color: var(--ink); text-align: left; }
 .week-day-summary > span, .week-day-summary small { color: var(--muted); font-size: .78rem; }
 .week-day-summary strong { font-size: .95rem; }
-.week-day-summary.selected { outline: 2px solid var(--blue); outline-offset: -2px; }
+.week-day-summary.selected { outline: 2px solid var(--blue); outline-offset: -2px; background: linear-gradient(145deg, color-mix(in srgb, var(--blue) 8%, var(--paper)), color-mix(in srgb, var(--memory) 16%, var(--paper))); }
 .schedule-editor { display: grid; max-width: 68rem; grid-template-columns: minmax(0, 1fr); padding: var(--space-5) 0; }
 .schedule-editor-date { display: flex; align-items: baseline; gap: var(--space-2); padding: 0 0 var(--space-4); border-bottom: 2px solid var(--attention); color: var(--attention); font-variant-numeric: tabular-nums; }
 .schedule-editor-date span { font-size: .86rem; font-weight: 650; }
@@ -324,7 +397,15 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .recipe-banner-actions { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-3); text-align: right; }
 .view-count { color: var(--muted); font-variant-numeric: tabular-nums; }
 .recipe-detail { width: 100%; max-width: 70rem; margin: 0 auto; padding: 0 0 var(--space-8); }
-.detail-context-bar { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-5); }
+.detail-context-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+  margin-inline: calc(var(--space-4) * -1);
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  background: linear-gradient(120deg, color-mix(in srgb, var(--attention) 9%, var(--paper)), color-mix(in srgb, var(--memory) 15%, var(--paper)));
+}
 .detail-title-group { min-width: 0; }
 .detail-back { justify-content: flex-start; margin: 0 0 var(--space-5) -14px; }
 .detail-title-group h2 { max-width: 14ch; text-wrap: balance; }
@@ -357,9 +438,9 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   grid-template-columns: minmax(0, 1fr) auto;
   overflow: hidden;
   padding: var(--space-6) var(--space-5);
-  border-top: 3px solid var(--attention);
   background:
-    linear-gradient(118deg, color-mix(in srgb, var(--attention) 10%, var(--paper)) 0 54%, color-mix(in srgb, var(--memory) 34%, var(--paper)) 100%);
+    radial-gradient(circle at 92% 15%, color-mix(in srgb, var(--memory) 44%, transparent), transparent 31%),
+    linear-gradient(118deg, color-mix(in srgb, var(--attention) 13%, var(--paper)) 0 50%, color-mix(in srgb, var(--memory) 38%, var(--paper)) 100%);
 }
 .recipe-banner h2 { max-width: 6ch; }
 .recipe-banner::before, .recipe-banner::after { position: absolute; border-radius: 50%; content: ""; pointer-events: none; }
@@ -368,15 +449,15 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   bottom: -5.5rem;
   width: 18rem;
   height: 11rem;
-  background: color-mix(in srgb, var(--attention) 13%, transparent);
+  background: color-mix(in srgb, var(--attention) 16%, transparent);
   transform: rotate(-12deg);
 }
 .recipe-banner::after {
-  right: 5rem;
-  bottom: -5.25rem;
-  width: 9rem;
-  height: 9rem;
-  border: 1px solid color-mix(in srgb, var(--success) 34%, transparent);
+  right: 3rem;
+  bottom: -6.5rem;
+  width: 12rem;
+  height: 12rem;
+  background: color-mix(in srgb, var(--success) 11%, transparent);
 }
 .recipe-banner > * { position: relative; z-index: 1; }
 .recipe-picks {
@@ -384,11 +465,11 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   margin-inline: calc(var(--space-4) * -1);
   padding: var(--space-7) var(--space-4);
   border-top: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--success) 18%, var(--rule));
+  border-bottom: 0;
   background: linear-gradient(108deg, color-mix(in srgb, var(--memory) 24%, transparent), color-mix(in srgb, var(--paper) 48%, transparent));
 }
 .recipe-picks .section-note { max-width: 32rem; margin-top: var(--space-2); }
-.recipe-picks #recipePicksEmpty { max-width: 34rem; margin-top: var(--space-5); padding: var(--space-3) 0 var(--space-3) var(--space-4); border-left: 2px solid color-mix(in srgb, var(--success) 50%, var(--rule)); }
+.recipe-picks #recipePicksEmpty { max-width: 34rem; margin-top: var(--space-5); padding: var(--space-3) 0; }
 .recipe-picks:has(#recipePicksEmpty:not([hidden])) { padding-bottom: var(--space-6); }
 .recipe-list { display: grid; margin-top: var(--space-4); border-top: 1px solid var(--rule); }
 .recipe-card { position: relative; display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; width: 100%; min-height: 120px; align-items: center; gap: var(--space-4); padding: var(--space-3) 0; border: 0; border-bottom: 1px solid var(--rule); border-radius: 0; background: transparent; color: var(--ink); text-align: left; transition: background-color 160ms ease; }
@@ -399,7 +480,12 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .recipe-card.no-media h3, .recipe-card.no-media p, .recipe-card.no-media .category-pill, .recipe-card.no-media .recipe-pick-label { grid-column: 1; }
 .recipe-card h3 { font-size: clamp(1.35rem, 3vw, 1.8rem); }
 .recipe-card p, .category-pill { color: var(--muted); font-size: .86rem; }
-.recipe-browse { margin-top: 0; padding-top: var(--space-6); border-top: 0; }
+.recipe-browse {
+  margin: 0 calc(var(--space-4) * -1);
+  padding: var(--space-6) var(--space-4);
+  border-top: 0;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--attention) 5%, var(--paper)), color-mix(in srgb, var(--memory) 12%, var(--paper)));
+}
 .recipe-browse summary { display: flex; justify-content: space-between; gap: var(--space-4); font-family: var(--font-reading); font-size: 1.6rem; }
 .recipe-browse summary small { max-width: 17rem; color: var(--muted); font-family: var(--font-ui); font-size: .84rem; font-weight: 500; text-align: right; }
 .recipe-browse-content { padding-top: var(--space-3); }
@@ -410,11 +496,15 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 
 /* 5d. Shopping as a physical list */
 .inventory-mode-switch { margin-bottom: var(--space-5); }
-.grocery-banner { align-items: flex-start; padding-bottom: var(--space-4); }
+.grocery-banner {
+  align-items: flex-start;
+  padding: var(--space-5);
+  background: linear-gradient(125deg, color-mix(in srgb, var(--blue) 10%, var(--paper)), color-mix(in srgb, var(--success) 15%, var(--paper)));
+}
 .grocery-banner h2 { font-size: clamp(2.5rem, 9vw, 4rem); }
 .shopping-context { margin-top: var(--space-2); color: var(--muted); }
 .shopping-show-all { justify-content: flex-start; margin: var(--space-1) 0 0 -14px; }
-.finish-shopping-prompt { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
+.finish-shopping-prompt { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-4); border-bottom: 0; background: linear-gradient(110deg, color-mix(in srgb, var(--blue) 7%, var(--paper)), color-mix(in srgb, var(--memory) 12%, var(--paper))); }
 .finish-shopping-prompt span { display: block; color: var(--muted); font-size: .84rem; }
 .grocery-meal-filter { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
 .grocery-meal-filter strong { font-size: .9rem; font-weight: 600; }
@@ -475,6 +565,7 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 }
 
 @media (max-width: 699px) {
+  .dinner-feedback, .smart-suggestions, .today-tools { margin-inline: calc(var(--space-4) * -1); }
   .view-banner { align-items: flex-start; }
   .view-banner.week-banner, .week-actions { display: grid; width: 100%; }
   .week-navigation { width: 100%; }
@@ -498,7 +589,10 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   main { padding-inline: var(--space-6); }
   .view { padding-top: var(--space-6); }
   .recipe-picks { margin-inline: calc(var(--space-6) * -1); padding-inline: var(--space-6); }
+  .recipe-browse { margin-inline: calc(var(--space-6) * -1); padding-inline: var(--space-6); }
   .today-story, .today-handoff, .smart-suggestions, .dinner-feedback, .today-tools { max-width: 44rem; margin-right: auto; margin-left: auto; }
+  .today-dashboard { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .focused-dinner-header, .detail-context-bar { margin-inline: 0; }
   .today-story { padding-top: var(--space-5); }
   .today-story.has-photo { display: grid; max-width: none; grid-template-columns: minmax(0, 1.15fr) minmax(13rem, .85fr); align-items: center; gap: var(--space-6); }
   .today-story.has-photo .today-image { display: block; }

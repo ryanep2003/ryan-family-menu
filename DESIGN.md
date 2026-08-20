@@ -28,7 +28,7 @@ The current implementation applies this direction to the connected Today → Pla
 
 Use the eight-step spacing scale only: 4, 8, 12, 16, 24, 32, 48, and 64px. Geometry is square by default; controls use 8px radius and temporary sheets or media use 16px. There are no resting shadows. Elevation is reserved for real temporary overlays.
 
-Core views may use very pale, related page washes derived from this palette: morning sage for Today, warm parchment for Plan, cool mineral for Shop, and an apricot-to-olive archive wash for Library. These washes create atmosphere and reading rhythm; they must not replace labels, encode navigation, or introduce a separate color system for each feature.
+Core views use related page washes derived from this palette: morning sage for Today, warm parchment for Plan, cool mineral for Shop, and an apricot-to-olive archive wash for Library. Within a view, broad shaded chapters may distinguish the immediate meal, reflection, next action, and quieter household tools. These chapters use soft gradients and filled color fields rather than decorative lines, isolated badges, or a collection of cards. They create atmosphere and reading rhythm; they must not replace labels, encode navigation, or introduce a separate color system for each feature.
 
 ## Typography
 
