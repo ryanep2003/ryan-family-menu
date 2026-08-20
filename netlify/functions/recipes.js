@@ -79,6 +79,26 @@ async function readRecipes(store, householdId) {
   return [...indexedRecipes, ...legacyRecipes].slice(0, MAX_RECIPES);
 }
 
+async function readRecipeById(store, householdId, id) {
+  if (typeof id !== "string" || !/^[a-z0-9-]{1,160}$/i.test(id)) return null;
+  const indexed = await store
+    .get(householdDataKey(householdId, `${RECIPE_PREFIX}${id}`), { type: "json" })
+    .catch(() => null);
+  if (indexed?.id === id) return indexed;
+  const legacy = (await store
+    .get(householdDataKey(householdId, RECIPES_KEY), { type: "json" })
+    .catch(() => [])) || [];
+  return legacy.find((recipe) => recipe?.id === id) || null;
+}
+
+function recipeCardMedia(recipe) {
+  const explicit = cleanPhoto(recipe?.cardPhoto);
+  const legacySingle = Array.isArray(recipe?.photos) && recipe.photos.length === 1
+    ? cleanPhoto(recipe.photos[0])
+    : "";
+  return explicit || legacySingle;
+}
+
 async function writeRecipe(store, recipe, householdId) {
   const indexKey = householdDataKey(householdId, INDEX_KEY);
   const index = (await store.get(indexKey, { type: "json" }).catch(() => [])) || [];
@@ -108,14 +128,18 @@ export default async (request) => {
 
   if (request.method === "GET") {
     try {
-      const recipes = await readRecipes(store, access.household.id);
       const params = new URL(request.url).searchParams;
       const view = params.get("view");
       const id = params.get("id");
       if (id) {
-        const recipe = recipes.find((item) => item?.id === id);
-        return recipe ? jsonResponse({ recipe }) : jsonResponse({ error: "Recipe not found" }, 404);
+        const recipe = await readRecipeById(store, access.household.id, id);
+        if (!recipe) return jsonResponse({ error: "Recipe not found" }, 404);
+        if (view === "card") {
+          return jsonResponse({ id: recipe.id, cardPhoto: recipeCardMedia(recipe) });
+        }
+        return jsonResponse({ recipe });
       }
+      const recipes = await readRecipes(store, access.household.id);
       return jsonResponse({ recipes: view === "catalog" ? recipes.map(compactRecipeForCatalog).filter(Boolean) : recipes });
     } catch (error) {
       console.error(error);

@@ -62,6 +62,8 @@ test("recipe endpoint keeps a bounded full-detail read alongside compact catalog
   const source = await readFile(new URL("../netlify/functions/recipes.js", import.meta.url), "utf8");
   assert.match(source, /params\.get\("id"\)/);
   assert.match(source, /params\.get\("view"\)/);
+  assert.match(source, /view === "card"/);
+  assert.match(source, /readRecipeById\(store, access\.household\.id, id\)/);
   assert.match(source, /Recipe not found/);
 });
 

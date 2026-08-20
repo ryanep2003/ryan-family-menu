@@ -36,6 +36,7 @@ export function createScheduleUi({
   cookingServings = plannedServings,
   recipeBatchPlan = () => null,
   allRecipes,
+  getRecipeCatalogStatus = () => "ready",
   availableLeftoversForDate = () => [],
   openGroceriesForMeal = () => {},
   copyCurrentWeekToNextWeek,
@@ -54,6 +55,7 @@ export function createScheduleUi({
   getVisibleMonth,
   setVisibleMonth,
   getFamilyMembers = () => [],
+  onRecipeMediaRendered = () => {},
   onFocusedDinnerComplete = () => {},
 }) {
   let selectedWeekDateKey = "";
@@ -63,6 +65,7 @@ export function createScheduleUi({
   let focusedDinnerDraft = null;
   let focusedDinnerChoosing = false;
   let focusedDinnerSearch = "";
+  const mealSearchState = new Map();
 
   function renderPlanningMode() {
     const weekPanel = $("#weekPlanningPanel");
@@ -94,13 +97,22 @@ export function createScheduleUi({
   }
 
   function recipeResults(query, categoryFilter, context, period) {
+    const catalogStatus = getRecipeCatalogStatus();
+    if (catalogStatus !== "ready") {
+      return `<p class="meal-search-state">${escapeHtml(t(catalogStatus === "loading" ? "recipeCatalogLoading" : "recipeCatalogUnavailable"))}</p>`;
+    }
     const matches = matchingRecipes(query, categoryFilter);
     return matches.slice(0, 12).map((recipe) => {
       const category = categoryFor(recipe);
       const role = mealRoles.find((item) => item.key === category) || mealRoles.find((item) => item.key === "other");
-      const hasPhoto = !cardPhotoIsGenerated(recipe);
-      return `<button class="meal-recipe-result${hasPhoto ? " has-image" : ""}" type="button" data-add-meal-result="${escapeHtml(context)}" data-period="${escapeHtml(period)}" data-recipe-id="${escapeHtml(recipe.id)}">
-        ${hasPhoto ? `<img src="${escapeHtml(cardPhotoFor(recipe))}" alt="" loading="lazy" decoding="async" />` : ""}
+      const hasPhoto = !cardPhotoIsGenerated(recipe) && Boolean(cardPhotoFor(recipe));
+      const canHydratePhoto = !hasPhoto && recipe.hasSourcePhotos;
+      return `<button class="meal-recipe-result${hasPhoto || canHydratePhoto ? " has-image" : ""}" type="button" data-add-meal-result="${escapeHtml(context)}" data-period="${escapeHtml(period)}" data-recipe-id="${escapeHtml(recipe.id)}">
+        ${hasPhoto
+          ? `<span class="recipe-photo-shell is-loaded"><img src="${escapeHtml(cardPhotoFor(recipe))}" alt="" loading="lazy" decoding="async" /></span>`
+          : canHydratePhoto
+            ? `<span class="recipe-photo-shell" data-recipe-photo-id="${escapeHtml(recipe.id)}" data-recipe-photo-alt="" aria-hidden="true"></span>`
+            : ""}
         <span class="meal-recipe-result-copy">
           <strong>${escapeHtml(localize(recipe.name))}</strong>
           ${localize(recipe.short || recipe.meta) ? `<small>${escapeHtml(localize(recipe.short || recipe.meta))}</small>` : ""}
@@ -136,25 +148,38 @@ export function createScheduleUi({
     ].filter(Boolean).join(" · ");
   }
 
-  function focusedSearchMarkup() {
+  function focusedRecipeResultsMarkup() {
+    const catalogStatus = getRecipeCatalogStatus();
     const matches = matchingRecipes(focusedDinnerSearch, "all").slice(0, 8);
+    if (catalogStatus !== "ready") {
+      return `<p>${escapeHtml(t(catalogStatus === "loading" ? "recipeCatalogLoading" : "recipeCatalogUnavailable"))}</p>`;
+    }
+    if (focusedDinnerSearch && !matches.length) return `<p>${t("noRecipeMatches")}</p>`;
+    return matches.map((recipe) => {
+      const hasPhoto = !cardPhotoIsGenerated(recipe) && Boolean(cardPhotoFor(recipe));
+      const canHydratePhoto = !hasPhoto && recipe.hasSourcePhotos;
+      return `
+        <button class="focused-recipe-result${hasPhoto || canHydratePhoto ? " has-image" : ""}" type="button" data-focused-recipe="${escapeHtml(recipe.id)}">
+          ${hasPhoto
+            ? `<span class="recipe-photo-shell is-loaded"><img src="${escapeHtml(cardPhotoFor(recipe))}" alt="" loading="lazy" decoding="async" /></span>`
+            : canHydratePhoto
+              ? `<span class="recipe-photo-shell" data-recipe-photo-id="${escapeHtml(recipe.id)}" data-recipe-photo-alt="" aria-hidden="true"></span>`
+              : ""}
+          <span class="focused-recipe-copy"><strong>${escapeHtml(localize(recipe.name))}</strong>
+          <small>${escapeHtml(localize(recipe.short || recipe.meta) || t("chooseRecipe"))}</small></span>
+        </button>
+      `;
+    }).join("");
+  }
+
+  function focusedSearchMarkup() {
     return `
       <label class="focused-dinner-search">
         <span>${t("whatShouldWeHave")}</span>
         <input id="focusedDinnerSearch" type="search" autocomplete="off" inputmode="search" value="${escapeHtml(focusedDinnerSearch)}" placeholder="${escapeHtml(t("recipeSearchPlaceholder"))}" />
       </label>
       <div class="focused-recipe-results" id="focusedDinnerResults">
-        ${matches.map((recipe) => {
-          const hasPhoto = !cardPhotoIsGenerated(recipe);
-          return `
-          <button class="focused-recipe-result${hasPhoto ? " has-image" : ""}" type="button" data-focused-recipe="${escapeHtml(recipe.id)}">
-            ${hasPhoto ? `<img src="${escapeHtml(cardPhotoFor(recipe))}" alt="" loading="lazy" decoding="async" />` : ""}
-            <span class="focused-recipe-copy"><strong>${escapeHtml(localize(recipe.name))}</strong>
-            <small>${escapeHtml(localize(recipe.short || recipe.meta) || t("chooseRecipe"))}</small></span>
-          </button>
-        `;
-        }).join("")}
-        ${focusedDinnerSearch && !matches.length ? `<p>${t("noRecipeMatches")}</p>` : ""}
+        ${focusedRecipeResultsMarkup()}
       </div>
     `;
   }
@@ -234,6 +259,7 @@ export function createScheduleUi({
         ` : ""}
       </form>
     `;
+    onRecipeMediaRendered();
 
     $("#cancelFocusedDinner")?.addEventListener("click", () => closeFocusedDinner({ navigate: true }));
     $("#changeFocusedDinner")?.addEventListener("click", () => {
@@ -246,14 +272,9 @@ export function createScheduleUi({
       focusedDinnerSearch = event.target.value;
       const results = $("#focusedDinnerResults");
       if (results) {
-        const matches = matchingRecipes(focusedDinnerSearch, "all").slice(0, 8);
-        results.innerHTML = matches.map((match) => `
-          <button type="button" data-focused-recipe="${escapeHtml(match.id)}">
-            <span>${escapeHtml(localize(match.name))}</span>
-            <small>${escapeHtml(localize(match.short || match.meta) || t("chooseRecipe"))}</small>
-          </button>
-        `).join("") || (focusedDinnerSearch ? `<p>${t("noRecipeMatches")}</p>` : "");
+        results.innerHTML = focusedRecipeResultsMarkup();
         bindFocusedRecipeChoices();
+        onRecipeMediaRendered();
       }
     });
     bindFocusedRecipeChoices();
@@ -343,12 +364,14 @@ export function createScheduleUi({
     const servingPlan = meal.servingPlans?.[period.key] || meal.servingPlan;
     const neededServings = plannedServings(servingPlan);
     const controlId = `meal-${context}-${period.key}`.replace(/[^a-zA-Z0-9_-]/g, "-");
+    const searchKey = `${context}:${period.key}`;
+    const searchState = mealSearchState.get(searchKey) || { query: "", category: "all", open: false };
     return `
-      <section class="meal-builder-period" aria-labelledby="${controlId}-heading">
+      <section class="meal-builder-period period-${escapeHtml(period.key)}" aria-labelledby="${controlId}-heading">
         <div class="meal-builder-period-heading">
           <h4 id="${controlId}-heading">${t(period.label)}</h4>
           <div class="meal-builder-period-meta">
-            <span>${t(items.length === 1 ? "mealItemCountOne" : "mealItemCountMany").replace("{count}", items.length)}</span>
+            ${items.length ? `<span>${t(items.length === 1 ? "mealItemCountOne" : "mealItemCountMany").replace("{count}", items.length)}</span>` : ""}
             ${items.some((item) => item.sourceType !== "leftover")
               ? `<button class="text-button meal-grocery-link" type="button" data-view-meal-groceries="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}">${t("viewMealGroceries")}</button>`
               : ""}
@@ -375,25 +398,25 @@ export function createScheduleUi({
             </article>`;
           }).join("") : `<p class="meal-period-empty">${t("mealPeriodEmpty")}</p>`}
         </div>
-        <details class="meal-item-adder">
+        <details class="meal-item-adder"${searchState.open ? " open" : ""}>
           <summary>${t("addToMeal").replace("{meal}", t(period.label))}</summary>
           <div class="meal-item-adder-fields">
             <div class="meal-search-tools">
               <label>
                 <span>${t("findRecipe")}</span>
-                <input id="${controlId}-search" type="search" inputmode="search" autocomplete="off" data-meal-item-search="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}" placeholder="${escapeHtml(t("recipeSearchPlaceholder"))}" />
+                <input id="${controlId}-search" type="search" inputmode="search" autocomplete="off" data-meal-item-search="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}" value="${escapeHtml(searchState.query)}" placeholder="${escapeHtml(t("recipeSearchPlaceholder"))}" />
               </label>
               <label>
                 <span>${t("categoryFilterLabel")}</span>
                 <select data-meal-category-filter="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}">
-                  <option value="all">${t("categoryAll")}</option>
-                  ${mealRoles.filter((role) => ["main", "side", "salad", "dessert", "sauce", "drink", "other"].includes(role.key)).map((role) => `<option value="${escapeHtml(role.key)}">${escapeHtml(t(role.label))}</option>`).join("")}
+                  <option value="all"${searchState.category === "all" ? " selected" : ""}>${t("categoryAll")}</option>
+                  ${mealRoles.filter((role) => ["main", "side", "salad", "dessert", "sauce", "drink", "other"].includes(role.key)).map((role) => `<option value="${escapeHtml(role.key)}"${searchState.category === role.key ? " selected" : ""}>${escapeHtml(t(role.label))}</option>`).join("")}
                 </select>
               </label>
             </div>
             <small class="meal-search-hint">${t("tapRecipeToAdd")}</small>
-            <div class="meal-recipe-results" data-meal-recipe-results="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}"></div>
-            <small class="meal-search-empty" data-meal-item-empty="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}" hidden>${t("noRecipeMatches")}</small>
+            <div class="meal-recipe-results${searchState.open ? " is-open" : ""}" data-meal-recipe-results="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}">${searchState.open ? recipeResults(searchState.query, searchState.category, context, period.key) : ""}</div>
+            <small class="meal-search-empty" data-meal-item-empty="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}"${searchState.open && searchState.query.trim() && getRecipeCatalogStatus() === "ready" && !matchingRecipes(searchState.query, searchState.category).length ? "" : " hidden"}>${t("noRecipeMatches")}</small>
           </div>
         </details>
         ${availableLeftovers.length ? `
@@ -465,7 +488,10 @@ export function createScheduleUi({
       ${label ? `<strong>${escapeHtml(label)}</strong>` : ""}
       <div class="meal-picker">
         <label class="dinner-pace-control">
-          <span><strong>${t("dinnerPaceLabel")}</strong><small>${t("dinnerPaceHelper")}</small></span>
+          <span class="dinner-pace-copy">
+            <strong>${t("dinnerPaceLabel")}</strong>
+            <small>${t("dinnerPaceHelper")}</small>
+          </span>
           <select data-meal-context="${escapeHtml(context)}" data-slot="dinner-pace">
             <option value=""${!meal.dinnerPace ? " selected" : ""}>${t("dinnerPaceUnset")}</option>
             <option value="quick"${meal.dinnerPace === "quick" ? " selected" : ""}>${t("dinnerPaceQuick")}</option>
@@ -566,6 +592,28 @@ export function createScheduleUi({
   }
 
   function bindMealControls(contextType) {
+    function updateMealSearch(search, categoryFilter) {
+      const context = search.dataset.mealItemSearch;
+      const period = search.dataset.period;
+      const category = categoryFilter?.value || "all";
+      mealSearchState.set(`${context}:${period}`, { query: search.value, category, open: true });
+      const results = $$(`[data-meal-recipe-results^="${contextType}:"]`).find((control) => (
+        control.dataset.mealRecipeResults === context && control.dataset.period === period
+      ));
+      const matches = matchingRecipes(search.value, category);
+      if (results) {
+        results.innerHTML = recipeResults(search.value, category, context, period);
+        results.classList?.add?.("is-open");
+        onRecipeMediaRendered();
+      }
+      const empty = $$(`[data-meal-item-empty^="${contextType}:"]`).find((item) => (
+        item.dataset.mealItemEmpty === context && item.dataset.period === period
+      ));
+      if (empty) {
+        empty.hidden = getRecipeCatalogStatus() !== "ready" || !search.value.trim() || matches.length > 0;
+      }
+    }
+
     $$(`[data-view-meal-groceries^="${contextType}:"]`).forEach((button) => {
       button.addEventListener("click", () => {
         openGroceriesForMeal(button.dataset.viewMealGroceries.split(":")[1], button.dataset.period);
@@ -579,21 +627,12 @@ export function createScheduleUi({
     });
 
     $$(`[data-meal-item-search^="${contextType}:"]`).forEach((search) => {
+      const categoryFilter = () => $$(`[data-meal-category-filter^="${contextType}:"]`).find((control) => (
+        control.dataset.mealCategoryFilter === search.dataset.mealItemSearch && control.dataset.period === search.dataset.period
+      ));
+      search.addEventListener("focus", () => updateMealSearch(search, categoryFilter()));
       search.addEventListener("input", () => {
-        const context = search.dataset.mealItemSearch;
-        const period = search.dataset.period;
-        const categoryFilter = $$(`[data-meal-category-filter^="${contextType}:"]`).find((control) => (
-          control.dataset.mealCategoryFilter === context && control.dataset.period === period
-        ))?.value || "all";
-        const results = $$(`[data-meal-recipe-results^="${contextType}:"]`).find((control) => (
-          control.dataset.mealRecipeResults === context && control.dataset.period === period
-        ));
-        const matches = matchingRecipes(search.value, categoryFilter);
-        if (results) results.innerHTML = recipeResults(search.value, categoryFilter, context, period);
-        const empty = $$(`[data-meal-item-empty^="${contextType}:"]`).find((item) => (
-          item.dataset.mealItemEmpty === context && item.dataset.period === period
-        ));
-        if (empty) empty.hidden = !search.value.trim() || matches.length > 0;
+        updateMealSearch(search, categoryFilter());
       });
     });
 
@@ -604,16 +643,7 @@ export function createScheduleUi({
         const search = $$(`[data-meal-item-search^="${contextType}:"]`).find((control) => (
           control.dataset.mealItemSearch === context && control.dataset.period === period
         ));
-        const results = $$(`[data-meal-recipe-results^="${contextType}:"]`).find((control) => (
-          control.dataset.mealRecipeResults === context && control.dataset.period === period
-        ));
-        const query = search?.value || "";
-        const matches = matchingRecipes(query, filter.value);
-        if (results) results.innerHTML = recipeResults(query, filter.value, context, period);
-        const empty = $$(`[data-meal-item-empty^="${contextType}:"]`).find((item) => (
-          item.dataset.mealItemEmpty === context && item.dataset.period === period
-        ));
-        if (empty) empty.hidden = !query.trim() || matches.length > 0;
+        if (search) updateMealSearch(search, filter);
       });
     });
 
@@ -794,13 +824,22 @@ export function createScheduleUi({
     const selectedDay = weekDates.find((day) => day.dateKey === selectedWeekDateKey);
     const editor = $("#weekDateEditor");
     const editorLabel = `${selectedDay[lang]} · ${rangeFormatter.format(selectedDay.date)}`;
+    const editorMonth = new Intl.DateTimeFormat(lang === "es" ? "es-US" : "en-US", { month: "short" }).format(selectedDay.date);
+    const editorDay = new Intl.NumberFormat(lang === "es" ? "es" : "en").format(selectedDay.date.getDate());
     editor.innerHTML = `
-      <div class="schedule-editor-heading">
-        <div><span>${t("editDay")}</span><h3 id="weekEditorHeading" tabindex="-1">${escapeHtml(editorLabel)}</h3></div>
-        <button class="ghost-button compact-button meal-save-button" type="button" data-save-meal-context="weekdate:${selectedWeekDateKey}">${t("saveMealChanges")}</button>
+      <div class="schedule-editor-date" aria-hidden="true">
+        <span>${escapeHtml(selectedDay[lang])}</span>
+        <strong>${escapeHtml(editorDay)}</strong>
+        <small>${escapeHtml(editorMonth)}</small>
       </div>
-      <p class="meal-save-status" role="status" data-meal-save-status="weekdate:${selectedWeekDateKey}"></p>
-      ${renderMealControls(calendarMealForDateKey(selectedWeekDateKey), `weekdate:${selectedWeekDateKey}`, "")}
+      <div class="schedule-editor-work">
+        <div class="schedule-editor-heading">
+          <div><span>${t("editDay")}</span><h3 id="weekEditorHeading" tabindex="-1">${escapeHtml(editorLabel)}</h3></div>
+          <button class="ghost-button compact-button meal-save-button" type="button" data-save-meal-context="weekdate:${selectedWeekDateKey}">${t("saveMealChanges")}</button>
+        </div>
+        <p class="meal-save-status" role="status" data-meal-save-status="weekdate:${selectedWeekDateKey}"></p>
+        ${renderMealControls(calendarMealForDateKey(selectedWeekDateKey), `weekdate:${selectedWeekDateKey}`, "")}
+      </div>
     `;
 
     bindMealControls("weekdate");

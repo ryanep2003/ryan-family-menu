@@ -176,6 +176,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     { id: "side-recipe", name: "Side Recipe", category: "side" },
     { id: "salad-recipe", name: "Salad Recipe", meta: "Fresh greens", category: "salad" },
     { id: "dessert-recipe", name: "Dessert Recipe", category: "dessert" },
+    { id: "one-dish-halibut", name: "One-Dish Halibut with Summer Vegetables", category: "main" },
   ];
   const state = {
     schedule: Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])),
@@ -452,11 +453,26 @@ test("recipe search shows one-tap matching results", async () => {
   await weekRecipeSearch.dispatch("input");
   assert.match(weekRecipeResults.innerHTML, /Salad Recipe/);
 
+  weekRecipeSearch.value = "one";
+  await weekRecipeSearch.dispatch("input");
+  assert.match(weekRecipeResults.innerHTML, /One-Dish Halibut with Summer Vegetables/);
+
   weekRecipeSearch.value = "";
   weekRecipeCategoryFilter.value = "dessert";
   await weekRecipeCategoryFilter.dispatch("change");
   assert.match(weekRecipeResults.innerHTML, /Dessert Recipe/);
   assert.doesNotMatch(weekRecipeResults.innerHTML, /Salad Recipe/);
+});
+
+test("recipe search opens useful suggestions on focus before typing", async () => {
+  const { ui, weekRecipeSearch, weekRecipeResults } = harness();
+  weekRecipeSearch.value = "";
+
+  ui.renderSchedule();
+  await weekRecipeSearch.dispatch("focus");
+
+  assert.match(weekRecipeResults.innerHTML, /Main Recipe/);
+  assert.match(weekRecipeResults.innerHTML, /Another Main/);
 });
 
 test("week editor exposes an explicit save retry for the open day", async () => {

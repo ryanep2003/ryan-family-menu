@@ -1612,6 +1612,80 @@ function showAppUpdateNotice() {
   notice.hidden = false;
 }
 
+const recipeCardMediaCache = new Map();
+const recipeCardMediaInFlight = new Map();
+let recipePhotoObserver = null;
+
+function applyRecipeCardMedia(id, cardPhoto) {
+  document.querySelectorAll(`[data-recipe-photo-id="${CSS.escape(id)}"]`).forEach((shell) => {
+    if (!cardPhoto) {
+      shell.closest(".recipe-card, .meal-recipe-result, .focused-recipe-result")?.classList.remove("has-media", "has-image");
+      shell.closest(".recipe-card")?.classList.add("no-media");
+      shell.remove();
+      return;
+    }
+    const image = document.createElement("img");
+    image.src = cardPhoto;
+    image.alt = shell.dataset.recipePhotoAlt || "";
+    image.loading = "lazy";
+    image.decoding = "async";
+    shell.replaceChildren(image);
+    shell.classList.add("is-loaded");
+    shell.removeAttribute("aria-hidden");
+  });
+}
+
+async function loadRecipeCardMedia(id) {
+  if (!id) return "";
+  if (recipeCardMediaCache.has(id)) {
+    const cached = recipeCardMediaCache.get(id);
+    applyRecipeCardMedia(id, cached);
+    return cached;
+  }
+  if (recipeCardMediaInFlight.has(id)) return recipeCardMediaInFlight.get(id);
+  const request = getJson(`/.netlify/functions/recipes?id=${encodeURIComponent(id)}&view=card`, "Could not load recipe photo.", { timeoutMs: 15000 })
+    .then((data) => {
+      const cardPhoto = typeof data?.cardPhoto === "string" ? data.cardPhoto : "";
+      recipeCardMediaCache.set(id, cardPhoto);
+      applyRecipeCardMedia(id, cardPhoto);
+      return cardPhoto;
+    })
+    .catch((error) => {
+      console.warn(error);
+      recipeCardMediaCache.set(id, "");
+      applyRecipeCardMedia(id, "");
+      return "";
+    })
+    .finally(() => recipeCardMediaInFlight.delete(id));
+  recipeCardMediaInFlight.set(id, request);
+  return request;
+}
+
+function queueRecipePhotoHydration(root = document) {
+  const shells = [...root.querySelectorAll("[data-recipe-photo-id]")];
+  if (!shells.length) return;
+  shells.forEach((shell) => {
+    const id = shell.dataset.recipePhotoId;
+    if (recipeCardMediaCache.has(id)) {
+      applyRecipeCardMedia(id, recipeCardMediaCache.get(id));
+      return;
+    }
+    if (!("IntersectionObserver" in window)) {
+      loadRecipeCardMedia(id);
+      return;
+    }
+    if (!recipePhotoObserver) {
+      recipePhotoObserver = new IntersectionObserver((entries) => {
+        entries.filter((entry) => entry.isIntersecting).forEach((entry) => {
+          recipePhotoObserver.unobserve(entry.target);
+          loadRecipeCardMedia(entry.target.dataset.recipePhotoId);
+        });
+      }, { rootMargin: "240px 0px" });
+    }
+    recipePhotoObserver.observe(shell);
+  });
+}
+
 const dashboardUi = createDashboardUi({
   $,
   $$,
@@ -1629,6 +1703,7 @@ const dashboardUi = createDashboardUi({
   plannedServings,
   recipeBatchPlan,
   allRecipes,
+  getRecipeCatalogStatus: () => sharedRecipesStatus,
   saveSharedState,
   offerUndo,
   render,
@@ -1698,6 +1773,7 @@ const scheduleUi = createScheduleUi({
   cookingServings,
   recipeBatchPlan,
   allRecipes,
+  getRecipeCatalogStatus: () => sharedRecipesStatus,
   availableLeftoversForDate,
   openGroceriesForMeal: async (dateKey, mealSlot) => {
     const plannedRecipeIds = new Set(mealRecipes(calendarMealForDateKey(dateKey))
@@ -1747,6 +1823,7 @@ const scheduleUi = createScheduleUi({
     visibleMonth = month;
   },
   getFamilyMembers: () => familyMembers,
+  onRecipeMediaRendered: queueRecipePhotoHydration,
   onFocusedDinnerComplete: () => {
     setView("today");
     renderToday();
@@ -1787,6 +1864,7 @@ const recipeLibraryUi = createRecipeLibraryUi({
   },
   setDetailStatus,
   getRecipeMemory: (recipeId) => selectRecipeMemory(recipeId, dinnerEvents, familyMembers),
+  onRecipeMediaRendered: queueRecipePhotoHydration,
   onRecipeOpen: loadRecipeDetail,
   canTranslateRecipe: (recipeId, targetLang) => {
     const recipe = rawRecipeById(recipeId);
@@ -1913,6 +1991,7 @@ function render() {
   bindOpenButtons();
   bindGroceryControls();
   bindInventoryControls();
+  queueRecipePhotoHydration();
 }
 
 function setView(viewName) {

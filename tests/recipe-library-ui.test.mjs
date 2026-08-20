@@ -233,7 +233,7 @@ test("renderDetail escapes photo URLs in detail markup", () => {
   assert.doesNotMatch(elements["#photoStrip"].innerHTML, /onerror="alert/);
 });
 
-test("photo-less recipes use a decorative food placeholder only on the card", () => {
+test("photo-less recipes stay typographic instead of showing generic food art", () => {
   const { elements, ui } = harness({
     recipe: {
       photos: [],
@@ -245,9 +245,25 @@ test("photo-less recipes use a decorative food placeholder only on the card", ()
   ui.renderRecipes();
   ui.renderDetail();
 
-  assert.match(elements["#recipeList"].innerHTML, /data:image\/svg\+xml,/);
-  assert.match(elements["#recipeList"].innerHTML, /alt=""/);
+  assert.match(elements["#recipeList"].innerHTML, /recipe-card no-media/);
+  assert.doesNotMatch(elements["#recipeList"].innerHTML, /data:image\/svg\+xml,/);
+  assert.doesNotMatch(elements["#recipeList"].innerHTML, /<img/);
   assert.equal(elements["#photoStrip"].innerHTML, "");
+});
+
+test("compact recipes advertise lazy real-photo hydration without embedding media", () => {
+  const { elements, ui } = harness({
+    recipe: {
+      photos: [],
+      cardPhoto: "",
+      hasSourcePhotos: true,
+    },
+  });
+
+  ui.renderRecipes();
+
+  assert.match(elements["#recipeList"].innerHTML, /data-recipe-photo-id=/);
+  assert.doesNotMatch(elements["#recipeList"].innerHTML, /data:image\/svg\+xml,/);
 });
 
 test("renderDetail resets recipe edit mode when switching recipes or languages", () => {

@@ -29,6 +29,7 @@ export function createRecipeLibraryUi({
   canTranslateRecipe = () => false,
   isRecipeTranslationPending = () => false,
   getRecipeMemory = () => ({}),
+  onRecipeMediaRendered = () => {},
   setView,
 }) {
   let lastLibraryButton = null;
@@ -83,12 +84,18 @@ export function createRecipeLibraryUi({
     const meta = displayText(recipe.meta).text;
     const short = displayText(recipe.short).text;
     const cardPhoto = cardPhotoFor(recipe);
+    const hasPhoto = !cardPhotoIsGenerated(recipe) && Boolean(cardPhoto);
+    const canHydratePhoto = !hasPhoto && recipe.hasSourcePhotos;
     const pickLabel = pick
       ? plannedIds.has(recipe.id) ? t("recipePickPlanned") : t("recipePickFavorite")
       : "";
     return `
-      <button class="recipe-card${pick ? " recipe-pick-card" : ""}" style="--card-order: ${Math.min(index, 8)}" type="button" data-open="${escapeHtml(recipe.id)}">
-        <img src="${escapeHtml(cardPhoto)}" alt="${cardPhotoIsGenerated(recipe) ? "" : escapeHtml(name)}" loading="lazy" decoding="async" />
+      <button class="recipe-card${pick ? " recipe-pick-card" : ""}${hasPhoto || canHydratePhoto ? " has-media" : " no-media"}" style="--card-order: ${Math.min(index, 8)}" type="button" data-open="${escapeHtml(recipe.id)}">
+        ${hasPhoto
+          ? `<span class="recipe-photo-shell is-loaded"><img src="${escapeHtml(cardPhoto)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" /></span>`
+          : canHydratePhoto
+            ? `<span class="recipe-photo-shell" data-recipe-photo-id="${escapeHtml(recipe.id)}" data-recipe-photo-alt="${escapeHtml(name)}" aria-hidden="true"></span>`
+            : ""}
         ${pickLabel ? `<span class="recipe-pick-label">${escapeHtml(pickLabel)}</span>` : ""}
         <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
         ${getFavorites().includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}
@@ -134,6 +141,9 @@ export function createRecipeLibraryUi({
       .map((recipe, index) => recipeCardMarkup(recipe, index, { pick: true, plannedIds }))
       .join("");
     $("#recipePicksEmpty").hidden = picks.length > 0;
+    if ($("#recipePicksSection")) {
+      $("#recipePicksSection").hidden = catalogStatus === "ready" && recipes.length === 0;
+    }
     $("#recipeList").innerHTML = catalogStatus === "loading"
       ? `<p class="empty-state">${t("recipeCatalogLoading")}<br><button class="ghost-button compact-button" type="button" data-retry-recipe-catalog>${t("retrySync")}</button></p>`
       : catalogStatus === "unavailable"
@@ -145,6 +155,7 @@ export function createRecipeLibraryUi({
         ? `<div class="empty-state recipe-catalog-empty"><strong>${t("recipeCatalogEmpty")}</strong><span>${t("recipeCatalogEmptyNote")}</span></div>`
         : `<p class="empty-state">${t("noMatchingRecipes")}</p>`;
     }
+    onRecipeMediaRendered();
   }
 
   function renderDetail() {
