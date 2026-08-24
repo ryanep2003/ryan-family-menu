@@ -159,6 +159,11 @@ export function createRecipeLibraryUi({
 
   function renderDetail() {
     const recipe = recipeById(getSelectedRecipeId());
+    if (!recipe) {
+      $("#recipeDetail").hidden = true;
+      $("#recipesView").classList.remove("detail-open");
+      return;
+    }
     const isLocalDraft = Boolean(draftById(recipe.id));
     const nameDisplay = displayText(recipe.name);
     const metaDisplay = displayText(recipe.meta);

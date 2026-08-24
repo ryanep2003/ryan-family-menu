@@ -127,9 +127,9 @@ function harness(overrides = {}) {
     getFavorites: () => [],
     getPlannedRecipeIds: () => overrides.plannedRecipeIds || [],
     allRecipes: () => overrides.recipes || [recipe],
-    recipeById: () => recipe,
+    recipeById: overrides.recipeById || (() => recipe),
     draftById: () => null,
-    getSelectedRecipeId: () => recipe.id,
+    getSelectedRecipeId: () => overrides.selectedRecipeId || recipe.id,
     setSelectedRecipeId: () => {},
     getRecipeSearch: () => overrides.search || "",
     setRecipeSearch: () => {},
@@ -189,6 +189,20 @@ test("catalog loading, unavailable, and genuinely empty states remain distinct",
   assert.match(empty.elements["#recipeList"].innerHTML, /recipeCatalogEmpty/);
   assert.match(empty.elements["#recipeList"].innerHTML, /recipeCatalogEmptyNote/);
   assert.doesNotMatch(empty.elements["#recipeList"].innerHTML, /noMatchingRecipes/);
+});
+
+test("renderDetail tolerates an empty Blob catalog while recipes are loading", () => {
+  const { elements, ui } = harness({
+    recipes: [],
+    selectedRecipeId: "",
+    recipeById: () => null,
+    catalogStatus: "loading",
+  });
+
+  ui.renderDetail();
+
+  assert.equal(elements["#recipeDetail"].hidden, true);
+  assert.equal(elements["#recipesView"].classList.values.has("detail-open"), false);
 });
 
 test("a loaded household catalog reports and renders every returned recipe", () => {
