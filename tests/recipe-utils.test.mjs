@@ -21,7 +21,7 @@ test("recipe servings use explicit yield and remain compatible with seeded metad
   assert.equal(servingsForRecipe({ servings: 6 }), 6);
   assert.equal(servingsForRecipe({ meta: { en: "Serves 4 · 30 minutes" } }), 4);
 });
-import { recipes } from "../recipes-data.js";
+import { recipes } from "../netlify/migrations/platform-starter-seed.js";
 
 const localizeEn = (value) => typeof value === "string" ? value : value.en;
 

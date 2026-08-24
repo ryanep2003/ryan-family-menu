@@ -12,13 +12,13 @@ This is a lightweight record of architectural and product decisions that future 
 
 **Consequences:** Older records normalize to an empty lunch state without migration. Catalog IDs become compatibility-sensitive. The rules remain fast, testable, offline-capable, and visibly editable; future model assistance must be optional and use the same bounded safety filters.
 
-## 2026-08-24 — Keep the starter recipe catalog permanently available
+## 2026-08-24 — Move the starter catalog into platform Blobs
 
-**Decision:** The recipe library and planning search always include the code-owned starter recipes from `recipes-data.js`, layered with household catalog records and local drafts. A household recipe with the same stable ID overrides the starter presentation, and `deletedRecipeIds` can hide either source. Starter recipes are never written into household Blobs or the household catalog cache.
+**Decision:** The recipe library and planning search read starter recipes from the shared platform Blob catalog, layered with household catalog records and local drafts. A household recipe with the same stable ID overrides the platform presentation, and `deletedRecipeIds` can hide either source. The browser does not ship a hardcoded starter catalog. A server-only migration seed remains temporarily until all platform records are verified.
 
-**Reason:** The earlier catalog recovery change removed bundled recipes after a successful household response. That made built-in recipes such as Lemon Chicken disappear even though their source code and stable IDs remained intact. A family should never lose the starter library because a remote catalog is empty, stale, unavailable, or partially populated.
+**Reason:** The earlier catalog recovery change mixed code-owned and household-owned sources, which made built-in recipes disappear during catalog changes and prevented the library from scaling as one data system. Stable platform records make the starter catalog available to every household without duplicating it into each household Blob namespace.
 
-**Consequences:** Starter recipes remain usable offline and during shared-catalog recovery. The Household menu still reports shared-catalog sync errors, but those errors no longer erase the starter reading surface. No production Blob migration is required; the fix changes only tolerant client composition and preserves existing IDs, edits, deletions, and household records.
+**Consequences:** A successful catalog read now materializes the twelve starter records in platform Blobs and returns them with household recipes. The browser reports an unavailable catalog instead of silently substituting stale code. The migration is additive and idempotent; after verifying the platform records, the server-only seed can be deleted without changing recipe IDs or household overlays.
 
 ## 2026-08-19 — Keep shared-recipe recovery separate from the main menu banner
 

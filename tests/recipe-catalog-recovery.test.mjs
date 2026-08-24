@@ -101,10 +101,9 @@ test("catalog response removes invalid and duplicate records without adding subs
   assert.deepEqual(catalog, [{ id: "shared-one", name: { en: "Newest copy" } }]);
 });
 
-test("browser catalog loader layers code-owned starters into the household view", async () => {
+test("browser catalog loader uses the Blob catalog without bundled recipe fallback", async () => {
   const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
   assert.match(source, /sharedRecipes = recipesFromCatalogResponse\(data\.recipes\)/);
-  assert.match(source, /blobHasEveryStarter/);
-  assert.match(source, /seedRecipes: blobHasEveryStarter \? \[\] : recipes/);
-  assert.match(source, /sharedRecipesStatus = recipes\.length \? "ready"/);
+  assert.match(source, /seedRecipes: \[\]/);
+  assert.doesNotMatch(source, /recipes-data\.js/);
 });

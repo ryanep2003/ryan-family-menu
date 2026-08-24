@@ -39,14 +39,14 @@ Recipe catalog reads use `/.netlify/functions/recipes?view=catalog`, a text-only
 | Domain | Logic and state | Rendering and interaction |
 |---|---|---|
 | Today and handoffs | `available-food.js`, `activity-logic.js`, `family-state.js` | `dashboard-ui.js`, `handoff-ui.js`, `activity-ui.js` |
-| Meal planning and leftovers | `schedule-utils.js`, `recipes-data.js`, `recipe-utils.js` | `schedule-ui.js` |
+| Meal planning and leftovers | `schedule-utils.js`, `recipe-utils.js` | `schedule-ui.js` |
 | Cook Along and dinner memory | `memory-logic.js`, recipe steps | `cook-along-ui.js`, `app.js` |
 | Household memory | `memory-logic.js`, `family-state.js` | `family-ui.js`, Today feedback in `app.js` |
 | School lunches | `lunch-logic.js`, shared family state, grocery provenance | `lunch-ui.js` |
 | Groceries | `grocery-logic.js`, versioned collection helpers | `grocery-ui.js` |
 | Inventory | `inventory-logic.js`, versioned collection helpers | `inventory-ui.js` |
 | Budget and receipts | `budget-logic.js`, shared family state | `budget-ui.js`, `receipt-ui.js` |
-| Recipes | `recipe-utils.js`, `recipes-data.js`, local drafts | `recipe-library-ui.js`, `recipe-form-ui.js` |
+| Recipes | `recipe-utils.js`, platform/household catalog, local drafts | `recipe-library-ui.js`, `recipe-form-ui.js` |
 | Household access | `household-access.js`, `api.js` | household gate in `index.html` |
 | PWA lifecycle | `app-lifecycle.js`, `storage-utils.js`, `sync-status.js` | install/update/status controls |
 
@@ -91,7 +91,7 @@ School lunch plans, child lunch preferences, saved combinations, and lunch const
 
 Meal planning has an additive, household-scoped `schedule` record and endpoint. New clients read and write schedule/calendar changes through that smaller versioned record, so meal edits do not compete with unrelated profile, budget, or recipe edits. The legacy schedule fields remain in `shared-state` as a fallback for older clients while the transition completes.
 
-Shared recipes use a platform catalog plus household index and individual recipe records. The authorized catalog read idempotently backfills the twelve platform starters into `platform:recipe-index` and `platform:recipe:<id>` records, then returns them together with household recipes; household IDs win on collisions. Published household recipes are appended through `POST`; recipe edits and hidden/deleted IDs are stored in family state. Unpublished drafts remain local to the browser. The browser keeps the release seed as a bounded loading/offline fallback during the migration, but a successful catalog response is Blob-backed and no longer depends on starter code for normal operation.
+Shared recipes use a platform catalog plus household index and individual recipe records. The authorized catalog read idempotently backfills the twelve platform starters into `platform:recipe-index` and `platform:recipe:<id>` records, then returns them together with household recipes; household IDs win on collisions. Published household recipes are appended through `POST`; recipe edits and hidden/deleted IDs are stored in family state. Unpublished drafts remain local to the browser. The browser has no bundled recipe fallback: the platform/household Blob catalog is the runtime source of truth. The server-only migration seed remains isolated under `netlify/migrations/` until the platform record count is verified, after which it can be deleted.
 
 See `DATA_MODEL.md` before changing any persisted shape.
 

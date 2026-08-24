@@ -96,9 +96,9 @@ File: `app.js`
 
 Change the catalog request to `/.netlify/functions/recipes?view=catalog`.
 
-Keep the twelve starter recipes and family-added recipes in one normalized in-memory catalog. Deduplicate by stable recipe ID, with the household record winning when IDs collide.
+Keep the twelve platform Blob starters and family-added recipes in one normalized in-memory catalog. Deduplicate by stable recipe ID, with the household record winning when IDs collide.
 
-Do not call the 12 starters a separate user-visible library. They remain only compatibility content and are normalized into the same catalog once the household response arrives.
+Do not call the 12 starters a separate user-visible library. They are platform catalog records and are normalized into the same catalog response as household recipes.
 
 ### 4. Make the cache genuinely stale-while-revalidate
 

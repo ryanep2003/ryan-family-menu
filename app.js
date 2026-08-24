@@ -39,7 +39,6 @@ import { createRecipeFormUi } from "./recipe-form-ui.js";
 import { createRecipeLibraryUi } from "./recipe-library-ui.js";
 import { createCookAlongUi } from "./cook-along-ui.js";
 import { createReceiptUi } from "./receipt-ui.js";
-import { recipes } from "./recipes-data.js";
 import { createScheduleUi } from "./schedule-ui.js";
 import { createSharedStateLoader } from "./shared-state-loader.js";
 import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage-utils.js";
@@ -130,9 +129,7 @@ let sharedRecipes = recipeCatalogCache?.schemaVersion === recipeCatalogCacheSche
   ? recipeCatalogCache.recipes : [];
 let recipeCatalogFetchedAt = recipeCatalogCache?.schemaVersion === recipeCatalogCacheSchemaVersion
   ? Number(new Date(recipeCatalogCache.fetchedAt).getTime()) || 0 : 0;
-// The code-owned family starter catalog is always available. Household recipes
-// layer on top when the shared catalog responds, but never replace the starters.
-let sharedRecipesStatus = recipes.length ? "ready" : (Array.isArray(sharedRecipes) && sharedRecipes.length ? "ready" : "loading");
+let sharedRecipesStatus = Array.isArray(sharedRecipes) && sharedRecipes.length ? "ready" : "loading";
 let recipeEdits = readJsonStorage(householdStorage, "dinner-recipe-edits", {});
 let deletedRecipeIds = readJsonStorage(householdStorage, "dinner-deleted-recipes", []);
 let importedRecipePhotos = [];
@@ -331,14 +328,10 @@ function offerUndo(message, undo) {
 }
 
 function allRecipes() {
-  const blobHasEveryStarter = recipes.every((starter) =>
-    sharedRecipes.some((recipe) => recipe?.id === starter.id)
-  );
   return visibleRecipes({
-    // Keep the release seed only until the Blob catalog has returned every
-    // starter. Once it has, the normal catalog is entirely Blob-backed while
-    // the seed still protects first paint and offline use during migration.
-    seedRecipes: blobHasEveryStarter ? [] : recipes,
+    // The platform catalog is the source of truth. Household records override
+    // platform IDs, and local drafts/edits remain layered on top.
+    seedRecipes: [],
     sharedRecipes,
     drafts,
     recipeEdits,
@@ -368,7 +361,6 @@ function persistRecipeCatalog(items) {
 function recipeById(id) {
   const visible = allRecipes();
   return visible.find((recipe) => recipe.id === id)
-    || recipes.find((recipe) => recipe.id === id)
     || visible[0]
     || null;
 }
@@ -400,25 +392,7 @@ function rawRecipeById(id) {
     || null;
   if (stored) return stored;
 
-  const seeded = recipes.find((recipe) => recipe.id === id);
-  if (!seeded) return null;
-  return {
-    id: seeded.id,
-    name: seeded.name,
-    category: categoryFor(seeded),
-    ingredientsText: {
-      en: (seeded.ingredients?.en || []).join("\n"),
-      es: (seeded.ingredients?.es || []).join("\n"),
-    },
-    stepsText: {
-      en: (seeded.steps?.en || []).join("\n"),
-      es: (seeded.steps?.es || []).join("\n"),
-    },
-    allergyWarning: seeded.allergyWarning,
-    notes: seeded.notes,
-    cardPhoto: seeded.cardPhoto,
-    photos: seeded.photos,
-  };
+  return null;
 }
 
 function rawRecipeText(value, locale) {
@@ -2183,7 +2157,7 @@ async function loadSharedRecipes({ restart = false } = {}) {
     render();
     return true;
   }
-  if (!sharedRecipes.length && !recipes.length) sharedRecipesStatus = "loading";
+  if (!sharedRecipes.length) sharedRecipesStatus = "loading";
   render();
   clearAreaStatus("recipes");
   recipeLoadInFlight = (async () => {
@@ -2201,7 +2175,7 @@ async function loadSharedRecipes({ restart = false } = {}) {
     } catch (error) {
       console.warn(error);
       if (generation !== recipeLoadGeneration) return false;
-      sharedRecipesStatus = sharedRecipes.length || recipes.length ? "ready" : "unavailable";
+      sharedRecipesStatus = sharedRecipes.length ? "ready" : "unavailable";
       scheduleRecipeRetry();
       render();
       return false;

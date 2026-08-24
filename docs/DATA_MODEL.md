@@ -36,7 +36,7 @@ The household profile lookup is the exception: it is keyed by a SHA-256 digest o
 
 ### Recipe catalog reads
 
-Recipe records use two layers. Platform-owned starter recipes are stored under the shared, read-only `platform:recipe-index` and `platform:recipe:<id>` keys; the authorized catalog read backfills any missing starter records idempotently from the release seed. Household uploads and edits remain under the household-scoped index and `recipe:<id>` keys, with a household record taking precedence when IDs overlap. The browser’s catalog cache is a separate local household-scoped envelope with `schemaVersion: 4`, `recipes`, and `fetchedAt`; it deliberately excludes embedded `data:image/` media. During the transition, code-owned starters remain a temporary offline/loading fallback, but a successful catalog response now comes from Blob records. The `?view=catalog` endpoint is a compact projection for startup, while the existing full recipe response remains available for detail and older clients.
+Recipe records use two layers. Platform-owned starter recipes are stored under the shared, read-only `platform:recipe-index` and `platform:recipe:<id>` keys; the authorized catalog read backfills any missing starter records idempotently from the server-only migration seed. Household uploads and edits remain under the household-scoped index and `recipe:<id>` keys, with a household record taking precedence when IDs overlap. The browser’s catalog cache is a separate local household-scoped envelope with `schemaVersion: 4`, `recipes`, and `fetchedAt`; it deliberately excludes embedded `data:image/` media. The browser has no bundled recipe fallback, so an empty or unavailable catalog is shown as a sync state instead of silently substituting code. The `?view=catalog` endpoint is a compact projection for startup, while the existing full recipe response remains available for detail and older clients.
 
 ## Versioned Record Envelope
 
@@ -176,7 +176,7 @@ Shared recipe records include localized names, ingredients, steps, safety warnin
 
 Important distinctions:
 
-- Starter recipes are seeded into the shared platform catalog (`platform:recipe-index` and `platform:recipe:<id>`); the release source remains only as a temporary idempotent backfill during migration and offline fallback. They are not copied into individual household namespaces.
+- Starter recipes are seeded into the shared platform catalog (`platform:recipe-index` and `platform:recipe:<id>`); the server-only release seed under `netlify/migrations/` is a temporary idempotent backfill and is not loaded by the browser. It can be removed after the platform record count is verified. Platform recipes are not copied into individual household namespaces.
 - Published household recipes live in individual Blob records and an index.
 - Edits to recipes live in shared family state.
 - Incomplete drafts live only in household-scoped browser storage.

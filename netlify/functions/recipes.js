@@ -4,7 +4,7 @@ import { jsonResponse, readJsonRequest } from "./_http.js";
 import { cleanLocalizedText, hasLocalizedContent, localizedText } from "../../localized-data.js";
 import { compactRecipeForCatalog } from "../../recipe-catalog-utils.js";
 import { categoryFor, servingsForRecipe } from "../../recipe-utils.js";
-import { recipes as starterRecipes } from "../../recipes-data.js";
+import { recipes as starterRecipes } from "../migrations/platform-starter-seed.js";
 
 const STORE_NAME = "family-menu-recipes";
 const RECIPES_KEY = "recipes";
