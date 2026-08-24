@@ -54,7 +54,7 @@ test("household names are normalized and bounded", () => {
 });
 
 test("every shared data endpoint validates and namespaces household access", async () => {
-  for (const file of ["family-state.js", "family-audit.js", "groceries.js", "inventory.js", "recipes.js", "schedule.js"]) {
+  for (const file of ["family-state.js", "family-audit.js", "groceries.js", "shopping-lists.js", "inventory.js", "recipes.js", "schedule.js"]) {
     const source = await readFile(new URL(`../netlify/functions/${file}`, import.meta.url), "utf8");
     assert.match(source, /requireHouseholdAccess\(request\)/, file);
     assert.match(source, /householdDataKey\(/, file);

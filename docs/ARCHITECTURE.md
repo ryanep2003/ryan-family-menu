@@ -44,6 +44,7 @@ Recipe catalog reads use `/.netlify/functions/recipes?view=catalog`, a text-only
 | Household memory | `memory-logic.js`, `family-state.js` | `family-ui.js`, Today feedback in `app.js` |
 | School lunches | `lunch-logic.js`, shared family state, grocery provenance | `lunch-ui.js` |
 | Groceries | `grocery-logic.js`, versioned collection helpers | `grocery-ui.js` |
+| Saved shopping lists | `shopping-list-logic.js`, versioned collection helpers | saved-list controls in `app.js` |
 | Inventory | `inventory-logic.js`, versioned collection helpers | `inventory-ui.js` |
 | Budget and receipts | `budget-logic.js`, shared family state | `budget-ui.js`, `receipt-ui.js` |
 | Recipes | `recipe-utils.js`, platform/household catalog, local drafts | `recipe-library-ui.js`, `recipe-form-ui.js` |
@@ -63,6 +64,7 @@ The serverless endpoints are in `netlify/functions/`:
 | `family-audit` | GET | Bounded household menu-change events and recoverable prior menu snapshots written by `family-state` |
 | `dinner-history` | GET, PUT | Versioned dinner feedback/history |
 | `groceries` | GET, PUT | Versioned shared grocery list |
+| `shopping-lists` | GET, PUT | Versioned reusable grocery-list snapshots and scoped rerun definitions |
 | `inventory` | GET, PUT | Versioned shared inventory |
 | `recipes` | GET, POST | Shared recipe index and recipe records |
 | `recognize-recipe` | POST | Extract a recipe from images with OpenAI |

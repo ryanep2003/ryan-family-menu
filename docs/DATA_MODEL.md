@@ -28,6 +28,7 @@ The household profile lookup is the exception: it is keyed by a SHA-256 digest o
 | `family-menu-state` | `schedule` | Versioned meal-plan record (schedule, calendar overrides, week start) |
 | `family-menu-dinner-history` | `events` | Versioned dinner history |
 | `family-menu-groceries` | `items` | Versioned grocery list |
+| `family-menu-grocery-lists` | `lists` | Versioned saved shopping-list snapshots and scope definitions |
 | `family-menu-inventory` | `items` | Versioned inventory |
 | `family-menu-recipes` | `platform:recipe-index`, `platform:recipe:<id>`, household `recipe-index`, `recipe:<id>`, legacy `recipes` | Platform catalog plus household recipe records |
 | `family-menu-audit` | `history` | Bounded household menu-change events and recoverable prior menu snapshots |
@@ -171,6 +172,8 @@ Locations: pantry, fridge, freezer, household. Stock states: full, some, low, ou
 Inventory quantities provide shopping guidance but never silently reduce or remove a generated grocery amount. Changes to matching, review, or amount semantics can cause households to overbuy or underbuy.
 
 Inventory and groceries are separate versioned collections. The phone can clear either collection through an explicit, confirmed bulk action; clearing groceries does not remove home inventory, and clearing inventory does not remove receipts, meal plans, or recipes. A successful clear offers a one-step local undo and still uses the normal optimistic-version save path.
+
+Saved shopping lists are a separate household-scoped, versioned collection. Each bounded list keeps a name, a scope definition (`day`, `two-days`, `recipe`, `lunch`, or `snapshot`), and a grocery-item snapshot. Running a scoped list regenerates it from the current meal plan, recipe catalog, or approved lunch plan before merging it into the active grocery list; a snapshot reruns its saved items. Deleting a saved list does not change the active grocery list. Older households default to an empty saved-list collection and require no migration.
 
 ## Recipes
 

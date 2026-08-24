@@ -561,6 +561,20 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .budget-metrics div { display: grid; gap: 2px; }
 .budget-metrics span { color: var(--muted); font-size: .78rem; }
 .grocery-tools-menu > div { display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-2) 0; }
+.saved-shopping-lists { margin-top: var(--space-8); padding-top: var(--space-6); border-top: 1px solid var(--rule); }
+.saved-shopping-lists-heading { display: flex; justify-content: space-between; gap: var(--space-4); }
+.saved-shopping-lists-heading h2 { margin: 0; }
+.saved-shopping-lists-heading p:not(.view-kicker) { max-width: 38rem; color: var(--muted); }
+.saved-shopping-list-form { display: grid; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-4); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius-sheet); }
+.saved-shopping-list-form label { display: grid; gap: var(--space-1); }
+.saved-shopping-list-form button { width: 100%; }
+.saved-shopping-lists-grid { display: grid; gap: var(--space-3); margin-top: var(--space-4); }
+.saved-shopping-list-card { display: grid; gap: var(--space-3); padding: var(--space-4); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius-sheet); }
+.saved-shopping-list-card h3 { margin: 0; font-size: 1.05rem; }
+.saved-shopping-list-card p { margin: 0; color: var(--muted); }
+.saved-shopping-list-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.saved-shopping-list-actions button { flex: 1 1 9rem; }
+.saved-shopping-list-empty { margin: 0; color: var(--muted); }
 
 /* Home inventory is a compact stock overview; editing is progressive, not
    repeated as a full form inside every row. */
@@ -893,10 +907,11 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   #shoppingPanel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(20rem, 22rem); column-gap: var(--space-7); align-items: start; }
   #shoppingPanel.recipe-context { grid-template-columns: minmax(0, 44rem) minmax(16rem, 1fr); }
   #shoppingPanel > .grocery-banner, #shoppingPanel > .finish-shopping-prompt, #shoppingPanel > .finish-shopping-panel, #shoppingPanel > .grocery-meal-filter, #shoppingPanel > .sync-status-row, #shoppingPanel > .grocery-list { grid-column: 1; }
-  #shoppingPanel > .shopping-list-setup, #shoppingPanel > .monthly-budget, #shoppingPanel > .grocery-tools-menu { grid-column: 2; }
+  #shoppingPanel > .shopping-list-setup, #shoppingPanel > .monthly-budget, #shoppingPanel > .grocery-tools-menu, #shoppingPanel > .saved-shopping-lists { grid-column: 2; }
   #shoppingPanel > .shopping-list-setup { grid-row: 1 / span 3; margin-top: 0; }
   #shoppingPanel > .monthly-budget { grid-row: 4 / span 2; margin-top: var(--space-5); }
   #shoppingPanel > .grocery-tools-menu { grid-row: 6; }
+  #shoppingPanel > .saved-shopping-lists { grid-column: 1 / -1; grid-row: 7; }
   #shoppingPanel .shopping-list-setup-content .grocery-add,
   #shoppingPanel .shopping-list-setup-content .plan-grocery-generator { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
   #shoppingPanel .shopping-list-setup-content .plan-grocery-generator > div { grid-column: auto; }

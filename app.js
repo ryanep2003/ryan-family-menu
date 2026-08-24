@@ -46,6 +46,7 @@ import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "./sync-status.
 import { translations } from "./translations.js";
 import { selectRecipeMemory, selectTodayStory } from "./almanac-selectors.js";
 import { recipesFromCatalogResponse } from "./recipe-catalog-utils.js";
+import { normalizeShoppingList, normalizeShoppingLists, shoppingListScopeLabelKey } from "./shopping-list-logic.js";
 import { approvedLunchDateKeys, approvedLunchFoodUses, normalizeSchoolLunches } from "./lunch-logic.js";
 import {
   normalizeDinnerEvents,
@@ -135,12 +136,19 @@ let deletedRecipeIds = readJsonStorage(householdStorage, "dinner-deleted-recipes
 let importedRecipePhotos = [];
 let importedRecipeCardPhoto = "";
 const groceryStorageKeys = { itemsKey: "dinner-groceries", versionKey: "dinner-grocery-version" };
+const shoppingListsStorageKeys = { itemsKey: "dinner-shopping-lists", versionKey: "dinner-shopping-lists-version" };
 const inventoryStorageKeys = { itemsKey: "dinner-inventory", versionKey: "dinner-inventory-version" };
 const storedGroceries = readVersionedCollectionStorage(householdStorage, groceryStorageKeys);
+const storedShoppingLists = readVersionedCollectionStorage(householdStorage, shoppingListsStorageKeys);
 const storedInventory = readVersionedCollectionStorage(householdStorage, inventoryStorageKeys);
 let groceries = storedGroceries.items;
 let groceryVersion = storedGroceries.version;
 let groceryBaseItems = cloneVersionedItems(storedGroceries.items);
+let shoppingLists = normalizeShoppingLists(storedShoppingLists.items);
+let shoppingListsVersion = storedShoppingLists.version;
+let shoppingListsBase = cloneVersionedItems(shoppingLists);
+const shoppingListsPendingKey = "dinner-shopping-lists-pending";
+let shoppingListsPending = readStringStorage(householdStorage, shoppingListsPendingKey, "") === "1";
 let inventory = storedInventory.items;
 let inventoryVersion = storedInventory.version;
 let inventoryBaseItems = cloneVersionedItems(storedInventory.items);
@@ -1060,7 +1068,7 @@ async function refreshSharedDataOnReturn() {
   const now = Date.now();
   if (now - lastForegroundSyncAt < 12000) return;
   lastForegroundSyncAt = now;
-  await Promise.allSettled([loadSharedState({ restart: true }), loadGroceries()]);
+  await Promise.allSettled([loadSharedState({ restart: true }), loadGroceries(), loadShoppingLists()]);
 }
 
 document.addEventListener("visibilitychange", refreshSharedDataOnReturn);
@@ -1301,9 +1309,56 @@ function generatedSchoolLunchGroceries(dateKeys) {
   });
 }
 
+function generatedGroceriesForLunch(dateKey, memberId) {
+  const children = familyMembers.filter((member) => member.active !== false && member.role === "child");
+  return approvedLunchFoodUses(schoolLunches, [dateKey], children)
+    .filter((use) => !memberId || use.memberId === memberId)
+    .flatMap(({ dateKey: useDateKey, memberId: useMemberId, memberName, food }) => {
+      const recipe = {
+        id: `school-lunch-${useMemberId}-${food.id}`.slice(0, 160),
+        name: { en: `${memberName} lunches`, es: `Almuerzos de ${memberName}` },
+        ingredients: food.groceries,
+      };
+      return recipeGroceries(recipe, "saved-list", {
+        dateKey: useDateKey,
+        mealSlot: "lunch",
+        servings: 1,
+      });
+    });
+}
+
 function generatedGroceriesFromPlan(range = "week", extraDateKeys = []) {
   const dateKeys = [...new Set([...dateKeysForGroceryRange(range), ...extraDateKeys])].sort();
   return [...generatedGroceriesForDates(dateKeys), ...generatedSchoolLunchGroceries(dateKeys)];
+}
+
+function generatedGroceriesForSavedList(list) {
+  if (!list) return [];
+  if (list.scope === "snapshot") return cloneVersionedItems(list.items);
+  if (list.scope === "recipe") {
+    const recipe = recipeById(list.recipeId);
+    return recipe ? recipeGroceries(recipe, "saved-list") : [];
+  }
+  if (list.scope === "lunch") return generatedGroceriesForLunch(list.dateKey, list.memberId);
+  if (list.scope === "two-days") {
+    const dateKey = list.dateKey || formatDateKey(new Date());
+    const start = new Date(`${dateKey}T12:00:00`);
+    const dateKeys = [0, 1].map((offset) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + offset);
+      return formatDateKey(date);
+    });
+    return [...generatedGroceriesForDates(dateKeys), ...generatedSchoolLunchGroceries(dateKeys)];
+  }
+  if (list.scope === "day") {
+    const dateKey = list.dateKey || formatDateKey(new Date());
+    return [...generatedGroceriesForDates([dateKey]), ...generatedSchoolLunchGroceries([dateKey])];
+  }
+  return generatedGroceriesFromPlan(list.range || "week");
+}
+
+function buildSavedShoppingListItems(list) {
+  return applyInventoryCoverage(mergeGroceries([], generatedGroceriesForSavedList(list)), inventory);
 }
 
 async function syncApprovedLunchGroceries() {
@@ -2073,6 +2128,167 @@ const lunchUi = createLunchUi({
   setView,
 });
 
+function savedShoppingDateOptions() {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return Array.from({ length: 45 }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() + index);
+    const dateKey = formatDateKey(date);
+    const label = new Intl.DateTimeFormat(lang === "es" ? "es-US" : "en-US", {
+      weekday: "short", month: "short", day: "numeric",
+    }).format(date);
+    return { dateKey, label };
+  });
+}
+
+function savedShoppingLunchOptions() {
+  const children = familyMembers.filter((member) => member.active !== false && member.role === "child");
+  const dateKeys = savedShoppingDateOptions().map(({ dateKey }) => dateKey);
+  const seen = new Set();
+  return approvedLunchFoodUses(schoolLunches, dateKeys, children)
+    .filter((use) => {
+      const key = `${use.dateKey}::${use.memberId}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((use) => ({
+      value: `${use.dateKey}::${use.memberId}`,
+      label: `${new Intl.DateTimeFormat(lang === "es" ? "es-US" : "en-US", { weekday: "short", month: "short", day: "numeric" }).format(new Date(`${use.dateKey}T12:00:00`))} · ${use.memberName}`,
+    }));
+}
+
+function renderSavedShoppingListTarget() {
+  const scope = $("#savedShoppingListScope")?.value || "day";
+  const dateField = $("#savedShoppingListDateField");
+  const recipeField = $("#savedShoppingListRecipeField");
+  const lunchField = $("#savedShoppingListLunchField");
+  if (!dateField || !recipeField || !lunchField) return;
+  dateField.hidden = !["day", "two-days"].includes(scope);
+  recipeField.hidden = scope !== "recipe";
+  lunchField.hidden = scope !== "lunch";
+
+  const dateInput = $("#savedShoppingListDate");
+  if (dateInput && !dateInput.value) dateInput.value = formatDateKey(new Date());
+  const recipeSelect = $("#savedShoppingListRecipe");
+  if (recipeSelect) {
+    const current = recipeSelect.value;
+    const recipes = allRecipes();
+    recipeSelect.innerHTML = recipes.length
+      ? recipes.map((recipe) => `<option value="${escapeHtml(recipe.id)}">${escapeHtml(localizeExact(recipe.name) || t("translationPendingShort"))}</option>`).join("")
+      : `<option value="">${escapeHtml(t("shoppingListNoRecipes"))}</option>`;
+    if (recipes.some((recipe) => recipe.id === current)) recipeSelect.value = current;
+  }
+  const lunchSelect = $("#savedShoppingListLunch");
+  if (lunchSelect) {
+    const current = lunchSelect.value;
+    const options = savedShoppingLunchOptions();
+    lunchSelect.innerHTML = options.length
+      ? options.map((option) => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.label)}</option>`).join("")
+      : `<option value="">${escapeHtml(t("shoppingListNoLunches"))}</option>`;
+    if (options.some((option) => option.value === current)) lunchSelect.value = current;
+  }
+}
+
+function savedShoppingListLabel(list) {
+  const labelKey = shoppingListScopeLabelKey(list);
+  return t(`${labelKey}Label`);
+}
+
+function renderSavedShoppingLists() {
+  renderSavedShoppingListTarget();
+  const target = $("#savedShoppingLists");
+  if (!target) return;
+  if (!shoppingLists.length) {
+    target.innerHTML = `<p class="saved-shopping-list-empty">${escapeHtml(t("shoppingListNoSavedLists"))}</p>`;
+    return;
+  }
+  target.innerHTML = shoppingLists.map((list) => `
+    <article class="saved-shopping-list-card">
+      <div>
+        <h3>${escapeHtml(list.name)}</h3>
+        <p>${escapeHtml(savedShoppingListLabel(list))} · ${escapeHtml(t("shoppingListItems").replace("{count}", `${list.items.length}`))}</p>
+      </div>
+      <div class="saved-shopping-list-actions">
+        <button class="primary-action" type="button" data-run-shopping-list="${escapeHtml(list.id)}">${escapeHtml(t("runShoppingList"))}</button>
+        <button class="text-button danger-action" type="button" data-delete-shopping-list="${escapeHtml(list.id)}">${escapeHtml(t("deleteShoppingList"))}</button>
+      </div>
+    </article>
+  `).join("");
+}
+
+let savedShoppingListControlsBound = false;
+function bindSavedShoppingListControls() {
+  if (savedShoppingListControlsBound) return;
+  savedShoppingListControlsBound = true;
+  $("#savedShoppingListScope")?.addEventListener("change", renderSavedShoppingListTarget);
+  $("#savedShoppingListForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const scope = $("#savedShoppingListScope")?.value || "day";
+    const dateKey = $("#savedShoppingListDate")?.value || formatDateKey(new Date());
+    const list = normalizeShoppingList({
+      id: `shopping-list-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: $("#savedShoppingListName")?.value.trim() || savedShoppingListLabel({ scope }),
+      scope,
+      dateKey,
+      recipeId: $("#savedShoppingListRecipe")?.value || "",
+      ...(scope === "lunch" ? (() => {
+        const [lunchDate, memberId] = `${$("#savedShoppingListLunch")?.value || ""}`.split("::");
+        return { dateKey: lunchDate, memberId };
+      })() : {}),
+      items: [],
+      updatedBy: householdMember,
+    });
+    const items = buildSavedShoppingListItems(list);
+    const status = $("#savedShoppingListStatus");
+    if (!items.length) {
+      if (status) status.textContent = t("shoppingListEmpty");
+      return;
+    }
+    list.items = items;
+    shoppingLists = [list, ...shoppingLists].slice(0, 100);
+    const saved = await saveShoppingLists();
+    if (status) status.textContent = saved
+      ? t("shoppingListSaved").replace("{name}", list.name)
+      : t("saveFailed");
+    $("#savedShoppingListName").value = "";
+    renderSavedShoppingLists();
+  });
+  $("#savedShoppingLists")?.addEventListener("click", async (event) => {
+    const runButton = event.target.closest("[data-run-shopping-list]");
+    const deleteButton = event.target.closest("[data-delete-shopping-list]");
+    const status = $("#savedShoppingListStatus");
+    if (runButton) {
+      const list = shoppingLists.find((entry) => entry.id === runButton.dataset.runShoppingList);
+      if (!list) return;
+      const freshItems = buildSavedShoppingListItems(list);
+      if (!freshItems.length) {
+        if (status) status.textContent = t("shoppingListEmpty");
+        return;
+      }
+      groceries = applyInventoryCoverage(mergeGroceries(groceries, freshItems), inventory);
+      list.items = freshItems;
+      list.updatedAt = new Date().toISOString();
+      list.updatedBy = householdMember;
+      renderGroceries();
+      const saved = await Promise.all([saveGroceries(), saveShoppingLists()]);
+      if (status) status.textContent = saved.every(Boolean)
+        ? t("shoppingListRun").replace("{name}", list.name)
+        : t("saveFailed");
+      return;
+    }
+    if (deleteButton) {
+      const list = shoppingLists.find((entry) => entry.id === deleteButton.dataset.deleteShoppingList);
+      if (!list || (globalThis.confirm && !globalThis.confirm(t("shoppingListDeleteConfirm")))) return;
+      shoppingLists = shoppingLists.filter((entry) => entry.id !== list.id);
+      const saved = await saveShoppingLists();
+      if (status) status.textContent = saved ? t("shoppingListDeleted") : t("saveFailed");
+      renderSavedShoppingLists();
+    }
+  });
+}
+
 function render() {
   renderTranslations();
   renderInventoryMode();
@@ -2083,6 +2299,7 @@ function render() {
   renderSchedule();
   renderCalendar();
   renderGroceries();
+  renderSavedShoppingLists();
   renderBudget();
   renderActivity();
   renderAuditHistory();
@@ -2097,6 +2314,7 @@ function render() {
   cookAlongUi.render();
   bindOpenButtons();
   bindGroceryControls();
+  bindSavedShoppingListControls();
   bindInventoryControls();
   queueRecipePhotoHydration();
 }
@@ -2280,6 +2498,72 @@ async function saveGroceries({ retrying = false } = {}) {
       return false;
     }
     setSyncStatus("groceries", "savedLocallyPending", { state: "pending", canRetry: true });
+    return false;
+  }
+}
+
+function persistShoppingListsLocally(items = shoppingLists, version = shoppingListsVersion) {
+  persistVersionedCollection(householdStorage, shoppingListsStorageKeys, normalizeShoppingLists(items), version);
+}
+
+async function loadShoppingLists() {
+  try {
+    const data = await getJson("/.netlify/functions/shopping-lists", "Could not load saved shopping lists.");
+    const remoteItems = normalizeShoppingLists(data.items);
+    const remoteVersion = Number(data.version) || 0;
+    if (shoppingListsPending) {
+      shoppingLists = normalizeShoppingLists(mergeVersionedItems(shoppingLists, shoppingListsBase, remoteItems));
+      shoppingListsVersion = remoteVersion;
+      shoppingListsBase = cloneVersionedItems(remoteItems);
+      persistShoppingListsLocally(shoppingLists, shoppingListsVersion);
+      render();
+      await saveShoppingLists();
+      return;
+    }
+    shoppingLists = remoteItems;
+    shoppingListsVersion = remoteVersion;
+    shoppingListsBase = cloneVersionedItems(shoppingLists);
+    persistShoppingListsLocally(shoppingLists, shoppingListsVersion);
+    render();
+  } catch (error) {
+    console.warn(error);
+  }
+}
+
+async function saveShoppingLists({ retrying = false } = {}) {
+  shoppingListsPending = true;
+  householdStorage.setItem(shoppingListsPendingKey, "1");
+  try {
+    await saveVersionedCollection({
+      putJson,
+      url: "/.netlify/functions/shopping-lists",
+      fallbackMessage: "Could not save shopping lists.",
+      items: normalizeShoppingLists(shoppingLists),
+      version: shoppingListsVersion,
+      setItems: (items) => {
+        shoppingLists = normalizeShoppingLists(items);
+      },
+      setVersion: (version) => {
+        shoppingListsVersion = version;
+      },
+      persist: (items, version) => persistShoppingListsLocally(items, version),
+    });
+    shoppingListsBase = cloneVersionedItems(shoppingLists);
+    shoppingListsPending = false;
+    householdStorage.removeItem(shoppingListsPendingKey);
+    return true;
+  } catch (error) {
+    console.warn(error);
+    if (applyVersionConflict(error, {
+      setItems: (items) => { shoppingLists = normalizeShoppingLists(items); },
+      setVersion: (version) => { shoppingListsVersion = version; },
+      currentVersion: shoppingListsVersion,
+      persist: (items, version) => persistShoppingListsLocally(items, version),
+    })) {
+      shoppingLists = normalizeShoppingLists(mergeVersionedItems(shoppingLists, shoppingListsBase, error.data.items));
+      persistShoppingListsLocally(shoppingLists, shoppingListsVersion);
+      if (!retrying) return saveShoppingLists({ retrying: true });
+    }
     return false;
   }
 }
@@ -2910,6 +3194,7 @@ window.addEventListener("online", () => {
   if (!$("#retrySharedState").hidden && sharedRetryAction) retries.push(sharedRetryAction());
   if (!$("#retryRecipes").hidden) retries.push(loadSharedRecipes({ restart: true }));
   if (!$("#retryGroceries").hidden) retries.push(saveGroceries());
+  if (shoppingListsPending) retries.push(saveShoppingLists());
   if (!$("#retryInventory").hidden) retries.push(saveInventory());
   if (dinnerHistoryPending) retries.push(saveDinnerHistory());
   Promise.allSettled(retries);
@@ -2929,4 +3214,5 @@ $("#householdHistoryPanel")?.addEventListener("toggle", (event) => {
 });
 loadDinnerHistory();
 loadGroceries();
+loadShoppingLists();
 loadInventory();

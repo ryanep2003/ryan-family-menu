@@ -5,6 +5,7 @@ import test from "node:test";
 const endpoints = [
   ["recipes", "../netlify/functions/recipes.js", "MAX_REQUEST_BYTES = 2000000"],
   ["groceries", "../netlify/functions/groceries.js", "MAX_REQUEST_BYTES = 250000"],
+  ["shopping lists", "../netlify/functions/shopping-lists.js", "MAX_REQUEST_BYTES = 400000"],
   ["inventory", "../netlify/functions/inventory.js", "MAX_REQUEST_BYTES = 1000000"],
   ["family state", "../netlify/functions/family-state.js", "MAX_REQUEST_BYTES = 3000000"],
   ["dinner history", "../netlify/functions/dinner-history.js", "MAX_REQUEST_BYTES = 750000"],

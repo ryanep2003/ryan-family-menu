@@ -530,6 +530,46 @@
               </section>
             </div>
           </details>
+          <section class="saved-shopping-lists" id="savedShoppingListsPanel" aria-labelledby="savedShoppingListsHeading">
+            <div class="saved-shopping-lists-heading">
+              <div>
+                <p class="view-kicker" data-i18n="savedShoppingListsKicker">Reusable lists</p>
+                <h2 id="savedShoppingListsHeading" data-i18n="savedShoppingListsHeading">Saved shopping lists</h2>
+                <p data-i18n="savedShoppingListsHelper">Make a short list for a day, recipe, or lunch and run it again whenever you need it.</p>
+              </div>
+            </div>
+            <form class="saved-shopping-list-form" id="savedShoppingListForm">
+              <label>
+                <span data-i18n="savedShoppingListNameLabel">List name</span>
+                <input id="savedShoppingListName" type="text" maxlength="120" data-i18n-placeholder="savedShoppingListNamePlaceholder" placeholder="Saturday groceries" />
+              </label>
+              <label>
+                <span data-i18n="savedShoppingListScopeLabel">Build this list for</span>
+                <select id="savedShoppingListScope">
+                  <option value="day" data-i18n="shoppingListOneDay">One day</option>
+                  <option value="two-days" data-i18n="shoppingListTwoDays">Two days</option>
+                  <option value="recipe" data-i18n="shoppingListOneRecipe">One recipe</option>
+                  <option value="lunch" data-i18n="shoppingListOneLunch">One lunch</option>
+                  <option value="snapshot" data-i18n="shoppingListSavedSnapshot">Current list</option>
+                </select>
+              </label>
+              <label id="savedShoppingListDateField">
+                <span data-i18n="savedShoppingListDateLabel">Starting date</span>
+                <input id="savedShoppingListDate" type="date" />
+              </label>
+              <label id="savedShoppingListRecipeField" hidden>
+                <span data-i18n="savedShoppingListRecipeLabel">Recipe</span>
+                <select id="savedShoppingListRecipe"></select>
+              </label>
+              <label id="savedShoppingListLunchField" hidden>
+                <span data-i18n="savedShoppingListLunchLabel">Lunch</span>
+                <select id="savedShoppingListLunch"></select>
+              </label>
+              <button class="primary-action" type="submit" data-i18n="saveShoppingList">Save list</button>
+              <p class="form-status" id="savedShoppingListStatus" role="status"></p>
+            </form>
+            <div class="saved-shopping-lists-grid" id="savedShoppingLists"></div>
+          </section>
           <details class="monthly-budget" aria-labelledby="budgetHeading">
             <summary>
               <span id="budgetHeading" data-i18n="budgetHeading">This month</span>
@@ -942,6 +982,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=152"></script>
+    <script type="module" src="app.js?v=153"></script>
   </body>
 </html>

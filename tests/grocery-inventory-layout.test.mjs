@@ -6,6 +6,8 @@ const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 const inventoryUi = await readFile(new URL("../inventory-ui.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("../styles.css", import.meta.url), "utf8");
+const shoppingListLogic = await readFile(new URL("../shopping-list-logic.js", import.meta.url), "utf8");
+const shoppingListsEndpoint = await readFile(new URL("../netlify/functions/shopping-lists.js", import.meta.url), "utf8");
 
 test("shopping keeps the active list before occasional utility controls", () => {
   assert.ok(html.indexOf('id="groceryList"') < html.indexOf('class="grocery-tools-menu"'));
@@ -107,6 +109,20 @@ test("shopping retains every supported planning range", () => {
     assert.match(html, new RegExp(`value="${range}"`));
   }
   assert.match(html, /id="generateGroceries"/);
+});
+
+test("shopping supports reusable scoped lists without replacing the active list", () => {
+  assert.match(html, /id="savedShoppingListsPanel"/);
+  assert.match(html, /id="savedShoppingListScope"/);
+  for (const scope of ["day", "two-days", "recipe", "lunch", "snapshot"]) {
+    assert.match(html, new RegExp(`value="${scope}"`));
+  }
+  assert.match(html, /id="savedShoppingLists"/);
+  assert.ok(app.includes("/.netlify/functions/shopping-lists"));
+  assert.ok(app.includes("generatedGroceriesForSavedList"));
+  assert.ok(shoppingListLogic.includes("normalizeShoppingLists"));
+  assert.ok(shoppingListsEndpoint.includes("MAX_LISTS = 100"));
+  assert.match(styles, /\.saved-shopping-list-card\s*\{/);
 });
 
 test("Today keeps the meal, memory, and next actions ahead of household utilities", () => {

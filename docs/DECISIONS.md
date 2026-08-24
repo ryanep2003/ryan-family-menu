@@ -20,6 +20,14 @@ This is a lightweight record of architectural and product decisions that future 
 
 **Consequences:** A successful catalog read now materializes the twelve starter records in platform Blobs and returns them with household recipes. The browser reports an unavailable catalog instead of silently substituting stale code. The migration is additive and idempotent; after verifying the platform records, the server-only seed can be deleted without changing recipe IDs or household overlays.
 
+## 2026-08-24 — Keep reusable shopping lists separate from the active list
+
+**Decision:** Store up to 100 named, household-scoped shopping-list definitions in a separate versioned Blob collection. Each list keeps a bounded grocery snapshot and a scope (`day`, `two-days`, `recipe`, `lunch`, or `snapshot`). Running a scoped list regenerates current ingredients before merging them into the active grocery list; deleting a saved list never deletes active groceries.
+
+**Reason:** One mutable list cannot serve a short errand, one recipe, and the family’s weekly shop without constant clearing and rebuilding. Separate saved lists make shopping flexible while preserving the active list as the authoritative at-the-store workflow.
+
+**Consequences:** Older households start with no saved lists and require no migration. Saved lists add one independent optimistic-version request path and remain bounded for Netlify cost and request size. A saved snapshot is reusable as-is; scoped lists intentionally reflect the current meal, recipe, and approved lunch data when rerun.
+
 ## 2026-08-19 — Keep shared-recipe recovery separate from the main menu banner
 
 **Decision:** Treat the household recipe catalog as its own read path with bounded retries and a dedicated recovery status in the Household menu. Do not let a failed shared-recipe request silently look like a complete 12-recipe library, and do not place sync errors in the main planning surface.
