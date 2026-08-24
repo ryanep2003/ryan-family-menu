@@ -562,6 +562,57 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .budget-metrics span { color: var(--muted); font-size: .78rem; }
 .grocery-tools-menu > div { display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-2) 0; }
 
+/* Home inventory is a compact stock overview; editing is progressive, not
+   repeated as a full form inside every row. */
+.inventory-utility-row { display: grid; gap: var(--space-3); margin-top: var(--space-5); }
+.inventory-search { display: grid; gap: var(--space-1); }
+.inventory-search > span, .inventory-location-filter > span { color: var(--muted); font-size: .78rem; font-weight: 600; }
+.inventory-filter-bar { display: grid; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3) 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.inventory-filters { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.inventory-filters button { min-height: 40px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 999px; background: transparent; color: var(--muted); font-size: .78rem; font-weight: 650; }
+.inventory-filters button.active { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.inventory-filters .attention-filter { border-color: color-mix(in srgb, var(--attention) 45%, var(--rule)); color: var(--attention); }
+.inventory-location-filter { display: grid; gap: var(--space-1); }
+.inventory-bulk-toolbar { display: grid; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-3); border: 1px solid color-mix(in srgb, var(--herb) 42%, var(--rule)); border-radius: var(--radius-control); background: var(--surface-herb); }
+.inventory-bulk-summary { display: grid; gap: 2px; }
+.inventory-bulk-summary strong { font-size: .95rem; }
+.inventory-bulk-summary span { color: var(--muted); font-size: .78rem; }
+.inventory-bulk-actions { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.inventory-bulk-actions .text-button { justify-content: flex-start; padding-inline: 8px; font-size: .78rem; }
+.inventory-list { margin-top: var(--space-5); }
+.inventory-section { border-top: 1px solid var(--rule); }
+.inventory-section > h3 { padding: var(--space-4) 0 var(--space-2); font-size: 1.35rem; }
+.inventory-item { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
+.inventory-item.has-photo { grid-template-columns: 56px minmax(0, 1fr); }
+.inventory-item:has(.inventory-select-control) { grid-template-columns: 32px minmax(0, 1fr); }
+.inventory-item.has-photo:has(.inventory-select-control) { grid-template-columns: 32px 56px minmax(0, 1fr); }
+.inventory-item > img { width: 56px; height: 56px; border-radius: var(--radius-control); object-fit: cover; }
+.inventory-item-main { display: grid; min-width: 0; gap: var(--space-2); }
+.inventory-item-copy { display: grid; min-width: 0; gap: 2px; }
+.inventory-item-copy strong { overflow-wrap: anywhere; font-size: 1rem; font-weight: 650; line-height: 1.3; }
+.inventory-item-copy em { color: var(--muted); font-size: .8rem; font-style: normal; }
+.inventory-item-copy .inventory-expiration.expiration-expired { color: var(--danger); }
+.inventory-item-copy .inventory-expiration.expiration-soon { color: var(--attention); }
+.inventory-item-copy .shopping-overlap { color: var(--herb); }
+.inventory-restock-action { width: max-content; min-height: 36px; padding: 6px 0; border: 0; background: transparent; color: var(--herb); font-size: .78rem; font-weight: 700; }
+.inventory-select-control { display: grid; width: 32px; min-height: 44px; place-items: center; margin: 0; }
+.inventory-select-control input { width: 22px; height: 22px; min-height: 22px; padding: 0; accent-color: var(--herb); }
+.inventory-stock-control { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: 0; }
+.inventory-stock-control > span { color: var(--muted); font-size: .78rem; }
+.inventory-stock-control select { width: auto; min-width: 8rem; min-height: 40px; }
+.inventory-row-details { border-top: 1px solid color-mix(in srgb, var(--rule) 70%, transparent); }
+.inventory-row-details summary { padding-block: 8px; color: var(--herb); font-size: .78rem; }
+.inventory-detail-controls { display: grid; gap: var(--space-2); padding: 0 0 var(--space-2); }
+.inventory-detail-controls label { display: grid; gap: var(--space-1); margin: 0; color: var(--muted); font-size: .78rem; }
+.inventory-detail-controls input, .inventory-detail-controls select { min-height: 42px; }
+.inventory-row-menu { position: relative; width: max-content; margin-left: auto; border-top: 0; }
+.inventory-row-menu > summary { min-height: 36px; padding: 6px 8px; color: var(--muted); list-style: none; }
+.inventory-row-menu > summary::-webkit-details-marker { display: none; }
+.inventory-menu-icon { font-size: 1.1rem; line-height: 1; }
+.inventory-item-actions { position: absolute; right: 0; z-index: 4; display: grid; min-width: 11rem; gap: var(--space-1); padding: var(--space-2); border: 1px solid var(--rule); border-radius: var(--radius-control); background: var(--paper); box-shadow: 0 12px 28px rgba(23,25,22,.12); }
+.inventory-item-actions button { justify-content: flex-start; }
+.inventory-tools-menu { margin-top: 0; }
+
 /* Compatibility surfaces outside the approved slice */
 .upload-panel label, .inventory-panel label, .family-rules-form label { display: grid; gap: var(--space-1); margin-bottom: var(--space-3); }
 .upload-panel label > span, .inventory-panel label > span, .family-rules-form label > span { color: var(--muted); font-size: .78rem; }
@@ -764,6 +815,9 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   .meal-diner-grid { grid-template-columns: repeat(4, 1fr); }
   .meal-optional-grid { grid-template-columns: 1fr 1fr; }
   .library-tools { grid-template-columns: 2fr 1fr; }
+  .inventory-utility-row { grid-template-columns: auto auto minmax(16rem, 1fr); align-items: end; }
+  .inventory-filter-bar { grid-template-columns: minmax(0, 1fr) 16rem; align-items: end; }
+  .inventory-detail-controls { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .grocery-add { grid-template-columns: minmax(0, 1fr) 10rem auto; align-items: start; }
   .plan-grocery-generator { grid-template-columns: 1fr 12rem auto; align-items: center; }
   .plan-grocery-generator > div { grid-column: 1 / -1; }

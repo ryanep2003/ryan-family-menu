@@ -43,6 +43,20 @@ test("inventory controls retain practical touch targets", () => {
   assert.match(html, /id="inventoryLocationFilter"/);
 });
 
+test("inventory uses compact rows with explicit bulk management", () => {
+  assert.match(html, /id="inventorySelectMode"/);
+  assert.match(html, /id="inventoryBulkToolbar"[^>]*hidden/);
+  assert.match(html, /id="inventorySelectVisible"/);
+  assert.match(html, /id="inventoryRemoveSelected"/);
+  assert.match(html, /id="inventoryClearAll"/);
+  assert.match(html, /id="clearAllGroceries"/);
+  assert.ok(inventoryUi.includes("removeSelectedInventoryConfirm"));
+  assert.ok(inventoryUi.includes("clearAllInventoryConfirm"));
+  assert.ok(app.includes("clearAllGroceriesConfirm"));
+  assert.match(styles, /\.inventory-row-details\s*\{/);
+  assert.match(styles, /\.inventory-bulk-toolbar\s*\{/);
+});
+
 test("inventory maintenance does not replace shopping context", () => {
   assert.match(html, /id="inventorySearch"[^>]*type="search"/);
   assert.ok(app.includes("inventorySearch") && app.includes('addEventListener("input"'));

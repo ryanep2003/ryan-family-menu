@@ -27,6 +27,9 @@ export function createInventoryUi({
   getInventorySuggestions,
   setInventorySuggestions,
 }) {
+  let selectionMode = false;
+  let selectedIds = new Set();
+
   function touchItem(item) {
     item.updatedBy = getHouseholdMember();
     item.updatedAt = new Date().toISOString();
@@ -57,6 +60,38 @@ export function createInventoryUi({
     return item.expiresOn ? t("inventoryExpires").replace("{date}", item.expiresOn) : "";
   }
 
+  function visibleInventoryItems() {
+    const inventory = getInventory();
+    const inventoryFilter = getInventoryFilter();
+    const inventoryQuery = canonicalText($("#inventorySearch")?.value || "").trim().toLowerCase();
+    return inventory.filter((item) => {
+      const matchesQuery = !inventoryQuery
+        || canonicalText(localizedText(item.text, getLang())).toLowerCase().includes(inventoryQuery);
+      const matchesFilter = inventoryQuery
+        || inventoryFilter === "all"
+        || (inventoryFilter === "attention" && (["low", "out"].includes(item.stockState) || ["expired", "soon"].includes(inventoryExpirationState(item))))
+        || (item.location || "pantry") === inventoryFilter;
+      return matchesQuery && matchesFilter;
+    });
+  }
+
+  function updateBulkToolbar() {
+    selectedIds = new Set([...selectedIds].filter((id) => getInventory().some((item) => item.id === id)));
+    const toolbar = $("#inventoryBulkToolbar");
+    const toggle = $("#inventorySelectMode");
+    if (toolbar) toolbar.hidden = !selectionMode;
+    if (toggle) {
+      toggle.textContent = selectionMode ? t("doneSelecting") : t("selectInventory");
+      toggle.setAttribute?.("aria-pressed", `${selectionMode}`);
+    }
+    const count = $("#inventoryBulkCount");
+    if (count) count.textContent = t("inventorySelectedCount").replace("{count}", `${selectedIds.size}`);
+    ["#inventoryRemoveSelected", "#inventoryClearSelection"].forEach((selector) => {
+      const button = $(selector);
+      if (button) button.disabled = selectedIds.size === 0;
+    });
+  }
+
   function renderInventoryMode() {
     $("#shoppingPanel").hidden = getInventoryMode() !== "shopping";
     $("#homePanel").hidden = getInventoryMode() !== "home";
@@ -72,6 +107,7 @@ export function createInventoryUi({
     const inventory = getInventory();
     const inventoryFilter = getInventoryFilter();
     const inventoryQuery = canonicalText($("#inventorySearch")?.value || "").trim().toLowerCase();
+    const visibleItems = visibleInventoryItems();
     const groups = [
       { key: "pantry", label: t("locationPantry") },
       { key: "fridge", label: t("locationFridge") },
@@ -79,16 +115,11 @@ export function createInventoryUi({
       { key: "household", label: t("locationHousehold") },
     ].map((group) => ({
       ...group,
-      items: inventory.filter((item) => {
-        const matchesQuery = !inventoryQuery
-          || canonicalText(localizedText(item.text, getLang())).toLowerCase().includes(inventoryQuery);
-        const matchesFilter = inventoryQuery
-          || inventoryFilter === "all"
-          || (inventoryFilter === "attention" && (["low", "out"].includes(item.stockState) || ["expired", "soon"].includes(inventoryExpirationState(item))))
-          || group.key === inventoryFilter;
-        return (item.location || "pantry") === group.key && matchesQuery && matchesFilter;
-      }).sort((left, right) => (left.expiresOn || "9999-12-31").localeCompare(right.expiresOn || "9999-12-31")),
+      items: visibleItems.filter((item) => (item.location || "pantry") === group.key)
+        .sort((left, right) => (left.expiresOn || "9999-12-31").localeCompare(right.expiresOn || "9999-12-31")),
     })).filter((group) => group.items.length);
+
+    updateBulkToolbar();
 
     if (!inventory.length) {
       $("#inventoryList").innerHTML = `<p class="empty-state">${t("inventoryEmpty")}</p>`;
@@ -108,6 +139,7 @@ export function createInventoryUi({
         <h3>${escapeHtml(group.label)}</h3>
         ${group.items.map((item) => `
           <div class="inventory-item${item.photos?.[0] ? " has-photo" : ""}">
+            ${selectionMode ? `<label class="inventory-select-control"><span class="visually-hidden">${escapeHtml(t("selectInventoryItem").replace("{item}", localizedText(item.text, getLang())))}</span><input type="checkbox" data-select-inventory="${escapeHtml(item.id)}" ${selectedIds.has(item.id) ? "checked" : ""} /></label>` : ""}
             ${item.photos?.[0] ? `<img src="${escapeHtml(item.photos[0])}" alt="${escapeHtml(localizedText(item.text, getLang()))}" loading="lazy" decoding="async" />` : ""}
             <div class="inventory-item-main">
               <span class="inventory-item-copy">
@@ -122,22 +154,25 @@ export function createInventoryUi({
                   ? `<button class="inventory-restock-action" type="button" data-add-inventory-to-shopping="${escapeHtml(item.id)}">${t("addToShopping")}</button>`
                   : ""}
               </span>
-              <div class="inventory-detail-controls">
-                <label>
-                  <span>${escapeHtml(t("inventoryAmountShort"))}</span>
-                  <input type="number" min="0" max="10000" step="0.25" value="${Number(item.amount) || 0}" data-inventory-amount="${escapeHtml(item.id)}" />
-                </label>
-                <label>
-                  <span>${escapeHtml(t("inventoryUnitShort"))}</span>
-                  <select data-inventory-unit="${escapeHtml(item.id)}">
-                    ${["each", "package", "container", "cup", "oz", "lb", "g", "kg"].map((unit) => `<option value="${unit}" ${unit === (item.unit || "each") ? "selected" : ""}>${escapeHtml(inventoryUnitLabel(unit))}</option>`).join("")}
-                  </select>
-                </label>
-                <label>
-                  <span>${escapeHtml(t("expiresOn"))}</span>
-                  <input type="date" value="${escapeHtml(item.expiresOn || "")}" data-inventory-expiration="${escapeHtml(item.id)}" />
-                </label>
-              </div>
+              <details class="inventory-row-details">
+                <summary>${escapeHtml(t("editInventoryItem"))}</summary>
+                <div class="inventory-detail-controls">
+                  <label>
+                    <span>${escapeHtml(t("inventoryAmountShort"))}</span>
+                    <input type="number" min="0" max="10000" step="0.25" value="${Number(item.amount) || 0}" data-inventory-amount="${escapeHtml(item.id)}" />
+                  </label>
+                  <label>
+                    <span>${escapeHtml(t("inventoryUnitShort"))}</span>
+                    <select data-inventory-unit="${escapeHtml(item.id)}">
+                      ${["each", "package", "container", "cup", "oz", "lb", "g", "kg"].map((unit) => `<option value="${unit}" ${unit === (item.unit || "each") ? "selected" : ""}>${escapeHtml(inventoryUnitLabel(unit))}</option>`).join("")}
+                    </select>
+                  </label>
+                  <label>
+                    <span>${escapeHtml(t("expiresOn"))}</span>
+                    <input type="date" value="${escapeHtml(item.expiresOn || "")}" data-inventory-expiration="${escapeHtml(item.id)}" />
+                  </label>
+                </div>
+              </details>
               <label class="inventory-stock-control">
                 <span>${escapeHtml(t("stockLabel"))}</span>
                 <select class="stock-select stock-${escapeHtml(item.stockState || "some")}" data-stock-state="${escapeHtml(item.id)}" aria-label="${escapeHtml(t("stockControlLabel").replace("{item}", localizedText(item.text, getLang())))}">
@@ -161,6 +196,81 @@ export function createInventoryUi({
   }
 
   function bindInventoryControls() {
+    const selectToggle = $("#inventorySelectMode");
+    if (selectToggle && !selectToggle.dataset?.inventoryBound) {
+      selectToggle.dataset.inventoryBound = "true";
+      selectToggle.addEventListener?.("click", () => {
+        selectionMode = !selectionMode;
+        if (!selectionMode) selectedIds.clear();
+        renderInventory();
+        bindInventoryControls();
+      });
+    }
+
+    const inventoryList = $("#inventoryList");
+    if (inventoryList && !inventoryList.dataset?.inventoryBulkBound) {
+      inventoryList.dataset.inventoryBulkBound = "true";
+      inventoryList.addEventListener?.("change", (event) => {
+        const checkbox = event.target.closest?.("[data-select-inventory]");
+        if (!checkbox) return;
+        if (checkbox.checked) selectedIds.add(checkbox.dataset.selectInventory);
+        else selectedIds.delete(checkbox.dataset.selectInventory);
+        updateBulkToolbar();
+      });
+    }
+
+    const bindBulkAction = (selector, handler) => {
+      const button = $(selector);
+      if (!button || button.dataset?.inventoryBound) return;
+      button.dataset.inventoryBound = "true";
+      button.addEventListener?.("click", handler);
+    };
+
+    bindBulkAction("#inventorySelectVisible", () => {
+      visibleInventoryItems().forEach((item) => selectedIds.add(item.id));
+      updateBulkToolbar();
+      renderInventory();
+    });
+    bindBulkAction("#inventoryClearSelection", () => {
+      selectedIds.clear();
+      updateBulkToolbar();
+      renderInventory();
+    });
+    bindBulkAction("#inventoryRemoveSelected", async () => {
+      const current = getInventory();
+      const removed = current.filter((item) => selectedIds.has(item.id));
+      if (!removed.length) return;
+      if (globalThis.confirm && !globalThis.confirm(t("removeSelectedInventoryConfirm"))) return;
+      setInventory(current.filter((item) => !selectedIds.has(item.id)));
+      selectedIds.clear();
+      renderInventory();
+      bindInventoryControls();
+      await saveInventory();
+      offerUndo?.(t("inventoryItemsRemoved"), async () => {
+        setInventory([...removed, ...getInventory()]);
+        renderInventory();
+        bindInventoryControls();
+        await saveInventory();
+      });
+    });
+    bindBulkAction("#inventoryClearAll", async () => {
+      const current = getInventory();
+      if (!current.length) return;
+      if (globalThis.confirm && !globalThis.confirm(t("clearAllInventoryConfirm"))) return;
+      setInventory([]);
+      selectedIds.clear();
+      selectionMode = false;
+      renderInventory();
+      bindInventoryControls();
+      await saveInventory();
+      offerUndo?.(t("inventoryCleared"), async () => {
+        setInventory(current);
+        renderInventory();
+        bindInventoryControls();
+        await saveInventory();
+      });
+    });
+
     $$('[data-inventory-amount], [data-inventory-unit], [data-inventory-expiration]').forEach((control) => {
       control.addEventListener("change", async () => {
         const id = control.dataset.inventoryAmount || control.dataset.inventoryUnit || control.dataset.inventoryExpiration;

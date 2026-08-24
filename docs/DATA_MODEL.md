@@ -170,6 +170,8 @@ Locations: pantry, fridge, freezer, household. Stock states: full, some, low, ou
 
 Inventory quantities provide shopping guidance but never silently reduce or remove a generated grocery amount. Changes to matching, review, or amount semantics can cause households to overbuy or underbuy.
 
+Inventory and groceries are separate versioned collections. The phone can clear either collection through an explicit, confirmed bulk action; clearing groceries does not remove home inventory, and clearing inventory does not remove receipts, meal plans, or recipes. A successful clear offers a one-step local undo and still uses the normal optimistic-version save path.
+
 ## Recipes
 
 Shared recipe records include localized names, ingredients, steps, safety warnings, notes, category, servings, up to three source photos, one card photo, and created timestamp.

@@ -556,6 +556,7 @@
             <div>
               <button class="ghost-button receipt-upload-button" id="quickReceiptUpload" type="button" data-i18n="uploadReceipt">Upload receipt</button>
               <button class="text-button" id="clearCheckedGroceries" type="button" data-i18n="clearChecked">Clear checked</button>
+              <button class="text-button danger-action" id="clearAllGroceries" type="button" data-i18n="clearAllGroceries">Clear shopping list</button>
             </div>
           </details>
         </div>
@@ -619,6 +620,7 @@
                 </details>
               </div>
             </details>
+            <button class="ghost-button inventory-select-toggle" id="inventorySelectMode" type="button" data-i18n="selectInventory">Select</button>
             <label class="inventory-search" for="inventorySearch">
               <span data-i18n="inventorySearchLabel">Find an inventory item</span>
               <input
@@ -631,6 +633,18 @@
                 placeholder="Search everything at home..."
               />
             </label>
+          </div>
+          <div class="inventory-bulk-toolbar" id="inventoryBulkToolbar" hidden>
+            <div class="inventory-bulk-summary">
+              <strong id="inventoryBulkCount">0 selected</strong>
+              <span data-i18n="inventoryBulkHelper">Choose items to manage together.</span>
+            </div>
+            <div class="inventory-bulk-actions">
+              <button class="text-button" id="inventorySelectVisible" type="button" data-i18n="selectVisible">Select visible</button>
+              <button class="text-button" id="inventoryClearSelection" type="button" data-i18n="clearSelection">Clear selection</button>
+              <button class="text-button" id="inventoryRemoveSelected" type="button" data-i18n="removeSelectedInventory">Remove selected</button>
+              <button class="text-button danger-action" id="inventoryClearAll" type="button" data-i18n="clearAllInventory">Clear inventory</button>
+            </div>
           </div>
           <div class="inventory-filter-bar">
             <div class="inventory-filters" role="group" aria-label="Inventory status and location" data-i18n-aria-label="inventoryFiltersLabel">
@@ -928,6 +942,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=151"></script>
+    <script type="module" src="app.js?v=152"></script>
   </body>
 </html>

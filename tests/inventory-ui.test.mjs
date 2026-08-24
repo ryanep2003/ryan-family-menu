@@ -3,6 +3,19 @@ import test from "node:test";
 
 import { createInventoryUi } from "../inventory-ui.js";
 
+function interactiveElement() {
+  const listeners = new Map();
+  return {
+    dataset: {},
+    hidden: false,
+    innerHTML: "",
+    value: "",
+    addEventListener(type, listener) { listeners.set(type, listener); },
+    setAttribute(name, value) { this[name] = value; },
+    async dispatch(type, event = {}) { await listeners.get(type)?.({ target: this, ...event }); },
+  };
+}
+
 function renderInventoryWith(filter, inventory, query = "") {
   const inventoryList = { innerHTML: "" };
   const ui = createInventoryUi({
@@ -117,4 +130,56 @@ test("low and out items expose one direct grocery action", () => {
   assert.equal((html.match(/data-add-inventory-to-shopping="low"/g) || []).length, 1);
   assert.equal((html.match(/data-add-inventory-to-shopping="out"/g) || []).length, 1);
   assert.equal((html.match(/class="inventory-restock-action"/g) || []).length, 2);
+});
+
+test("clear inventory removes the collection in one confirmed action and offers undo", async () => {
+  const inventoryList = interactiveElement();
+  const elements = {
+    "#inventoryList": inventoryList,
+    "#inventorySearch": Object.assign(interactiveElement(), { value: "" }),
+    "#inventoryBulkToolbar": interactiveElement(),
+    "#inventorySelectMode": interactiveElement(),
+    "#inventoryBulkCount": interactiveElement(),
+    "#inventoryRemoveSelected": interactiveElement(),
+    "#inventoryClearSelection": interactiveElement(),
+    "#inventorySelectVisible": interactiveElement(),
+    "#inventoryClearAll": interactiveElement(),
+  };
+  let inventory = [
+    { id: "milk", text: "Milk", location: "fridge", stockState: "full" },
+    { id: "rice", text: "Rice", location: "pantry", stockState: "some" },
+  ];
+  let saved = 0;
+  let undo = null;
+  const ui = createInventoryUi({
+    $: (selector) => elements[selector],
+    $$: () => [],
+    t: (key) => ({
+      locationPantry: "Pantry", locationFridge: "Fridge", locationFreezer: "Freezer", locationHousehold: "Household",
+      inventoryEmpty: "Empty", inventorySelectedCount: "{count} selected", selectInventory: "Select", doneSelecting: "Done",
+      removeSelectedInventory: "Remove selected", clearAllInventory: "Clear inventory", clearAllInventoryConfirm: "Confirm",
+      inventoryCleared: "Cleared", selectVisible: "Select visible", clearSelection: "Clear selection", inventoryBulkHelper: "Helper",
+      inventoryAttentionEmpty: "Nothing", inventorySearchEmpty: "No search", noInventoryMatches: "No matches",
+      stockFull: "Full", stockSome: "Some", stockLow: "Low", stockOut: "Out", stockLabel: "Stock", stockControlLabel: "Stock for {item}",
+      itemActions: "Actions for {item}", editInventoryItem: "Edit", addToShopping: "Add", remove: "Remove", inventoryAmountShort: "Amount",
+      inventoryUnitShort: "Unit", expiresOn: "Expires", unitEach: "Each",
+    }[key] || key),
+    escapeHtml: (value) => `${value}`,
+    inventoryShoppingNote: () => "",
+    getInventory: () => inventory,
+    setInventory: (items) => { inventory = items; },
+    getInventoryFilter: () => "all",
+    getLang: () => "en",
+    saveInventory: async () => { saved += 1; },
+    offerUndo: (label, action) => { undo = { label, action }; },
+  });
+
+  ui.bindInventoryControls();
+  await elements["#inventoryClearAll"].dispatch("click");
+  assert.deepEqual(inventory, []);
+  assert.equal(saved, 1);
+  assert.equal(undo.label, "Cleared");
+  await undo.action();
+  assert.deepEqual(inventory.map((item) => item.id), ["milk", "rice"]);
+  assert.equal(saved, 2);
 });

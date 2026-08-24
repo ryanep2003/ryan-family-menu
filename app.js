@@ -2726,6 +2726,23 @@ $("#clearCheckedGroceries").addEventListener("click", async () => {
   await saveGroceries();
 });
 
+$("#clearAllGroceries").addEventListener("click", async () => {
+  $(".grocery-tools-menu").open = false;
+  if (!groceries.length) return;
+  if (globalThis.confirm && !globalThis.confirm(t("clearAllGroceriesConfirm"))) return;
+  const removed = groceries;
+  groceries = [];
+  renderGroceries();
+  bindGroceryControls();
+  await saveGroceries();
+  offerUndo?.(t("allGroceriesCleared"), async () => {
+    groceries = [...removed, ...groceries];
+    renderGroceries();
+    bindGroceryControls();
+    await saveGroceries();
+  });
+});
+
 receiptUi.bindReceiptControls();
 budgetUi.bindBudgetControls();
 
