@@ -70,7 +70,7 @@ function calendarDates() {
   });
 }
 
-function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedCount: 1, skippedCount: 0 } } = {}) {
+function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedCount: 1, skippedCount: 0 }, extraRecipes = [] } = {}) {
   const elements = {
     "#scheduleGrid": element(),
     "#weekDateEditor": element(),
@@ -177,6 +177,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     { id: "salad-recipe", name: "Salad Recipe", meta: "Fresh greens", category: "salad" },
     { id: "dessert-recipe", name: "Dessert Recipe", category: "dessert" },
     { id: "one-dish-halibut", name: "One-Dish Halibut with Summer Vegetables", category: "main" },
+    ...extraRecipes,
   ];
   const state = {
     schedule: Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])),
@@ -474,6 +475,37 @@ test("recipe search opens useful suggestions on focus before typing", async () =
 
   assert.match(weekRecipeResults.innerHTML, /Main Recipe/);
   assert.match(weekRecipeResults.innerHTML, /Another Main/);
+});
+
+test("recipe search exposes every matching recipe instead of truncating the family catalog", async () => {
+  const extraRecipes = Array.from({ length: 14 }, (_, index) => ({
+    id: `family-main-${index + 1}`,
+    name: `Family Main ${index + 1}`,
+    category: "main",
+  }));
+  const { weekRecipeCategoryFilter, weekRecipeResults, weekRecipeSearch, ui } = harness({ extraRecipes });
+  weekRecipeSearch.value = "";
+  weekRecipeCategoryFilter.value = "main";
+
+  ui.renderSchedule();
+  await weekRecipeSearch.dispatch("focus");
+
+  assert.match(weekRecipeResults.innerHTML, /Family Main 14/);
+  assert.equal((weekRecipeResults.innerHTML.match(/data-add-meal-result=/g) || []).length, 17);
+});
+
+test("focused dinner search also exposes the complete matching catalog", () => {
+  const extraRecipes = Array.from({ length: 14 }, (_, index) => ({
+    id: `focused-main-${index + 1}`,
+    name: `Focused Main ${index + 1}`,
+    category: "main",
+  }));
+  const { elements, state, ui } = harness({ extraRecipes });
+  state.schedule.mon = { ...emptyMeal };
+
+  ui.openFocusedDinner("2026-06-22");
+
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Focused Main 14/);
 });
 
 test("week editor exposes an explicit save retry for the open day", async () => {

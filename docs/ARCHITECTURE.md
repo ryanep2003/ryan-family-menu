@@ -42,6 +42,7 @@ Recipe catalog reads use `/.netlify/functions/recipes?view=catalog`, a text-only
 | Meal planning and leftovers | `schedule-utils.js`, `recipes-data.js`, `recipe-utils.js` | `schedule-ui.js` |
 | Cook Along and dinner memory | `memory-logic.js`, recipe steps | `cook-along-ui.js`, `app.js` |
 | Household memory | `memory-logic.js`, `family-state.js` | `family-ui.js`, Today feedback in `app.js` |
+| School lunches | `lunch-logic.js`, shared family state, grocery provenance | `lunch-ui.js` |
 | Groceries | `grocery-logic.js`, versioned collection helpers | `grocery-ui.js` |
 | Inventory | `inventory-logic.js`, versioned collection helpers | `inventory-ui.js` |
 | Budget and receipts | `budget-logic.js`, shared family state | `budget-ui.js`, `receipt-ui.js` |
@@ -85,6 +86,8 @@ Netlify Blobs is the production source of shared household data. The browser kee
 Shared state, groceries, inventory, and dinner history use optimistic versions. A client submits the version it last read. If another device has already written a newer version, the server returns `409` and the newest server copy. This prevents silent overwrites but does not merge simultaneous edits field by field.
 
 Shared menu and grocery conflicts now perform a small three-way merge before retrying: unchanged fields from the newest server copy are retained, while local edits and deletions are replayed. When a phone returns to the foreground, it refreshes shared menu and grocery data (throttled to avoid request loops); there is intentionally no continuous polling.
+
+School lunch plans, child lunch preferences, saved combinations, and lunch constraints are an additive, bounded field in `shared-state`. Approved lunch components are converted into ordinary planned grocery contributions with lunch/date/child provenance, then rebuilt through the same idempotent grocery merge used by the family meal plan. Lunch generation is pure browser logic; it reads household preferences, meal-plan ingredients, groceries, inventory, and realistically available leftovers without creating a second catalog, grocery record, or AI endpoint.
 
 Meal planning has an additive, household-scoped `schedule` record and endpoint. New clients read and write schedule/calendar changes through that smaller versioned record, so meal edits do not compete with unrelated profile, budget, or recipe edits. The legacy schedule fields remain in `shared-state` as a fallback for older clients while the transition completes.
 

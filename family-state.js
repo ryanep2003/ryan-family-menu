@@ -3,6 +3,7 @@ import { normalizeAvailableFood } from "./available-food.js";
 import { normalizeBudgetSettings, normalizeReceipts } from "./budget-logic.js";
 import { normalizeActivity } from "./activity-logic.js";
 import { normalizeFamilyMembers, normalizeFamilyPreferences, normalizeFamilyRules } from "./memory-logic.js";
+import { normalizeSchoolLunches } from "./lunch-logic.js";
 
 const RECIPE_OUTCOMES = ["made", "loved", "repeat", "skip"];
 const MAX_RECIPE_FEEDBACK = 300;
@@ -70,10 +71,11 @@ export function sharedStateSnapshot({
   familyMembers = [],
   familyPreferences = [],
   familyRules = {},
+  schoolLunches = {},
   recipeEdits,
   deletedRecipeIds,
 }) {
-  return { weekStart: weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, budgetSettings, receipts, activity, familyMembers, familyPreferences, familyRules, recipeEdits, deletedRecipeIds };
+  return { weekStart: weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, budgetSettings, receipts, activity, familyMembers, familyPreferences, familyRules, schoolLunches: normalizeSchoolLunches(schoolLunches), recipeEdits, deletedRecipeIds };
 }
 
 export function normalizeSharedState(remoteState = {}, fallbacks = {}) {
@@ -96,6 +98,7 @@ export function normalizeSharedState(remoteState = {}, fallbacks = {}) {
       Array.isArray(remoteState.familyMembers) ? remoteState.familyMembers : fallbacks.familyMembers,
     ),
     familyRules: normalizeFamilyRules(remoteState.familyRules || fallbacks.familyRules),
+    schoolLunches: normalizeSchoolLunches(remoteState.schoolLunches || fallbacks.schoolLunches),
     recipeEdits: remoteState.recipeEdits && typeof remoteState.recipeEdits === "object"
       ? remoteState.recipeEdits
       : fallbacks.recipeEdits,
@@ -124,6 +127,7 @@ export function persistSharedState(storage, state, version) {
     storage.setItem("dinner-family-members", JSON.stringify(normalizeFamilyMembers(state.familyMembers)));
     storage.setItem("dinner-family-preferences", JSON.stringify(normalizeFamilyPreferences(state.familyPreferences, state.familyMembers)));
     storage.setItem("dinner-family-rules", JSON.stringify(normalizeFamilyRules(state.familyRules)));
+    storage.setItem("school-lunches", JSON.stringify(normalizeSchoolLunches(state.schoolLunches)));
     storage.setItem("dinner-deleted-recipes", JSON.stringify(state.deletedRecipeIds));
     return true;
   } catch {

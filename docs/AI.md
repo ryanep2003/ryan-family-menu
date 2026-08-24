@@ -18,6 +18,12 @@ The default model is `gpt-5.4-mini`. `OPENAI_MODEL` can override it without a co
 
 Manual recipe, grocery, and inventory entry remains available without OpenAI. URL import can work without OpenAI when the page exposes readable Recipe JSON-LD.
 
+## School Lunch Generation
+
+The School Lunches “Make me a lunch” and “Fill My Week” actions do not call OpenAI. They use deterministic browser logic over a bounded food catalog, child ratings and never-pack choices, family restrictions, recent approved lunches, preparation/storage constraints, current meal-plan and grocery ingredients, inventory, and realistically available leftovers. Hard restrictions and `never` ratings are excluded; recent mains are penalized; useful ingredient overlap and repeatedly approved foods are preferred.
+
+This intentionally keeps the interaction immediate, offline-capable, explainable, and cost-free. The UI is a lunch builder, not a chatbot, and every generated component remains swappable. A future model-assisted ranking layer must remain optional, preserve deterministic fallback behavior, pass through the same restriction checks, and receive separate privacy and cost review.
+
 ## Prompt and Output Pattern
 
 Each function builds a task-specific prompt that requests JSON only. The server extracts `output_text` or text content from the response, parses direct JSON when possible, and otherwise attempts to parse the first object-shaped substring.

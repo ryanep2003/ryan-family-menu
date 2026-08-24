@@ -102,7 +102,7 @@ export function createScheduleUi({
       return `<p class="meal-search-state">${escapeHtml(t(catalogStatus === "loading" ? "recipeCatalogLoading" : "recipeCatalogUnavailable"))}</p>`;
     }
     const matches = matchingRecipes(query, categoryFilter);
-    return matches.slice(0, 12).map((recipe) => {
+    return matches.map((recipe) => {
       const category = categoryFor(recipe);
       const role = mealRoles.find((item) => item.key === category) || mealRoles.find((item) => item.key === "other");
       const hasPhoto = !cardPhotoIsGenerated(recipe) && Boolean(cardPhotoFor(recipe));
@@ -150,7 +150,7 @@ export function createScheduleUi({
 
   function focusedRecipeResultsMarkup() {
     const catalogStatus = getRecipeCatalogStatus();
-    const matches = matchingRecipes(focusedDinnerSearch, "all").slice(0, 8);
+    const matches = matchingRecipes(focusedDinnerSearch, "all");
     if (catalogStatus !== "ready") {
       return `<p>${escapeHtml(t(catalogStatus === "loading" ? "recipeCatalogLoading" : "recipeCatalogUnavailable"))}</p>`;
     }

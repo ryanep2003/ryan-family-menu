@@ -30,6 +30,7 @@ import { createGroceryUi } from "./grocery-ui.js";
 import { cleanHouseholdMember } from "./household-attribution.js";
 import { createHouseholdStorage, leaveHousehold, requireHouseholdSession } from "./household-access.js";
 import { createInventoryUi } from "./inventory-ui.js";
+import { createLunchUi } from "./lunch-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
 import { localizedText, localizedTextExact, updateLocalizedText } from "./localized-data.js";
 import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
@@ -46,6 +47,7 @@ import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "./sync-status.
 import { translations } from "./translations.js";
 import { selectRecipeMemory, selectTodayStory } from "./almanac-selectors.js";
 import { recipesFromCatalogResponse } from "./recipe-catalog-utils.js";
+import { approvedLunchDateKeys, approvedLunchFoodUses, normalizeSchoolLunches } from "./lunch-logic.js";
 import {
   normalizeDinnerEvents,
   normalizeDinnerEvent,
@@ -155,6 +157,7 @@ let auditHistory = { events: [], snapshots: [] };
 let familyMembers = normalizeFamilyMembers(readJsonStorage(householdStorage, "dinner-family-members", []));
 let familyPreferences = normalizeFamilyPreferences(readJsonStorage(householdStorage, "dinner-family-preferences", []), familyMembers);
 let familyRules = normalizeFamilyRules(readJsonStorage(householdStorage, "dinner-family-rules", {}));
+let schoolLunches = normalizeSchoolLunches(readJsonStorage(householdStorage, "school-lunches", {}));
 const dinnerHistoryStorageKeys = { itemsKey: "dinner-history", versionKey: "dinner-history-version" };
 const storedDinnerHistory = readVersionedCollectionStorage(householdStorage, dinnerHistoryStorageKeys);
 let dinnerEvents = normalizeDinnerEvents(storedDinnerHistory.items);
@@ -696,13 +699,14 @@ function sharedStateSnapshot() {
     familyMembers,
     familyPreferences,
     familyRules,
+    schoolLunches,
     recipeEdits: compactRecipeEditsForSync(recipeEdits, sharedRecipes),
     deletedRecipeIds,
   });
 }
 
 function currentSharedState() {
-  return { weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, budgetSettings, receipts, activity, familyMembers, familyPreferences, familyRules, recipeEdits, deletedRecipeIds };
+  return { weekStartKey, schedule, calendarMeals, favorites, tasks, availableFood, recipeFeedback, budgetSettings, receipts, activity, familyMembers, familyPreferences, familyRules, schoolLunches, recipeEdits, deletedRecipeIds };
 }
 
 function persistLedger(kind, items, version) {
@@ -763,6 +767,7 @@ function applySharedState(nextState) {
   familyMembers = normalizeFamilyMembers(nextState.familyMembers);
   familyPreferences = normalizeFamilyPreferences(nextState.familyPreferences, familyMembers);
   familyRules = normalizeFamilyRules(nextState.familyRules);
+  schoolLunches = normalizeSchoolLunches(nextState.schoolLunches);
   recipeEdits = nextState.recipeEdits;
   deletedRecipeIds = nextState.deletedRecipeIds;
 }
@@ -871,18 +876,41 @@ async function loadSchedule() {
 
 function mergeSharedState(serverState, localState, baseState) {
   const merged = { ...serverState };
+  const mergeMap = (serverMap = {}, localMap = {}, baseMap = {}) => {
+    const keys = new Set([...Object.keys(baseMap), ...Object.keys(localMap), ...Object.keys(serverMap)]);
+    return Object.fromEntries([...keys].map((entry) => [
+      entry,
+      JSON.stringify(localMap[entry]) !== JSON.stringify(baseMap[entry]) ? localMap[entry] : serverMap[entry],
+    ]).filter(([, value]) => value !== undefined));
+  };
+  const mergeItems = (serverItems = [], localItems = [], baseItems = []) => {
+    const base = new Map(baseItems.map((item) => [item.id, item]));
+    const local = new Map(localItems.map((item) => [item.id, item]));
+    const remote = new Map(serverItems.map((item) => [item.id, item]));
+    const ids = new Set([...base.keys(), ...local.keys(), ...remote.keys()]);
+    return [...ids].map((id) => JSON.stringify(local.get(id)) !== JSON.stringify(base.get(id)) ? local.get(id) : remote.get(id)).filter(Boolean);
+  };
   Object.keys(localState).forEach((key) => {
     if (key === "schedule" || key === "calendarMeals") {
       const localMap = localState[key] || {};
       const baseMap = baseState?.[key] || {};
       const serverMap = serverState[key] || {};
-      const keys = new Set([...Object.keys(baseMap), ...Object.keys(localMap), ...Object.keys(serverMap)]);
-      merged[key] = Object.fromEntries([...keys].map((entry) => [
-        entry,
-        JSON.stringify(localMap[entry]) !== JSON.stringify(baseMap[entry])
-          ? localMap[entry]
-          : serverMap[entry],
-      ]).filter(([, value]) => value !== undefined));
+      merged[key] = mergeMap(serverMap, localMap, baseMap);
+    } else if (key === "schoolLunches") {
+      const serverLunches = normalizeSchoolLunches(serverState[key]);
+      const localLunches = normalizeSchoolLunches(localState[key]);
+      const baseLunches = normalizeSchoolLunches(baseState?.[key]);
+      const dateKeys = new Set([...Object.keys(serverLunches.plans), ...Object.keys(localLunches.plans), ...Object.keys(baseLunches.plans)]);
+      merged[key] = normalizeSchoolLunches({
+        schemaVersion: 1,
+        plans: Object.fromEntries([...dateKeys].map((dateKey) => [
+          dateKey,
+          mergeMap(serverLunches.plans[dateKey], localLunches.plans[dateKey], baseLunches.plans[dateKey]),
+        ])),
+        preferences: mergeItems(serverLunches.preferences, localLunches.preferences, baseLunches.preferences),
+        savedLunches: mergeItems(serverLunches.savedLunches, localLunches.savedLunches, baseLunches.savedLunches),
+        settings: mergeMap(serverLunches.settings, localLunches.settings, baseLunches.settings),
+      });
     } else if (JSON.stringify(localState[key]) !== JSON.stringify(baseState?.[key])) {
       merged[key] = localState[key];
     }
@@ -1005,6 +1033,7 @@ async function applyLoadedSharedState(data) {
     familyMembers,
     familyPreferences,
     familyRules,
+    schoolLunches,
     recipeEdits: {},
     deletedRecipeIds: [],
   }));
@@ -1253,8 +1282,8 @@ function dateKeysForGroceryRange(range) {
   return activeWeekDateKeys().map(({ dateKey }) => dateKey);
 }
 
-function generatedGroceriesFromPlan(range = "week") {
-  return dateKeysForGroceryRange(range).flatMap((dateKey) => {
+function generatedGroceriesForDates(dateKeys) {
+  return dateKeys.flatMap((dateKey) => {
     const meal = calendarMealForDateKey(dateKey);
     return mealRecipes(meal)
       .filter(({ sourceType }) => sourceType !== "leftover")
@@ -1270,6 +1299,43 @@ function generatedGroceriesFromPlan(range = "week") {
         }, batches);
       });
   });
+}
+
+function generatedSchoolLunchGroceries(dateKeys) {
+  const children = familyMembers.filter((member) => member.active !== false && member.role === "child");
+  return approvedLunchFoodUses(schoolLunches, dateKeys, children).flatMap(({ dateKey, memberId, memberName, food }) => {
+    const recipe = {
+      id: `school-lunch-${memberId}-${food.id}`.slice(0, 160),
+      name: { en: `${memberName} lunches`, es: `Almuerzos de ${memberName}` },
+      ingredients: food.groceries,
+    };
+    return recipeGroceries(recipe, "meal-plan", {
+      dateKey,
+      mealSlot: "lunch",
+      servings: 1,
+    });
+  });
+}
+
+function generatedGroceriesFromPlan(range = "week", extraDateKeys = []) {
+  const dateKeys = [...new Set([...dateKeysForGroceryRange(range), ...extraDateKeys])].sort();
+  return [...generatedGroceriesForDates(dateKeys), ...generatedSchoolLunchGroceries(dateKeys)];
+}
+
+async function syncApprovedLunchGroceries() {
+  const range = $("#groceryPlanRange")?.value || readStringStorage(householdStorage, "dinner-grocery-plan-range", "week");
+  householdStorage.setItem("dinner-grocery-plan-range", range);
+  const today = formatDateKey(new Date());
+  const horizon = new Date();
+  horizon.setDate(horizon.getDate() + 45);
+  const upcomingLunchDates = approvedLunchDateKeys(schoolLunches, { from: today, to: formatDateKey(horizon) });
+  groceries = applyInventoryCoverage(
+    replacePlannedGroceries(groceries, generatedGroceriesFromPlan(range, upcomingLunchDates)),
+    inventory,
+  );
+  renderGroceries();
+  bindGroceryControls();
+  return saveGroceries();
 }
 
 function generatedGroceriesForMeal(dateKey, mealSlot) {
@@ -1331,6 +1397,7 @@ const groceryUi = createGroceryUi({
   formatItemActivity,
   saveGroceries,
   offerUndo,
+  translateRecipe: async (recipeId) => backfillRecipeLocale(recipeId, lang),
 });
 
 const renderGroceries = () => groceryUi.renderGroceries();
@@ -1982,6 +2049,45 @@ const familyUi = createFamilyUi({
   getLang: () => lang,
 });
 
+function schoolLunchRestrictionsByMember() {
+  return Object.fromEntries(familyMembers.map((member) => [
+    member.id,
+    familyPreferences
+      .filter((preference) => preference.memberId === member.id && preference.kind === "restriction")
+      .map((preference) => preference.value),
+  ]));
+}
+
+function schoolLunchContext(dateKey = formatDateKey(new Date())) {
+  const plannedRecipes = dateKeysForGroceryRange("week").flatMap((dateKey) => mealRecipes(calendarMealForDateKey(dateKey)).map(({ recipe }) => recipe));
+  return {
+    mealPlan: plannedRecipes.flatMap((recipe) => [recipe.name, recipe.ingredients, recipe.ingredientsText]),
+    groceries: groceries.map((item) => item.text),
+    inventory: inventory.map((item) => item.text),
+    leftovers: [
+      ...availableFood.filter((item) => item.type === "leftover").map((item) => item.label),
+      ...availableLeftoversForDate(dateKey).map((entry) => entry.recipe.name),
+    ],
+  };
+}
+
+const lunchUi = createLunchUi({
+  $,
+  t,
+  escapeHtml,
+  localize: (value) => localizeExact(value) || localize(value),
+  getLang: () => lang,
+  getSchoolLunches: () => schoolLunches,
+  setSchoolLunches: (next) => { schoolLunches = normalizeSchoolLunches(next); },
+  getChildren: () => familyMembers,
+  getRestrictionsByMember: schoolLunchRestrictionsByMember,
+  getLunchContext: schoolLunchContext,
+  getHouseholdMember: () => householdMember,
+  saveSharedState,
+  syncApprovedLunchGroceries,
+  setView,
+});
+
 function render() {
   renderTranslations();
   renderInventoryMode();
@@ -1997,6 +2103,7 @@ function render() {
   renderAuditHistory();
   familyUi.renderFamily();
   familyUi.renderTodayFeedback();
+  lunchUi.render();
   renderInventory();
   renderInventorySuggestions();
   renderRecipes();
@@ -2570,6 +2677,7 @@ $("#addRecipeGroceries").addEventListener("click", async () => {
 recipeFormUi.bind();
 onboardingUi.bind();
 familyUi.bind();
+lunchUi.bind();
 $("#householdMenuName").textContent = household.name;
 $("#currentHouseholdKey").value = household.key;
 $("#copyHouseholdKey").addEventListener("click", async () => {
@@ -2605,7 +2713,16 @@ $("#groceryForm").addEventListener("submit", async (event) => {
   await Promise.all([saveGroceries(), saveSharedState()]);
 });
 
+const savedGroceryPlanRange = readStringStorage(householdStorage, "dinner-grocery-plan-range", "week");
+if (["week", "next3", "nextWeek", "next14", "month"].includes(savedGroceryPlanRange)) {
+  $("#groceryPlanRange").value = savedGroceryPlanRange;
+}
+$("#groceryPlanRange").addEventListener("change", (event) => {
+  householdStorage.setItem("dinner-grocery-plan-range", event.target.value);
+});
+
 $("#generateGroceries").addEventListener("click", async () => {
+  householdStorage.setItem("dinner-grocery-plan-range", $("#groceryPlanRange").value);
   groceries = applyInventoryCoverage(
     replacePlannedGroceries(groceries, generatedGroceriesFromPlan($("#groceryPlanRange").value)),
     inventory,

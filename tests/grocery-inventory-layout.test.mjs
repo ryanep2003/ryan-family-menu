@@ -49,11 +49,11 @@ test("inventory maintenance does not replace shopping context", () => {
   assert.doesNotMatch(inventoryUi, /setInventoryMode\("shopping"\)/);
 });
 
-test("mobile shell preserves room for the fixed four-view navigation", () => {
+test("mobile shell preserves room for the fixed five-view navigation", () => {
   assert.ok(styles.includes("--bottom-nav-space: calc(76px + env(safe-area-inset-bottom))"));
   assert.ok(styles.includes("padding: 0 var(--space-4) calc(var(--bottom-nav-space) + var(--space-6))"));
   assert.ok(styles.includes("env(safe-area-inset-top)"));
-  assert.ok(styles.includes(".tabs { position: fixed") && styles.includes("grid-template-columns: repeat(4, 1fr)"));
+  assert.ok(styles.includes(".tabs { position: fixed") && styles.includes("grid-template-columns: repeat(5, 1fr)"));
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="sharedSyncStatusPanel"[^>]*hidden/);
   assert.match(html, /id="recipeSyncStatusPanel"[^>]*hidden/);
@@ -66,6 +66,7 @@ test("mobile shell preserves room for the fixed four-view navigation", () => {
 
 test("the new core navigation keeps the existing route mapping intact", () => {
   assert.match(html, /data-view="schedule" data-i18n="planTab"/);
+  assert.match(html, /data-view="lunches" data-i18n="lunchesTab"/);
   assert.match(html, /data-view="grocery" data-i18n="shopTab"/);
   assert.match(html, /data-view="recipes" data-i18n="libraryTab"/);
   assert.ok(app.includes('viewName === "add" ? "recipes" : viewName'));

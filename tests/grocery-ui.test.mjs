@@ -130,6 +130,13 @@ function harness(overrides = {}) {
       haveEnough: "Have enough",
       onShoppingList: "On shopping list",
       translationPendingShort: "Translation pending",
+      translateGroceryRecipe: "Translate recipe to Spanish",
+      translatingGroceryRecipe: "Translating recipe",
+      groceryTranslationError: "Could not translate this recipe",
+      addSpanishTranslation: "Add Spanish",
+      spanishTranslationLabel: "Spanish grocery name",
+      spanishTranslationPlaceholder: "Spanish for {source}",
+      saveTranslation: "Save translation",
     }[key] || key),
     escapeHtml,
     cleanIngredientForGrocery,
@@ -151,6 +158,7 @@ function harness(overrides = {}) {
     offerUndo: (message, undo) => {
       state.undo = { message, undo };
     },
+    translateRecipe: overrides.translateRecipe,
   });
 
   ui.bindGroceryControls();
@@ -193,6 +201,93 @@ test("grocery items without the active language show a pending state", () => {
 
   assert.match(elements["#groceryList"].innerHTML, /Translation pending/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, />milk</);
+});
+
+test("a valid Spanish grocery value wins even when the linked recipe is incomplete", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{
+        id: "localized-row",
+        text: { en: "1 teaspoon salt", es: "1 cucharadita de sal" },
+        checked: false,
+        source: "week-plan",
+        store: "any",
+        recipeId: "mixed-recipe",
+      }],
+      recipes: [{
+        id: "mixed-recipe",
+        name: { en: "Mixed recipe", es: "Receta mixta" },
+        ingredients: { en: ["1 teaspoon salt", "1 tablespoon oil"], es: ["1 cucharadita de sal", "1 tablespoon oil"] },
+      }],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /1 cucharadita de sal/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Translation pending/);
+});
+
+test("legacy recipe rows map by ingredient identity after Spanish translation", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{
+        id: "legacy-lemon",
+        text: { en: "4 lemons" },
+        ingredientKey: "lemon",
+        checked: false,
+        source: "week-plan",
+        store: "any",
+        recipeId: "single-lemon",
+      }],
+      recipes: [{
+        id: "single-lemon",
+        name: { en: "Lemon recipe", es: "Receta de limón" },
+        ingredients: { en: ["1 lemon"], es: ["1 limón"] },
+      }],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, />1 limón</);
+});
+
+test("pending recipe rows offer an explicit Spanish translation action", async () => {
+  let translatedRecipeId = "";
+  const { elements, ui } = harness({
+    translateRecipe: async (recipeId) => {
+      translatedRecipeId = recipeId;
+    },
+    state: {
+      groceries: [{
+        id: "needs-translation",
+        text: { en: "4 lemons" },
+        checked: false,
+        source: "week-plan",
+        store: "any",
+        recipeId: "needs-spanish",
+      }],
+      recipes: [{
+        id: "needs-spanish",
+        name: { en: "Lemon recipe", es: "Receta de limón" },
+        ingredients: { en: ["4 lemons"], es: [] },
+      }],
+    },
+  });
+
+  ui.renderGroceries();
+  assert.match(elements["#groceryList"].innerHTML, /data-translate-grocery-recipe="needs-spanish"/);
+
+  await elements["#groceryList"].dispatch("click", {
+    closest(selector) {
+      return selector === "[data-translate-grocery-recipe]"
+        ? { dataset: { translateGroceryRecipe: "needs-spanish" } }
+        : null;
+    },
+  });
+
+  assert.equal(translatedRecipeId, "needs-spanish");
 });
 
 test("shopping list reveals the end-of-trip action after an item is checked", () => {

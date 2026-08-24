@@ -2,6 +2,16 @@
 
 This is a lightweight record of architectural and product decisions that future contributors should not reverse accidentally. Add an entry only when a decision changes enduring structure, data meaning, access, deployment, or a significant product constraint.
 
+## 2026-08-23 — Keep school lunch planning inside household state and deterministic rules
+
+**Decision:** Store bounded child lunch plans, preferences, saved combinations, and packing settings as one additive `schoolLunches` field in shared family state. Generate lunch suggestions in the browser from a fixed catalog and existing household context; approved lunches contribute to the existing grocery list instead of creating separate storage, shopping, or AI systems.
+
+**Reason:** School lunch is another household food-planning workflow. Reusing family restrictions, meal ingredients, real leftover availability, optimistic shared-state saves, grocery provenance, and household-scoped fallbacks reduces waste and cognitive load while preserving the current architecture and cost profile.
+
+**Alternatives considered:** A separate lunch Blob store and grocery list, freeform persisted lunch foods, and an OpenAI-backed lunch chatbot.
+
+**Consequences:** Older records normalize to an empty lunch state without migration. Catalog IDs become compatibility-sensitive. The rules remain fast, testable, offline-capable, and visibly editable; future model assistance must be optional and use the same bounded safety filters.
+
 ## 2026-08-19 — Bundled recipes are compatibility records, not household catalog data
 
 **Decision:** The recipe library and planning search display only household catalog records and local drafts. Bundled examples may resolve an exact legacy recipe ID from an older meal plan, but they are never merged into a household catalog response or shown as a fallback library.

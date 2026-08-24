@@ -1,179 +1,115 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-13T21:18:00Z",
-  "title": "Design System: Ryan Family Menu",
+  "generatedAt": "2026-08-20T17:30:00Z",
+  "title": "Design System: The Honed Almanac",
   "extensions": {
     "colorMeta": {
-      "ink": {
-        "role": "neutral",
-        "displayName": "Espresso Ink",
-        "canonical": "#28221d",
-        "tonalRamp": ["#1b1815", "#25211d", "#3e3832", "#5b534a", "#81776d", "#aaa197", "#d5cec5", "#f5f1eb"]
-      },
-      "muted": {
-        "role": "neutral",
-        "displayName": "Pantry Muted",
-        "canonical": "#6d6258",
-        "tonalRamp": ["#211e1b", "#39342f", "#514a43", "#6b6258", "#8b8177", "#aca49b", "#d1cbc4", "#f4f1ed"]
-      },
-      "paper": {
-        "role": "neutral",
-        "displayName": "Pantry Paper",
-        "canonical": "#f4ecdf",
-        "tonalRamp": ["#29251f", "#49423a", "#6b6257", "#918578", "#b7aa9b", "#d8cec1", "#eee7dd", "#fbf7ef"]
-      },
-      "surface": {
-        "role": "neutral",
-        "displayName": "Counter Surface",
-        "canonical": "#fffaf2",
-        "tonalRamp": ["#2a2823", "#4b4740", "#6f6960", "#958e83", "#bbb4aa", "#ddd8d0", "#f1ede7", "#fffdf8"]
-      },
-      "line": {
-        "role": "neutral",
-        "displayName": "Cupboard Line",
-        "canonical": "#d7c8b5",
-        "tonalRamp": ["#27231e", "#484138", "#685f53", "#8b8071", "#ada293", "#cabfb1", "#ddd3c4", "#f5f0e9"]
-      },
-      "tomato": {
-        "role": "primary",
-        "displayName": "Action Tomato",
-        "canonical": "#aa3b2e",
-        "tonalRamp": ["#2a0d09", "#521912", "#7d291f", "#9f3528", "#c65443", "#df8375", "#f1b7ae", "#fce9e5"]
-      },
-      "tomato-deep": {
-        "role": "primary",
-        "displayName": "Deep Tomato",
-        "canonical": "#7f2b22",
-        "tonalRamp": ["#240b08", "#42150f", "#612019", "#7d291f", "#a24437", "#ca7063", "#e8aca4", "#f9e6e2"]
-      },
-      "sage": {
-        "role": "secondary",
-        "displayName": "Organizing Sage",
-        "canonical": "#3f664f",
-        "tonalRamp": ["#101d14", "#203a29", "#34533f", "#496b55", "#678a72", "#8eaa96", "#bdcdbf", "#edf3ee"]
-      },
-      "gold": {
-        "role": "tertiary",
-        "displayName": "Provision Gold",
-        "canonical": "#d6a53c",
-        "tonalRamp": ["#2b1d05", "#563b0b", "#815d18", "#a77b29", "#c89a3c", "#ddb965", "#eed99e", "#fbf2d9"]
-      },
-      "white": {
-        "role": "neutral",
-        "displayName": "Clean White",
-        "canonical": "#ffffff",
-        "tonalRamp": ["#262626", "#474747", "#696969", "#8c8c8c", "#b0b0b0", "#d3d3d3", "#ededed", "#ffffff"]
-      }
+      "ground": { "role": "neutral", "displayName": "Honed Limestone", "canonical": "#F0EFEA", "tonalRamp": ["#272823", "#3D3D37", "#55554E", "#6D7068", "#96958D", "#BDBBB1", "#D9D6CC", "#F0EFEA"] },
+      "paper": { "role": "neutral", "displayName": "Ceramic Paper", "canonical": "#FCFBF7", "tonalRamp": ["#272823", "#45453F", "#6D7068", "#97958C", "#C2BFB6", "#DEDAD0", "#F2F0E9", "#FCFBF7"] },
+      "ink": { "role": "neutral", "displayName": "Cast Iron Ink", "canonical": "#272823", "tonalRamp": ["#151612", "#272823", "#3D3D37", "#55554E", "#6D7068", "#96958D", "#C7C5BC", "#F0EFEA"] },
+      "muted": { "role": "neutral", "displayName": "Brushed Context", "canonical": "#666960", "tonalRamp": ["#2A2B27", "#42433D", "#585A53", "#666960", "#8D8F87", "#B0B1A8", "#D3D1C8", "#F0EFEA"] },
+      "rule": { "role": "neutral", "displayName": "Mineral Rule", "canonical": "#D9D6CC", "tonalRamp": ["#2A2B27", "#45453F", "#62615A", "#7E7C74", "#99968D", "#BAB7AD", "#D9D6CC", "#F4F2EC"] },
+      "primary-action": { "role": "primary", "displayName": "Herb Action", "canonical": "#476346", "tonalRamp": ["#182719", "#29412A", "#38543A", "#476346", "#708970", "#9EAF9B", "#CBD6C6", "#F0F4EE"] },
+      "focus": { "role": "primary", "displayName": "Cobalt Focus", "canonical": "#2F58B8", "tonalRamp": ["#0E1B49", "#18327A", "#2446A0", "#2F58B8", "#627FCA", "#9AADDE", "#CBD6F0", "#F0F3FC"] },
+      "memory": { "role": "secondary", "displayName": "Pale Herb Memory", "canonical": "#DCE2CC", "tonalRamp": ["#30382B", "#515E49", "#718069", "#95A08C", "#B7C0AB", "#DCE2CC", "#EDF0E5", "#FAFBF7"] },
+      "attention": { "role": "secondary", "displayName": "Clay Attention", "canonical": "#B5674A", "tonalRamp": ["#421C11", "#6B301F", "#8E4931", "#B5674A", "#CD947D", "#E1B8A8", "#F1D9D0", "#FDF4F0"] },
+      "success": { "role": "secondary", "displayName": "Steady Success", "canonical": "#3E6B52", "tonalRamp": ["#122318", "#203A29", "#31523D", "#3E6B52", "#6E927A", "#A0B8A5", "#D0DED1", "#F0F5F0"] },
+      "danger": { "role": "tertiary", "displayName": "Clear Danger", "canonical": "#A33A35", "tonalRamp": ["#3A1110", "#611E1B", "#812B27", "#A33A35", "#C56B65", "#DFA09C", "#F0CBC8", "#FBEDEC"] }
     },
     "typographyMeta": {
-      "display": { "displayName": "App Display", "purpose": "The application title only." },
-      "headline": { "displayName": "View Headline", "purpose": "View, recipe, and major section headings." },
-      "title": { "displayName": "Content Title", "purpose": "Cards, groups, and compact content headings." },
-      "body": { "displayName": "Working Body", "purpose": "Recipes, lists, help text, and field values." },
-      "label": { "displayName": "Organizing Label", "purpose": "Short navigational and categorical cues." }
+      "display": { "displayName": "Almanac Display", "purpose": "Page-level household reading moments." },
+      "headline": { "displayName": "Editorial Heading", "purpose": "Days, recipes, and major sections." },
+      "body": { "displayName": "Working Sans", "purpose": "Recipes, controls, lists, navigation, and instructions." },
+      "label": { "displayName": "Quiet Label", "purpose": "Meal labels, dates, quantities, and concise orientation." }
     },
     "shadows": [
-      { "name": "featured-lift", "value": "0 16px 36px rgba(61, 43, 27, 0.12)", "purpose": "Featured meal imagery and floating inventory tools." },
-      { "name": "detail-lift", "value": "0 8px 24px rgba(61, 43, 27, 0.08)", "purpose": "Selected recipe detail separation." },
-      { "name": "control-lift", "value": "0 1px 5px rgba(61, 43, 27, 0.12)", "purpose": "Selected segmented controls." },
-      { "name": "marker-lift", "value": "0 2px 8px rgba(37, 33, 29, 0.18)", "purpose": "Small floating status markers." }
+      { "name": "temporary-overlay", "value": "0 16px 36px rgba(23,25,22,.14)", "purpose": "Menus and temporary sheets that sit above the working document." },
+      { "name": "result-popover", "value": "0 14px 30px rgba(23,25,22,.11)", "purpose": "Temporary recipe-result popovers only." }
     ],
-    "motion": [],
+    "motion": [
+      { "name": "media-wait", "value": "1.4s ease-in-out infinite", "purpose": "Loading treatment for on-demand recipe media." }
+    ],
     "breakpoints": [
-      { "name": "compact-mobile", "value": "520px" },
-      { "name": "mobile", "value": "780px" }
+      { "name": "compact", "value": "640px" },
+      { "name": "desktop-shell", "value": "960px" }
     ]
   },
   "components": [
     {
-      "name": "Primary Button",
+      "name": "Primary Action",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The highest-value action in a task group.",
-      "html": "<button class=\"ds-button-primary\">Add item</button>",
-      "css": ".ds-button-primary { min-height: 44px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--tomato, #aa3b2e); color: var(--on-accent, #fff9ee); font: 850 1rem var(--font-body, \"Avenir Next\", Avenir, \"Segoe UI\", sans-serif); cursor: pointer; transition: background 180ms ease-out, transform 180ms ease-out; } .ds-button-primary:hover { background: var(--tomato-dark, #7f2b22); transform: translateY(-1px); } .ds-button-primary:focus-visible { outline: 3px solid var(--gold, #d6a53c); outline-offset: 2px; } .ds-button-primary:active { transform: translateY(0); }"
+      "description": "The one highest-value action in the active household task.",
+      "html": "<button class=\"ds-primary-action\">Plan dinner</button>",
+      "css": ".ds-primary-action { min-height: 44px; padding: 10px 14px; border: 1px solid #476346; border-radius: 8px; background: #476346; color: #FCFBF7; font: 650 1rem ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; letter-spacing: -.01em; } .ds-primary-action:hover { background: color-mix(in srgb, #476346 88%, #272823); } .ds-primary-action:focus-visible { outline: 3px solid color-mix(in srgb, #2F58B8 55%, white); outline-offset: 3px; }"
     },
     {
-      "name": "Ghost Button",
+      "name": "Ghost Action",
       "kind": "button",
-      "refersTo": "button-secondary",
-      "description": "A secondary action that remains tactile and familiar.",
-      "html": "<button class=\"ds-button-ghost\">Edit recipe</button>",
-      "css": ".ds-button-ghost { min-height: 44px; padding: 0 16px; border: 1px solid var(--line, #d7c8b5); border-radius: 8px; background: var(--surface, #fffaf2); color: var(--ink, #28221d); font: 850 1rem var(--font-body, \"Avenir Next\", Avenir, \"Segoe UI\", sans-serif); cursor: pointer; } .ds-button-ghost:hover { background: var(--surface-paper-soft, #f6efe2); } .ds-button-ghost:focus-visible { outline: 3px solid var(--gold, #d6a53c); outline-offset: 2px; } .ds-button-ghost:active { background: var(--surface-muted, #eee7dc); }"
+      "refersTo": "button-ghost",
+      "description": "A visible secondary action that stays quiet beside the primary decision.",
+      "html": "<button class=\"ds-ghost-action\">Save changes</button>",
+      "css": ".ds-ghost-action { min-height: 44px; padding: 10px 14px; border: 1px solid #D9D6CC; border-radius: 8px; background: transparent; color: #272823; font: 650 1rem ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; letter-spacing: -.01em; } .ds-ghost-action:hover { border-color: #272823; } .ds-ghost-action:focus-visible { outline: 3px solid color-mix(in srgb, #2F58B8 55%, white); outline-offset: 3px; }"
     },
     {
-      "name": "Text Field",
+      "name": "Working Field",
       "kind": "input",
       "refersTo": "input",
-      "description": "The canonical text entry control for household data.",
-      "html": "<input class=\"ds-input\" type=\"text\" value=\"Milk, lemons, pasta\" aria-label=\"Grocery items\">",
-      "css": ".ds-input { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line, #d7c8b5); border-radius: 8px; background: #fff; color: var(--ink, #28221d); font: 500 1rem var(--font-body, \"Avenir Next\", Avenir, \"Segoe UI\", sans-serif); } .ds-input:hover { border-color: var(--muted, #6d6258); } .ds-input:focus-visible { outline: 3px solid color-mix(in srgb, var(--sage, #3f664f) 30%, transparent); border-color: var(--sage, #3f664f); }"
+      "description": "A practical, readable field for household food information.",
+      "html": "<input class=\"ds-working-field\" value=\"Search recipes\" aria-label=\"Search recipes\">",
+      "css": ".ds-working-field { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #D9D6CC; border-radius: 8px; background: #FCFBF7; color: #272823; font: 1rem ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; } .ds-working-field:focus-visible { outline: 3px solid color-mix(in srgb, #2F58B8 55%, white); outline-offset: 3px; }"
     },
     {
-      "name": "Selected Filter Chip",
-      "kind": "chip",
-      "refersTo": "chip-selected",
-      "description": "A selected inventory or recipe scope filter.",
-      "html": "<button class=\"ds-filter-chip\" aria-pressed=\"true\">Pantry</button>",
-      "css": ".ds-filter-chip { min-height: 38px; padding: 0 14px; border: 1px solid var(--sage, #3f664f); border-radius: 999px; background: var(--sage, #3f664f); color: var(--on-accent, #fff9ee); font: 800 0.82rem var(--font-body, \"Avenir Next\", Avenir, \"Segoe UI\", sans-serif); cursor: pointer; } .ds-filter-chip:hover { background: var(--sage-dark, #294738); } .ds-filter-chip:focus-visible { outline: 3px solid var(--gold, #d6a53c); outline-offset: 2px; }"
-    },
-    {
-      "name": "Recipe Card",
-      "kind": "card",
-      "description": "An image-led recipe summary in the library grid.",
-      "html": "<article class=\"ds-recipe-card\"><span class=\"ds-category\">Main</span><h3>Chicken Milanese</h3><p>Shared upload</p></article>",
-      "css": ".ds-recipe-card { min-height: 180px; padding: 14px; border: 1px solid var(--line, #d7c8b5); border-radius: 8px; background: var(--surface, #fffaf2); color: var(--ink, #28221d); font-family: var(--font-body, \"Avenir Next\", Avenir, \"Segoe UI\", sans-serif); } .ds-recipe-card h3 { margin: 8px 0; font-family: var(--font-display, \"Iowan Old Style\", Baskerville, serif); font-size: 1rem; } .ds-recipe-card p { margin: 0; color: var(--muted, #6d6258); } .ds-category { display: inline-flex; align-items: center; min-height: 26px; padding: 0 8px; border-radius: 999px; background: var(--surface-success, #eef5eb); color: var(--sage, #3f664f); font-size: 0.72rem; font-weight: 850; } .ds-recipe-card:focus-within { outline: 3px solid color-mix(in srgb, var(--sage, #3f664f) 30%, transparent); outline-offset: 2px; }"
-    },
-    {
-      "name": "Language Toggle",
-      "kind": "nav",
-      "description": "The persistent English and Spanish selector.",
-      "html": "<div class=\"ds-language\" role=\"group\" aria-label=\"Language\"><button class=\"ds-language-active\">EN</button><button>ES</button></div>",
-      "css": ".ds-language { display: grid; grid-template-columns: repeat(2, 48px); padding: 4px; border: 1px solid var(--line, #d7c8b5); border-radius: 8px; background: var(--surface, #fffaf2); } .ds-language button { min-height: 38px; border: 0; border-radius: 6px; background: transparent; color: var(--muted, #6d6258); font: 800 0.82rem var(--font-body, \"Avenir Next\", Avenir, \"Segoe UI\", sans-serif); cursor: pointer; } .ds-language .ds-language-active { background: var(--ink, #28221d); color: var(--on-accent, #fff9ee); } .ds-language button:focus-visible { outline: 3px solid var(--gold, #d6a53c); outline-offset: 1px; }"
+      "name": "Meal Period Chapter",
+      "kind": "custom",
+      "description": "A flat, tonal breakfast, lunch, or dinner section that makes Day → Meal → Recipe scannable.",
+      "html": "<section class=\"ds-meal-period\"><p>Lunch</p><strong>Green Monster Salad</strong><button>Open recipe</button></section>",
+      "css": ".ds-meal-period { display: grid; gap: 8px; padding: 24px 16px; border-top: 1px solid #D9D6CC; background: #FCFBF7; color: #272823; } .ds-meal-period p { margin: 0; color: #666960; font: 600 .78rem ui-sans-serif, sans-serif; } .ds-meal-period strong { font: 500 1.55rem Iowan Old Style, \"Palatino Linotype\", Palatino, Georgia, serif; } .ds-meal-period button { width: fit-content; min-height: 44px; padding: 0; border: 0; background: transparent; color: #476346; font: 650 1rem ui-sans-serif, sans-serif; } .ds-meal-period button:focus-visible { outline: 3px solid color-mix(in srgb, #2F58B8 55%, white); outline-offset: 3px; }"
     },
     {
       "name": "Core Navigation",
       "kind": "nav",
-      "description": "The four core destinations, fixed to the bottom edge on phones and spanning the content width on desktop.",
-      "html": "<nav class=\"ds-bottom-nav\" aria-label=\"Views\"><button class=\"ds-nav-active\">Today</button><button>Week</button><button>Groceries</button><button>Recipes</button></nav>",
-      "css": ".ds-bottom-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 6px; border-top: 1px solid var(--line, #d7c8b5); background: color-mix(in srgb, var(--surface, #fffaf2) 97%, transparent); } .ds-bottom-nav button { min-width: 0; min-height: 48px; padding: 4px 2px; border: 0; border-radius: 6px; background: transparent; color: var(--muted, #6d6258); font: 800 0.72rem var(--font-body, \"Avenir Next\", Avenir, \"Segoe UI\", sans-serif); cursor: pointer; } .ds-bottom-nav .ds-nav-active { background: var(--ink, #28221d); color: var(--on-accent, #fff9ee); } .ds-bottom-nav button:focus-visible { outline: 3px solid var(--gold, #d6a53c); outline-offset: -1px; }"
+      "refersTo": "navigation-active",
+      "description": "The stable four-destination navigation, fixed safely above the mobile device edge.",
+      "html": "<nav class=\"ds-core-nav\" aria-label=\"Views\"><button class=\"ds-active\">Today</button><button>Plan</button><button>Shop</button><button>Library</button></nav>",
+      "css": ".ds-core-nav { display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 12px; background: #282B25; } .ds-core-nav button { min-width: 0; min-height: 48px; padding: 6px 2px; border: 0; border-radius: 6px; background: transparent; color: #D5D7CE; font: 650 .82rem ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; } .ds-core-nav .ds-active { background: #FCFBF7; color: #272823; } .ds-core-nav button:focus-visible { outline: 3px solid #FCFBF7; outline-offset: -1px; }"
     }
   ],
   "narrative": {
-    "northStar": "The Shared Kitchen Table",
-    "overview": "Ryan Family Menu should feel like the dependable center of a busy household: warm enough to feel personal, structured enough to keep everyone coordinated, and direct enough to use with one hand in a kitchen or grocery aisle. Editorial serif headings evoke a family recipe book, while a humanist sans-serif keeps actions fast. Contextual sage, peach, gold, and tomato fields orient planning, shopping, recipes, and capture without turning every section into another white card. English and Spanish receive equal layout consideration; controls grow or wrap instead of truncating translated text. The product rejects enterprise SaaS density and generic meal-planner sameness.",
+    "northStar": "The Honed Almanac",
+    "overview": "Ryan Family Menu is a smart household food concierge, not meal-planning software. It makes a family's food situation recognizable in the few seconds available between school pickup, a grocery aisle, and starting dinner: what the family is eating, what is still undecided, and what needs attention next. The visual character is warm, editorial, calm, and exact: mineral canvas, ceramic-paper surfaces, herb action, clay attention, and quiet seams borrow the calm material clarity of a working kitchen without becoming literal kitchen décor.",
     "keyCharacteristics": [
-      "Warm, capable, and household-centered.",
-      "Fast, familiar controls with strong 44-48px touch targets.",
-      "Restrained color reserved for action, organization, and status.",
-      "Bilingual and mobile-first by construction.",
-      "Compact 8px geometry with clear, purposeful hierarchy."
+      "Recognition and scanning win over instruction, especially in the first 2–3 seconds.",
+      "The current household food state is more important than planning mechanics.",
+      "Editorial serif headings and quiet paper surfaces make ordinary family content feel considered.",
+      "Progressive emphasis makes the next decision clear without falsifying the complete state.",
+      "English and Spanish are one product experience, not separate workflows."
     ],
     "rules": [
-      { "name": "The One Tomato Rule", "body": "Tomato is functional, never decorative. Use it for the primary action or the most important active state, not as ambient page color.", "section": "colors" },
-      { "name": "The Semantic Pantry Rule", "body": "Sage means organization or success, gold means attention, and tomato-deep means urgency. Never swap these roles for visual variety.", "section": "colors" },
-      { "name": "The Two-Voice Rule", "body": "Use the editorial serif only for brand, view, recipe, and grouping headings. Keep labels, controls, data, navigation, and recipe instructions in the humanist sans-serif. Never introduce script or novelty fonts.", "section": "typography" },
-      { "name": "The Translation-Fit Rule", "body": "Never reduce type below the documented scale to force Spanish text into an English-sized control. Wrap or expand the component instead.", "section": "typography" },
-      { "name": "The Purposeful Lift Rule", "body": "A resting card or form section stays flat. Add elevation only when the element is featured, selected, sticky, or temporarily overlapping other content.", "section": "elevation" }
+      { "name": "The State-First Color Rule", "body": "Color clarifies a real state or a broad reading chapter; it never substitutes for labels, hierarchy, or navigation.", "section": "colors" },
+      { "name": "The Three-Level Rule", "body": "In planning, Day → Meal → Recipe must never collapse into equal visual weight. Day boundaries orient; meal headings group; recipe names read as the content belonging to that meal.", "section": "typography" },
+      { "name": "The Busy-Moment Rule", "body": "Every major screen must have a dominant answer to the question that caused the user to open it. Prefer recognition and direct state over explanatory copy or disconnected widgets.", "section": "layout" },
+      { "name": "The Safe-Edge Rule", "body": "Fixed navigation, status areas, and sticky actions reserve space using system safe-area insets. Scrollable content and focused controls must clear the bottom navigation and iOS status area without device-specific pixel assumptions.", "section": "layout" },
+      { "name": "The Flat-Working-Surface Rule", "body": "Do not use resting shadows, nested cards, glass effects, or decorative side stripes to manufacture hierarchy. Use content order, type, spacing, rules, and tonal fields first.", "section": "elevation" }
     ],
     "dos": [
-      "Do preserve the Shared Kitchen Table character: warm, capable, direct, and useful in a real kitchen or store.",
-      "Do maintain minimum 44px controls and 48px mobile navigation targets.",
-      "Do design English and Spanish together, allowing translated labels to wrap or expand.",
-      "Do use Action Tomato for the highest-value action, Organizing Sage for organization or success, and Provision Gold for non-danger attention.",
-      "Do keep common controls visually consistent across Today, Week, Groceries, Recipes, and Add.",
-      "Do collapse multi-column forms and detail layouts to one column at the 780px mobile breakpoint.",
-      "Do use imagery for real recipes and featured meals, not as generic decoration."
+      "Do foreground the family’s actual meals and next decision before planning mechanics or household administration.",
+      "Do use hierarchy, grouping, labels, and sensible defaults before adding instructional prose or configuration.",
+      "Do keep empty states subordinate to known meal content.",
+      "Do adapt information architecture for narrow screens, not merely shrink desktop layouts.",
+      "Do use warm editorial language only when it adds context without duplicating or replacing household state.",
+      "Do preserve original content while treating Spanish and English as equally complete supported experiences.",
+      "Do favor deletion, consolidation, and stronger defaults when a concept has not earned its cognitive cost."
     ],
     "donts": [
-      "Don't make the product feel corporate, stodgy, or old.",
-      "Don't imitate enterprise SaaS dashboards, stiff admin tools, or dated family organizer software.",
-      "Don't introduce ornamental cards, glassmorphism, gradient text, decorative grid backgrounds, or broad soft shadows on every container.",
-      "Don't use display fonts in labels, buttons, recipe data, or navigation.",
-      "Don't truncate Spanish or shrink it below the established type scale to match English.",
-      "Don't invent different button, field, card, or selected-state styles for individual views.",
-      "Don't hide core household workflows behind modals when inline or progressive disclosure works.",
-      "Don't use colored side-stripe borders as a decorative accent; safety messaging must use a complete border and clear semantic background."
+      "Don't expose implementation concepts, workflow terminology, or internal classifications unless the family truly needs to decide them.",
+      "Don't make an empty dinner imply that nothing else is planned today.",
+      "Don't flatten Day, Meal, and Recipe into equivalent typography or visual weight.",
+      "Don't squeeze complete multi-day meal content into narrow mobile columns.",
+      "Don't make users request a recipe-level translation after selecting the global language.",
+      "Don't elevate sides or minor components as complete dinner recommendations without supporting context.",
+      "Don't allow fixed navigation or device safe areas to obscure meaningful content or actions.",
+      "Don't turn warmth into verbose self-instruction or turn planning into a generic dashboard."
     ]
   }
 }

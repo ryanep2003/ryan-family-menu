@@ -6,6 +6,7 @@ import { cleanLocalizedText, hasLocalizedContent } from "../../localized-data.js
 import { normalizeRecipeFeedback } from "../../family-state.js";
 import { auditEvent, hasPlannedMeals, normalizeAuditEvents, normalizeStateSnapshots, stateSnapshot } from "../../audit-logic.js";
 import { normalizeDinnerPace, normalizeFamilyMembers, normalizeFamilyPreferences, normalizeFamilyRules } from "../../memory-logic.js";
+import { normalizeSchoolLunches } from "../../lunch-logic.js";
 
 const STORE_NAME = "family-menu-state";
 const AUDIT_STORE_NAME = "family-menu-audit";
@@ -309,6 +310,7 @@ export function cleanState(value) {
     familyMembers: normalizeFamilyMembers(value?.familyMembers),
     familyPreferences: normalizeFamilyPreferences(value?.familyPreferences, value?.familyMembers),
     familyRules: normalizeFamilyRules(value?.familyRules),
+    schoolLunches: normalizeSchoolLunches(value?.schoolLunches),
     recipeEdits: cleanRecipeEdits(value?.recipeEdits),
     deletedRecipeIds: cleanDeletedRecipeIds(value?.deletedRecipeIds),
     updatedAt: new Date().toISOString(),

@@ -1,5 +1,6 @@
-import { allLocalizedText, canonicalText, localizedTextExact } from "./localized-data.js";
+import { allLocalizedText, canonicalText, localizedTextExact, updateLocalizedText } from "./localized-data.js";
 import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
+import { normalizedWords, parseIngredientAmount } from "./grocery-logic.js";
 
 export function createGroceryUi({
   $,
@@ -19,10 +20,14 @@ export function createGroceryUi({
   formatItemActivity = () => "",
   saveGroceries,
   offerUndo,
+  translateRecipe = null,
 }) {
   let controlsBound = false;
   let selectedMealFilter = "";
   let selectedRecipeFilter = "";
+  let translationEditorId = "";
+  const recipeTranslationsInFlight = new Set();
+  const translationErrors = new Map();
 
   function mealFilterKey(use) {
     const dateKey = /^\d{4}-\d{2}-\d{2}$/.test(use?.dateKey) ? use.dateKey : "";
@@ -149,10 +154,10 @@ export function createGroceryUi({
 
   function groceryDisplayText(item) {
     const direct = localizedTextExact(item.text, getLang());
+    if (direct && textMatchesLanguage(direct, getLang())) return direct;
     const recipe = recipeForGroceryItem(item);
     const recipeIngredients = recipe?.ingredients?.[getLang()] || [];
     const recipeLanguageReady = linesMatchLanguage(recipeIngredients, getLang());
-    if (direct && textMatchesLanguage(direct, getLang()) && recipeLanguageReady) return direct;
     if (!recipe) return t("translationPendingShort");
     if (!recipeLanguageReady) return t("translationPendingShort");
 
@@ -161,17 +166,46 @@ export function createGroceryUi({
     const spanishIngredients = recipe.ingredients?.es || [];
     const currentIngredients = recipe.ingredients?.[lang] || [];
     const itemText = cleanIngredientForGrocery(canonicalText(item.text)).toLowerCase();
-    const ingredientIndex = [...englishIngredients, ...spanishIngredients, ...currentIngredients]
-      .findIndex((ingredient) => cleanIngredientForGrocery(ingredient).toLowerCase() === itemText);
-    const index = ingredientIndex >= englishIngredients.length + spanishIngredients.length
-      ? ingredientIndex - englishIngredients.length - spanishIngredients.length
-      : ingredientIndex >= englishIngredients.length
-        ? ingredientIndex - englishIngredients.length
-        : ingredientIndex;
+    const itemKey = `${item.ingredientKey || ""}`.trim();
+    const ingredientSources = [englishIngredients, spanishIngredients, currentIngredients];
+    const keySource = itemKey
+      ? ingredientSources.find((ingredients) => ingredients.some((ingredient) => {
+        const parsed = parseIngredientAmount(ingredient);
+        return normalizedWords(parsed.remainder).join("-") === itemKey;
+      }))
+      : null;
+    const keyIndex = keySource
+      ? keySource.findIndex((ingredient) => {
+        const parsed = parseIngredientAmount(ingredient);
+        return normalizedWords(parsed.remainder).join("-") === itemKey;
+      })
+      : -1;
+    const exactSources = [englishIngredients, spanishIngredients, currentIngredients];
+    const exactSource = exactSources.find((ingredients) => ingredients.some((ingredient) => cleanIngredientForGrocery(ingredient).toLowerCase() === itemText));
+    const exactIndex = exactSource
+      ? exactSource.findIndex((ingredient) => cleanIngredientForGrocery(ingredient).toLowerCase() === itemText)
+      : -1;
+    const index = keyIndex >= 0 ? keyIndex : exactIndex;
     const translated = currentIngredients[index] || "";
     return translated && textMatchesLanguage(translated, getLang())
       ? translated
       : t("translationPendingShort");
+  }
+
+  function groceryTranslationAction(item, displayText) {
+    if (getLang() !== "es" || displayText !== t("translationPendingShort")) return "";
+    const recipe = recipeForGroceryItem(item);
+    if (recipe?.id && translateRecipe) {
+      if (recipeTranslationsInFlight.has(recipe.id)) return `<span class="translation-status">${escapeHtml(t("translatingGroceryRecipe"))}</span>`;
+      const error = translationErrors.get(recipe.id);
+      return `<div class="grocery-translation-action"><button class="text-button" type="button" data-translate-grocery-recipe="${escapeHtml(recipe.id)}">${escapeHtml(t("translateGroceryRecipe"))}</button>${error ? `<span class="translation-error">${escapeHtml(error)}</span>` : ""}</div>`;
+    }
+    if (!item?.text || !canonicalText(item.text)) return "";
+    if (translationEditorId === item.id) {
+      const source = canonicalText(item.text);
+      return `<div class="grocery-translation-editor"><input type="text" data-grocery-translation-input="${escapeHtml(item.id)}" value="" placeholder="${escapeHtml(t("spanishTranslationPlaceholder").replace("{source}", source))}" aria-label="${escapeHtml(t("spanishTranslationLabel"))}" /><button class="text-button" type="button" data-save-grocery-translation="${escapeHtml(item.id)}">${escapeHtml(t("saveTranslation"))}</button></div>`;
+    }
+    return `<div class="grocery-translation-action"><button class="text-button" type="button" data-edit-grocery-translation="${escapeHtml(item.id)}">${escapeHtml(t("addSpanishTranslation"))}</button></div>`;
   }
 
   function groupGroceriesBySource(items) {
@@ -268,6 +302,7 @@ export function createGroceryUi({
         </div>
         ${items.map((item) => {
           const displayText = groceryDisplayText(item);
+          const translationAction = groceryTranslationAction(item, displayText);
           const atHomeNote = groceryAtHomeNote(item);
           const activity = formatItemActivity(item);
           const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
@@ -275,13 +310,14 @@ export function createGroceryUi({
             <article class="grocery-item-row${inventoryDecisionFor(item) === "review" ? " inventory-review" : ""}">
               <label class="grocery-item">
                 <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" ${item.checked && inventoryDecisionFor(item) !== "review" ? "checked" : ""} />
-                <span>
-                  <strong${displayText === t("translationPendingShort") ? ` class="translation-placeholder"` : ""}>${escapeHtml(displayText)}</strong>
-                  ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
-                  ${activity ? `<em class="item-activity">${escapeHtml(activity)}</em>` : ""}
+                  <span>
+                    <strong${displayText === t("translationPendingShort") ? ` class="translation-placeholder"` : ""}>${escapeHtml(displayText)}</strong>
+                    ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
+                    ${activity ? `<em class="item-activity">${escapeHtml(activity)}</em>` : ""}
                 </span>
                 ${store ? `<small>${escapeHtml(store)}</small>` : ""}
               </label>
+              ${translationAction}
               ${inventoryDecisionFor(item) === "review" ? `<div class="inventory-review-actions" aria-label="${escapeHtml(t("reviewInventoryMatch"))}">
                 <button class="ghost-button" type="button" data-inventory-need="${escapeHtml(item.id)}">${t("keepOnList")}</button>
                 <button class="text-button" type="button" data-inventory-have="${escapeHtml(item.id)}">${t("haveEnough")}</button>
@@ -362,6 +398,52 @@ export function createGroceryUi({
       const deleteButton = event.target.closest("[data-delete-grocery-section]");
       const needButton = event.target.closest("[data-inventory-need]");
       const haveButton = event.target.closest("[data-inventory-have]");
+      const translateButton = event.target.closest("[data-translate-grocery-recipe]");
+      const editTranslationButton = event.target.closest("[data-edit-grocery-translation]");
+      const saveTranslationButton = event.target.closest("[data-save-grocery-translation]");
+
+      if (translateButton) {
+        event.preventDefault();
+        const recipeId = translateButton.dataset.translateGroceryRecipe;
+        if (!recipeId || recipeTranslationsInFlight.has(recipeId)) return;
+        recipeTranslationsInFlight.add(recipeId);
+        translationErrors.delete(recipeId);
+        renderGroceries();
+        try {
+          await translateRecipe(recipeId);
+        } catch (error) {
+          translationErrors.set(recipeId, error?.message || t("groceryTranslationError"));
+        } finally {
+          recipeTranslationsInFlight.delete(recipeId);
+          renderGroceries();
+        }
+        return;
+      }
+
+      if (editTranslationButton) {
+        event.preventDefault();
+        translationEditorId = editTranslationButton.dataset.editGroceryTranslation || "";
+        renderGroceries();
+        document.querySelector("[data-grocery-translation-input]")?.focus();
+        return;
+      }
+
+      if (saveTranslationButton) {
+        event.preventDefault();
+        const id = saveTranslationButton.dataset.saveGroceryTranslation;
+        const input = saveTranslationButton.closest(".grocery-item-row")?.querySelector("[data-grocery-translation-input]");
+        const value = input?.value?.trim() || "";
+        if (!id || !value) return;
+        const item = getGroceries().find((entry) => entry.id === id);
+        if (!item) return;
+        const nextItem = { ...item, text: updateLocalizedText(item.text, value, "es") };
+        touchItem(nextItem);
+        setGroceries(getGroceries().map((entry) => entry.id === id ? nextItem : entry));
+        translationEditorId = "";
+        renderGroceries();
+        await saveGroceries();
+        return;
+      }
 
       if (needButton || haveButton) {
         event.preventDefault();

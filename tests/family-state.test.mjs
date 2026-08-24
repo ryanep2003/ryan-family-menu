@@ -24,6 +24,7 @@ test("sharedStateSnapshot uses the API field names", () => {
     familyMembers: [],
     familyPreferences: [],
     familyRules: {},
+    schoolLunches: {},
     recipeEdits: { pasta: { name: "Pasta" } },
     deletedRecipeIds: ["old"],
   }), {
@@ -40,6 +41,13 @@ test("sharedStateSnapshot uses the API field names", () => {
     familyMembers: [],
     familyPreferences: [],
     familyRules: {},
+    schoolLunches: {
+      schemaVersion: 1,
+      plans: {},
+      preferences: [],
+      savedLunches: [],
+      settings: {},
+    },
     recipeEdits: { pasta: { name: "Pasta" } },
     deletedRecipeIds: ["old"],
   });
@@ -164,6 +172,13 @@ test("persistSharedState writes the local storage keys", () => {
   assert.equal(writes.get("dinner-favorites"), "[\"pasta\"]");
   assert.equal(writes.get("dinner-schedule"), "{\"monday\":{\"main\":\"pasta\"}}");
   assert.equal(writes.get("dinner-available-food"), "[]");
+  assert.deepEqual(JSON.parse(writes.get("school-lunches")), {
+    schemaVersion: 1,
+    plans: {},
+    preferences: [],
+    savedLunches: [],
+    settings: {},
+  });
   assert.deepEqual(JSON.parse(writes.get("dinner-recipe-feedback")), {
     pasta: {
       made: 2,

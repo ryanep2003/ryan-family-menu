@@ -45,28 +45,33 @@ test("family-memory selectors condense a deep history into one current record", 
   assert.equal(memory.fact, "everyoneAte");
 });
 
-test("Living Almanac stylesheet uses only declared custom properties", async () => {
+test("Honed Almanac stylesheet uses only declared custom properties", async () => {
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
   const declared = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]));
   const referenced = new Set([...css.matchAll(/var\((--[\w-]+)/g)].map((match) => match[1]));
   assert.deepEqual([...referenced].filter((name) => !declared.has(name)), []);
-  assert.match(css, /--ground: #F1F2EE/);
-  assert.match(css, /--blue: #2947B8/);
+  assert.match(css, /--ground: #F0EFEA/);
+  assert.match(css, /--herb: #476346/);
+  assert.match(css, /--blue: #2F58B8/);
 });
 
-test("Living Almanac page atmosphere stays connected to the semantic palette", async () => {
+test("Honed Almanac page atmosphere uses distinct material chapters", async () => {
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 
   for (const view of ["today", "schedule", "grocery", "recipes"]) {
     assert.match(css, new RegExp(`body\\[data-view="${view}"\\]`));
   }
   assert.match(css, /--page-wash-primary: color-mix\(in srgb, var\(--memory\)/);
-  assert.match(css, /\.recipe-banner::before[\s\S]*background: color-mix\(in srgb, var\(--attention\)/);
-  assert.doesNotMatch(css, /\.recipe-banner::before[\s\S]{0,300}content:\s*["']R["']/);
+  assert.match(css, /--surface-clay: #F4E9E2/);
+  assert.match(css, /--surface-herb: #E9EBDD/);
+  assert.match(css, /--surface-utility: #ECEDEB/);
+  assert.match(css, /\.recipe-banner[\s\S]*background: var\(--surface-clay\)/);
+  assert.match(css, /\.recipe-picks[\s\S]*background: var\(--surface-herb\)/);
+  assert.match(css, /\.recipe-browse[\s\S]*background: var\(--surface-utility\)/);
   const recipeBannerRule = css.match(/\.recipe-banner\s*\{([^}]*)\}/)?.[1] || "";
   const recipeBannerAfterRule = css.match(/\.recipe-banner::after\s*\{([^}]*)\}/)?.[1] || "";
   const recipePicksEmptyRule = css.match(/\.recipe-picks #recipePicksEmpty\s*\{([^}]*)\}/)?.[1] || "";
-  assert.doesNotMatch(recipeBannerRule, /border-top/);
+  assert.match(recipeBannerRule, /border-top/);
   assert.doesNotMatch(recipeBannerAfterRule, /border\s*:/);
   assert.doesNotMatch(recipePicksEmptyRule, /border-left/);
   assert.match(css, /\.dinner-feedback\s*\{[\s\S]*linear-gradient/);

@@ -75,10 +75,22 @@ Important fields:
 - `familyMembers`: member profiles.
 - `familyPreferences`: restrictions, dislikes, likes, and reliable meals linked by member ID.
 - `familyRules`: household planning preferences.
+- `schoolLunches`: bounded, child-specific lunch plans, food preferences, saved combinations, and packing constraints.
 - `recipeEdits`: edits for seeded or shared recipes.
 - `deletedRecipeIds`: recipes hidden from the household library.
 
 The record has collection limits and a three-megabyte request cap. A new field must be added to both the browser snapshot/normalizer/local persistence and the server sanitizer.
+
+### School lunches
+
+`schoolLunches` is additive and defaults to `{ schemaVersion: 1, plans: {}, preferences: [], savedLunches: [], settings: {} }`; older household records require no migration.
+
+- `plans` keeps at most 370 `YYYY-MM-DD` entries. Each date is keyed by member ID and contains `dayType`, five catalog component IDs (`main`, `produce`, `side`, `extra`, `drink`), approval and packing state, plus attribution. `dayType` is `pack`, `school-lunch`, `pizza-day`, `no-school`, or `field-trip`.
+- `preferences` keeps at most 600 unique member/food records. `rating` is `love`, `eat`, `dislike`, or `never`; `favorite` is an independent manual favorite flag.
+- `savedLunches` keeps at most 80 complete five-component combinations linked to a member.
+- `settings` keeps per-member preparation, cold-storage, and reheating constraints for at most 20 members.
+
+Food IDs and grocery quantities come from the code-owned catalog in `lunch-logic.js`, not from arbitrary persisted text. Both browser and server use `normalizeSchoolLunches()`, so unknown food IDs, invalid dates, unbounded collections, and unsupported enum values are discarded. Removing or renaming catalog IDs therefore requires an explicit compatibility plan.
 
 ## Household audit history
 
@@ -142,6 +154,8 @@ Inventory guidance is deliberately explicit. `inventorySuggested` records that a
 
 Generated items also retain `mealUses`: date, meal period, recipe, batches, and servings. This provenance makes regeneration idempotent and permits shared ingredients to aggregate without double-counting.
 
+An approved packed lunch contributes catalog grocery quantities with `mealSlot: "lunch"` and a child-specific recipe name such as `Theo lunches`. Regeneration includes upcoming approved lunch dates even when “tomorrow” crosses the current-week boundary. Rebuilding removes stale planned contributions after swaps or no-packing changes, consolidates compatible quantities with meal-plan ingredients, and preserves manual grocery rows.
+
 Do not change `source`, `ingredientKey`, `mealUses`, or quantity semantics without regression tests for rebuilding a plan, changing servings, shared ingredients, legacy generated rows, and months with many meal uses.
 
 At the store, `checked` means the shopper says the item was purchased. Finishing a trip removes those checked rows and merges them into home inventory. A scanned receipt may match additional rows before completion. A manually entered receipt total has no line-item knowledge, so it only moves rows the shopper checked.
@@ -176,7 +190,7 @@ The raw household access key is stored globally as `family-menu-household-key`. 
 family-menu:<household-id>:<local-key>
 ```
 
-Important local keys include schedule, calendar, versions, favorites, tasks, groceries, inventory, budget, receipts, activity, family memory, dinner history, recipe edits, deleted recipe IDs, and drafts.
+Important local keys include schedule, calendar, versions, favorites, tasks, groceries, inventory, budget, receipts, activity, family memory, `school-lunches`, dinner history, recipe edits, deleted recipe IDs, and drafts.
 
 Changing these names without migration can make existing browser fallbacks disappear. Never move household data to unscoped local storage.
 

@@ -19,12 +19,14 @@ The shipped product currently supports:
 - Private household creation and shared access through a family key.
 - A Today view for the current meal, available leftovers/snacks, household handoffs, tasks, favorites, and recent activity.
 - Weekly and monthly planning across breakfast, lunch, and dinner.
+- A child-specific School Lunches workspace for tomorrow, a Monday–Friday plan, interchangeable lunchbox components, ready-made ideas, easy swaps, packing checklists, and progressively learned favorites.
 - Flexible meal composition using mains, sides, salads, desserts, sauces, drinks, and other recipe roles.
 - Per-meal serving plans for adults, children, and guests, with batch and leftover estimates.
 - Intentional leftover recording and allocation to later meals.
 - A shared household recipe library with local drafts, editing, favorites, and hiding/deletion overlays. Bundled examples exist only for exact-ID compatibility with older meal plans and are never presented as the household catalog.
 - Recipe creation from photos, public links, or manual entry.
 - A grocery list generated from meal plans, with shared-ingredient aggregation, advisory inventory matches, meal/date attribution, and per-meal shopping.
+- Approved school lunches contribute to that same grocery list, so overlapping dinner, breakfast, and lunchbox ingredients consolidate instead of becoming a separate shopping system.
 - Home inventory by location, stock level, quantity, and expiration.
 - Receipt capture and monthly grocery-budget tracking.
 - Family profiles, food preferences, household rules, quick dinner feedback, dinner history, and deterministic recommendation ranking.
@@ -38,13 +40,14 @@ The product does not currently provide individual user accounts, verified identi
 
 1. **Open a household:** create an invited household or enter the private family key on a new device.
 2. **Plan food:** choose meals for a week or specific month date, compose each meal, adjust eaters, and estimate leftovers.
-3. **Prepare and hand off:** use Today to see what is planned, what should be used soon, and who is helping.
-4. **Shop:** open a planned meal directly in the grocery list, review possible inventory matches, check items while shopping, or upload a receipt directly so purchases move home and spending stays current.
-5. **Manage food at home:** track location, amount, stock, and expiration; scan photos for suggested items.
-6. **Manage recipes:** browse, search, favorite, import, scan, edit, draft, and publish household recipes.
-7. **Learn from dinner:** record a two-second outcome, optional individual reactions, and leftovers so later suggestions can improve.
-8. **Cook along:** open a recipe while preparing it, move through localized steps, start detected timers, optionally say “next,” then save what really happened.
-9. **Track spending:** add a receipt photo or enter the total when finishing a shopping trip, then compare monthly grocery spending with the household target.
+3. **Pack school lunch:** approve or swap tomorrow's lunch, fill a simple school week, mark no-packing days, and check items off in packing mode.
+4. **Prepare and hand off:** use Today to see what is planned, what should be used soon, and who is helping.
+5. **Shop:** open a planned meal directly in the grocery list, review possible inventory matches, check items while shopping, or upload a receipt directly so purchases move home and spending stays current.
+6. **Manage food at home:** track location, amount, stock, and expiration; scan photos for suggested items.
+7. **Manage recipes:** browse, search, favorite, import, scan, edit, draft, and publish household recipes.
+8. **Learn from dinner:** record a two-second outcome, optional individual reactions, and leftovers so later suggestions can improve.
+9. **Cook along:** open a recipe while preparing it, move through localized steps, start detected timers, optionally say “next,” then save what really happened.
+10. **Track spending:** add a receipt photo or enter the total when finishing a shopping trip, then compare monthly grocery spending with the household target.
 
 ## Product Terminology
 
@@ -57,6 +60,7 @@ The product does not currently provide individual user accounts, verified identi
 - **Handoff:** optional coordination details that help another caretaker continue meal preparation.
 - **Dinner pace:** quick, standard, or no-cooking guidance for an evening.
 - **Family memory:** explicit preferences, household rules, dinner outcomes, and history used to rank suggestions.
+- **School lunch plan:** one child's five lunchbox components or a no-packing day for a specific school date.
 - **Shared state:** the primary household record containing planning and collaboration data.
 
 ## Current Priorities
