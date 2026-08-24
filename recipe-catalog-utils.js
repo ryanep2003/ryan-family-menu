@@ -23,6 +23,9 @@ export function compactRecipeForCatalog(recipe) {
     stepsText: recipe.stepsText || textFromLegacy(recipe.steps),
     allergyWarning: recipe.allergyWarning,
     notes: recipe.notes,
+    meta: recipe.meta,
+    short: recipe.short,
+    tags: recipe.tags,
     createdAt: recipe.createdAt,
   };
   const cardPhoto = safeCardPhoto(recipe.cardPhoto);

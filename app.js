@@ -331,11 +331,14 @@ function offerUndo(message, undo) {
 }
 
 function allRecipes() {
+  const blobHasEveryStarter = recipes.every((starter) =>
+    sharedRecipes.some((recipe) => recipe?.id === starter.id)
+  );
   return visibleRecipes({
-    // Starter recipes are code-owned and remain available when the household
-    // catalog is offline or empty. Shared recipes override a starter with the
-    // same stable ID; deletedRecipeIds still hides either source.
-    seedRecipes: recipes,
+    // Keep the release seed only until the Blob catalog has returned every
+    // starter. Once it has, the normal catalog is entirely Blob-backed while
+    // the seed still protects first paint and offline use during migration.
+    seedRecipes: blobHasEveryStarter ? [] : recipes,
     sharedRecipes,
     drafts,
     recipeEdits,

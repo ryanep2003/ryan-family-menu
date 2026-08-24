@@ -29,14 +29,14 @@ The household profile lookup is the exception: it is keyed by a SHA-256 digest o
 | `family-menu-dinner-history` | `events` | Versioned dinner history |
 | `family-menu-groceries` | `items` | Versioned grocery list |
 | `family-menu-inventory` | `items` | Versioned inventory |
-| `family-menu-recipes` | `recipe-index`, `recipe:<id>`, legacy `recipes` | Shared recipe index and records |
+| `family-menu-recipes` | `platform:recipe-index`, `platform:recipe:<id>`, household `recipe-index`, `recipe:<id>`, legacy `recipes` | Platform catalog plus household recipe records |
 | `family-menu-audit` | `history` | Bounded household menu-change events and recoverable prior menu snapshots |
 
 `householdDataKey()` wraps every record key except household access profiles.
 
 ### Recipe catalog reads
 
-Recipe records remain unchanged and are still stored under the household-scoped index and `recipe:<id>` keys. The browser’s catalog cache is a separate local household-scoped envelope with `schemaVersion: 4`, `recipes`, and `fetchedAt`; it deliberately excludes embedded `data:image/` media. The cache contains household recipes only. The code-owned starter recipes in `recipes-data.js` are layered into the browser catalog on every device, so a missing, empty, stale, or unavailable household response cannot make the starter library disappear. The `?view=catalog` endpoint is a read-only compact projection for startup. The existing full recipe response remains available for older clients, and no production record migration is required.
+Recipe records use two layers. Platform-owned starter recipes are stored under the shared, read-only `platform:recipe-index` and `platform:recipe:<id>` keys; the authorized catalog read backfills any missing starter records idempotently from the release seed. Household uploads and edits remain under the household-scoped index and `recipe:<id>` keys, with a household record taking precedence when IDs overlap. The browser’s catalog cache is a separate local household-scoped envelope with `schemaVersion: 4`, `recipes`, and `fetchedAt`; it deliberately excludes embedded `data:image/` media. During the transition, code-owned starters remain a temporary offline/loading fallback, but a successful catalog response now comes from Blob records. The `?view=catalog` endpoint is a compact projection for startup, while the existing full recipe response remains available for detail and older clients.
 
 ## Versioned Record Envelope
 
@@ -176,7 +176,7 @@ Shared recipe records include localized names, ingredients, steps, safety warnin
 
 Important distinctions:
 
-- Starter recipes live in `recipes-data.js` and are code, not Blob records; they are always available and are never written into household Blobs.
+- Starter recipes are seeded into the shared platform catalog (`platform:recipe-index` and `platform:recipe:<id>`); the release source remains only as a temporary idempotent backfill during migration and offline fallback. They are not copied into individual household namespaces.
 - Published household recipes live in individual Blob records and an index.
 - Edits to recipes live in shared family state.
 - Incomplete drafts live only in household-scoped browser storage.

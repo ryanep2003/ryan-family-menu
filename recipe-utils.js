@@ -99,9 +99,9 @@ export function uploadToRecipe(upload, enMeta, esMeta) {
   return {
     ...upload,
     name: localizedPair(upload.name),
-    meta: { en: enMeta, es: esMeta },
-    short: localizedPair(upload.notes, "Needs review", "Necesita revisión"),
-    tags: { en: enMeta, es: esMeta },
+    meta: upload.meta || { en: enMeta, es: esMeta },
+    short: upload.short || localizedPair(upload.notes, "Needs review", "Necesita revisión"),
+    tags: upload.tags || { en: enMeta, es: esMeta },
     category: upload.category || "draft",
     servings: normalizeRecipeServings(upload.servings),
     allergyWarning: upload.allergyWarning

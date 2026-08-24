@@ -14,6 +14,7 @@ test("compact catalog keeps cooking fields and removes embedded photos", () => {
     stepsText: { en: "Cook it", es: "Cocinar" },
     allergyWarning: { en: "", es: "" },
     notes: { en: "Family favorite", es: "Favorito" },
+    meta: { en: "Family favorite", es: "Favorito" },
     createdAt: "2026-08-19T00:00:00.000Z",
     photos: ["data:image/jpeg;base64," + "x".repeat(1000)],
     cardPhoto: "data:image/jpeg;base64," + "y".repeat(1000),
@@ -22,6 +23,7 @@ test("compact catalog keeps cooking fields and removes embedded photos", () => {
   assert.equal(compact.id, full.id);
   assert.equal(compact.ingredientsText.en, "1 onion");
   assert.equal(compact.stepsText.es, "Cocinar");
+  assert.equal(compact.meta.en, "Family favorite");
   assert.equal(compact.hasSourcePhotos, true);
   assert.equal("photos" in compact, false);
   assert.equal("cardPhoto" in compact, false);
@@ -63,8 +65,17 @@ test("recipe endpoint keeps a bounded full-detail read alongside compact catalog
   assert.match(source, /params\.get\("id"\)/);
   assert.match(source, /params\.get\("view"\)/);
   assert.match(source, /view === "card"/);
-  assert.match(source, /readRecipeById\(store, access\.household\.id, id\)/);
+  assert.match(source, /readRecipeById\(store, access\.household\.id, id/);
   assert.match(source, /Recipe not found/);
+});
+
+test("recipe endpoint backfills the platform starter catalog and overlays household records", async () => {
+  const source = await readFile(new URL("../netlify/functions/recipes.js", import.meta.url), "utf8");
+  assert.match(source, /PLATFORM_INDEX_KEY = "platform:recipe-index"/);
+  assert.match(source, /PLATFORM_RECIPE_PREFIX = "platform:recipe:"/);
+  assert.match(source, /ensurePlatformCatalog\(store\)/);
+  assert.match(source, /householdRecipes,\s*\.\.\.platformRecipes\.filter/);
+  assert.match(source, /!householdIds\.has\(recipe\.id\)/);
 });
 
 test("household catalog responses stay household-scoped before browser layering", () => {
@@ -93,6 +104,7 @@ test("catalog response removes invalid and duplicate records without adding subs
 test("browser catalog loader layers code-owned starters into the household view", async () => {
   const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
   assert.match(source, /sharedRecipes = recipesFromCatalogResponse\(data\.recipes\)/);
-  assert.match(source, /seedRecipes: recipes/);
+  assert.match(source, /blobHasEveryStarter/);
+  assert.match(source, /seedRecipes: blobHasEveryStarter \? \[\] : recipes/);
   assert.match(source, /sharedRecipesStatus = recipes\.length \? "ready"/);
 });

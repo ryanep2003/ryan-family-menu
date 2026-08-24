@@ -91,7 +91,7 @@ School lunch plans, child lunch preferences, saved combinations, and lunch const
 
 Meal planning has an additive, household-scoped `schedule` record and endpoint. New clients read and write schedule/calendar changes through that smaller versioned record, so meal edits do not compete with unrelated profile, budget, or recipe edits. The legacy schedule fields remain in `shared-state` as a fallback for older clients while the transition completes.
 
-Shared recipes use an index plus individual recipe records. Published recipes are appended through `POST`; recipe edits and hidden/deleted IDs are stored in family state. Unpublished drafts remain local to the browser. The browser layers the code-owned starter catalog with the household catalog through its own bounded retry path: starters remain usable while the shared catalog is loading or unavailable, while the Household menu still reports the sync problem for household recipes.
+Shared recipes use a platform catalog plus household index and individual recipe records. The authorized catalog read idempotently backfills the twelve platform starters into `platform:recipe-index` and `platform:recipe:<id>` records, then returns them together with household recipes; household IDs win on collisions. Published household recipes are appended through `POST`; recipe edits and hidden/deleted IDs are stored in family state. Unpublished drafts remain local to the browser. The browser keeps the release seed as a bounded loading/offline fallback during the migration, but a successful catalog response is Blob-backed and no longer depends on starter code for normal operation.
 
 See `DATA_MODEL.md` before changing any persisted shape.
 
