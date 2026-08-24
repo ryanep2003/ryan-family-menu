@@ -160,7 +160,7 @@ Do not change `source`, `ingredientKey`, `mealUses`, or quantity semantics witho
 
 At the store, `checked` means the shopper says the item was purchased. Finishing a trip removes those checked rows and merges them into home inventory. A scanned receipt may match additional rows before completion. A manually entered receipt total has no line-item knowledge, so it only moves rows the shopper checked.
 
-Receipt summaries live in shared family state and include store, date, total, item count, and attribution. They drive monthly budget totals; they are not a second inventory or grocery-item ledger.
+Receipt summaries live in the household receipt ledger and include store, date, total, item count, and attribution. They drive monthly budget totals; they are not a second inventory or grocery-item ledger. Receipt-photo review requires a positive total before purchases can be finalized, so a scan that misses the printed total cannot silently produce a zero-dollar budget entry.
 
 ## Inventory
 

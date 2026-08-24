@@ -976,7 +976,11 @@ async function saveSharedState(options = {}) {
   try {
     const result = await sharedSaveInFlight;
     if (result) {
-      await Promise.all([saveLedger("activity"), saveLedger("receipts")]);
+      const ledgerResults = await Promise.all([saveLedger("activity"), saveLedger("receipts")]);
+      // Most shared-state edits should remain successful even if the
+      // auxiliary activity ledger is temporarily unavailable. Receipt
+      // capture is different: the budget depends on its receipt ledger.
+      return options.requireLedger === "receipts" ? ledgerResults[1] === true : result;
     }
     return result;
   } finally {
@@ -1457,7 +1461,7 @@ const renderInventorySuggestions = () => inventoryUi.renderInventorySuggestions(
 async function addHouseholdReceipt(receipt) {
   receipts = [normalizeReceipt({ ...receipt, updatedBy: householdMember }), ...receipts];
   recordActivity("receipt", t("activityReceiptAdded").replace("{store}", receipt.store || t("receiptStore")));
-  await saveSharedState();
+  return saveSharedState({ requireLedger: "receipts" });
 }
 
 const receiptUi = createReceiptUi({
@@ -1498,6 +1502,7 @@ const receiptUi = createReceiptUi({
   setGroceries: (items) => {
     groceries = items;
   },
+  getPurchasedCount: (excludedIds = new Set()) => purchasedGroceries().filter((item) => !excludedIds.has(item.id)).length,
   finishPurchasedItems: movePurchasedItemsHome,
   onTripFinished: showHomeAfterTrip,
 });
@@ -2776,12 +2781,16 @@ $("#manualReceiptForm").addEventListener("submit", async (event) => {
   const total = Number($("#manualReceiptTotal").value);
   if (!(total > 0)) return;
 
-  await addHouseholdReceipt({
+  const saved = await addHouseholdReceipt({
     store: $("#manualReceiptStore").value.trim(),
     date: $("#manualReceiptDate").value || formatDateKey(new Date()),
     total,
     itemCount: purchasedCount,
   });
+  if (saved === false) {
+    setSyncStatus("groceries", "receiptSaveError", { state: "error" });
+    return;
+  }
   movePurchasedItemsHome();
   $("#manualReceiptForm").reset();
   showHomeAfterTrip();
