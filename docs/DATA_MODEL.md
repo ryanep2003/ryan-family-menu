@@ -36,7 +36,7 @@ The household profile lookup is the exception: it is keyed by a SHA-256 digest o
 
 ### Recipe catalog reads
 
-Recipe records remain unchanged and are still stored under the household-scoped index and `recipe:<id>` keys. The browser’s catalog cache is a separate local household-scoped envelope with `schemaVersion: 4`, `recipes`, and `fetchedAt`; it deliberately excludes embedded `data:image/` media. Version 4 invalidates earlier browser caches that may have mixed bundled examples into a household response. The `?view=catalog` endpoint is a read-only compact projection for startup. The existing full recipe response remains available for older clients, and no production record migration is required.
+Recipe records remain unchanged and are still stored under the household-scoped index and `recipe:<id>` keys. The browser’s catalog cache is a separate local household-scoped envelope with `schemaVersion: 4`, `recipes`, and `fetchedAt`; it deliberately excludes embedded `data:image/` media. The cache contains household recipes only. The code-owned starter recipes in `recipes-data.js` are layered into the browser catalog on every device, so a missing, empty, stale, or unavailable household response cannot make the starter library disappear. The `?view=catalog` endpoint is a read-only compact projection for startup. The existing full recipe response remains available for older clients, and no production record migration is required.
 
 ## Versioned Record Envelope
 
@@ -176,7 +176,7 @@ Shared recipe records include localized names, ingredients, steps, safety warnin
 
 Important distinctions:
 
-- Bundled recipes live in `recipes-data.js` and are code, not Blob records.
+- Starter recipes live in `recipes-data.js` and are code, not Blob records; they are always available and are never written into household Blobs.
 - Published household recipes live in individual Blob records and an index.
 - Edits to recipes live in shared family state.
 - Incomplete drafts live only in household-scoped browser storage.

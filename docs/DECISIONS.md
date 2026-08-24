@@ -12,13 +12,13 @@ This is a lightweight record of architectural and product decisions that future 
 
 **Consequences:** Older records normalize to an empty lunch state without migration. Catalog IDs become compatibility-sensitive. The rules remain fast, testable, offline-capable, and visibly editable; future model assistance must be optional and use the same bounded safety filters.
 
-## 2026-08-19 — Bundled recipes are compatibility records, not household catalog data
+## 2026-08-24 — Keep the starter recipe catalog permanently available
 
-**Decision:** The recipe library and planning search display only household catalog records and local drafts. Bundled examples may resolve an exact legacy recipe ID from an older meal plan, but they are never merged into a household catalog response or shown as a fallback library.
+**Decision:** The recipe library and planning search always include the code-owned starter recipes from `recipes-data.js`, layered with household catalog records and local drafts. A household recipe with the same stable ID overrides the starter presentation, and `deletedRecipeIds` can hide either source. Starter recipes are never written into household Blobs or the household catalog cache.
 
-**Reason:** A successful empty or unavailable household response had been represented as a 12-recipe library, hiding the real state and making a family’s catalog appear to lose recipes.
+**Reason:** The earlier catalog recovery change removed bundled recipes after a successful household response. That made built-in recipes such as Lemon Chicken disappear even though their source code and stable IDs remained intact. A family should never lose the starter library because a remote catalog is empty, stale, unavailable, or partially populated.
 
-**Consequences:** Loading, unavailable, genuinely empty, and loaded catalog states remain distinct. The household-scoped browser catalog cache moved to schema version 4 to discard contaminated local projections; no Netlify Blob record or persisted recipe contract changed.
+**Consequences:** Starter recipes remain usable offline and during shared-catalog recovery. The Household menu still reports shared-catalog sync errors, but those errors no longer erase the starter reading surface. No production Blob migration is required; the fix changes only tolerant client composition and preserves existing IDs, edits, deletions, and household records.
 
 ## 2026-08-19 — Keep shared-recipe recovery separate from the main menu banner
 

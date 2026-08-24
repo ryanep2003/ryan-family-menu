@@ -161,6 +161,28 @@ test("visibleRecipes combines shared uploads, drafts, edits, and deletions", () 
   assert.equal(recipes[2].meta.en, "Local draft");
 });
 
+test("shared recipes override starter IDs without removing the starter catalog", () => {
+  const visible = visibleRecipes({
+    seedRecipes: [
+      { id: "lemon-chicken", name: { en: "Starter Lemon Chicken" }, ingredients: { en: ["lemon"] }, steps: { en: ["cook"] } },
+      { id: "meatballs", name: { en: "Starter Meatballs" } },
+    ],
+    sharedRecipes: [{
+      id: "lemon-chicken",
+      name: { en: "Household Lemon Chicken", es: "Pollo al limón" },
+      ingredientsText: { en: "lemon", es: "limón" },
+      stepsText: { en: "cook", es: "cocinar" },
+    }],
+    drafts: [],
+    recipeEdits: {},
+    deletedRecipeIds: [],
+    localize: localizeEn,
+  });
+
+  assert.deepEqual(visible.map((recipe) => recipe.id), ["lemon-chicken", "meatballs"]);
+  assert.equal(visible[0].name.en, "Household Lemon Chicken");
+});
+
 test("compact recipe edits omit media already stored with a shared recipe", () => {
   const photo = "data:image/jpeg;base64,already-stored";
   const compact = compactRecipeEditsForSync({

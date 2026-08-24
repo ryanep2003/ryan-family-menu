@@ -67,7 +67,7 @@ test("recipe endpoint keeps a bounded full-detail read alongside compact catalog
   assert.match(source, /Recipe not found/);
 });
 
-test("household catalog responses never receive bundled fallback recipes", () => {
+test("household catalog responses stay household-scoped before browser layering", () => {
   const householdRecipes = Array.from({ length: 60 }, (_, index) => ({
     id: `shared-${index + 1}`,
     name: { en: `Family recipe ${index + 1}` },
@@ -90,9 +90,9 @@ test("catalog response removes invalid and duplicate records without adding subs
   assert.deepEqual(catalog, [{ id: "shared-one", name: { en: "Newest copy" } }]);
 });
 
-test("browser catalog loader does not merge bundled recipes into a household response", async () => {
+test("browser catalog loader layers code-owned starters into the household view", async () => {
   const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
   assert.match(source, /sharedRecipes = recipesFromCatalogResponse\(data\.recipes\)/);
-  assert.doesNotMatch(source, /new Map\(recipes\.map/);
-  assert.match(source, /seedRecipes: \[\]/);
+  assert.match(source, /seedRecipes: recipes/);
+  assert.match(source, /sharedRecipesStatus = recipes\.length \? "ready"/);
 });

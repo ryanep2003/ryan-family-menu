@@ -130,7 +130,9 @@ let sharedRecipes = recipeCatalogCache?.schemaVersion === recipeCatalogCacheSche
   ? recipeCatalogCache.recipes : [];
 let recipeCatalogFetchedAt = recipeCatalogCache?.schemaVersion === recipeCatalogCacheSchemaVersion
   ? Number(new Date(recipeCatalogCache.fetchedAt).getTime()) || 0 : 0;
-let sharedRecipesStatus = Array.isArray(sharedRecipes) && sharedRecipes.length ? "ready" : "loading";
+// The code-owned family starter catalog is always available. Household recipes
+// layer on top when the shared catalog responds, but never replace the starters.
+let sharedRecipesStatus = recipes.length ? "ready" : (Array.isArray(sharedRecipes) && sharedRecipes.length ? "ready" : "loading");
 let recipeEdits = readJsonStorage(householdStorage, "dinner-recipe-edits", {});
 let deletedRecipeIds = readJsonStorage(householdStorage, "dinner-deleted-recipes", []);
 let importedRecipePhotos = [];
@@ -330,9 +332,10 @@ function offerUndo(message, undo) {
 
 function allRecipes() {
   return visibleRecipes({
-    // Bundled examples are never a substitute for the household catalog.
-    // Exact-ID compatibility for old meal plans is handled by recipeById.
-    seedRecipes: [],
+    // Starter recipes are code-owned and remain available when the household
+    // catalog is offline or empty. Shared recipes override a starter with the
+    // same stable ID; deletedRecipeIds still hides either source.
+    seedRecipes: recipes,
     sharedRecipes,
     drafts,
     recipeEdits,
@@ -2177,7 +2180,7 @@ async function loadSharedRecipes({ restart = false } = {}) {
     render();
     return true;
   }
-  if (!sharedRecipes.length) sharedRecipesStatus = "loading";
+  if (!sharedRecipes.length && !recipes.length) sharedRecipesStatus = "loading";
   render();
   clearAreaStatus("recipes");
   recipeLoadInFlight = (async () => {
@@ -2195,7 +2198,7 @@ async function loadSharedRecipes({ restart = false } = {}) {
     } catch (error) {
       console.warn(error);
       if (generation !== recipeLoadGeneration) return false;
-      sharedRecipesStatus = sharedRecipes.length ? "ready" : "unavailable";
+      sharedRecipesStatus = sharedRecipes.length || recipes.length ? "ready" : "unavailable";
       scheduleRecipeRetry();
       render();
       return false;

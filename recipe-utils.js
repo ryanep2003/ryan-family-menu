@@ -173,11 +173,17 @@ export function visibleRecipes({
   localize,
 }) {
   const deletedIds = new Set(deletedRecipeIds || []);
-  return [
-    ...(seedRecipes || []),
-    ...(sharedRecipes || []).map((recipe) => uploadToRecipe(recipe, "Shared upload", "Receta compartida")),
-    ...(drafts || []).map((draft) => uploadToRecipe(draft, "Local draft", "Borrador local")),
-  ]
+  const byId = new Map();
+  (seedRecipes || []).forEach((recipe) => {
+    if (recipe?.id) byId.set(recipe.id, recipe);
+  });
+  (sharedRecipes || []).forEach((recipe) => {
+    if (recipe?.id) byId.set(recipe.id, uploadToRecipe(recipe, "Shared upload", "Receta compartida"));
+  });
+  (drafts || []).forEach((draft) => {
+    if (draft?.id) byId.set(draft.id, uploadToRecipe(draft, "Local draft", "Borrador local"));
+  });
+  return [...byId.values()]
     .filter((recipe) => !deletedIds.has(recipe.id))
     .map((recipe) => {
       const edit = recipeEdits?.[recipe.id];
