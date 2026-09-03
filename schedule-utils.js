@@ -339,6 +339,47 @@ export function mealHasContent(meal) {
   );
 }
 
+export function upcomingMealDateOptions(now = new Date(), count = 7) {
+  const start = new Date(now);
+  start.setHours(12, 0, 0, 0);
+  const days = Math.max(1, Math.min(14, Number(count) || 7));
+  return Array.from({ length: days }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return {
+      dateKey: formatDateKey(date),
+      offset: index,
+    };
+  });
+}
+
+export function appendRecipeToMeal(meal, {
+  recipeId,
+  period = "dinner",
+  role = "main",
+  id = "",
+} = {}) {
+  const cleanRecipeId = typeof recipeId === "string" ? recipeId.trim().slice(0, 120) : "";
+  if (!cleanRecipeId) return normalizeMealPlan(meal);
+  const itemId = typeof id === "string" && /^[a-z0-9-]{1,160}$/i.test(id)
+    ? id
+    : `meal-item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const normalized = normalizeMealPlan(meal);
+  return normalizeMealPlan({
+    ...normalized,
+    items: [
+      ...normalized.items,
+      {
+        id: itemId,
+        period: mealPeriodKeys.has(period) ? period : "dinner",
+        role: mealRoleKeys.has(role) ? role : "other",
+        sourceType: "recipe",
+        recipeId: cleanRecipeId,
+      },
+    ],
+  });
+}
+
 export function copyCurrentWeekToNextWeek(weekStartKey, schedule, calendarMeals) {
   const normalizedSchedule = normalizeSchedule(schedule);
   const normalizedCalendar = normalizeCalendar(calendarMeals);

@@ -17,13 +17,13 @@ Family Menu is the shared operating system for a household's food life. It helps
 The shipped product currently supports:
 
 - Private household creation and shared access through a family key.
-- A Today view for the current meal, available leftovers/snacks, household handoffs, tasks, favorites, and recent activity.
+- A Today view for the current meal, with recipe search and the persistent shopping list on the primary surface. Inventory, leftovers/snacks, household handoffs, tasks, favorites, and recent activity remain available without sitting in the daily loop.
 - Weekly and monthly planning across breakfast, lunch, and dinner.
 - A child-specific School Lunches workspace for tomorrow, a Monday–Friday plan, interchangeable lunchbox components, ready-made ideas, easy swaps, packing checklists, and progressively learned favorites.
 - Flexible meal composition using mains, sides, salads, desserts, sauces, drinks, and other recipe roles.
 - Per-meal serving plans for adults, children, and guests, with batch and leftover estimates.
 - Intentional leftover recording and allocation to later meals.
-- A shared household recipe library backed by the platform catalog, local drafts, editing, favorites, and hiding/deletion overlays. The platform catalog is the single source for starter and family recipes; local cache supports brief offline recovery.
+- A shared household recipe library backed by the platform catalog, local drafts, editing, favorites, and hiding/deletion overlays. Search is at the top of the library, and a recipe can be added directly to a day and meal from the recipe screen. The platform catalog is the single source for starter and family recipes; local cache supports brief offline recovery.
 - Recipe creation from photos, public links, or manual entry.
 - A grocery list generated from meal plans, with shared-ingredient aggregation, advisory inventory matches, meal/date attribution, and per-meal shopping.
 - Approved school lunches contribute to that same grocery list, so overlapping dinner, breakfast, and lunchbox ingredients consolidate instead of becoming a separate shopping system.
@@ -42,9 +42,9 @@ The product does not currently provide individual user accounts, verified identi
 2. **Plan food:** choose meals for a week or specific month date, compose each meal, adjust eaters, and estimate leftovers.
 3. **Pack school lunch:** approve or swap tomorrow's lunch, fill a simple school week, mark no-packing days, and check items off in packing mode.
 4. **Prepare and hand off:** use Today to see what is planned, what should be used soon, and who is helping.
-5. **Shop:** open a planned meal directly in the grocery list, review possible inventory matches, check items while shopping, or upload a receipt directly so purchases move home and spending stays current.
-6. **Manage food at home:** track location, amount, stock, and expiration; scan photos for suggested items.
-7. **Manage recipes:** browse, search, favorite, import, scan, edit, draft, and publish household recipes.
+5. **Shop:** open the persistent shopping list from Today or the Shop tab, review possible inventory matches, check items while shopping, or upload a receipt directly so purchases move home and spending stays current. The Shop tab always opens the list, not home inventory.
+6. **Manage food at home:** optionally track location, amount, stock, and expiration; scan photos for suggested items. Inventory is not required to plan meals or shop.
+7. **Manage recipes:** search from Today or the library, then add a recipe to a day, favorite, import, scan, edit, draft, or publish household recipes.
 8. **Learn from dinner:** record a two-second outcome, optional individual reactions, and leftovers so later suggestions can improve.
 9. **Cook along:** open a recipe while preparing it, move through localized steps, start detected timers, optionally say “next,” then save what really happened.
 10. **Track spending:** add a receipt photo or enter the total when finishing a shopping trip, then compare monthly grocery spending with the household target.

@@ -185,11 +185,12 @@ test("renderGroceries shows Spanish ingredient text under grocery items", () => 
 
   assert.match(elements["#groceryList"].innerHTML, /4 limones/);
   assert.match(elements["#groceryList"].innerHTML, /1 taza de aceite de oliva/);
+  assert.match(elements["#groceryList"].innerHTML, /grocery-item-row is-unchecked/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /Weekly menu/);
 });
 
-test("grocery items without the active language show a pending state", () => {
+test("grocery items without the active language still show the authored name", () => {
   const { elements, ui } = harness({
     state: {
       groceries: [{ id: "manual", text: { en: "milk" }, checked: false, source: "manual", store: "any" }],
@@ -199,8 +200,25 @@ test("grocery items without the active language show a pending state", () => {
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, /Translation pending/);
-  assert.doesNotMatch(elements["#groceryList"].innerHTML, />milk</);
+  assert.match(elements["#groceryList"].innerHTML, />milk</);
+  assert.match(elements["#groceryList"].innerHTML, />Add-ons</);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Translation pending/);
+});
+
+test("English shopping lists show Spanish-only add-on names instead of a pending placeholder", () => {
+  const { elements, ui } = harness({
+    state: {
+      lang: "en",
+      groceries: [{ id: "manual-es", text: { es: "leche" }, checked: false, source: "manual", store: "any", recipeName: {} }],
+      recipes: [],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, />leche</);
+  assert.match(elements["#groceryList"].innerHTML, />Add-ons</);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Translation pending/);
 });
 
 test("a valid Spanish grocery value wins even when the linked recipe is incomplete", () => {
@@ -301,6 +319,7 @@ test("shopping list reveals the end-of-trip action after an item is checked", ()
   ui.renderGroceries();
   assert.equal(elements["#finishShoppingPrompt"].hidden, false);
   assert.equal(elements["#restockPurchased"].textContent, "Finish shopping (1)");
+  assert.match(elements["#groceryList"].innerHTML, /grocery-item-row is-checked/);
 });
 
 test("receipt matching prefers a checked purchase over an unchecked duplicate", () => {
@@ -401,7 +420,7 @@ test("grocery recipe matching works from localized recipe names", () => {
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
 });
 
-test("mixed-language Spanish recipe lists stay pending", () => {
+test("mixed-language Spanish recipe lists keep a usable ingredient name", () => {
   const { elements, ui } = harness({
     state: {
       groceries: [{
@@ -432,8 +451,8 @@ test("mixed-language Spanish recipe lists stay pending", () => {
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, /Translation pending/);
-  assert.doesNotMatch(elements["#groceryList"].innerHTML, /chili powder/);
+  assert.match(elements["#groceryList"].innerHTML, /chili powder/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Translation pending/);
 });
 
 test("delete section removes every item in that grocery section", async () => {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  applyLoadedVersionedCollection,
   applyVersionConflict,
   cloneVersionedItems,
   loadVersionedCollection,
@@ -28,6 +29,68 @@ test("cloned conflict baseline detects an in-place UI edit", () => {
   assert.deepEqual(mergeVersionedItems(local, base, [{ id: "milk", checked: false }]), [
     { id: "milk", checked: true },
   ]);
+});
+
+test("a same-version reload keeps locally checked groceries and asks to save", () => {
+  const local = [{ id: "milk", checked: true }];
+  const remote = [{ id: "milk", checked: false }];
+  const result = applyLoadedVersionedCollection({
+    localItems: local,
+    localVersion: 5,
+    baseItems: local,
+    remoteItems: remote,
+    remoteVersion: 5,
+  });
+  assert.equal(result.apply, true);
+  assert.equal(result.shouldSave, true);
+  assert.equal(result.items[0].checked, true);
+});
+
+test("a stale grocery snapshot cannot overwrite a newer local save", () => {
+  const result = applyLoadedVersionedCollection({
+    localItems: [{ id: "milk", checked: true }],
+    localVersion: 6,
+    baseItems: [{ id: "milk", checked: true }],
+    remoteItems: [{ id: "milk", checked: false }],
+    remoteVersion: 5,
+  });
+  assert.deepEqual(result, { apply: false, reason: "stale-remote" });
+});
+
+test("an in-flight grocery save is not clobbered by a concurrent load", () => {
+  const result = applyLoadedVersionedCollection({
+    localItems: [{ id: "milk", checked: true }],
+    localVersion: 5,
+    baseItems: [{ id: "milk", checked: false }],
+    remoteItems: [{ id: "milk", checked: false }],
+    remoteVersion: 5,
+    saveInFlight: true,
+  });
+  assert.deepEqual(result, { apply: false, reason: "save-in-flight" });
+});
+
+test("newer remote groceries still keep a local checked edit through three-way merge", () => {
+  const result = applyLoadedVersionedCollection({
+    localItems: [
+      { id: "milk", checked: true },
+      { id: "eggs", checked: false },
+    ],
+    localVersion: 5,
+    baseItems: [
+      { id: "milk", checked: false },
+      { id: "eggs", checked: false },
+    ],
+    remoteItems: [
+      { id: "milk", checked: false },
+      { id: "eggs", checked: false },
+      { id: "bread", checked: false },
+    ],
+    remoteVersion: 6,
+  });
+  assert.equal(result.apply, true);
+  assert.equal(result.shouldSave, true);
+  assert.equal(result.items.find((item) => item.id === "milk").checked, true);
+  assert.ok(result.items.find((item) => item.id === "bread"));
 });
 
 function storage(values = {}) {
@@ -126,7 +189,7 @@ test("saveVersionedCollection sends items and updates server version", async () 
     { items: [{ text: "old" }], version: 1 },
     { items: [{ text: "new" }], version: 2 },
   ]);
-  assert.deepEqual(result, { saved: true, conflict: false });
+  assert.deepEqual(result, { saved: true, conflict: false, items: [{ text: "new" }], version: 2 });
 });
 
 test("applyVersionConflict loads server copy on 409", () => {

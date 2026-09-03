@@ -33,7 +33,12 @@ function element(initial = {}) {
       listeners.set(type, listener);
     },
     async dispatch(type) {
-      await listeners.get(type)?.();
+      await listeners.get(type)?.({
+        target: this,
+        preventDefault() {
+          this.prevented = true;
+        },
+      });
     },
     focus() {
       this.focused = true;
@@ -78,8 +83,14 @@ function harness(overrides = {}) {
     "#recipePicksList": element(),
     "#recipePicksEmpty": element({ hidden: true }),
     "#recipeList": element(),
-    "#recipeSearch": element(),
+    "#recipeSearch": element({ value: "" }),
     "#categoryFilter": element(),
+    "#addRecipeToMealForm": element(),
+    "#addRecipeToMealDate": element({ value: "" }),
+    "#addRecipeToMealPeriod": element({ value: "dinner" }),
+    "#addRecipeToMealSubmit": element({ disabled: false }),
+    "#addRecipeToMealStatus": element(),
+    "#recipePicksSection": element({ hidden: false }),
     "#closeRecipeDetail": element(),
     "#editRecipeForm": element(),
     "#detailName": element(),
@@ -139,9 +150,16 @@ function harness(overrides = {}) {
     isRecipeTranslationPending: () => Boolean(overrides.translationPending),
     getRecipeCatalogStatus: () => overrides.catalogStatus || "ready",
     setView: () => {},
+    calendarMealForDateKey: overrides.calendarMealForDateKey || (() => ({ items: [] })),
+    getCalendarMeals: () => overrides.calendarMeals || {},
+    setCalendarMeals: (next) => {
+      overrides.calendarMeals = next;
+    },
+    saveSchedule: overrides.saveSchedule || (async () => true),
+    render: overrides.render || (() => {}),
   });
 
-  return { elements, ui };
+  return { elements, ui, overrides };
 }
 
 test("renderRecipes escapes recipe ids and photo URLs in card markup", () => {
@@ -353,6 +371,39 @@ test("complete translated recipe does not show translation controls", () => {
   assert.equal(elements["#recipeTranslationPanel"].hidden, true);
 });
 
+test("searching hides family picks so results are immediate", () => {
+  const { elements, ui } = harness({ search: "chicken" });
+  ui.renderRecipes();
+  assert.equal(elements["#recipePicksSection"].hidden, true);
+});
+
+test("adding a recipe to a meal writes the calendar and saves the plan", async () => {
+  let saved = 0;
+  let rendered = 0;
+  const { elements, ui, overrides } = harness({
+    calendarMeals: {},
+    calendarMealForDateKey: () => ({ items: [] }),
+    saveSchedule: async () => {
+      saved += 1;
+      return true;
+    },
+    render: () => {
+      rendered += 1;
+    },
+  });
+  elements["#addRecipeToMealDate"].value = "2026-09-03";
+  elements["#addRecipeToMealPeriod"].value = "dinner";
+  ui.bindLibraryControls();
+
+  await elements["#addRecipeToMealForm"].dispatch("submit");
+
+  assert.equal(saved, 1);
+  assert.equal(rendered, 1);
+  assert.equal(overrides.calendarMeals["2026-09-03"].items[0].recipeId, `recipe-1" autofocus="true`);
+  assert.equal(overrides.calendarMeals["2026-09-03"].items[0].period, "dinner");
+  assert.match(elements["#addRecipeToMealStatus"].textContent, /addRecipeToMealSaved/);
+});
+
 test("missing Spanish safety warning keeps cooking actions disabled", () => {
   const { elements, ui } = harness({
     lang: "es",
@@ -368,6 +419,7 @@ test("missing Spanish safety warning keeps cooking actions disabled", () => {
 
   assert.equal(elements["#allergyWarning"].textContent, "Contains nuts");
   assert.equal(elements["#addRecipeGroceries"].disabled, true);
+  assert.equal(elements["#addRecipeToMealSubmit"].disabled, true);
   assert.equal(elements["#markCooked"].disabled, true);
   assert.equal(elements["#recipeTranslationPanel"].hidden, false);
   assert.equal(elements["#recipeSafetyLockReason"].hidden, false);

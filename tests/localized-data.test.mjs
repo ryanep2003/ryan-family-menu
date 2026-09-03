@@ -6,6 +6,7 @@ import {
   localizedText,
   localizedTextExact,
   updateLocalizedText,
+  usableLocalizedText,
 } from "../localized-data.js";
 
 test("cleanLocalizedText preserves explicit language values", () => {
@@ -16,8 +17,10 @@ test("cleanLocalizedText duplicates legacy text for bilingual fallback", () => {
   assert.deepEqual(cleanLocalizedText("  Milk  ", 120), { en: "Milk", es: "Milk" });
 });
 
-test("localizedText falls back to the other language", () => {
-  assert.equal(localizedText({ es: "Despensa" }, "en"), "Despensa");
+test("usableLocalizedText never returns an empty pending placeholder", () => {
+  assert.equal(usableLocalizedText({ es: "leche" }, "en"), "leche");
+  assert.equal(usableLocalizedText({ en: "milk" }, "es"), "milk");
+  assert.equal(usableLocalizedText("Milk", "es"), "Milk");
 });
 
 test("localizedTextExact does not treat fallback text as translated content", () => {

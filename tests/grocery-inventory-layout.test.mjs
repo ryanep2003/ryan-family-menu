@@ -134,6 +134,36 @@ test("Today keeps the meal, memory, and next actions ahead of household utilitie
   assert.match(styles, /\.dinner-outcome-options button\s*\{[\s\S]*?min-height: 44px;/);
 });
 
+test("Today puts recipe search and the shopping list on the primary surface", () => {
+  assert.ok(html.indexOf('id="todayDailyLoop"') < html.indexOf('class="today-tools"'));
+  assert.ok(html.indexOf('id="todayRecipeSearch"') < html.indexOf('class="today-tools"'));
+  assert.ok(html.indexOf('id="todayGrocerySummary"') < html.indexOf('class="today-tools"'));
+  assert.ok(html.indexOf('id="todayInventorySummary"') > html.indexOf('class="today-tools"'));
+  assert.match(html, /id="todayRecipeSearchForm"/);
+  assert.match(html, /data-view-target="grocery"[^>]*data-inventory-target="shopping"/);
+  assert.match(app, /inventoryMode = "shopping"/);
+  assert.match(app, /#todayRecipeSearchForm/);
+});
+
+test("the Shop tab always opens the persistent shopping list", () => {
+  assert.match(app, /button\.dataset\.view === "grocery"[\s\S]*inventoryMode = "shopping"/);
+  assert.match(html, /data-view="grocery" data-i18n="shopTab"/);
+});
+
+test("grocery loads keep a local checked item instead of clobbering it", () => {
+  assert.ok(app.includes("applyLoadedVersionedCollection"));
+  assert.ok(app.includes("grocerySaveInFlight"));
+  assert.ok(app.includes("shouldSave"));
+  assert.doesNotMatch(app, /setSyncStatus\("groceries", "groceryConflict"/);
+});
+
+test("a recipe can be added to a day from the recipe screen", () => {
+  assert.match(html, /id="addRecipeToMealForm"/);
+  assert.match(html, /id="addRecipeToMealDate"/);
+  assert.match(html, /id="addRecipeToMealPeriod"/);
+  assert.ok(html.indexOf('id="recipeSearch"') < html.indexOf('id="recipePicksSection"'));
+});
+
 test("household attribution remains available for any family", () => {
   assert.match(html, /id="householdMemberInput"/);
   assert.match(html, /id="householdMemberSuggestions"/);
@@ -167,6 +197,8 @@ test("recipe detail owns the page instead of appearing under library chrome", ()
 
 test("the household library opens to the complete catalog instead of hiding it behind a disclosure", () => {
   assert.match(html, /<details class="recipe-browse" id="recipeBrowse" open>/);
+  assert.ok(html.indexOf('id="recipeLibraryTools"') < html.indexOf('id="recipePicksSection"'));
+  assert.doesNotMatch(html, /id="recipeBrowse"[\s\S]*id="recipeSearch"/);
 });
 
 test("file inputs remain usable through localized picker controls", () => {
