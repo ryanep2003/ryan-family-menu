@@ -1996,6 +1996,13 @@ const recipeLibraryUi = createRecipeLibraryUi({
   },
   isRecipeTranslationPending: (recipeId, targetLang) => recipeTranslationInFlight.has(`${recipeId}:${targetLang}`),
   setView,
+  calendarMealForDateKey,
+  getCalendarMeals: () => calendarMeals,
+  setCalendarMeals: (nextCalendarMeals) => {
+    calendarMeals = normalizeCalendar(nextCalendarMeals);
+  },
+  saveSchedule,
+  render: () => render(),
 });
 
 const renderRecipes = () => recipeLibraryUi.renderRecipes();
@@ -2848,7 +2855,25 @@ $("#inventorySearch").addEventListener("input", () => {
 $$(".tabs button").forEach((button) => {
   button.addEventListener("click", () => {
     if (button.dataset.view === "schedule") scheduleUi.closeFocusedDinner();
+    if (button.dataset.view === "grocery") {
+      inventoryMode = "shopping";
+      renderInventoryMode();
+    }
     setView(button.dataset.view);
+  });
+});
+
+$("#todayRecipeSearchForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const query = `${$("#todayRecipeSearch")?.value || ""}`.trim();
+  recipeSearch = query;
+  if ($("#recipeSearch")) $("#recipeSearch").value = query;
+  setView("recipes");
+  renderRecipes();
+  bindOpenButtons();
+  requestAnimationFrame(() => {
+    $("#recipeSearch")?.focus({ preventScroll: true });
+    $("#recipeLibraryTools")?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 });
 

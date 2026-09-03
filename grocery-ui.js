@@ -307,7 +307,7 @@ export function createGroceryUi({
           const activity = formatItemActivity(item);
           const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
           return `
-            <article class="grocery-item-row${inventoryDecisionFor(item) === "review" ? " inventory-review" : ""}">
+            <article class="grocery-item-row${inventoryDecisionFor(item) === "review" ? " inventory-review" : ""}${item.checked && inventoryDecisionFor(item) !== "review" ? " is-checked" : " is-unchecked"}">
               <label class="grocery-item">
                 <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" ${item.checked && inventoryDecisionFor(item) !== "review" ? "checked" : ""} />
                   <span>

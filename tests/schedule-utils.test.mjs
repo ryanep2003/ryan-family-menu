@@ -16,6 +16,8 @@ import {
   plannedServings,
   recipeBatchPlan,
   removeRecipeFromPlans,
+  appendRecipeToMeal,
+  upcomingMealDateOptions,
 } from "../schedule-utils.js";
 
 test("serving plans default to two adults and two kids", () => {
@@ -224,6 +226,61 @@ test("legacy dinner pace remains compatible without driving the planner UI", () 
   assert.equal(meal.dinnerPace, "no-cooking");
   assert.equal(mealHasContent(meal), true);
   assert.equal(normalizeMealPlan({ dinnerPace: "unsupported" }).dinnerPace, "");
+});
+
+test("upcomingMealDateOptions returns the next seven local dates", () => {
+  const options = upcomingMealDateOptions(new Date("2026-09-03T08:15:00"), 7);
+  assert.deepEqual(options.map((option) => [option.offset, option.dateKey]), [
+    [0, "2026-09-03"],
+    [1, "2026-09-04"],
+    [2, "2026-09-05"],
+    [3, "2026-09-06"],
+    [4, "2026-09-07"],
+    [5, "2026-09-08"],
+    [6, "2026-09-09"],
+  ]);
+});
+
+test("appendRecipeToMeal adds a recipe without dropping existing dishes", () => {
+  const meal = appendRecipeToMeal({
+    mealItemsVersion: 1,
+    items: [{
+      id: "existing-breakfast",
+      period: "breakfast",
+      role: "main",
+      sourceType: "recipe",
+      recipeId: "oatmeal",
+    }],
+  }, {
+    id: "planned-dinner",
+    recipeId: "lemon-chicken",
+    period: "dinner",
+    role: "main",
+  });
+
+  assert.equal(meal.items.length, 2);
+  assert.equal(meal.items[0].recipeId, "oatmeal");
+  assert.deepEqual(meal.items[1], {
+    id: "planned-dinner",
+    period: "dinner",
+    role: "main",
+    sourceType: "recipe",
+    recipeId: "lemon-chicken",
+  });
+  assert.equal(meal.dinner, "lemon-chicken");
+});
+
+test("appendRecipeToMeal ignores blank recipes and unknown meal slots", () => {
+  const empty = appendRecipeToMeal(emptyMeal, { recipeId: "   " });
+  assert.equal(empty.items.length, 0);
+  const fallback = appendRecipeToMeal(emptyMeal, {
+    id: "side-item",
+    recipeId: "green-salad",
+    period: "brunch",
+    role: "salad",
+  });
+  assert.equal(fallback.items[0].period, "dinner");
+  assert.equal(fallback.items[0].role, "salad");
 });
 
 test("removeRecipeFromPlans clears a deleted lunch salad", () => {

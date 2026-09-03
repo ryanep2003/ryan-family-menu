@@ -1,6 +1,7 @@
 import { allLocalizedText, hasLocalizedContent } from "./localized-data.js";
 import { linesMatchLanguage } from "./language-quality.js";
 import { cardPhotoFor, cardPhotoIsGenerated, servingsForRecipe } from "./recipe-utils.js";
+import { appendRecipeToMeal, mealRoles, upcomingMealDateOptions } from "./schedule-utils.js";
 
 export function createRecipeLibraryUi({
   $,
@@ -30,6 +31,11 @@ export function createRecipeLibraryUi({
   getRecipeMemory = () => ({}),
   onRecipeMediaRendered = () => {},
   setView,
+  calendarMealForDateKey = () => ({}),
+  getCalendarMeals = () => ({}),
+  setCalendarMeals = () => {},
+  saveSchedule = async () => true,
+  render = () => {},
 }) {
   let lastLibraryButton = null;
 
@@ -141,7 +147,10 @@ export function createRecipeLibraryUi({
       .join("");
     $("#recipePicksEmpty").hidden = picks.length > 0;
     if ($("#recipePicksSection")) {
-      $("#recipePicksSection").hidden = catalogStatus === "ready" && recipes.length === 0;
+      $("#recipePicksSection").hidden = Boolean(search) || (catalogStatus === "ready" && recipes.length === 0);
+    }
+    if ($("#recipeSearch") && globalThis.document?.activeElement !== $("#recipeSearch")) {
+      $("#recipeSearch").value = getRecipeSearch();
     }
     $("#recipeList").innerHTML = catalogStatus === "loading"
       ? `<p class="empty-state">${t("recipeCatalogLoading")}<br><button class="ghost-button compact-button" type="button" data-retry-recipe-catalog>${t("retrySync")}</button></p>`
@@ -247,7 +256,34 @@ export function createRecipeLibraryUi({
     if ($("#startCooking")) $("#startCooking").textContent = t("cookButton");
     $("#recipeSafetyLockReason").hidden = !actionLockReason;
     $("#recipeSafetyLockReason").textContent = actionLockReason;
+    const addForm = $("#addRecipeToMealForm");
+    const addSubmit = $("#addRecipeToMealSubmit");
+    if (addForm) addForm.hidden = false;
+    if (addSubmit) addSubmit.disabled = !contentReady;
+    renderMealDateOptions();
     setDetailStatus("");
+  }
+
+  function mealDateLabel(dateKey, offset) {
+    if (offset === 0) return t("addRecipeToMealToday");
+    if (offset === 1) return t("addRecipeToMealTomorrow");
+    const date = new Date(`${dateKey}T12:00:00`);
+    return new Intl.DateTimeFormat(getLang() === "es" ? "es-US" : "en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    }).format(date);
+  }
+
+  function renderMealDateOptions() {
+    const select = $("#addRecipeToMealDate");
+    if (!select) return;
+    const current = select.value;
+    const options = upcomingMealDateOptions(new Date(), 7);
+    select.innerHTML = options.map((option) => (
+      `<option value="${escapeHtml(option.dateKey)}">${escapeHtml(mealDateLabel(option.dateKey, option.offset))}</option>`
+    )).join("");
+    select.value = options.some((option) => option.dateKey === current) ? current : options[0]?.dateKey || "";
   }
 
   function bindOpenButtons() {
@@ -290,6 +326,33 @@ export function createRecipeLibraryUi({
       setCategoryFilter(event.target.value);
       renderRecipes();
       bindOpenButtons();
+    });
+
+    $("#addRecipeToMealForm")?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const recipe = recipeById(getSelectedRecipeId());
+      const dateKey = $("#addRecipeToMealDate")?.value || "";
+      const period = $("#addRecipeToMealPeriod")?.value || "dinner";
+      const status = $("#addRecipeToMealStatus");
+      if (!recipe || !dateKey) return;
+      const category = categoryFor(recipe);
+      const role = mealRoles.some((item) => item.key === category) ? category : "other";
+      const nextMeal = appendRecipeToMeal(calendarMealForDateKey(dateKey), {
+        recipeId: recipe.id,
+        period,
+        role,
+      });
+      setCalendarMeals({ ...getCalendarMeals(), [dateKey]: nextMeal });
+      if (status) status.textContent = "";
+      render();
+      const saved = await saveSchedule();
+      if (status) {
+        status.textContent = saved === false
+          ? t("addRecipeToMealFailed")
+          : t("addRecipeToMealSaved")
+            .replace("{meal}", t(`${period}Slot`))
+            .replace("{date}", mealDateLabel(dateKey, upcomingMealDateOptions(new Date(), 7).find((option) => option.dateKey === dateKey)?.offset));
+      }
     });
   }
 

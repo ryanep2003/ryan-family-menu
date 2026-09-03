@@ -185,6 +185,7 @@ test("renderGroceries shows Spanish ingredient text under grocery items", () => 
 
   assert.match(elements["#groceryList"].innerHTML, /4 limones/);
   assert.match(elements["#groceryList"].innerHTML, /1 taza de aceite de oliva/);
+  assert.match(elements["#groceryList"].innerHTML, /grocery-item-row is-unchecked/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /Weekly menu/);
 });
@@ -301,6 +302,7 @@ test("shopping list reveals the end-of-trip action after an item is checked", ()
   ui.renderGroceries();
   assert.equal(elements["#finishShoppingPrompt"].hidden, false);
   assert.equal(elements["#restockPurchased"].textContent, "Finish shopping (1)");
+  assert.match(elements["#groceryList"].innerHTML, /grocery-item-row is-checked/);
 });
 
 test("receipt matching prefers a checked purchase over an unchecked duplicate", () => {

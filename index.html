@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=147" />
+    <link rel="stylesheet" href="styles.css?v=154" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -209,6 +209,26 @@
           </figure>
         </section>
 
+        <section class="today-daily-loop" id="todayDailyLoop" aria-labelledby="todayDailyLoopHeading">
+          <div class="today-daily-loop-copy">
+            <p class="section-label" data-i18n="todayDailyLoopLabel">Today's loop</p>
+            <h2 id="todayDailyLoopHeading" data-i18n="todayDailyLoopHeading">Find a recipe or open the shopping list</h2>
+          </div>
+          <form class="today-recipe-search" id="todayRecipeSearchForm">
+            <label for="todayRecipeSearch">
+              <span data-i18n="searchLabel">Search recipes</span>
+              <input type="search" id="todayRecipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" data-i18n-aria-label="searchLabel" aria-label="Search recipes" placeholder="chicken, salad, pasta" autocomplete="off" inputmode="search" />
+            </label>
+            <button class="primary-action" type="submit" data-i18n="searchRecipes">Search recipes</button>
+          </form>
+          <div class="today-shortcuts">
+            <button type="button" data-view-target="grocery" data-inventory-target="shopping">
+              <span data-i18n="groceryShortcut">Shopping list</span>
+              <strong id="todayGrocerySummary">0 items to buy</strong>
+            </button>
+          </div>
+        </section>
+
         <section class="dinner-feedback" id="dinnerFeedback" aria-live="polite" hidden></section>
 
         <section class="smart-suggestions" id="smartSuggestions" aria-labelledby="smartSuggestionsHeading" hidden>
@@ -236,7 +256,7 @@
         <details class="today-tools">
           <summary>
             <span data-i18n="todayToolsHeading">Household tools</span>
-            <small data-i18n="todayToolsHelper">Snacks, shopping shortcuts, tasks, and favorites</small>
+            <small data-i18n="todayToolsHelper">Snacks, home inventory, tasks, and favorites</small>
           </summary>
           <div class="today-tools-content">
         <section class="available-food-panel" id="todayAvailableFood" aria-labelledby="todayAvailableFoodHeading">
@@ -286,16 +306,10 @@
           </details>
         </section>
 
-        <div class="today-shortcuts">
-          <button type="button" data-view-target="grocery">
-            <span data-i18n="groceryShortcut">Shopping list</span>
-            <strong id="todayGrocerySummary">0 items to buy</strong>
-          </button>
-          <button type="button" data-view-target="grocery" data-inventory-target="home">
-            <span data-i18n="inventoryShortcut">Home inventory</span>
-            <strong id="todayInventorySummary">0 items at home</strong>
-          </button>
-        </div>
+        <button class="text-action today-inventory-link" type="button" data-view-target="grocery" data-inventory-target="home">
+          <span data-i18n="inventoryShortcut">Home inventory</span>
+          <strong id="todayInventorySummary">0 items at home</strong>
+        </button>
 
         <div class="today-dashboard">
           <section class="today-panel">
@@ -743,6 +757,25 @@
           <div class="detail-actions">
             <button class="primary-action" id="publishDraftRecipe" type="button" data-i18n="publishDraftRecipe" hidden>Publish draft</button>
             <button class="primary-action" id="startCooking" type="button" data-i18n="startCooking">Start cooking</button>
+            <form class="add-recipe-to-meal" id="addRecipeToMealForm">
+              <p class="add-recipe-to-meal-heading" data-i18n="addRecipeToMeal">Add to a meal</p>
+              <div class="add-recipe-to-meal-fields">
+                <label>
+                  <span data-i18n="addRecipeToMealDay">Day</span>
+                  <select id="addRecipeToMealDate" aria-label="Day" data-i18n-aria-label="addRecipeToMealDay"></select>
+                </label>
+                <label>
+                  <span data-i18n="addRecipeToMealPeriod">Meal</span>
+                  <select id="addRecipeToMealPeriod" aria-label="Meal" data-i18n-aria-label="addRecipeToMealPeriod">
+                    <option value="breakfast" data-i18n="breakfastSlot">Breakfast</option>
+                    <option value="lunch" data-i18n="lunchSlot">Lunch</option>
+                    <option value="dinner" selected data-i18n="dinnerSlot">Dinner</option>
+                  </select>
+                </label>
+              </div>
+              <button class="primary-action" id="addRecipeToMealSubmit" type="submit" data-i18n="addRecipeToMealSubmit">Add to this meal</button>
+              <p class="form-status" id="addRecipeToMealStatus" role="status"></p>
+            </form>
             <button class="ghost-button" id="addRecipeGroceries" type="button" aria-describedby="recipeSafetyLockReason" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
             <details class="detail-more-actions" id="recipeMoreActions">
               <summary data-i18n="moreActions">More actions</summary>
@@ -830,6 +863,24 @@
             </aside>
           </div>
         </section>
+        <div class="library-tools" id="recipeLibraryTools">
+          <label>
+            <span data-i18n="searchLabel">Search recipes</span>
+            <input type="search" id="recipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" data-i18n-aria-label="searchLabel" aria-label="Search recipes" placeholder="chicken, salad, pasta" autocomplete="off" inputmode="search" />
+          </label>
+          <label>
+            <span data-i18n="categoryFilterLabel">Category</span>
+            <select id="categoryFilter">
+              <option value="all" data-i18n="categoryAll">All</option>
+              <option value="main" data-i18n="categoryMain">Mains</option>
+              <option value="side" data-i18n="categorySide">Sides</option>
+              <option value="salad" data-i18n="categorySalad">Salads</option>
+              <option value="sauce" data-i18n="categorySauce">Sauces</option>
+              <option value="dessert" data-i18n="categoryDessert">Desserts</option>
+              <option value="draft" data-i18n="categoryDraft">Drafts</option>
+            </select>
+          </label>
+        </div>
         <section class="recipe-picks" id="recipePicksSection" aria-labelledby="recipePicksHeading">
           <div class="panel-heading">
             <div>
@@ -844,27 +895,9 @@
         <details class="recipe-browse" id="recipeBrowse" open>
           <summary>
             <span data-i18n="browseAllRecipes">Browse all recipes</span>
-            <small data-i18n="browseAllRecipesNote">Search and filter the full library.</small>
+            <small data-i18n="browseAllRecipesNote">The full library stays open here.</small>
           </summary>
           <div class="recipe-browse-content">
-            <div class="library-tools">
-              <label>
-                <span data-i18n="searchLabel">Search recipes</span>
-                <input type="search" id="recipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" placeholder="chicken, salad, pasta" />
-              </label>
-              <label>
-                <span data-i18n="categoryFilterLabel">Category</span>
-                <select id="categoryFilter">
-                  <option value="all" data-i18n="categoryAll">All</option>
-                  <option value="main" data-i18n="categoryMain">Mains</option>
-                  <option value="side" data-i18n="categorySide">Sides</option>
-                  <option value="salad" data-i18n="categorySalad">Salads</option>
-                  <option value="sauce" data-i18n="categorySauce">Sauces</option>
-                  <option value="dessert" data-i18n="categoryDessert">Desserts</option>
-                  <option value="draft" data-i18n="categoryDraft">Drafts</option>
-                </select>
-              </label>
-            </div>
             <div class="recipe-list" id="recipeList"></div>
           </div>
         </details>
@@ -982,6 +1015,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=153"></script>
+    <script type="module" src="app.js?v=154"></script>
   </body>
 </html>
