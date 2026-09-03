@@ -58,6 +58,7 @@ import {
   rankedRecipes,
 } from "./memory-logic.js";
 import {
+  applyLoadedVersionedCollection,
   applyVersionConflict,
   loadVersionedCollection,
   mergeVersionedItems,
@@ -144,6 +145,9 @@ const storedInventory = readVersionedCollectionStorage(householdStorage, invento
 let groceries = storedGroceries.items;
 let groceryVersion = storedGroceries.version;
 let groceryBaseItems = cloneVersionedItems(storedGroceries.items);
+let grocerySaveInFlight = null;
+let grocerySaveQueued = false;
+let groceryLoadGeneration = 0;
 let shoppingLists = normalizeShoppingLists(storedShoppingLists.items);
 let shoppingListsVersion = storedShoppingLists.version;
 let shoppingListsBase = cloneVersionedItems(shoppingLists);
@@ -2441,22 +2445,28 @@ async function saveSharedRecipe(recipe) {
 }
 
 async function loadGroceries() {
+  const generation = ++groceryLoadGeneration;
   try {
-    await loadVersionedCollection({
-      getJson,
-      url: "/.netlify/functions/groceries",
-      fallbackMessage: "Could not load groceries.",
-      setItems: (items) => {
-        groceries = items;
-        groceryBaseItems = cloneVersionedItems(items);
-      },
-      setVersion: (version) => {
-        groceryVersion = version;
-      },
-      persist: (items, version) => persistGroceriesLocally(items, version),
-      render,
+    const data = await getJson("/.netlify/functions/groceries", "Could not load groceries.");
+    if (generation !== groceryLoadGeneration) return;
+    const remoteItems = Array.isArray(data.items) ? data.items : [];
+    const remoteVersion = Number(data.version) || 0;
+    const result = applyLoadedVersionedCollection({
+      remoteItems,
+      remoteVersion,
+      localItems: groceries,
+      localVersion: groceryVersion,
+      baseItems: groceryBaseItems,
+      saveInFlight: Boolean(grocerySaveInFlight),
     });
+    if (!result.apply) return;
+    groceries = result.items;
+    groceryVersion = result.version;
+    groceryBaseItems = cloneVersionedItems(result.shouldSave ? remoteItems : result.items);
+    persistGroceriesLocally(groceries, groceryVersion);
+    render();
     markSynced("groceries");
+    if (result.shouldSave) await saveGroceries();
   } catch (error) {
     console.warn(error);
     setSyncStatus("groceries", "usingSavedCopy", { state: "pending", canRetry: true });
@@ -2464,48 +2474,63 @@ async function loadGroceries() {
 }
 
 async function saveGroceries({ retrying = false } = {}) {
-  setSyncStatus("groceries", "savedLocallySyncing", { state: "pending" });
-  try {
-    await saveVersionedCollection({
-      putJson,
-      url: "/.netlify/functions/groceries",
-      fallbackMessage: "Could not save groceries.",
-      items: groceries,
-      version: groceryVersion,
-      setItems: (items) => {
-        groceries = items;
-      },
-      setVersion: (version) => {
-        groceryVersion = version;
-      },
-      persist: (items, version) => persistGroceriesLocally(items, version),
-    });
-    groceryBaseItems = cloneVersionedItems(groceries);
-    markSynced("groceries");
+  setSharedRetryAction(() => saveGroceries({ retrying: false }));
+  if (grocerySaveInFlight && !retrying) {
+    grocerySaveQueued = true;
+    await grocerySaveInFlight;
     return true;
-  } catch (error) {
-    console.warn(error);
-    const localGroceries = groceries;
-    if (applyVersionConflict(error, {
-      setItems: (items) => {
-        groceries = items;
-      },
-      setVersion: (version) => {
-        groceryVersion = version;
-      },
-      currentVersion: groceryVersion,
-      persist: (items, version) => persistGroceriesLocally(items, version),
-    })) {
-      groceries = mergeVersionedItems(localGroceries, groceryBaseItems, error.data.items);
-      persistGroceriesLocally(groceries, groceryVersion);
-      if (!retrying) return saveGroceries({ retrying: true });
-      renderGroceries();
-      bindGroceryControls();
-      setSyncStatus("groceries", "groceryConflict", { state: "error" });
-      return false;
+  }
+  setSyncStatus("groceries", "savedLocallySyncing", { state: "pending" });
+  grocerySaveInFlight = (async () => {
+    const send = async (isRetry) => {
+      try {
+        const saved = await saveVersionedCollection({
+          putJson,
+          url: "/.netlify/functions/groceries",
+          fallbackMessage: "Could not save groceries.",
+          items: groceries,
+          version: groceryVersion,
+          setItems: (items) => {
+            if (!grocerySaveQueued) groceries = items;
+          },
+          setVersion: (version) => {
+            groceryVersion = version;
+          },
+          persist: (items, version) => persistGroceriesLocally(items, version),
+        });
+        groceryBaseItems = cloneVersionedItems(saved.items || groceries);
+        if (grocerySaveQueued) persistGroceriesLocally(groceries, groceryVersion);
+        markSynced("groceries");
+        return true;
+      } catch (error) {
+        console.warn(error);
+        const localGroceries = cloneVersionedItems(groceries);
+        if (error.status === 409 && Array.isArray(error.data?.items)) {
+          groceryVersion = Number(error.data.version) || groceryVersion;
+          groceries = mergeVersionedItems(localGroceries, groceryBaseItems, error.data.items);
+          groceryBaseItems = cloneVersionedItems(error.data.items);
+          persistGroceriesLocally(groceries, groceryVersion);
+          if (!isRetry) return send(true);
+          renderGroceries();
+          bindGroceryControls();
+          setSyncStatus("groceries", "savedLocallyPending", { state: "pending", canRetry: true });
+          return false;
+        }
+        persistGroceriesLocally(localGroceries, groceryVersion);
+        setSyncStatus("groceries", "savedLocallyPending", { state: "pending", canRetry: true });
+        return false;
+      }
+    };
+    return send(false);
+  })();
+  try {
+    return await grocerySaveInFlight;
+  } finally {
+    grocerySaveInFlight = null;
+    if (grocerySaveQueued) {
+      grocerySaveQueued = false;
+      await saveGroceries();
     }
-    setSyncStatus("groceries", "savedLocallyPending", { state: "pending", canRetry: true });
-    return false;
   }
 }
 

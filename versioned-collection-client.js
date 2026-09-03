@@ -31,6 +31,45 @@ export function mergeVersionedItems(localItems, baseItems, remoteItems) {
   return merged;
 }
 
+export function applyLoadedVersionedCollection({
+  remoteItems,
+  remoteVersion,
+  localItems,
+  localVersion,
+  baseItems,
+  saveInFlight = false,
+} = {}) {
+  if (saveInFlight) return { apply: false, reason: "save-in-flight" };
+  const remoteVer = Number(remoteVersion) || 0;
+  const localVer = Number(localVersion) || 0;
+  if (remoteVer < localVer) return { apply: false, reason: "stale-remote" };
+
+  const remote = Array.isArray(remoteItems) ? remoteItems : [];
+  const local = Array.isArray(localItems) ? localItems : [];
+  const base = Array.isArray(baseItems) ? baseItems : [];
+  if (sameValue(local, remote)) {
+    return { apply: true, items: remote, version: remoteVer, shouldSave: false };
+  }
+
+  // A persist-before-PUT snapshot keeps the old version, so a reload looks like
+  // local === base even though checked state has not reached the server yet.
+  if (remoteVer === localVer) {
+    return { apply: true, items: local, version: remoteVer, shouldSave: true };
+  }
+
+  if (sameValue(local, base)) {
+    return { apply: true, items: remote, version: remoteVer, shouldSave: false };
+  }
+
+  const merged = mergeVersionedItems(local, base, remote);
+  return {
+    apply: true,
+    items: merged,
+    version: remoteVer,
+    shouldSave: !sameValue(merged, remote),
+  };
+}
+
 export function readVersionedCollectionStorage(storage, { itemsKey, versionKey }) {
   return {
     items: readJsonStorage(storage, itemsKey, []),
@@ -72,13 +111,13 @@ export async function saveVersionedCollection({
   persist,
 }) {
   persist?.(items, version);
-  const data = await putJson(url, { items, version }, fallbackMessage);
+  const data = await putJson(url, { items: cloneVersionedItems(items), version }, fallbackMessage);
   const nextItems = Array.isArray(data.items) ? data.items : items;
   const nextVersion = Number(data.version) || version;
   setItems(nextItems);
   setVersion(nextVersion);
   persist?.(nextItems, nextVersion);
-  return { saved: true, conflict: false };
+  return { saved: true, conflict: false, items: nextItems, version: nextVersion };
 }
 
 export function applyVersionConflict(error, { setItems, setVersion, currentVersion, persist }) {

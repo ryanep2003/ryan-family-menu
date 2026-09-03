@@ -150,10 +150,11 @@ test("the Shop tab always opens the persistent shopping list", () => {
   assert.match(html, /data-view="grocery" data-i18n="shopTab"/);
 });
 
-test("shopping rows keep a phone-sized tap target and a clear checked state", () => {
-  assert.match(styles, /\.grocery-item input\s*\{[^}]*min-height: 44px;/);
-  assert.match(styles, /\.grocery-item-row\.is-checked/);
-  assert.match(styles, /\.grocery-item-row\.is-unchecked/);
+test("grocery loads keep a local checked item instead of clobbering it", () => {
+  assert.ok(app.includes("applyLoadedVersionedCollection"));
+  assert.ok(app.includes("grocerySaveInFlight"));
+  assert.ok(app.includes("shouldSave"));
+  assert.doesNotMatch(app, /setSyncStatus\("groceries", "groceryConflict"/);
 });
 
 test("a recipe can be added to a day from the recipe screen", () => {

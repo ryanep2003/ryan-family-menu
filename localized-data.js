@@ -69,6 +69,10 @@ export function canonicalText(value) {
   return localizedText(value, "en") || localizedText(value, "es") || "";
 }
 
+export function usableLocalizedText(value, preferredLang = "en") {
+  return localizedText(value, preferredLang) || canonicalText(value) || "";
+}
+
 export function cleanLocalizedText(value, limit) {
   const trim = (entry) => sanitizedText(entry).slice(0, limit);
 
