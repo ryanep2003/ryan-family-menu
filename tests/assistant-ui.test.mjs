@@ -231,6 +231,8 @@ test("Today and Plan expose Help entry points and the action sheet", async () =>
   assert.match(html, /id="assistantAskSubmit"/);
   assert.match(html, /id="assistantSpinner"/);
   assert.match(html, /id="assistantStatusRow"[^>]*aria-live="polite"/);
+  assert.match(html, /data-i18n-placeholder="assistantAskPlaceholder"/);
+  assert.doesNotMatch(html, /placeholder="Coming soon"/);
   assert.doesNotMatch(html, /id="groceryView"[\s\S]*data-open-assistant="shop"/);
   const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
   assert.match(app, /createAssistantUi\(/);

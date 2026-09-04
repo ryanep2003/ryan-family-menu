@@ -56,6 +56,58 @@ test("English and Spanish expose the same translation keys", () => {
   assert.match(translations.es.sharedStateError, /teléfono.*sincronizarán.*esté en línea/);
 });
 
+test("household menu chrome is localized in English and Spanish", async () => {
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
+  for (const key of [
+    "shareFamilyKeyHint",
+    "familyKeyLabel",
+    "copyFamilyKey",
+    "rotateFamilyKey",
+    "rotateFamilyKeyNote",
+    "rotationCodeLabel",
+    "createNewFamilyKey",
+    "leaveHousehold",
+    "leaveHouseholdConfirm",
+    "familyKeyCopied",
+    "familyKeySelected",
+    "familyKeyRotated",
+    "rotateFamilyKeyError",
+  ]) {
+    assert.ok(translations.en[key], `English missing ${key}`);
+    assert.ok(translations.es[key], `Spanish missing ${key}`);
+  }
+  assert.equal(translations.en.familyKeyLabel, "Family key");
+  assert.equal(translations.es.familyKeyLabel, "Clave familiar");
+  assert.equal(translations.es.copyFamilyKey, "Copiar clave familiar");
+  assert.equal(translations.es.leaveHousehold, "Usar otro hogar");
+  assert.match(translations.es.shareFamilyKeyHint, /clave/);
+  assert.match(html, /data-i18n="shareFamilyKeyHint"/);
+  assert.match(html, /id="copyHouseholdKey"[^>]*data-i18n="copyFamilyKey"/);
+  assert.match(html, /data-i18n="rotateFamilyKey"/);
+  assert.match(html, /id="leaveHousehold"[^>]*data-i18n="leaveHousehold"/);
+  assert.match(app, /t\("familyKeyCopied"\)/);
+  assert.match(app, /t\("leaveHouseholdConfirm"\)/);
+  assert.match(app, /function localizeDisplayed\(/);
+});
+
+test("missing recipe language copy names the recipe text, not the whole app", () => {
+  assert.equal(translations.en.translationPendingShort, "Recipe text not in English yet");
+  assert.equal(translations.es.translationPendingShort, "Aún no hay texto en español");
+  assert.doesNotMatch(translations.es.translationPendingShort, /Español aún no disponible/);
+  assert.doesNotMatch(translations.en.translationPendingShort, /English not available yet/);
+});
+
+test("Help Ask placeholder is an example question, not coming soon", async () => {
+  const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+  assert.equal(translations.en.assistantAskPlaceholder, "What’s for dinner tomorrow?");
+  assert.equal(translations.es.assistantAskPlaceholder, "¿Qué hay de cena mañana?");
+  assert.match(html, /data-i18n-placeholder="assistantAskPlaceholder"/);
+  assert.doesNotMatch(html, /placeholder="Coming soon"/);
+  assert.doesNotMatch(translations.en.assistantAskPlaceholder, /coming soon/i);
+  assert.doesNotMatch(translations.es.assistantAskPlaceholder, /próximamente/i);
+});
+
 test("offline collection status never exposes an internal translation key", () => {
   assert.equal(translations.en.usingSavedCopy, "Offline. Changes will sync when the connection returns.");
   assert.equal(translations.es.usingSavedCopy, "Sin conexión. Los cambios se sincronizarán cuando vuelva la conexión.");

@@ -618,6 +618,11 @@ function localizeExact(value) {
   return localizedText(value, lang);
 }
 
+function localizeDisplayed(value) {
+  if (value == null || value === "") return "";
+  return localizeExact(value) || t("translationPendingShort");
+}
+
 function escapeHtml(value) {
   return `${value || ""}`.replace(/[&<>"']/g, (character) => ({
     "&": "&amp;",
@@ -1913,7 +1918,7 @@ const dashboardUi = createDashboardUi({
   $$,
   t,
   escapeHtml,
-  localize: (value) => localizeExact(value) || t("translationPendingShort"),
+  localize: localizeDisplayed,
   formatDateKey,
   categoryFor,
   categoryLabel,
@@ -1975,7 +1980,7 @@ const scheduleUi = createScheduleUi({
   $$,
   t,
   escapeHtml,
-  localize: (value) => localizeExact(value) || t("translationPendingShort"),
+  localize: localizeDisplayed,
   formatDateKey,
   normalizeMealPlan,
   mealPeriods,
@@ -2152,7 +2157,7 @@ const assistantUi = createAssistantUi({
   $$,
   t,
   escapeHtml,
-  localize: (value) => localizeExact(value) || t("translationPendingShort"),
+  localize: localizeDisplayed,
   getLang: () => lang,
   formatDateKey,
   getMealForDate: calendarMealForDateKey,
@@ -3144,15 +3149,15 @@ $("#copyHouseholdKey").addEventListener("click", async () => {
   const status = $("#householdMenuStatus");
   try {
     await navigator.clipboard.writeText(household.key);
-    status.textContent = "Family key copied.";
+    status.textContent = t("familyKeyCopied");
   } catch {
     $("#currentHouseholdKey").type = "text";
     $("#currentHouseholdKey").select();
-    status.textContent = "Key selected. Copy it from the field.";
+    status.textContent = t("familyKeySelected");
   }
 });
 $("#leaveHousehold").addEventListener("click", () => {
-  if (window.confirm("Use a different household? Make sure this family key is saved first.")) leaveHousehold();
+  if (window.confirm(t("leaveHouseholdConfirm"))) leaveHousehold();
 });
 
 recipeLibraryUi.bindLibraryControls();
@@ -3367,12 +3372,12 @@ $("#rotateHouseholdKey")?.addEventListener("click", async () => {
   const button = $("#rotateHouseholdKey");
   button.disabled = true;
   try {
-    const data = await putJson("/.netlify/functions/households", { rotateKey: true, rotationCode: code }, "Could not rotate the family key.");
+    const data = await putJson("/.netlify/functions/households", { rotateKey: true, rotationCode: code }, t("rotateFamilyKeyError"));
     localStorage.setItem("family-menu-household-key", data.key);
     $("#currentHouseholdKey").value = data.key;
-    $("#householdMenuStatus").textContent = "New family key created. Share it privately with trusted household members.";
+    $("#householdMenuStatus").textContent = t("familyKeyRotated");
   } catch (error) {
-    $("#householdMenuStatus").textContent = error.message || "Could not rotate the family key.";
+    $("#householdMenuStatus").textContent = error.message || t("rotateFamilyKeyError");
   } finally {
     button.disabled = false;
   }

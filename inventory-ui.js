@@ -75,6 +75,28 @@ export function createInventoryUi({
     });
   }
 
+  function syncInventoryToolsDisclosure(isEmpty) {
+    const menu = $("#inventoryToolsMenu");
+    if (menu && isEmpty) menu.open = true;
+  }
+
+  function openInventoryTool(which) {
+    const menu = $("#inventoryToolsMenu");
+    const addPanel = $("#inventoryAddPanel");
+    const scanPanel = $("#inventoryScanPanel");
+    if (menu) menu.open = true;
+    if (which === "add") {
+      if (addPanel) addPanel.open = true;
+      if (scanPanel) scanPanel.open = false;
+      $("#inventoryInput")?.focus?.();
+      addPanel?.scrollIntoView?.({ block: "nearest" });
+      return;
+    }
+    if (scanPanel) scanPanel.open = true;
+    if (addPanel) addPanel.open = false;
+    scanPanel?.scrollIntoView?.({ block: "nearest" });
+  }
+
   function updateBulkToolbar() {
     selectedIds = new Set([...selectedIds].filter((id) => getInventory().some((item) => item.id === id)));
     const toolbar = $("#inventoryBulkToolbar");
@@ -120,9 +142,17 @@ export function createInventoryUi({
     })).filter((group) => group.items.length);
 
     updateBulkToolbar();
+    syncInventoryToolsDisclosure(!inventory.length);
 
     if (!inventory.length) {
-      $("#inventoryList").innerHTML = `<p class="empty-state">${t("inventoryEmpty")}</p>`;
+      $("#inventoryList").innerHTML = `
+        <div class="empty-state inventory-empty">
+          <p>${t("inventoryEmpty")}</p>
+          <div class="inventory-empty-actions">
+            <button class="primary-action" type="button" data-open-inventory-add>${escapeHtml(t("addInventoryItem"))}</button>
+            <button class="ghost-button" type="button" data-open-inventory-scan>${escapeHtml(t("scanShelf"))}</button>
+          </div>
+        </div>`;
       return;
     }
 
@@ -216,6 +246,10 @@ export function createInventoryUi({
         if (checkbox.checked) selectedIds.add(checkbox.dataset.selectInventory);
         else selectedIds.delete(checkbox.dataset.selectInventory);
         updateBulkToolbar();
+      });
+      inventoryList.addEventListener?.("click", (event) => {
+        if (event.target.closest?.("[data-open-inventory-add]")) openInventoryTool("add");
+        if (event.target.closest?.("[data-open-inventory-scan]")) openInventoryTool("scan");
       });
     }
 

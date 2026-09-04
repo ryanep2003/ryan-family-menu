@@ -132,6 +132,51 @@ test("low and out items expose one direct grocery action", () => {
   assert.equal((html.match(/class="inventory-restock-action"/g) || []).length, 2);
 });
 
+test("empty inventory keeps add and scan reachable without opening Manage first", () => {
+  const inventoryList = interactiveElement();
+  const toolsMenu = { open: false, dataset: {} };
+  const addPanel = { open: false, dataset: {} };
+  const scanPanel = { open: false, dataset: {} };
+  const inventoryInput = { focused: false, dataset: {}, focus() { this.focused = true; } };
+  const ui = createInventoryUi({
+    $: (selector) => {
+      if (selector === "#inventoryList") return inventoryList;
+      if (selector === "#inventorySearch") return { value: "", dataset: {} };
+      if (selector === "#inventoryToolsMenu") return toolsMenu;
+      if (selector === "#inventoryAddPanel") return addPanel;
+      if (selector === "#inventoryScanPanel") return scanPanel;
+      if (selector === "#inventoryInput") return inventoryInput;
+      return { hidden: false, dataset: {}, disabled: false };
+    },
+    $$: () => [],
+    t: (key) => ({
+      inventoryEmpty: "No items at home yet. Add an item or scan a shelf to get started.",
+      addInventoryItem: "Add item",
+      scanShelf: "Scan shelf",
+    })[key] || key,
+    escapeHtml: (value) => `${value}`,
+    inventoryShoppingNote: () => "",
+    getInventory: () => [],
+    getInventoryFilter: () => "all",
+    getLang: () => "en",
+  });
+
+  ui.renderInventory();
+  ui.bindInventoryControls();
+
+  assert.match(inventoryList.innerHTML, /No items at home yet/);
+  assert.doesNotMatch(inventoryList.innerHTML, /above/);
+  assert.match(inventoryList.innerHTML, /data-open-inventory-add/);
+  assert.match(inventoryList.innerHTML, /data-open-inventory-scan/);
+  assert.equal(toolsMenu.open, true);
+
+  const addButton = { dataset: {}, closest(selector) { return selector === "[data-open-inventory-add]" ? this : null; } };
+  inventoryList.dispatch("click", { target: addButton });
+  assert.equal(addPanel.open, true);
+  assert.equal(scanPanel.open, false);
+  assert.equal(inventoryInput.focused, true);
+});
+
 test("clear inventory removes the collection in one confirmed action and offers undo", async () => {
   const inventoryList = interactiveElement();
   const elements = {

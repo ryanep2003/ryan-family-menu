@@ -35,7 +35,7 @@ function element() {
   };
 }
 
-function dashboardFixture({ mealOverride, availableFoodOverride = [], tasks = [] } = {}) {
+function dashboardFixture({ mealOverride, availableFoodOverride = [], tasks = [], localize = (value) => value, recipesOverride } = {}) {
   const elements = Object.fromEntries([
     "todayDinnerName",
     "todayDinnerMeta",
@@ -84,7 +84,7 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [], tasks = []
     notes: "",
     servingPlans: { dinner: { adults: 2, kids: 2, guests: 0, extraServings: 0 } },
   };
-  const recipes = {
+  const recipes = recipesOverride || {
     main: { id: "main", name: "Main recipe", photos: ["main.jpg"], allergyWarning: "" },
     side: { id: "side", name: "Side recipe", photos: ["side.jpg"], allergyWarning: "" },
     lunch: { id: "lunch", name: "Green Monster Salad", photos: [], allergyWarning: "" },
@@ -157,7 +157,7 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [], tasks = []
       remove: "Remove",
     })[key] || key,
     escapeHtml: (value) => value,
-    localize: (value) => value,
+    localize,
     formatDateKey: () => "2026-07-10",
     categoryFor: () => "main",
     categoryLabel: () => "Mains",
@@ -324,6 +324,45 @@ test("empty Today offers a direct planning action", () => {
 
   elements.cookToday.handlers.click();
   assert.equal(events.focusedDate, "2026-07-10");
+});
+
+test("Today dinner meta omits empty recipe blurbs instead of a pending-language placeholder", () => {
+  const pending = "Español aún no disponible";
+  const { elements, ui } = dashboardFixture({
+    localize: (value) => (value == null || value === "" ? pending : value),
+  });
+
+  ui.renderToday();
+
+  assert.equal(elements.todayDinnerName.textContent, "Main recipe");
+  assert.match(elements.todayDinnerMeta.textContent, /4 people/);
+  assert.doesNotMatch(elements.todayDinnerMeta.textContent, /Español aún no disponible/);
+  assert.doesNotMatch(elements.todayDinnerMeta.textContent, /Recipe text not in English yet/);
+});
+
+test("Today dinner meta shows original recipe text when Spanish is missing", () => {
+  const { elements, ui } = dashboardFixture({
+    recipesOverride: {
+      main: {
+        id: "main",
+        name: { en: "Main recipe", es: "Receta principal" },
+        meta: { en: "Weeknight pasta" },
+        photos: ["main.jpg"],
+        allergyWarning: "",
+      },
+      side: { id: "side", name: "Side recipe", photos: ["side.jpg"], allergyWarning: "" },
+      lunch: { id: "lunch", name: "Green Monster Salad", photos: [], allergyWarning: "" },
+    },
+    localize: (value) => {
+      if (value && typeof value === "object") return value.es || value.en || "";
+      return value || "";
+    },
+  });
+
+  ui.renderToday();
+
+  assert.match(elements.todayDinnerMeta.textContent, /Weeknight pasta/);
+  assert.doesNotMatch(elements.todayDinnerMeta.textContent, /Español aún no disponible/);
 });
 
 test("Today keeps a planned lunch visible when dinner is open", () => {

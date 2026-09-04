@@ -207,6 +207,20 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .household-access-form, .household-key-receipt { display: grid; gap: var(--space-3); }
 .household-access-form label, .household-key-receipt label { display: grid; gap: var(--space-1); color: var(--muted); font-size: .8rem; }
 .quick-guide, .family-workspace, .upload-panel, .inventory-panel, .calendar-agenda, .cook-along-panel, .translation-state, .allergy-warning { margin-top: var(--space-5); padding: var(--space-5); border: 1px solid var(--rule); background: var(--paper); }
+.family-section-links { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0 0; }
+.family-section-links a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 8px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--navy);
+  text-decoration: none;
+  font-size: .84rem;
+  font-weight: 650;
+}
 
 /* 5a. Today — meal, memory, next action */
 .today-story { position: relative; margin-inline: 0; padding: 0; overflow: visible; border: 0; background: transparent; }
@@ -880,6 +894,14 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
 .inventory-item-actions { position: absolute; right: 0; z-index: 4; display: grid; min-width: 11rem; gap: var(--space-1); padding: var(--space-2); border: 1px solid var(--rule); border-radius: var(--radius-control); background: var(--paper); box-shadow: 0 12px 28px rgba(23,25,22,.12); }
 .inventory-item-actions button { justify-content: flex-start; }
 .inventory-tools-menu { margin-top: 0; }
+.inventory-tools { display: grid; gap: var(--space-2); padding: var(--space-2) 0 var(--space-3); }
+.inventory-tools > details { border: 1px solid var(--rule); border-radius: var(--radius-control); padding: 0 var(--space-3); background: var(--paper); }
+.inventory-tools > details > summary { min-height: 44px; }
+.inventory-empty { display: grid; gap: var(--space-3); }
+.inventory-empty p { margin: 0; }
+.inventory-empty-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.inventory-empty-actions .primary-action,
+.inventory-empty-actions .ghost-button { flex: 1 1 9rem; }
 
 /* Compatibility surfaces outside the approved slice */
 .upload-panel label, .inventory-panel label, .family-rules-form label { display: grid; gap: var(--space-1); margin-bottom: var(--space-3); }
