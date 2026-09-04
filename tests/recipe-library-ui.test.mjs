@@ -85,7 +85,7 @@ function harness(overrides = {}) {
     "#recipeList": element(),
     "#recipeSearch": element({ value: "" }),
     "#categoryFilter": element(),
-    "#addRecipeToMealForm": element(),
+    "#addRecipeToMealForm": element({ hidden: false }),
     "#addRecipeToMealDate": element({ value: "", disabled: false }),
     "#addRecipeToMealPeriod": element({ value: "dinner", disabled: false }),
     "#addRecipeToMealSubmit": element({ disabled: false }),
@@ -100,12 +100,14 @@ function harness(overrides = {}) {
     "#recipeTranslationStatus": element(),
     "#translateSelectedRecipe": element(),
     "#ingredientList": element(),
+    "#ingredientListEmpty": element({ hidden: true, textContent: "" }),
     "#stepList": element(),
+    "#stepListEmpty": element({ hidden: true, textContent: "" }),
     "#familyNotes": element(),
     "#photoStrip": element(),
     "#favoriteRecipe": element(),
     "#publishDraftRecipe": element(),
-    "#addRecipeGroceries": element(),
+    "#addRecipeGroceries": element({ hidden: false, disabled: false }),
     "#markCooked": element(),
     "#startCooking": element({ disabled: false }),
     "#recipeSafetyLockReason": element(),
@@ -339,11 +341,14 @@ test("Spanish detail uses source content while global translation is prepared", 
   assert.equal(elements["#detailName"].textContent, "Recipe");
   assert.match(elements["#ingredientList"].innerHTML, />one</);
   assert.match(elements["#stepList"].innerHTML, />cook</);
-  assert.equal(elements["#addRecipeGroceries"].disabled, false);
-  assert.equal(elements["#markCooked"].disabled, false);
-  assert.equal(elements["#addRecipeToMealForm"].classList.values.has("is-locked"), false);
   assert.equal(elements["#recipeTranslationPanel"].hidden, false);
   assert.match(elements["#recipeTranslationStatus"].textContent, /translationFallbackDetail/);
+  assert.equal(elements["#addRecipeToMealForm"].hidden, true);
+  assert.equal(elements["#addRecipeGroceries"].hidden, true);
+  assert.equal(elements["#addRecipeGroceries"].disabled, true);
+  assert.equal(elements["#addRecipeToMealSubmit"].disabled, true);
+  assert.equal(elements["#startCooking"].disabled, true);
+  assert.equal(elements["#addRecipeToMealForm"].classList.values.has("is-locked"), true);
 });
 
 test("global recipe translation shows a pending status without a second action", () => {
@@ -371,6 +376,9 @@ test("complete translated recipe does not show translation controls", () => {
   ui.renderDetail();
 
   assert.equal(elements["#recipeTranslationPanel"].hidden, true);
+  assert.equal(elements["#addRecipeToMealForm"].hidden, false);
+  assert.equal(elements["#addRecipeGroceries"].hidden, false);
+  assert.equal(elements["#addRecipeGroceries"].disabled, false);
 });
 
 test("searching hides family picks so results are immediate", () => {
@@ -455,10 +463,33 @@ test("punctuation-only recipe chrome is treated as empty, not a warning card or 
   assert.doesNotMatch(elements["#stepList"].innerHTML, />[·.]</);
   assert.match(elements["#stepList"].innerHTML, /Brown the meat\./);
   assert.equal(elements["#familyNotes"].textContent, "");
-  assert.equal(elements["#addRecipeGroceries"].disabled, false);
-  assert.equal(elements["#addRecipeToMealSubmit"].disabled, false);
-  assert.equal(elements["#addRecipeToMealForm"].classList.values.has("is-locked"), false);
+  assert.equal(elements["#addRecipeToMealForm"].hidden, true);
+  assert.equal(elements["#addRecipeGroceries"].hidden, true);
+  assert.equal(elements["#addRecipeGroceries"].disabled, true);
   assert.equal(elements["#recipeTranslationPanel"].hidden, false);
-  assert.doesNotMatch(elements["#recipeTranslationStatus"].textContent, /safetyActionsLocked|bloqueadas/);
+  assert.match(elements["#recipeTranslationStatus"].textContent, /translationFallbackDetail/);
   assert.equal(elements["#recipeSafetyLockReason"].hidden, true);
+});
+
+test("punctuation-only steps show a Spanish empty state instead of numbered chrome", () => {
+  const { elements, ui } = harness({
+    lang: "es",
+    recipe: {
+      name: { en: "Taco meat- pre make" },
+      ingredients: { en: ["1 lb ground beef"] },
+      steps: { en: [".", "·", "01 ."] },
+      allergyWarning: { en: "." },
+    },
+  });
+
+  ui.renderDetail();
+
+  assert.equal(elements["#stepList"].innerHTML, "");
+  assert.equal(elements["#stepList"].hidden, true);
+  assert.equal(elements["#stepListEmpty"].hidden, false);
+  assert.equal(elements["#stepListEmpty"].textContent, "recipeStepsEmpty");
+  assert.doesNotMatch(elements["#stepList"].innerHTML, /<li/);
+  assert.equal(elements["#allergyWarning"].hidden, true);
+  assert.equal(elements["#addRecipeToMealForm"].hidden, true);
+  assert.equal(elements["#addRecipeGroceries"].hidden, true);
 });

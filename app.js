@@ -32,7 +32,7 @@ import { createHouseholdStorage, leaveHousehold, requireHouseholdSession } from 
 import { createInventoryUi } from "./inventory-ui.js";
 import { createLunchUi } from "./lunch-ui.js";
 import { readFilesAsDataUrls } from "./images.js";
-import { isMeaningfulText, localizedText, localizedTextExact, updateLocalizedText } from "./localized-data.js";
+import { localizedText, localizedTextExact, updateLocalizedText } from "./localized-data.js";
 import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
 import { createOnboardingUi } from "./onboarding-ui.js";
 import { createRecipeFormUi } from "./recipe-form-ui.js";
@@ -73,6 +73,7 @@ import {
   categoryFor,
   categoryLabel as localizedCategoryLabel,
   compactRecipeEditsForSync,
+  isUsableRecipeLine,
   recipeToEditableUpload as recipeToEditable,
   servingsForRecipe,
   uploadToRecipe,
@@ -487,7 +488,7 @@ function rawRecipeLines(value, locale) {
   return rawRecipeText(value, locale)
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => isMeaningfulText(line));
+    .filter((line) => isUsableRecipeLine(line));
 }
 
 function recipeUploadFieldHasText(value) {

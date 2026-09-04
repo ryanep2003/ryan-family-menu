@@ -47,8 +47,14 @@ const recipeCategories = {
   "basil-pesto-pasta": "main",
 };
 
+export function isUsableRecipeLine(value) {
+  const text = `${value || ""}`.trim();
+  if (!isMeaningfulText(text)) return false;
+  return !/^\d+[.)]?\s*[·.•.-]*$/.test(text);
+}
+
 function splitLines(text, fallback) {
-  const lines = (text || "").split("\n").map((line) => line.trim()).filter((line) => isMeaningfulText(line));
+  const lines = (text || "").split("\n").map((line) => line.trim()).filter(isUsableRecipeLine);
   return lines.length ? lines : fallback ? [fallback] : [];
 }
 

@@ -7,6 +7,7 @@ import {
   cardPhotoFor,
   cardPhotoIsGenerated,
   compactRecipeEditsForSync,
+  isUsableRecipeLine,
   recipeById,
   recipeToEditableUpload,
   normalizeRecipeServings,
@@ -64,13 +65,22 @@ test("uploadToRecipe drops punctuation-only ingredient and step lines", () => {
     id: "taco-meat",
     name: "Taco meat-pre make",
     ingredientsText: "1 lb ground beef\n.\n·",
-    stepsText: ".\nBrown the meat.\n·",
+    stepsText: ".\nBrown the meat.\n·\n01 .",
     allergyWarning: ".",
   }, "Shared upload", "Receta compartida");
 
   assert.deepEqual(recipe.ingredients.en, ["1 lb ground beef"]);
   assert.deepEqual(recipe.steps.en, ["Brown the meat."]);
   assert.equal(recipe.allergyWarning, undefined);
+});
+
+test("numbered empty step chrome is not treated as a cooking step", () => {
+  assert.equal(isUsableRecipeLine("."), false);
+  assert.equal(isUsableRecipeLine("·"), false);
+  assert.equal(isUsableRecipeLine("01 ."), false);
+  assert.equal(isUsableRecipeLine("1."), false);
+  assert.equal(isUsableRecipeLine("Brown the meat."), true);
+  assert.equal(isUsableRecipeLine("1 lb ground beef"), true);
 });
 
 test("uploadToRecipe keeps scanned source photos out of recipe cards", () => {
