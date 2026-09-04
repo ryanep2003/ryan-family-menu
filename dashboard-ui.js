@@ -8,6 +8,7 @@ import {
   availableFoodUses,
   orderAvailableFood,
 } from "./available-food.js";
+import { canonicalHouseholdMember, displayHouseholdMember, isDefaultHouseholdMember } from "./household-attribution.js";
 
 export function createDashboardUi({
   $,
@@ -272,6 +273,7 @@ export function createDashboardUi({
       pierce: "assigneePierce",
       other: "assigneeOther",
     };
+    if (isDefaultHouseholdMember(assignee)) return displayHouseholdMember(assignee, t);
     return labels[assignee] ? t(labels[assignee]) : `${assignee || ""}`.trim() || t(labels.other);
   }
 
@@ -385,7 +387,7 @@ export function createDashboardUi({
       setTasks([{
         id: `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         text: updateLocalizedText("", text, getLang()),
-        assignee: $("#taskAssigneeInput").value,
+        assignee: canonicalHouseholdMember($("#taskAssigneeInput").value),
         date: formatDateKey(new Date()),
         completed: false,
         createdAt: new Date().toISOString(),

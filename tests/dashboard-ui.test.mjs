@@ -35,7 +35,7 @@ function element() {
   };
 }
 
-function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
+function dashboardFixture({ mealOverride, availableFoodOverride = [], tasks = [] } = {}) {
   const elements = Object.fromEntries([
     "todayDinnerName",
     "todayDinnerMeta",
@@ -72,6 +72,8 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
     "taskForm",
     "taskInput",
     "taskAssigneeInput",
+    "taskProgress",
+    "taskList",
     "recipeDetail",
     "detailName",
   ].map((id) => [id, element()]));
@@ -150,6 +152,9 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
       dinnerSlot: "Dinner",
       mealPeriodEmpty: "Nothing planned for this meal yet.",
       heroPeople: "{count} people",
+      householdFamily: "Familia",
+      tasksEmpty: "No tasks yet.",
+      remove: "Remove",
     })[key] || key,
     escapeHtml: (value) => value,
     localize: (value) => value,
@@ -181,7 +186,7 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
     },
     getLang: () => "en",
     getFavorites: () => [],
-    getTasks: () => [],
+    getTasks: () => tasks,
     setTasks: () => {},
     getGroceries: () => [],
     getInventory: () => [],
@@ -336,4 +341,21 @@ test("Today keeps a planned lunch visible when dinner is open", () => {
   assert.doesNotMatch(elements.todayMealsList.innerHTML, /Dinner/);
   assert.equal(elements.cookToday.hidden, false);
   assert.equal(elements.cookToday.textContent, "Plan dinner");
+});
+
+test("task assignee Family displays through householdFamily", () => {
+  const { elements, ui } = dashboardFixture({
+    tasks: [{
+      id: "task-1",
+      text: { en: "Prep rice" },
+      assignee: "Family",
+      date: "2026-07-10",
+      completed: false,
+    }],
+  });
+
+  ui.renderTasks();
+
+  assert.match(elements.taskList.innerHTML, /Familia/);
+  assert.doesNotMatch(elements.taskList.innerHTML, />\s*Family\s*</);
 });

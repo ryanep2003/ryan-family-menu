@@ -47,6 +47,26 @@ test("member attribution offers setup instead of a dead-looking Family field", (
   assert.equal(elements.setupFamilyMembers.hidden, false);
   assert.equal(elements.setupFamilyMembers.textContent, "Add family members");
   assert.match(elements.householdMemberInput.innerHTML, /value="Family">Family/);
+  assert.match(elements.householdMemberSuggestions.innerHTML, /value="Family"/);
+});
+
+test("Spanish member chrome localizes Family while keeping the stored Family value", () => {
+  const { elements } = familyUiFixture();
+  const spanish = createFamilyUi({
+    $: (selector) => elements[selector.slice(1)] || null,
+    $$: () => [],
+    t: (key) => ({ householdFamily: "Familia", addFamilyMembersShort: "Agregar familiares" })[key] || key,
+    escapeHtml: (value) => `${value}`,
+    getHouseholdMember: () => "Family",
+    setHouseholdMember: () => {},
+    getFamilyMembers: () => [],
+  });
+
+  spanish.updateMemberSuggestions();
+
+  assert.match(elements.householdMemberInput.innerHTML, /value="Family">Familia/);
+  assert.match(elements.householdMemberSuggestions.innerHTML, /value="Familia"/);
+  assert.doesNotMatch(elements.householdMemberInput.innerHTML, /value="Family">Family/);
 });
 
 test("member attribution becomes a selector when active profiles exist", () => {

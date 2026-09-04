@@ -172,7 +172,8 @@ test("a recipe can be added to a day from the recipe screen", () => {
 test("household attribution remains available for any family", () => {
   assert.match(html, /id="householdMemberInput"/);
   assert.match(html, /id="householdMemberSuggestions"/);
-  assert.ok(app.includes("cleanHouseholdMember"));
+  assert.ok(app.includes("canonicalHouseholdMember"));
+  assert.ok(app.includes("displayHouseholdMember"));
   assert.match(html, /id="setupFamilyMembers"/);
 });
 
