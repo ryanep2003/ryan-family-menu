@@ -1,5 +1,3 @@
-import { translations } from "./translations.js";
-
 export const DEFAULT_HOUSEHOLD_MEMBER = "Family";
 
 export function cleanHouseholdMember(value) {
@@ -10,16 +8,10 @@ export function cleanHouseholdMember(value) {
     .slice(0, 40);
 }
 
-function defaultHouseholdMemberNames() {
-  return new Set(
-    [DEFAULT_HOUSEHOLD_MEMBER, translations.en?.householdFamily, translations.es?.householdFamily]
-      .map((value) => `${value || ""}`.trim())
-      .filter(Boolean)
-  );
-}
+const defaultHouseholdMemberNames = new Set([DEFAULT_HOUSEHOLD_MEMBER, "Familia"]);
 
 export function isDefaultHouseholdMember(name) {
-  return defaultHouseholdMemberNames().has(cleanHouseholdMember(name));
+  return defaultHouseholdMemberNames.has(cleanHouseholdMember(name));
 }
 
 export function displayHouseholdMember(name, translate) {

@@ -37,8 +37,8 @@ test("default Family identity stays stored as Family and displays through househ
   assert.equal(DEFAULT_HOUSEHOLD_MEMBER, "Family");
   assert.equal(translations.en.householdFamily, "Family");
   assert.equal(translations.es.householdFamily, "Familia");
-  assert.ok(isDefaultHouseholdMember("Family"));
-  assert.ok(isDefaultHouseholdMember("Familia"));
+  assert.ok(isDefaultHouseholdMember(translations.en.householdFamily));
+  assert.ok(isDefaultHouseholdMember(translations.es.householdFamily));
   assert.equal(canonicalHouseholdMember("Family"), "Family");
   assert.equal(canonicalHouseholdMember("Familia"), "Family");
   assert.equal(canonicalHouseholdMember("  Familia  "), "Family");
