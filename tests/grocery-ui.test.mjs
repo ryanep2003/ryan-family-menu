@@ -328,7 +328,7 @@ test("shopping rows omit recipe translation actions and instruction paste", () =
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, /<strong>limones<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>lemons<\/strong>/);
   assert.match(elements["#groceryList"].innerHTML, /<strong>russet potato<\/strong>/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /data-translate-grocery-recipe/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /Traducir receta|Translate recipe/);

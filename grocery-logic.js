@@ -42,7 +42,7 @@ const INSTRUCTION_SCENE = /^(?:in a |in the |en un |en una |en el |en la |with t
 const INSTRUCTION_FLOW = /\b(then|until|hasta(?:\s+que)?|combine|mix|coat|dip|stir|mezcla|reboza|cubre)\b/i;
 const SIZE_PREFIX = /^(?:extra[-\s]?(?:large|small)|medium[-\s]large|very\s+large|large|small|medium|jumbo|big|grandes?|pequeñ[oa]s?|median[oa]s?)\s+/i;
 const FRESH_PREFIX = /^(?:freshly\s+ground|freshly|fresh|recién\s+molid[oa]s?|frescos?|frescas?)\s+/i;
-const TRAILING_PREP = /(?:,\s*)?(?:\s+(?:divided|plus more(?:\s+if needed)?|to taste|al gusto|for serving|para servir|for garnish|or more as needed(?:\s+to coat)?|as needed(?:\s+to coat)?|cut into wedges(?:[\/,]?\s*sliced for serving)?|peeled and chopped|and chopped))\s*$/i;
+const TRAILING_PREP = /(?:,\s*)?(?:\s+(?:divided|plus more(?:\s+if needed)?|for serving|para servir|for garnish|or more as needed(?:\s+to coat)?|as needed(?:\s+to coat)?|cut into wedges(?:[\/,]?\s*sliced for serving)?|peeled and chopped|and chopped))\s*$/i;
 
 function cleanIngredientLine(line) {
   return `${line || ""}`
