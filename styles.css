@@ -1230,6 +1230,10 @@ body.assistant-open { overflow: hidden; }
   background: var(--assistant-navy);
   color: var(--paper);
 }
+.assistant-chip:disabled, .assistant-ask button:disabled, .assistant-ask input:disabled, .assistant-apply:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
 .assistant-ask { display: grid; gap: var(--space-2); }
 .assistant-ask label { display: grid; gap: var(--space-1); }
 .assistant-ask label > span { color: var(--muted); font-size: .78rem; font-weight: 600; }
@@ -1240,6 +1244,23 @@ body.assistant-open { overflow: hidden; }
 .assistant-preview-list li { display: grid; gap: 2px; padding-bottom: var(--space-2); border-bottom: 1px solid color-mix(in srgb, var(--rule) 80%, transparent); }
 .assistant-preview-list small { color: var(--muted); }
 .assistant-lookup-actions, .assistant-sheet-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.assistant-status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 1.4rem;
+}
+.assistant-status-row .form-status { margin: 0; }
+.assistant-spinner {
+  width: 1.15rem;
+  height: 1.15rem;
+  border: 2px solid color-mix(in srgb, var(--assistant-navy) 22%, var(--rule));
+  border-top-color: var(--assistant-navy);
+  border-radius: 50%;
+  animation: assistant-spin .75s linear infinite;
+  flex: 0 0 auto;
+}
+.assistant-spinner[hidden] { display: none !important; }
 .assistant-apply, .assistant-secondary {
   appearance: none;
   display: inline-flex;
@@ -1265,4 +1286,5 @@ body[data-view="grocery"] .tabs button[data-view="grocery"], body[data-view="sch
 .translation-placeholder { color: var(--muted); font-style: italic; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
 @keyframes almanac-turn { to { transform: rotate(360deg); } }
+@keyframes assistant-spin { to { transform: rotate(360deg); } }
 @keyframes media-wait { 0%, 100% { transform: translateX(-100%); } 50% { transform: translateX(100%); } }
