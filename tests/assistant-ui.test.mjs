@@ -3,8 +3,12 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { createAssistantUi } from "../assistant-ui.js";
-import { emptyMeal, normalizeMealPlan } from "../schedule-utils.js";
+import { emptyMeal, formatDateKey, normalizeMealPlan } from "../schedule-utils.js";
 import { translations } from "../translations.js";
+
+function localDate(year, month, day, hour = 12, minute = 0) {
+  return new Date(year, month - 1, day, hour, minute, 0, 0);
+}
 
 function element(initial = {}) {
   const listeners = new Map();
@@ -55,7 +59,11 @@ function harness({ occupied = true } = {}) {
     cooked: [],
   };
   const meals = occupied
-    ? { "2026-09-09": mealWithDinner("roast") }
+    ? {
+      "2026-09-03": mealWithDinner("pesto"),
+      "2026-09-06": mealWithDinner("halibut"),
+      "2026-09-13": mealWithDinner("roast"),
+    }
     : {};
   let calendarMeals = { ...meals };
   let groceries = [{ id: "manual-1", text: { en: "Milk" }, source: "manual" }];
@@ -81,7 +89,7 @@ function harness({ occupied = true } = {}) {
     t: (key) => translations.en[key] || key,
     escapeHtml: (value) => `${value || ""}`,
     localize: (value) => value?.en || value || "",
-    formatDateKey: (date) => date.toISOString().slice(0, 10),
+    formatDateKey,
     getMealForDate: (dateKey) => calendarMeals[dateKey] || emptyMeal,
     getRecipes: () => recipes,
     getFavorites: () => ["tacos"],
@@ -95,7 +103,7 @@ function harness({ occupied = true } = {}) {
       mealUses: [{ dateKey: "2026-09-07", mealSlot: "dinner", recipeId: "tacos", recipeName: { en: "Tacos" } }],
     }],
     recipeById: (id) => recipes.find((recipe) => recipe.id === id) || null,
-    now: () => new Date("2026-09-07T12:00:00"),
+    now: () => localDate(2026, 9, 3, 20, 15),
     saveSchedule: async () => {
       calls.saveSchedule += 1;
       return true;
@@ -130,7 +138,9 @@ test("previewing a dinner fill does not write until Apply", async () => {
   const preview = ui.getPreview();
   assert.equal(preview.kind, "fill-dinners");
   assert.ok(preview.assignments.length > 0);
-  assert.ok(!preview.assignments.some((item) => item.dateKey === "2026-09-09"));
+  assert.deepEqual(preview.dateKeys[0], "2026-09-07");
+  assert.ok(!preview.dateKeys.includes("2026-09-03"));
+  assert.ok(!preview.assignments.some((item) => item.dateKey === "2026-09-03" || item.dateKey === "2026-09-13"));
   assert.equal(calls.saveSchedule, 0);
   assert.equal(calls.saveGroceries, 0);
   assert.equal(calls.calendarWrites.length, 0);
@@ -143,7 +153,9 @@ test("Apply writes empty-slot dinners through the schedule save path", async () 
   assert.equal(saved, true);
   assert.equal(calls.saveSchedule, 1);
   assert.equal(calls.saveGroceries, 0);
-  assert.equal(dinnerRecipe(getCalendar()["2026-09-09"]), "roast");
+  assert.equal(dinnerRecipe(getCalendar()["2026-09-03"]), "pesto");
+  assert.equal(dinnerRecipe(getCalendar()["2026-09-06"]), "halibut");
+  assert.equal(dinnerRecipe(getCalendar()["2026-09-13"]), "roast");
   assert.equal(dinnerRecipe(getCalendar()["2026-09-07"]), "tacos");
 });
 
@@ -168,6 +180,28 @@ test("dinner lookup navigates without using Apply or a schedule write", async ()
   assert.equal(ui.getPreview().kind, "dinner-lookup");
   assert.equal(await ui.applyPreview(), false);
   assert.equal(calls.saveSchedule, 0);
+});
+
+test("What's for dinner today and tomorrow use local Thursday-evening dates", async () => {
+  const { ui, elements } = harness();
+  ui.previewAction("dinner-today");
+  assert.equal(ui.getPreview().when, "today");
+  assert.equal(ui.getPreview().dateKey, "2026-09-03");
+  assert.match(elements.assistantPreview.innerHTML, /Tonight/);
+  assert.match(elements.assistantPreview.innerHTML, /Sep 3/);
+
+  ui.previewAction("dinner-tomorrow");
+  assert.equal(ui.getPreview().when, "tomorrow");
+  assert.equal(ui.getPreview().dateKey, "2026-09-04");
+  assert.match(elements.assistantPreview.innerHTML, /Tomorrow night/);
+  assert.match(elements.assistantPreview.innerHTML, /Sep 4/);
+  assert.doesNotMatch(elements.assistantPreview.innerHTML, /Tonight/);
+});
+
+test("tomorrow chip does not treat dinner-tomorrow as today", async () => {
+  const source = await readFile(new URL("../assistant-ui.js", import.meta.url), "utf8");
+  assert.match(source, /action === "dinner-tomorrow" \? "tomorrow"/);
+  assert.doesNotMatch(source, /action === "tomorrow" \? "tomorrow"/);
 });
 
 test("Today and Plan expose Help entry points and the action sheet", async () => {

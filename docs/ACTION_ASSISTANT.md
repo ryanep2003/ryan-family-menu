@@ -10,10 +10,10 @@ Every write follows the same loop: choose a chip → review a structured preview
 
 Deterministic browser logic. No OpenAI call.
 
-- **Plan next week:** propose dinners for empty dinner slots over the next 7 days, ranked from favorites, recent wins, then the library.
-- **Fill gaps this week:** the same empty-slot fill, limited to remaining days of the current week that still fall inside the 7-day horizon.
-- **Build / refresh shopping list:** preview how many planned items will be on the list, then rebuild planned groceries through the ordinary grocery save.
-- **What’s for dinner today / tomorrow:** answer from the current plan and offer Open meal or Cook. This path does not write.
+- **Plan next week:** propose dinners for empty dinner slots in the calendar week after this week’s Monday (the week Plan shows after Next week). Dates are local, not UTC. Occupied dinners in that week are left as they are.
+- **Fill gaps this week:** the same empty-slot fill for remaining days of the current local week from today through Sunday.
+- **Build / refresh shopping list:** preview how many planned items will be on the list from the next 7 local days, then rebuild planned groceries through the ordinary grocery save.
+- **What’s for dinner today / tomorrow:** answer from the local calendar date (today stays today; tomorrow is the next local date) and offer Open meal or Cook. This path does not write.
 
 The optional “ask in your own words” field is a Phase B stub. It shows “coming soon” and does not call a model or write data.
 

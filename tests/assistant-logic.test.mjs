@@ -9,15 +9,31 @@ import {
   dinnerIsOccupied,
   horizonDateKeys,
   lookupDinner,
+  nextWeekDateKeys,
   proposeDinnerFill,
   proposeShoppingRefresh,
+  relativeDinnerDateKey,
   remainingWeekDateKeys,
 } from "../assistant-logic.js";
 import { groceryItem } from "../grocery-logic.js";
-import { emptyMeal, normalizeMealPlan } from "../schedule-utils.js";
+import { emptyMeal, formatDateKey, normalizeMealPlan } from "../schedule-utils.js";
 import { translations } from "../translations.js";
 
-const now = new Date("2026-09-07T15:00:00"); // Monday
+function localDate(year, month, day, hour = 12, minute = 0) {
+  return new Date(year, month - 1, day, hour, minute, 0, 0);
+}
+
+const thursdayEvening = localDate(2026, 9, 3, 20, 15);
+const monday = localDate(2026, 9, 7, 15);
+const nextWeek = [
+  "2026-09-07",
+  "2026-09-08",
+  "2026-09-09",
+  "2026-09-10",
+  "2026-09-11",
+  "2026-09-12",
+  "2026-09-13",
+];
 
 const recipes = [
   { id: "tacos", name: { en: "Tacos" }, category: "main" },
@@ -38,24 +54,53 @@ function mealWithLunch(recipeId) {
   });
 }
 
-test("the 7-day horizon starts today and never exceeds seven dates", () => {
-  const keys = horizonDateKeys(now);
-  assert.deepEqual(keys, [
+test("plan next week is the calendar week after this week's Monday, not today", () => {
+  assert.equal(formatDateKey(thursdayEvening), "2026-09-03");
+  assert.deepEqual(nextWeekDateKeys(thursdayEvening), nextWeek);
+  assert.deepEqual(dateKeysForAction("plan-next-week", thursdayEvening), nextWeek);
+  assert.ok(!dateKeysForAction("plan-next-week", thursdayEvening).includes("2026-09-03"));
+  assert.deepEqual(dateKeysForAction("plan-next-week", localDate(2026, 9, 6, 21)), nextWeek);
+  assert.deepEqual(dateKeysForAction("plan-next-week", monday), [
+    "2026-09-14",
+    "2026-09-15",
+    "2026-09-16",
+    "2026-09-17",
+    "2026-09-18",
+    "2026-09-19",
+    "2026-09-20",
+  ]);
+});
+
+test("today and tomorrow use the local calendar date, including Thursday evening", () => {
+  assert.equal(relativeDinnerDateKey("today", thursdayEvening), "2026-09-03");
+  assert.equal(relativeDinnerDateKey("tomorrow", thursdayEvening), "2026-09-04");
+  assert.equal(relativeDinnerDateKey("dinner-tomorrow", thursdayEvening), "2026-09-04");
+  assert.equal(relativeDinnerDateKey("today", localDate(2026, 9, 6, 21, 45)), "2026-09-06");
+  assert.equal(relativeDinnerDateKey("dinner-tomorrow", localDate(2026, 9, 6, 21, 45)), "2026-09-07");
+  assert.notEqual(relativeDinnerDateKey("today", thursdayEvening), relativeDinnerDateKey("tomorrow", thursdayEvening));
+});
+
+test("the shopping horizon starts today locally and stays seven dates", () => {
+  assert.deepEqual(horizonDateKeys(thursdayEvening), [
+    "2026-09-03",
+    "2026-09-04",
+    "2026-09-05",
+    "2026-09-06",
     "2026-09-07",
     "2026-09-08",
     "2026-09-09",
-    "2026-09-10",
-    "2026-09-11",
-    "2026-09-12",
-    "2026-09-13",
   ]);
-  assert.equal(dateKeysForAction("plan-next-week", now).length, 7);
-  assert.deepEqual(remainingWeekDateKeys(now), keys);
+  assert.deepEqual(dateKeysForAction("refresh-shopping", thursdayEvening), horizonDateKeys(thursdayEvening));
 });
 
-test("fill-gaps uses remaining current-week dates inside the 7-day horizon", () => {
-  const wednesday = new Date("2026-09-09T12:00:00");
-  assert.deepEqual(dateKeysForAction("fill-gaps", wednesday), [
+test("fill-gaps uses remaining current-week dates from today through Sunday", () => {
+  assert.deepEqual(dateKeysForAction("fill-gaps", thursdayEvening), [
+    "2026-09-03",
+    "2026-09-04",
+    "2026-09-05",
+    "2026-09-06",
+  ]);
+  assert.deepEqual(remainingWeekDateKeys(localDate(2026, 9, 9, 12)), [
     "2026-09-09",
     "2026-09-10",
     "2026-09-11",
@@ -70,14 +115,16 @@ test("dinner occupancy ignores breakfast and lunch so those meals are not delete
   assert.equal(dinnerIsOccupied(emptyMeal), false);
 });
 
-test("planning proposals fill only empty dinners and prefer favorites then recent wins", () => {
+test("planning proposals fill only empty dinners in next week and prefer favorites then recent wins", () => {
   const meals = {
+    "2026-09-03": mealWithDinner("pesto"),
+    "2026-09-06": mealWithDinner("halibut"),
     "2026-09-09": mealWithDinner("roast"),
     "2026-09-07": mealWithLunch("potatoes"),
   };
   const proposal = proposeDinnerFill({
     action: "plan-next-week",
-    now,
+    now: thursdayEvening,
     mealForDate: (dateKey) => meals[dateKey] || emptyMeal,
     recipes,
     favorites: ["tacos"],
@@ -92,7 +139,9 @@ test("planning proposals fill only empty dinners and prefer favorites then recen
   });
 
   assert.equal(proposal.kind, "fill-dinners");
-  assert.equal(proposal.occupied.length, 1);
+  assert.deepEqual(proposal.dateKeys, nextWeek);
+  assert.ok(!proposal.dateKeys.includes("2026-09-03"));
+  assert.ok(!proposal.assignments.some((item) => item.dateKey === "2026-09-03" || item.dateKey === "2026-09-06"));
   assert.equal(proposal.occupied[0].dateKey, "2026-09-09");
   assert.ok(!proposal.assignments.some((item) => item.dateKey === "2026-09-09"));
   assert.equal(proposal.assignments.find((item) => item.dateKey === "2026-09-07")?.recipeId, "tacos");
@@ -139,15 +188,26 @@ test("proposing a shopping refresh does not mutate the existing list", () => {
   assert.equal(assistantPreviewNeedsConfirm(proposal), true);
 });
 
-test("dinner lookup answers without writing", () => {
-  const lookup = lookupDinner({
-    dateKey: "2026-09-07",
-    todayKey: "2026-09-07",
-    meal: mealWithDinner("tacos"),
+test("dinner lookup answers without writing and keeps today vs tomorrow labels", () => {
+  const today = lookupDinner({
+    dateKey: relativeDinnerDateKey("today", thursdayEvening),
+    todayKey: formatDateKey(thursdayEvening),
+    when: "today",
+    meal: mealWithDinner("pesto"),
   });
-  assert.equal(lookup.empty, false);
-  assert.equal(lookup.items[0].recipeId, "tacos");
-  assert.equal(assistantPreviewNeedsConfirm(lookup), false);
+  const tomorrow = lookupDinner({
+    dateKey: relativeDinnerDateKey("dinner-tomorrow", thursdayEvening),
+    todayKey: formatDateKey(thursdayEvening),
+    when: "tomorrow",
+    meal: emptyMeal,
+  });
+  assert.equal(today.when, "today");
+  assert.equal(today.dateKey, "2026-09-03");
+  assert.equal(today.items[0].recipeId, "pesto");
+  assert.equal(tomorrow.when, "tomorrow");
+  assert.equal(tomorrow.dateKey, "2026-09-04");
+  assert.equal(tomorrow.empty, true);
+  assert.equal(assistantPreviewNeedsConfirm(today), false);
 });
 
 test("assistant translation keys stay in English/Spanish parity", async () => {

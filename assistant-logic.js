@@ -4,6 +4,7 @@ import {
   activeWeekDateKeys,
   appendRecipeToMeal,
   currentWeekStartKey,
+  dateFromKey,
   formatDateKey,
   normalizeMealPlan,
 } from "./schedule-utils.js";
@@ -39,21 +40,33 @@ export function horizonDateKeys(now = new Date(), days = ASSISTANT_HORIZON_DAYS)
 
 export function remainingWeekDateKeys(now = new Date()) {
   const todayKey = formatDateKey(now);
-  const allowed = new Set(horizonDateKeys(now));
   return activeWeekDateKeys(currentWeekStartKey(now))
     .map((day) => day.dateKey)
-    .filter((dateKey) => dateKey >= todayKey && allowed.has(dateKey));
+    .filter((dateKey) => dateKey >= todayKey);
+}
+
+export function nextWeekDateKeys(now = new Date()) {
+  const thisMonday = dateFromKey(currentWeekStartKey(now));
+  thisMonday.setDate(thisMonday.getDate() + 7);
+  return activeWeekDateKeys(formatDateKey(thisMonday)).map((day) => day.dateKey);
 }
 
 export function dateKeysForAction(action, now = new Date()) {
   if (action === "fill-gaps") return remainingWeekDateKeys(now);
-  return horizonDateKeys(now);
+  if (action === "refresh-shopping") return horizonDateKeys(now);
+  return nextWeekDateKeys(now);
+}
+
+function addLocalDays(dateKey, days) {
+  const date = dateFromKey(dateKey);
+  date.setDate(date.getDate() + days);
+  return formatDateKey(date);
 }
 
 export function relativeDinnerDateKey(which = "today", now = new Date()) {
-  const start = dateAtNoon(now);
-  if (which === "tomorrow") start.setDate(start.getDate() + 1);
-  return formatDateKey(start);
+  const todayKey = formatDateKey(now);
+  if (which === "tomorrow" || which === "dinner-tomorrow") return addLocalDays(todayKey, 1);
+  return todayKey;
 }
 
 export function dinnerItems(meal) {
@@ -243,12 +256,15 @@ export function shoppingListAfterRefresh({ generatedItems = [], existingItems = 
   );
 }
 
-export function lookupDinner({ dateKey, meal, todayKey } = {}) {
+export function lookupDinner({ dateKey, meal, todayKey, when } = {}) {
   const items = dinnerItems(meal);
+  const resolvedWhen = when === "today" || when === "tomorrow"
+    ? when
+    : dateKey && todayKey && dateKey === todayKey ? "today" : "tomorrow";
   return {
     kind: "dinner-lookup",
     dateKey,
-    when: dateKey === todayKey ? "today" : "tomorrow",
+    when: resolvedWhen,
     empty: items.length === 0,
     items: items.map((item) => ({
       recipeId: item.recipeId,

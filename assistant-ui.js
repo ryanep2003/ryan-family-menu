@@ -205,14 +205,16 @@ export function createAssistantUi({
     setStatus("");
     const current = now();
     if (action === "dinner-today" || action === "dinner-tomorrow") {
-      const dateKey = relativeDinnerDateKey(action === "tomorrow" ? "tomorrow" : "today", current);
+      const which = action === "dinner-tomorrow" ? "tomorrow" : "today";
+      const dateKey = relativeDinnerDateKey(which, current);
       preview = lookupDinner({
         dateKey,
         meal: getMealForDate(dateKey),
         todayKey: formatDateKey(current),
+        when: which,
       });
     } else if (action === "refresh-shopping") {
-      const dateKeys = dateKeysForAction("plan-next-week", current);
+      const dateKeys = dateKeysForAction("refresh-shopping", current);
       const generatedItems = generateGroceriesForDates(dateKeys);
       preview = proposeShoppingRefresh({
         generatedItems,
@@ -302,7 +304,7 @@ export function createAssistantUi({
       }
 
       if (preview.kind === "shopping") {
-        const dateKeys = dateKeysForAction("plan-next-week", now());
+        const dateKeys = dateKeysForAction("refresh-shopping", now());
         const generatedItems = generateGroceriesForDates(dateKeys);
         const nextItems = applyInventoryCoverage(
           shoppingListAfterRefresh({
