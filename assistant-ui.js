@@ -4,6 +4,7 @@ import {
   assistantPreviewNeedsConfirm,
   dateKeysForAction,
   lookupDinner,
+  lookupDinnersRange,
   matchAskAction,
   proposeDinnerFill,
   proposeShoppingRefresh,
@@ -58,11 +59,20 @@ export function createAssistantUi({
   startCook = () => {},
   recordActivity = () => {},
   documentObject = globalThis.document,
+  waitForPaint = () => new Promise((resolve) => {
+    const raf = globalThis.requestAnimationFrame;
+    if (typeof raf === "function") {
+      raf(() => raf(resolve));
+      return;
+    }
+    setTimeout(resolve, 0);
+  }),
 } = {}) {
   let preview = null;
   let activeAction = "";
   let lastOpener = null;
   let applying = false;
+  let asking = false;
 
   function sheet() {
     return $("#assistantSheet");
@@ -116,9 +126,20 @@ export function createAssistantUi({
     chips?.setAttribute?.("aria-disabled", isBusy ? "true" : "false");
   }
 
+  function isBusy() {
+    return applying || asking;
+  }
+
   function setApplying(isApplying) {
     applying = isApplying;
-    setBusyControls(isApplying);
+    setBusyControls(isBusy());
+    renderChips();
+    updateApplyState();
+  }
+
+  function setAsking(isAsking) {
+    asking = isAsking;
+    setBusyControls(isBusy());
     renderChips();
     updateApplyState();
   }
@@ -126,8 +147,9 @@ export function createAssistantUi({
   function updateApplyState() {
     const apply = $("#assistantApply");
     if (!apply) return;
-    const canApply = assistantPreviewNeedsConfirm(preview) && !applying;
-    apply.hidden = !preview || preview.kind === "dinner-lookup" || preview.kind === "ask-unmatched";
+    const lookupPreview = preview?.kind === "dinner-lookup" || preview?.kind === "dinners-range";
+    const canApply = assistantPreviewNeedsConfirm(preview) && !isBusy();
+    apply.hidden = !preview || lookupPreview || preview.kind === "ask-unmatched";
     apply.disabled = !canApply;
   }
 
@@ -135,7 +157,7 @@ export function createAssistantUi({
     const list = $("#assistantChips");
     if (!list) return;
     list.innerHTML = ASSISTANT_ACTIONS.map((action) => `
-      <button type="button" class="assistant-chip${activeAction === action ? " is-selected" : ""}" data-assistant-action="${escapeHtml(action)}" aria-pressed="${activeAction === action}"${applying ? " disabled" : ""}>
+      <button type="button" class="assistant-chip${activeAction === action ? " is-selected" : ""}" data-assistant-action="${escapeHtml(action)}" aria-pressed="${activeAction === action}"${isBusy() ? " disabled" : ""}>
         ${escapeHtml(t(ACTION_LABELS[action]))}
       </button>
     `).join("");
@@ -148,6 +170,22 @@ export function createAssistantUi({
       <button type="button" class="assistant-secondary" data-assistant-open-meal="${escapeHtml(previewState.dateKey)}">${escapeHtml(t("assistantOpenMeal"))}</button>
       <button type="button" class="assistant-apply" data-assistant-cook="${escapeHtml(main.recipeId)}">${escapeHtml(t("assistantStartCook"))}</button>
     </div>`;
+  }
+
+  function renderRangeDay(day) {
+    const names = day.items.map((item) => escapeHtml(recipeName(item.recipeId))).join(", ");
+    const main = day.items.find((item) => item.role === "main") || day.items[0];
+    const cook = !day.empty && main
+      ? `<button type="button" class="assistant-apply" data-assistant-cook="${escapeHtml(main.recipeId)}">${escapeHtml(t("assistantStartCook"))}</button>`
+      : "";
+    return `<li>
+      <strong>${escapeHtml(formatDayLabel(day.dateKey))}</strong>
+      <span>${day.empty ? escapeHtml(t("assistantDinnerRangeEmpty")) : names}</span>
+      <div class="assistant-lookup-actions">
+        <button type="button" class="assistant-secondary" data-assistant-open-meal="${escapeHtml(day.dateKey)}">${escapeHtml(t("assistantOpenMeal"))}</button>
+        ${cook}
+      </div>
+    </li>`;
   }
 
   function renderPreview() {
@@ -180,6 +218,19 @@ export function createAssistantUi({
           ${renderLookupActions(preview)}
         `;
       }
+      updateApplyState();
+      return;
+    }
+
+    if (preview.kind === "dinners-range") {
+      const heading = preview.when === "this-week"
+        ? t("assistantDinnersThisWeekHeading")
+        : t("assistantDinnersNextWeekHeading");
+      const rows = (preview.days || []).map(renderRangeDay).join("");
+      panel.innerHTML = `
+        <h3>${escapeHtml(heading)}</h3>
+        <ul class="assistant-preview-list">${rows}</ul>
+      `;
       updateApplyState();
       return;
     }
@@ -243,6 +294,12 @@ export function createAssistantUi({
         todayKey: formatDateKey(current),
         when: which,
       });
+    } else if (action === "dinners-next-week" || action === "dinners-this-week") {
+      preview = lookupDinnersRange({
+        action,
+        now: current,
+        mealForDate: getMealForDate,
+      });
     } else if (action === "refresh-shopping") {
       const dateKeys = dateKeysForAction("refresh-shopping", current);
       const generatedItems = generateGroceriesForDates(dateKeys);
@@ -273,6 +330,7 @@ export function createAssistantUi({
     documentObject?.body?.classList?.remove("assistant-open");
     preview = null;
     activeAction = "";
+    asking = false;
     setApplying(false);
     setStatus("");
     const ask = $("#assistantAskInput");
@@ -291,6 +349,7 @@ export function createAssistantUi({
     documentObject?.body?.classList?.add("assistant-open");
     preview = null;
     activeAction = "";
+    asking = false;
     setApplying(false);
     setStatus("");
     renderChips();
@@ -364,20 +423,28 @@ export function createAssistantUi({
     return false;
   }
 
-  function handleAsk(event) {
+  async function handleAsk(event) {
     event.preventDefault();
-    if (applying) return;
+    if (isBusy()) return;
     const asked = $("#assistantAskInput")?.value || "";
     const action = matchAskAction(asked);
-    if (!action) {
-      activeAction = "";
-      preview = { kind: "ask-unmatched" };
-      renderChips();
-      renderPreview();
-      setStatus(t("assistantAskUnmatched"));
-      return;
+    setAsking(true);
+    setStatus(t("assistantLooking"));
+    try {
+      await waitForPaint();
+      if (!asking) return;
+      if (!action) {
+        activeAction = "";
+        preview = { kind: "ask-unmatched" };
+        renderChips();
+        renderPreview();
+        setStatus(t("assistantAskUnmatched"));
+        return;
+      }
+      previewAction(action);
+    } finally {
+      if (asking) setAsking(false);
     }
-    previewAction(action);
   }
 
   function bindAssistantControls() {
@@ -391,7 +458,7 @@ export function createAssistantUi({
       const action = event.target.closest?.("[data-assistant-action]");
       if (action && isOpen()) {
         event.preventDefault();
-        if (applying) return;
+        if (isBusy()) return;
         previewAction(action.dataset.assistantAction);
         return;
       }
@@ -441,6 +508,7 @@ export function createAssistantUi({
     applyPreview,
     getPreview: () => preview,
     isApplying: () => applying,
+    isAsking: () => asking,
     isOpen,
   };
 }

@@ -9,6 +9,7 @@ import {
   dinnerIsOccupied,
   horizonDateKeys,
   lookupDinner,
+  lookupDinnersRange,
   matchAskAction,
   nextWeekDateKeys,
   proposeDinnerFill,
@@ -94,13 +95,15 @@ test("the shopping horizon starts today locally and stays seven dates", () => {
   assert.deepEqual(dateKeysForAction("refresh-shopping", thursdayEvening), horizonDateKeys(thursdayEvening));
 });
 
-test("fill-gaps uses remaining current-week dates from today through Sunday", () => {
+test("fill-gaps and this-week lookup use remaining current-week dates from today through Sunday", () => {
   assert.deepEqual(dateKeysForAction("fill-gaps", thursdayEvening), [
     "2026-09-03",
     "2026-09-04",
     "2026-09-05",
     "2026-09-06",
   ]);
+  assert.deepEqual(dateKeysForAction("dinners-this-week", thursdayEvening), dateKeysForAction("fill-gaps", thursdayEvening));
+  assert.deepEqual(dateKeysForAction("dinners-next-week", thursdayEvening), nextWeek);
   assert.deepEqual(remainingWeekDateKeys(localDate(2026, 9, 9, 12)), [
     "2026-09-09",
     "2026-09-10",
@@ -213,11 +216,16 @@ test("dinner lookup answers without writing and keeps today vs tomorrow labels",
 
 test("Ask text maps to existing chip actions in English and Spanish without a model", () => {
   const cases = [
-    ["What's for lunch and dinner next week?", "plan-next-week"],
-    ["whats for lunch and dinner next week", "plan-next-week"],
+    ["What's for dinner next week?", "dinners-next-week"],
+    ["whats for dinner next week", "dinners-next-week"],
+    ["What's for dinner this week?", "dinners-this-week"],
+    ["¿Qué hay de cena la próxima semana?", "dinners-next-week"],
+    ["¿Qué hay de cena esta semana?", "dinners-this-week"],
+    ["What's for lunch and dinner next week?", "dinners-next-week"],
+    ["whats for lunch and dinner next week", "dinners-next-week"],
+    ["¿Qué hay de almuerzo y cena la próxima semana?", "dinners-next-week"],
     ["Plan next week", "plan-next-week"],
     ["plan dinners", "plan-next-week"],
-    ["¿Qué hay de almuerzo y cena la próxima semana?", "plan-next-week"],
     ["planear la próxima semana", "plan-next-week"],
     ["PRÓXIMA SEMANA", "plan-next-week"],
     ["Fill gaps this week", "fill-gaps"],
@@ -238,7 +246,6 @@ test("Ask text maps to existing chip actions in English and Spanish without a mo
     ["cena mañana", "dinner-tomorrow"],
     ["¿Qué hay de cena mañana?", "dinner-tomorrow"],
     ["what's for lunch and dinner tomorrow", "dinner-tomorrow"],
-    ["what's for dinner next week", "plan-next-week"],
   ];
   for (const [phrase, action] of cases) {
     assert.equal(matchAskAction(phrase), action, phrase);
@@ -247,6 +254,39 @@ test("Ask text maps to existing chip actions in English and Spanish without a mo
   assert.equal(matchAskAction("   "), null);
   assert.equal(matchAskAction("tell me a joke"), null);
   assert.equal(matchAskAction("invent a new meal plan with AI"), null);
+});
+
+test("week dinner lookups list each date without requiring Apply", () => {
+  const meals = {
+    "2026-09-07": mealWithDinner("tacos"),
+    "2026-09-09": mealWithDinner("chili"),
+    "2026-09-03": mealWithDinner("pesto"),
+  };
+  const next = lookupDinnersRange({
+    action: "dinners-next-week",
+    now: thursdayEvening,
+    mealForDate: (dateKey) => meals[dateKey] || emptyMeal,
+  });
+  assert.equal(next.kind, "dinners-range");
+  assert.equal(next.when, "next-week");
+  assert.deepEqual(next.dateKeys, nextWeek);
+  assert.equal(next.days.length, 7);
+  assert.equal(next.days[0].dateKey, "2026-09-07");
+  assert.equal(next.days[0].items[0].recipeId, "tacos");
+  assert.equal(next.days[1].empty, true);
+  assert.equal(next.days[2].items[0].recipeId, "chili");
+  assert.equal(assistantPreviewNeedsConfirm(next), false);
+
+  const remaining = lookupDinnersRange({
+    action: "dinners-this-week",
+    now: thursdayEvening,
+    mealForDate: (dateKey) => meals[dateKey] || emptyMeal,
+  });
+  assert.equal(remaining.when, "this-week");
+  assert.deepEqual(remaining.dateKeys, dateKeysForAction("fill-gaps", thursdayEvening));
+  assert.equal(remaining.days[0].dateKey, "2026-09-03");
+  assert.equal(remaining.days[0].items[0].recipeId, "pesto");
+  assert.equal(assistantPreviewNeedsConfirm(remaining), false);
 });
 
 test("assistant translation keys stay in English/Spanish parity", async () => {

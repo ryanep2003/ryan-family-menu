@@ -14,14 +14,17 @@ Deterministic browser logic. No OpenAI call.
 - **Fill gaps this week:** the same empty-slot fill for remaining days of the current local week from today through Sunday.
 - **Build / refresh shopping list:** preview how many planned items will be on the list from the next 7 local days, then rebuild planned groceries through the ordinary grocery save.
 - **What’s for dinner today / tomorrow:** answer from the local calendar date (today stays today; tomorrow is the next local date) and offer Open meal or Cook. This path does not write.
+- **What’s for dinner this week / next week:** typed Ask only. Lists each dinner in that local week window (remaining days of this week, or the calendar week after this week’s Monday) as a read-only preview. Empty days stay visible as “nothing planned.” Apply is not shown. Occupied dinners are never rewritten.
 
 Recipe ranking reuses existing family memory (`rankedRecipes`). OpenAI is not used for Phase A ranking.
 
 ## Phase B lite — keyword routing (this release)
 
-Typed “ask in your own words” text is matched in the browser to the same Phase A chips (`plan-next-week`, `fill-gaps`, `refresh-shopping`, `dinner-today`, `dinner-tomorrow`). Matching uses English and Spanish keywords and phrases (accents and case are ignored). There is still no LLM and no network model call.
+Typed “ask in your own words” text is matched in the browser with English and Spanish keywords (accents and case are ignored). There is still no LLM and no network model call.
 
-A match opens the same preview as tapping that chip. Apply / Aplicar is still required before any write. While Apply is saving the schedule or grocery list, the sheet shows a spinner in the status area and disables Apply, chips, and Ask submit.
+Routing prefers a dinner lookup when the text is a “what’s for” / “qué hay” meal question, even if it also says “this week” or “next week.” Those week lookups (`dinners-this-week`, `dinners-next-week`) list planned dinners and do not write. “Plan next week”, “planear la próxima semana”, “fill gaps”, and similar plan/fill phrasing still open the empty-slot fill preview. Other matches open the same preview as the Phase A chips (`plan-next-week`, `fill-gaps`, `refresh-shopping`, `dinner-today`, `dinner-tomorrow`).
+
+Apply / Aplicar is still required before any write. Lookup answers do not show Apply. While Apply is saving the schedule or grocery list, the sheet shows a spinner in the status area and disables Apply, chips, and Ask submit. Ask also shows a brief looking spinner while a (usually local) preview is prepared.
 
 If the text does not match, a short message points back at the chips. Unmatched text never writes and never calls a model.
 

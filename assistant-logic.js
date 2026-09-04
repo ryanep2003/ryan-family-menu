@@ -20,6 +20,64 @@ export const ASSISTANT_ACTIONS = [
   "dinner-tomorrow",
 ];
 
+const NEXT_WEEK_PHRASES = [
+  "next week",
+  "coming week",
+  "following week",
+  "the week after",
+  "proxima semana",
+  "la semana proxima",
+  "semana que viene",
+  "la semana que viene",
+  "semana siguiente",
+];
+
+const THIS_WEEK_PHRASES = [
+  "this week",
+  "esta semana",
+  "rest of the week",
+  "rest of week",
+  "remaining days",
+  "current week",
+];
+
+const FILL_PHRASES = [
+  "fill gaps",
+  "fill the gaps",
+  "fill empty",
+  "empty dinners",
+  "empty dinner",
+  "huecos",
+  "completar huecos",
+  "lo que falta",
+];
+
+const PLAN_PHRASES = [
+  "plan next week",
+  "plan dinners",
+  "plan meals",
+  "plan the week",
+  "help me plan",
+  "planear",
+  "planea",
+  "planificar",
+];
+
+const SHOPPING_PHRASES = [
+  "shopping list",
+  "grocery list",
+  "lista de compras",
+  "lista de la compra",
+  "lista del super",
+  "build shopping",
+  "refresh shopping",
+  "shopping",
+  "groceries",
+  "grocery",
+  "compras",
+  "supermercado",
+];
+
 export function normalizeAskText(text) {
   return String(text ?? "")
     .normalize("NFD")
@@ -59,58 +117,16 @@ function askHasToday(query) {
   ]);
 }
 
+function askHasPlanOrFillIntent(query) {
+  return query === "plan" || askHasAny(query, PLAN_PHRASES) || askHasAny(query, FILL_PHRASES);
+}
+
 export function matchAskAction(text) {
   const query = normalizeAskText(text);
   if (!query) return null;
 
-  if (askHasAny(query, [
-    "shopping list",
-    "grocery list",
-    "lista de compras",
-    "lista de la compra",
-    "lista del super",
-    "build shopping",
-    "refresh shopping",
-    "shopping",
-    "groceries",
-    "grocery",
-    "compras",
-    "supermercado",
-  ])) {
+  if (askHasAny(query, SHOPPING_PHRASES)) {
     return "refresh-shopping";
-  }
-
-  if (askHasAny(query, [
-    "next week",
-    "coming week",
-    "following week",
-    "the week after",
-    "proxima semana",
-    "la semana proxima",
-    "semana que viene",
-    "la semana que viene",
-    "semana siguiente",
-  ])) {
-    return "plan-next-week";
-  }
-
-  if (askHasAny(query, [
-    "this week",
-    "esta semana",
-    "rest of the week",
-    "rest of week",
-    "remaining days",
-    "current week",
-    "fill gaps",
-    "fill the gaps",
-    "fill empty",
-    "empty dinners",
-    "empty dinner",
-    "huecos",
-    "completar huecos",
-    "lo que falta",
-  ])) {
-    return "fill-gaps";
   }
 
   const dinner = askHasAny(query, ["dinner", "supper", "cena", "cenar", "cenamos"]);
@@ -126,32 +142,33 @@ export function matchAskAction(text) {
     "que cenamos",
   ]);
   const foodAsk = dinner || meals || whatsFor;
+  const lookupQuestion = foodAsk && !askHasPlanOrFillIntent(query);
+  const nextWeek = askHasAny(query, NEXT_WEEK_PHRASES);
+  const thisWeek = askHasAny(query, THIS_WEEK_PHRASES);
   const tomorrow = askHasTomorrow(query);
   const today = askHasToday(query);
+
+  if (lookupQuestion && nextWeek) return "dinners-next-week";
+  if (lookupQuestion && thisWeek) return "dinners-this-week";
+
+  if (nextWeek) return "plan-next-week";
+  if (thisWeek || askHasAny(query, FILL_PHRASES)) return "fill-gaps";
 
   if (tomorrow && foodAsk) return "dinner-tomorrow";
   if (today && foodAsk) return "dinner-today";
 
-  if ((dinner && meals) || askHasAny(query, [
+  if (!lookupQuestion && ((dinner && meals) || askHasAny(query, [
     "lunch and dinner",
     "dinner and lunch",
     "almuerzo y cena",
     "cena y almuerzo",
-  ])) {
+  ]))) {
     return "plan-next-week";
   }
 
   if (dinner || whatsFor) return "dinner-today";
 
-  if (askHasAny(query, [
-    "plan dinners",
-    "plan meals",
-    "plan the week",
-    "help me plan",
-    "planear",
-    "planea",
-    "planificar",
-  ]) || query === "plan") {
+  if (askHasAny(query, PLAN_PHRASES) || query === "plan") {
     return "plan-next-week";
   }
 
@@ -190,7 +207,7 @@ export function nextWeekDateKeys(now = new Date()) {
 }
 
 export function dateKeysForAction(action, now = new Date()) {
-  if (action === "fill-gaps") return remainingWeekDateKeys(now);
+  if (action === "fill-gaps" || action === "dinners-this-week") return remainingWeekDateKeys(now);
   if (action === "refresh-shopping") return horizonDateKeys(now);
   return nextWeekDateKeys(now);
 }
@@ -394,8 +411,16 @@ export function shoppingListAfterRefresh({ generatedItems = [], existingItems = 
   );
 }
 
+function dinnerLookupItems(meal) {
+  return dinnerItems(meal).map((item) => ({
+    recipeId: item.recipeId,
+    role: item.role,
+    sourceType: item.sourceType,
+  }));
+}
+
 export function lookupDinner({ dateKey, meal, todayKey, when } = {}) {
-  const items = dinnerItems(meal);
+  const items = dinnerLookupItems(meal);
   const resolvedWhen = when === "today" || when === "tomorrow"
     ? when
     : dateKey && todayKey && dateKey === todayKey ? "today" : "tomorrow";
@@ -404,11 +429,33 @@ export function lookupDinner({ dateKey, meal, todayKey, when } = {}) {
     dateKey,
     when: resolvedWhen,
     empty: items.length === 0,
-    items: items.map((item) => ({
-      recipeId: item.recipeId,
-      role: item.role,
-      sourceType: item.sourceType,
-    })),
+    items,
+  };
+}
+
+export function lookupDinnersRange({
+  action = "dinners-next-week",
+  dateKeys,
+  now = new Date(),
+  mealForDate = () => ({}),
+  when,
+} = {}) {
+  const resolvedWhen = when === "this-week" || action === "dinners-this-week" ? "this-week" : "next-week";
+  const resolvedAction = resolvedWhen === "this-week" ? "dinners-this-week" : "dinners-next-week";
+  const windowKeys = Array.isArray(dateKeys) ? dateKeys : dateKeysForAction(resolvedAction, now);
+  return {
+    kind: "dinners-range",
+    action: resolvedAction,
+    when: resolvedWhen,
+    dateKeys: windowKeys,
+    days: windowKeys.map((dateKey) => {
+      const items = dinnerLookupItems(mealForDate(dateKey));
+      return {
+        dateKey,
+        empty: items.length === 0,
+        items,
+      };
+    }),
   };
 }
 
