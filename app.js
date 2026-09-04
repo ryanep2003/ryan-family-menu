@@ -27,7 +27,7 @@ import { addAvailableFood, normalizeAvailableFood } from "./available-food.js";
 import { inventoryExpirationState, inventoryItem, mergeInventory } from "./inventory-logic.js";
 import { getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
-import { cleanHouseholdMember } from "./household-attribution.js";
+import { canonicalHouseholdMember, DEFAULT_HOUSEHOLD_MEMBER, displayHouseholdMember } from "./household-attribution.js";
 import { createHouseholdStorage, leaveHousehold, requireHouseholdSession } from "./household-access.js";
 import { createInventoryUi } from "./inventory-ui.js";
 import { createLunchUi } from "./lunch-ui.js";
@@ -40,6 +40,7 @@ import { createRecipeLibraryUi } from "./recipe-library-ui.js";
 import { createCookAlongUi } from "./cook-along-ui.js";
 import { createReceiptUi } from "./receipt-ui.js";
 import { createScheduleUi } from "./schedule-ui.js";
+import { createAssistantUi } from "./assistant-ui.js";
 import { createSharedStateLoader } from "./shared-state-loader.js";
 import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage-utils.js";
 import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "./sync-status.js";
@@ -145,7 +146,7 @@ applyStaticTranslations();
 const household = await requireHouseholdSession({ t });
 const householdStorage = createHouseholdStorage(localStorage, household.id);
 
-let householdMember = cleanHouseholdMember(readStringStorage(householdStorage, "dinner-household-member", "Family")) || "Family";
+let householdMember = canonicalHouseholdMember(readStringStorage(householdStorage, "dinner-household-member", DEFAULT_HOUSEHOLD_MEMBER)) || DEFAULT_HOUSEHOLD_MEMBER;
 let selectedRecipeId = "meatballs";
 const storedSchedule = readJsonStorage(householdStorage, "dinner-schedule", null);
 let schedule = normalizeSchedule(storedSchedule || Object.fromEntries(days.map((day) => [day.key, { ...emptyMeal }])));
@@ -225,6 +226,24 @@ const recipeTranslationInFlight = new Set();
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 
+function displayedHouseholdMember(name = householdMember) {
+  return displayHouseholdMember(name, t) || name;
+}
+
+function assigneeMatchesHouseholdMember(value, member = householdMember) {
+  const cleaned = `${value || ""}`.trim();
+  if (!cleaned) return true;
+  return canonicalHouseholdMember(cleaned) === (canonicalHouseholdMember(member) || DEFAULT_HOUSEHOLD_MEMBER)
+    || cleaned === displayedHouseholdMember(member)
+    || cleaned === member;
+}
+
+function syncTaskAssigneeInput() {
+  const input = $("#taskAssigneeInput");
+  if (!input) return;
+  if (assigneeMatchesHouseholdMember(input.value)) input.value = displayedHouseholdMember();
+}
+
 function formatItemActivity(item) {
   if (!item?.updatedBy || !item?.updatedAt) return "";
   const date = new Date(item.updatedAt);
@@ -235,7 +254,7 @@ function formatItemActivity(item) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
-  return t("itemUpdatedBy").replace("{name}", item.updatedBy).replace("{time}", time);
+  return t("itemUpdatedBy").replace("{name}", displayHouseholdMember(item.updatedBy, t) || item.updatedBy).replace("{time}", time);
 }
 
 function updateFileInputStatus(input) {
@@ -1769,9 +1788,7 @@ function renderTranslations() {
   });
   refreshSyncStatuses();
   if ($("#householdMemberInput")) $("#householdMemberInput").value = householdMember;
-  if ($("#taskAssigneeInput") && !$("#taskAssigneeInput").value.trim()) {
-    $("#taskAssigneeInput").value = householdMember;
-  }
+  syncTaskAssigneeInput();
   renderFileInputStatuses();
 }
 
@@ -2108,6 +2125,59 @@ const cookAlongUi = createCookAlongUi({
   },
 });
 
+function generatedGroceriesForHorizon(dateKeys) {
+  return [...generatedGroceriesForDates(dateKeys), ...generatedSchoolLunchGroceries(dateKeys)];
+}
+
+const assistantUi = createAssistantUi({
+  $,
+  $$,
+  t,
+  escapeHtml,
+  localize: (value) => localizeExact(value) || t("translationPendingShort"),
+  getLang: () => lang,
+  formatDateKey,
+  getMealForDate: calendarMealForDateKey,
+  getRecipes: allRecipes,
+  getFavorites: () => favorites,
+  getDinnerEvents: () => dinnerEvents,
+  getFamilyMembers: () => familyMembers,
+  getFamilyPreferences: () => familyPreferences,
+  getFamilyRules: () => familyRules,
+  getRecipeFeedback: () => recipeFeedback,
+  getGroceries: () => groceries,
+  generateGroceriesForDates: generatedGroceriesForHorizon,
+  applyInventoryCoverage,
+  getInventory: () => inventory,
+  recipeById,
+  saveSchedule,
+  saveGroceries: async () => {
+    renderGroceries();
+    bindGroceryControls();
+    const [grocerySaved] = await Promise.all([saveGroceries(), saveSharedState()]);
+    return grocerySaved !== false;
+  },
+  setCalendarMeals: (nextCalendarMeals) => {
+    calendarMeals = normalizeCalendar(nextCalendarMeals);
+  },
+  setGroceries: (nextGroceries) => {
+    groceries = nextGroceries;
+  },
+  getCalendarMeals: () => calendarMeals,
+  render,
+  setView,
+  openFocusedDinner: (dateKey) => {
+    setView("schedule");
+    scheduleUi.openFocusedDinner(dateKey);
+  },
+  startCook: (recipe) => {
+    selectedRecipeId = recipe.id;
+    setView("recipes");
+    cookAlongUi.start(recipe);
+  },
+  recordActivity,
+});
+
 const onboardingUi = createOnboardingUi({
   $,
   $$,
@@ -2128,9 +2198,10 @@ const familyUi = createFamilyUi({
   formatDateKey,
   getHouseholdMember: () => householdMember,
   setHouseholdMember: (name) => {
-    householdMember = cleanHouseholdMember(name) || "Family";
+    householdMember = canonicalHouseholdMember(name) || DEFAULT_HOUSEHOLD_MEMBER;
     householdStorage.setItem("dinner-household-member", householdMember);
     if ($("#householdMemberInput")) $("#householdMemberInput").value = householdMember;
+    syncTaskAssigneeInput();
   },
   getFamilyMembers: () => familyMembers,
   setFamilyMembers: (members) => { familyMembers = normalizeFamilyMembers(members); },
@@ -2883,12 +2954,9 @@ async function recognizeReceipt(images) {
 }
 
 $("#householdMemberInput").addEventListener("change", (event) => {
-  const previousMember = householdMember;
-  householdMember = cleanHouseholdMember(event.target.value) || "Family";
+  householdMember = canonicalHouseholdMember(event.target.value) || DEFAULT_HOUSEHOLD_MEMBER;
   householdStorage.setItem("dinner-household-member", householdMember);
-  if ($("#taskAssigneeInput") && ["", previousMember].includes($("#taskAssigneeInput").value.trim())) {
-    $("#taskAssigneeInput").value = householdMember;
-  }
+  syncTaskAssigneeInput();
 });
 
 $("#addRecipeFromLibrary").addEventListener("click", () => setView("add"));
@@ -2992,6 +3060,8 @@ $$("[data-scroll-to]").forEach((button) => {
 scheduleUi.bindScheduleControls();
 
 dashboardUi.bindDashboardControls();
+
+assistantUi.bindAssistantControls();
 
 $("#startCooking").addEventListener("click", () => {
   const recipe = recipeById(selectedRecipeId);

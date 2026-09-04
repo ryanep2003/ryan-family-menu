@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=158" />
+    <link rel="stylesheet" href="styles.css?v=159" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -87,7 +87,7 @@
       <div class="app-header-title-row">
         <h1 id="viewPageTitle" data-i18n="todayTab">Today</h1>
         <details class="household-menu">
-          <summary class="household-button">
+          <summary class="household-button" data-i18n-aria-label="householdButton">
             <span class="household-summary-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg>
             </span>
@@ -217,7 +217,10 @@
         </section>
 
         <section class="today-daily-loop" id="todayDailyLoop" aria-labelledby="todayDailyLoopHeading">
-          <p class="section-label" id="todayDailyLoopHeading" data-i18n="todayDailyLoopLabel">Plan &amp; shop</p>
+          <div class="today-daily-loop-copy">
+            <p class="section-label" id="todayDailyLoopHeading" data-i18n="todayDailyLoopLabel">Plan &amp; shop</p>
+            <button class="assistant-entry" id="assistantHelpToday" type="button" data-open-assistant="today" data-i18n="assistantHelp">Help</button>
+          </div>
           <div class="today-shortcuts">
             <button class="today-shop-button" type="button" data-view-target="grocery" data-inventory-target="shopping">
               <svg class="today-shortcut-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 6h2l1.2 9.2a2 2 0 0 0 2 1.8h7.3a2 2 0 0 0 2-1.6L21 9H8"/><circle cx="10" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg>
@@ -443,6 +446,7 @@
                 <button class="ghost-button" id="thisWeek" type="button"><span data-i18n="thisWeek">This week</span></button>
                 <button class="week-nav-circle" id="nextWeek" type="button"><span class="week-nav-icon" aria-hidden="true">→</span><span class="visually-hidden" data-i18n="nextWeek">Next week</span></button>
               </div>
+              <button class="assistant-entry" id="assistantHelpPlan" type="button" data-open-assistant="plan" data-i18n="assistantHelpPlan">Help plan</button>
               <button class="primary-action" id="copyWeekForward" type="button" data-i18n="copyWeekForward">Plan next week</button>
               <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Clear week</button>
             </div>
@@ -452,7 +456,10 @@
           <section class="schedule-editor" id="weekDateEditor"></section>
           <div class="plan-save-bar" id="planSaveBar" data-plan-save-bar hidden>
             <p class="plan-save-bar-status" id="planSaveBarStatus" role="status"></p>
-            <button class="primary-action" id="planSaveBarButton" type="button" data-plan-save-bar-button data-i18n="saveMealChanges">Save changes</button>
+            <div class="plan-save-bar-actions">
+              <button class="assistant-entry" id="assistantHelpPlanSticky" type="button" data-open-assistant="plan" data-i18n="assistantHelpPlan">Help plan</button>
+              <button class="primary-action" id="planSaveBarButton" type="button" data-plan-save-bar-button data-i18n="saveMealChanges">Save changes</button>
+            </div>
           </div>
         </div>
 
@@ -1050,11 +1057,38 @@
 
     </main>
 
+    <div class="assistant-sheet" id="assistantSheet" hidden aria-hidden="true">
+      <div class="assistant-sheet-backdrop" data-assistant-close></div>
+      <section class="assistant-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="assistantSheetTitle">
+        <header class="assistant-sheet-header">
+          <div>
+            <p class="section-label" data-i18n="assistantSheetKicker">Family help</p>
+            <h2 id="assistantSheetTitle" data-i18n="assistantHelp">Help</h2>
+          </div>
+          <button class="ghost-button" id="assistantClose" type="button" data-assistant-close data-i18n="assistantClose">Close</button>
+        </header>
+        <p class="assistant-sheet-intro" data-i18n="assistantSheetIntro">Choose an action, preview what will change, then apply it.</p>
+        <div class="assistant-chips" id="assistantChips" role="group" aria-label="Help actions" data-i18n-aria-label="assistantActionsLabel"></div>
+        <form class="assistant-ask" id="assistantAskForm">
+          <label for="assistantAskInput">
+            <span data-i18n="assistantAskLabel">Ask in your own words</span>
+            <input id="assistantAskInput" type="text" maxlength="200" data-i18n-placeholder="assistantAskPlaceholder" placeholder="Coming soon" autocomplete="off" />
+          </label>
+          <button class="assistant-secondary" type="submit" data-i18n="assistantAskSubmit">Ask</button>
+        </form>
+        <div class="assistant-preview" id="assistantPreview"></div>
+        <p class="form-status" id="assistantStatus" role="status"></p>
+        <div class="assistant-sheet-actions">
+          <button class="assistant-apply" id="assistantApply" type="button" data-i18n="assistantApply" hidden disabled>Apply</button>
+        </div>
+      </section>
+    </div>
+
     <div class="undo-toast" id="undoToast" role="status" hidden>
       <span id="undoMessage"></span>
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=158"></script>
+    <script type="module" src="app.js?v=159"></script>
   </body>
 </html>

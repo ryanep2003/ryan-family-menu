@@ -8,6 +8,7 @@ import {
   preferencesFromText,
   upsertDinnerEvent,
 } from "./memory-logic.js";
+import { displayHouseholdMember } from "./household-attribution.js";
 
 const preferenceKinds = ["restriction", "dislike", "like", "reliable"];
 const outcomes = ["loved", "worked", "mixed", "skip", "not-made"];
@@ -49,7 +50,7 @@ export function createFamilyUi({
     const names = ["Family", ...members.map((member) => member.name)];
     const datalist = $("#householdMemberSuggestions");
     if (datalist) datalist.innerHTML = names
-      .map((name) => `<option value="${escapeHtml(name)}"></option>`).join("");
+      .map((name) => `<option value="${escapeHtml(displayHouseholdMember(name, t) || name)}"></option>`).join("");
     const picker = $("#householdMemberPicker");
     const setupButton = $("#setupFamilyMembers");
     const select = $("#householdMemberInput");
@@ -59,7 +60,7 @@ export function createFamilyUi({
       setupButton.textContent = t("addFamilyMembersShort");
     }
     if (select) {
-      select.innerHTML = names.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name === "Family" ? t("householdFamily") : name)}</option>`).join("");
+      select.innerHTML = names.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(displayHouseholdMember(name, t) || name)}</option>`).join("");
       const selectedName = names.includes(getHouseholdMember()) ? getHouseholdMember() : "Family";
       if (selectedName !== getHouseholdMember()) setHouseholdMember(selectedName);
       select.value = selectedName;
@@ -124,7 +125,7 @@ export function createFamilyUi({
       const leftoverTotal = Object.values(event.leftovers || {}).reduce((sum, amount) => sum + Number(amount || 0), 0);
       return `<article class="past-dinner-item">
         <div><time datetime="${event.dateKey}">${escapeHtml(formatter.format(new Date(`${event.dateKey}T12:00:00`)))}</time><strong>${escapeHtml(names.join(" · ") || t("dinnerChangedPlans"))}</strong></div>
-        <div class="past-dinner-meta"><span>${escapeHtml(outcomeLabel(event))}</span>${leftoverTotal ? `<span>${escapeHtml(t("leftoverCount").replace("{count}", leftoverTotal))}</span>` : ""}<span>${escapeHtml(t("updatedByShort").replace("{name}", event.updatedBy))}</span></div>
+        <div class="past-dinner-meta"><span>${escapeHtml(outcomeLabel(event))}</span>${leftoverTotal ? `<span>${escapeHtml(t("leftoverCount").replace("{count}", leftoverTotal))}</span>` : ""}<span>${escapeHtml(t("updatedByShort").replace("{name}", displayHouseholdMember(event.updatedBy, t) || event.updatedBy))}</span></div>
       </article>`;
     }).join("");
   }

@@ -54,6 +54,8 @@ test("service worker pre-caches first-party app modules", async () => {
     "./recipe-library-ui.js",
     "./receipt-ui.js",
     "./schedule-ui.js",
+    "./assistant-logic.js",
+    "./assistant-ui.js",
     "./shared-state-loader.js",
   ]) {
     assert.match(serviceWorker, new RegExp(path.replace(".", "\\.")), path);

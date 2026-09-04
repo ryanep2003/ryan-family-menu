@@ -24,6 +24,12 @@ The School Lunches “Make me a lunch” and “Fill My Week” actions do not c
 
 This intentionally keeps the interaction immediate, offline-capable, explainable, and cost-free. The UI is a lunch builder, not a chatbot, and every generated component remains swappable. A future model-assisted ranking layer must remain optional, preserve deterministic fallback behavior, pass through the same restriction checks, and receive separate privacy and cost review.
 
+## Action Assistant
+
+Phase A of the Family Menu Action Assistant is also deterministic and browser-first. Filling empty dinners and refreshing the shopping list reuse existing ranking and grocery helpers; they do not call OpenAI. A later typed-request phase may use the model only after household validation and the existing AI usage caps, and only to rank or interpret a request. The assistant must still preview and require Apply; it must never silent-write a plan.
+
+See `docs/ACTION_ASSISTANT.md`.
+
 ## Prompt and Output Pattern
 
 Each function builds a task-specific prompt that requests JSON only. The server extracts `output_text` or text content from the response, parses direct JSON when possible, and otherwise attempts to parse the first object-shaped substring.

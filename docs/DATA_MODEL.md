@@ -17,6 +17,7 @@ The household profile lookup is the exception: it is keyed by a SHA-256 digest o
 - A household owns all shared meals, recipes, groceries, inventory, receipts, preferences, and history in its namespace.
 - All household members with the household key share equal read/write access.
 - Member names and `updatedBy` values are attribution, not authenticated identities.
+- The default shared device identity is stored as the English name `Family`. The UI shows it through the `householdFamily` translation and must not persist `Familia` as a second identity.
 - Local drafts and fallback copies are owned by one browser but are still namespaced by household ID.
 
 ## Blob Stores
