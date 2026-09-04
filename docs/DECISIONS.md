@@ -12,6 +12,16 @@ This is a lightweight record of architectural and product decisions that future 
 
 **Consequences:** Lunches remain in household state and grocery generation. Existing meal records are unchanged. Next-week planning is date-specific. Clients must keep English and Spanish Save copy in parity. Do not drop the visual redesign to ship Save alone. Restore this menu must save the schedule record as well as shared-state, or a reload will replace restored meals.
 
+## 2026-09-04 — Keep the Action Assistant as a confirm-to-write sheet
+
+**Decision:** Family help is an action sheet on Today and Plan, not a chat-first UI and not a new bottom tab. Phase A fills only empty dinners, previews grocery refreshes, and writes through the existing schedule and grocery saves after Apply / Aplicar. Learning from usage (Phase D) may later rank suggestions but must only propose; it must never silent-write or auto-redesign a week.
+
+**Reason:** Families need a fast phone control for “fill the gaps” and “what’s for dinner” without a chatbot, a sixth tab, or surprise overwrites of dinners someone already planned.
+
+**Alternatives considered:** A chat transcript, a dedicated Help tab, automatic week generation, and OpenAI ranking in Phase A.
+
+**Consequences:** Occupied dinners, inventory, and lunches stay untouched. Typed requests stay stubbed until Phase B. Any future model or usage-ranking layer must keep preview-and-confirm and the empty-slot rule.
+
 ## 2026-08-23 — Keep school lunch planning inside household state and deterministic rules
 
 **Decision:** Store bounded child lunch plans, preferences, saved combinations, and packing settings as one additive `schoolLunches` field in shared family state. Generate lunch suggestions in the browser from a fixed catalog and existing household context; approved lunches contribute to the existing grocery list instead of creating separate storage, shopping, or AI systems.

@@ -17,7 +17,7 @@ Family Menu is the shared operating system for a household's food life. It helps
 The shipped product currently supports:
 
 - Private household creation and shared access through a family key.
-- A Today view for tonight’s dinner, with Plan & shop shortcuts, breakfast/lunch under Also today, and household tools remaining available without sitting in the daily loop.
+- A Today view for tonight’s dinner, with Plan & shop shortcuts, Help for empty-dinner planning and shopping-list refresh, breakfast/lunch under Also today, and household tools remaining available without sitting in the daily loop.
 - Four primary destinations: Today, Plan, Shop, and Library. School Lunches stays in the product and opens from Plan.
 - Weekly and monthly planning across breakfast, lunch, and dinner. Plan keeps a navy Save bar on screen while a meal change is unsaved, and meal add/remove/edit auto-saves.
 - A child-specific School Lunches workspace for tomorrow, a Monday–Friday plan, interchangeable lunchbox components, ready-made ideas, easy swaps, packing checklists, and progressively learned favorites.
@@ -32,6 +32,7 @@ The shipped product currently supports:
 - Receipt capture and monthly grocery-budget tracking.
 - Family profiles, food preferences, household rules, quick dinner feedback, dinner history, and deterministic recommendation ranking.
 - Cook Along mode for hands-free step-by-step preparation, simple timers, and saving actual servings, leftovers, notes, and outcomes.
+- Help on Today and Plan: an action sheet that can preview filling empty dinners for the next 7 days, refresh the shopping list from planned meals, or say what is for dinner. Changes are applied only after confirm and never overwrite a dinner that is already planned.
 - English and Spanish interface/content support.
 - Installable mobile PWA behavior and household-scoped offline fallbacks.
 

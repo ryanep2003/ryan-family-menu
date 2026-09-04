@@ -40,6 +40,7 @@ import { createRecipeLibraryUi } from "./recipe-library-ui.js";
 import { createCookAlongUi } from "./cook-along-ui.js";
 import { createReceiptUi } from "./receipt-ui.js";
 import { createScheduleUi } from "./schedule-ui.js";
+import { createAssistantUi } from "./assistant-ui.js";
 import { createSharedStateLoader } from "./shared-state-loader.js";
 import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage-utils.js";
 import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "./sync-status.js";
@@ -2108,6 +2109,59 @@ const cookAlongUi = createCookAlongUi({
   },
 });
 
+function generatedGroceriesForHorizon(dateKeys) {
+  return [...generatedGroceriesForDates(dateKeys), ...generatedSchoolLunchGroceries(dateKeys)];
+}
+
+const assistantUi = createAssistantUi({
+  $,
+  $$,
+  t,
+  escapeHtml,
+  localize: (value) => localizeExact(value) || t("translationPendingShort"),
+  getLang: () => lang,
+  formatDateKey,
+  getMealForDate: calendarMealForDateKey,
+  getRecipes: allRecipes,
+  getFavorites: () => favorites,
+  getDinnerEvents: () => dinnerEvents,
+  getFamilyMembers: () => familyMembers,
+  getFamilyPreferences: () => familyPreferences,
+  getFamilyRules: () => familyRules,
+  getRecipeFeedback: () => recipeFeedback,
+  getGroceries: () => groceries,
+  generateGroceriesForDates: generatedGroceriesForHorizon,
+  applyInventoryCoverage,
+  getInventory: () => inventory,
+  recipeById,
+  saveSchedule,
+  saveGroceries: async () => {
+    renderGroceries();
+    bindGroceryControls();
+    const [grocerySaved] = await Promise.all([saveGroceries(), saveSharedState()]);
+    return grocerySaved !== false;
+  },
+  setCalendarMeals: (nextCalendarMeals) => {
+    calendarMeals = normalizeCalendar(nextCalendarMeals);
+  },
+  setGroceries: (nextGroceries) => {
+    groceries = nextGroceries;
+  },
+  getCalendarMeals: () => calendarMeals,
+  render,
+  setView,
+  openFocusedDinner: (dateKey) => {
+    setView("schedule");
+    scheduleUi.openFocusedDinner(dateKey);
+  },
+  startCook: (recipe) => {
+    selectedRecipeId = recipe.id;
+    setView("recipes");
+    cookAlongUi.start(recipe);
+  },
+  recordActivity,
+});
+
 const onboardingUi = createOnboardingUi({
   $,
   $$,
@@ -2992,6 +3046,8 @@ $$("[data-scroll-to]").forEach((button) => {
 scheduleUi.bindScheduleControls();
 
 dashboardUi.bindDashboardControls();
+
+assistantUi.bindAssistantControls();
 
 $("#startCooking").addEventListener("click", () => {
   const recipe = recipeById(selectedRecipeId);

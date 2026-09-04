@@ -1,0 +1,266 @@
+import { rankedRecipes } from "./memory-logic.js";
+import { categoryFor } from "./recipe-utils.js";
+import {
+  activeWeekDateKeys,
+  appendRecipeToMeal,
+  currentWeekStartKey,
+  formatDateKey,
+  normalizeMealPlan,
+} from "./schedule-utils.js";
+import { mergeGroceries, replacePlannedGroceries } from "./grocery-logic.js";
+
+export const ASSISTANT_HORIZON_DAYS = 7;
+
+export const ASSISTANT_ACTIONS = [
+  "plan-next-week",
+  "fill-gaps",
+  "refresh-shopping",
+  "dinner-today",
+  "dinner-tomorrow",
+];
+
+const NON_DINNER_CATEGORIES = new Set(["side", "salad", "sauce", "dessert", "drink"]);
+
+function dateAtNoon(now = new Date()) {
+  const date = new Date(now);
+  date.setHours(12, 0, 0, 0);
+  return date;
+}
+
+export function horizonDateKeys(now = new Date(), days = ASSISTANT_HORIZON_DAYS) {
+  const start = dateAtNoon(now);
+  const count = Math.max(1, Math.min(ASSISTANT_HORIZON_DAYS, Number(days) || ASSISTANT_HORIZON_DAYS));
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return formatDateKey(date);
+  });
+}
+
+export function remainingWeekDateKeys(now = new Date()) {
+  const todayKey = formatDateKey(now);
+  const allowed = new Set(horizonDateKeys(now));
+  return activeWeekDateKeys(currentWeekStartKey(now))
+    .map((day) => day.dateKey)
+    .filter((dateKey) => dateKey >= todayKey && allowed.has(dateKey));
+}
+
+export function dateKeysForAction(action, now = new Date()) {
+  if (action === "fill-gaps") return remainingWeekDateKeys(now);
+  return horizonDateKeys(now);
+}
+
+export function relativeDinnerDateKey(which = "today", now = new Date()) {
+  const start = dateAtNoon(now);
+  if (which === "tomorrow") start.setDate(start.getDate() + 1);
+  return formatDateKey(start);
+}
+
+export function dinnerItems(meal) {
+  return normalizeMealPlan(meal).items.filter((item) => item.period === "dinner");
+}
+
+export function dinnerIsOccupied(meal) {
+  return dinnerItems(meal).length > 0;
+}
+
+function dinnerEligibleRecipes(recipes = []) {
+  const list = recipes.filter((recipe) => recipe && recipe.id);
+  const mains = list.filter((recipe) => categoryFor(recipe) === "main");
+  if (mains.length) return mains;
+  return list.filter((recipe) => !NON_DINNER_CATEGORIES.has(categoryFor(recipe)));
+}
+
+function recentWinIds(events = []) {
+  const ids = [];
+  const seen = new Set();
+  for (const event of events) {
+    if (event?.outcome !== "loved" && event?.outcome !== "worked") continue;
+    for (const item of event.items || []) {
+      if (!item?.recipeId || seen.has(item.recipeId)) continue;
+      seen.add(item.recipeId);
+      ids.push(item.recipeId);
+    }
+  }
+  return ids;
+}
+
+export function dinnerSuggestionPool({
+  recipes = [],
+  favorites = [],
+  events = [],
+  members = [],
+  preferences = [],
+  rules = {},
+  recipeFeedback = {},
+  excludeIds = [],
+} = {}) {
+  const eligible = dinnerEligibleRecipes(recipes);
+  const byId = new Map(eligible.map((recipe) => [recipe.id, recipe]));
+  const ranked = rankedRecipes(eligible, {
+    events,
+    members,
+    preferences,
+    rules,
+    recipeFeedback,
+  });
+  const allowed = new Set(ranked.map(({ recipe }) => recipe.id));
+  const excluded = new Set(excludeIds);
+  const ordered = [];
+  const seen = new Set();
+  const push = (id, source) => {
+    if (!id || seen.has(id) || excluded.has(id) || !allowed.has(id) || !byId.has(id)) return;
+    seen.add(id);
+    ordered.push({ recipe: byId.get(id), source });
+  };
+  (Array.isArray(favorites) ? favorites : []).forEach((id) => push(id, "favorite"));
+  recentWinIds(events).forEach((id) => push(id, "recent-win"));
+  ranked.forEach(({ recipe }) => push(recipe.id, "library"));
+  return ordered;
+}
+
+function pickSuggestion(pool, usedCount) {
+  if (!pool.length) return null;
+  return pool[usedCount % pool.length];
+}
+
+export function proposeDinnerFill({
+  action = "plan-next-week",
+  dateKeys,
+  now = new Date(),
+  mealForDate = () => ({}),
+  recipes = [],
+  favorites = [],
+  events = [],
+  members = [],
+  preferences = [],
+  rules = {},
+  recipeFeedback = {},
+} = {}) {
+  const windowKeys = Array.isArray(dateKeys) ? dateKeys : dateKeysForAction(action, now);
+  const occupied = [];
+  const emptyKeys = [];
+  windowKeys.forEach((dateKey) => {
+    const meal = mealForDate(dateKey);
+    if (dinnerIsOccupied(meal)) {
+      occupied.push({
+        dateKey,
+        recipeIds: dinnerItems(meal).map((item) => item.recipeId),
+      });
+    } else {
+      emptyKeys.push(dateKey);
+    }
+  });
+
+  const plannedIds = new Set(occupied.flatMap((entry) => entry.recipeIds));
+  const pool = dinnerSuggestionPool({
+    recipes,
+    favorites,
+    events,
+    members,
+    preferences,
+    rules,
+    recipeFeedback,
+    excludeIds: plannedIds,
+  });
+
+  const assignments = [];
+  const unfilled = [];
+  emptyKeys.forEach((dateKey, index) => {
+    const pick = pickSuggestion(pool, index);
+    if (!pick) {
+      unfilled.push({ dateKey, reason: "no-recipes" });
+      return;
+    }
+    assignments.push({
+      dateKey,
+      recipeId: pick.recipe.id,
+      source: pick.source,
+    });
+  });
+
+  return {
+    kind: "fill-dinners",
+    action,
+    dateKeys: windowKeys,
+    assignments,
+    occupied,
+    unfilled,
+  };
+}
+
+export function applyDinnerAssignments({
+  calendarMeals = {},
+  assignments = [],
+  mealForDate = (dateKey) => calendarMeals[dateKey],
+} = {}) {
+  const next = { ...calendarMeals };
+  const applied = [];
+  const skipped = [];
+
+  assignments.forEach((assignment) => {
+    const dateKey = assignment?.dateKey;
+    const recipeId = typeof assignment?.recipeId === "string" ? assignment.recipeId.trim() : "";
+    if (!dateKey || !recipeId) {
+      skipped.push({ ...assignment, reason: "invalid" });
+      return;
+    }
+    const current = Object.prototype.hasOwnProperty.call(next, dateKey)
+      ? next[dateKey]
+      : mealForDate(dateKey);
+    if (dinnerIsOccupied(current)) {
+      skipped.push({ ...assignment, reason: "occupied" });
+      return;
+    }
+    next[dateKey] = appendRecipeToMeal(current, {
+      recipeId,
+      period: "dinner",
+      role: "main",
+    });
+    applied.push({ dateKey, recipeId, source: assignment.source || "library" });
+  });
+
+  return { calendarMeals: next, applied, skipped };
+}
+
+export function proposeShoppingRefresh({ generatedItems = [], existingItems = [] } = {}) {
+  const generated = Array.isArray(generatedItems) ? generatedItems : [];
+  const existing = Array.isArray(existingItems) ? existingItems : [];
+  const next = replacePlannedGroceries(existing, generated);
+  const generatedCount = mergeGroceries([], generated).length;
+  return {
+    kind: "shopping",
+    generatedCount,
+    listCount: next.length,
+    retainedManualCount: existing.filter((item) => !["meal-plan", "week-plan"].includes(item.source)).length,
+  };
+}
+
+export function shoppingListAfterRefresh({ generatedItems = [], existingItems = [] } = {}) {
+  return replacePlannedGroceries(
+    Array.isArray(existingItems) ? existingItems : [],
+    Array.isArray(generatedItems) ? generatedItems : [],
+  );
+}
+
+export function lookupDinner({ dateKey, meal, todayKey } = {}) {
+  const items = dinnerItems(meal);
+  return {
+    kind: "dinner-lookup",
+    dateKey,
+    when: dateKey === todayKey ? "today" : "tomorrow",
+    empty: items.length === 0,
+    items: items.map((item) => ({
+      recipeId: item.recipeId,
+      role: item.role,
+      sourceType: item.sourceType,
+    })),
+  };
+}
+
+export function assistantPreviewNeedsConfirm(preview) {
+  if (!preview) return false;
+  if (preview.kind === "fill-dinners") return preview.assignments.length > 0;
+  if (preview.kind === "shopping") return preview.generatedCount > 0;
+  return false;
+}

@@ -913,7 +913,10 @@ export function createScheduleUi({
       <div class="schedule-editor-work">
         <div class="schedule-editor-heading">
           <div><span>${t("editDay")}</span><h3 id="weekEditorHeading" tabindex="-1">${escapeHtml(editorLabel)}</h3></div>
-          <button class="ghost-button compact-button meal-save-button" type="button" data-save-meal-context="weekdate:${selectedWeekDateKey}">${t("saveMealChanges")}</button>
+          <div class="schedule-editor-heading-actions">
+            <button class="assistant-entry compact-button" type="button" data-open-assistant="plan">${t("assistantHelpPlan")}</button>
+            <button class="ghost-button compact-button meal-save-button" type="button" data-save-meal-context="weekdate:${selectedWeekDateKey}">${t("saveMealChanges")}</button>
+          </div>
         </div>
         <p class="meal-save-status" role="status" data-meal-save-status="weekdate:${selectedWeekDateKey}"></p>
         ${renderMealControls(calendarMealForDateKey(selectedWeekDateKey), `weekdate:${selectedWeekDateKey}`, "")}
@@ -1029,7 +1032,10 @@ export function createScheduleUi({
       editor.innerHTML = `
         <div class="schedule-editor-heading">
           <div><span>${t("editDate")}</span><h3 id="calendarEditorHeading" tabindex="-1">${escapeHtml(dateFormatter.format(selectedDate))}</h3></div>
-          <button class="ghost-button compact-button meal-save-button" type="button" data-save-meal-context="calendar:${selectedCalendarDateKey}">${t("saveMealChanges")}</button>
+          <div class="schedule-editor-heading-actions">
+            <button class="assistant-entry compact-button" type="button" data-open-assistant="plan">${t("assistantHelpPlan")}</button>
+            <button class="ghost-button compact-button meal-save-button" type="button" data-save-meal-context="calendar:${selectedCalendarDateKey}">${t("saveMealChanges")}</button>
+          </div>
         </div>
         <p class="meal-save-status" role="status" data-meal-save-status="calendar:${selectedCalendarDateKey}"></p>
         ${renderMealControls(selectedMeal, `calendar:${selectedCalendarDateKey}`, "")}
