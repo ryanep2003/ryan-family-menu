@@ -1,6 +1,7 @@
 import { allLocalizedText, localizedText, updateLocalizedText } from "./localized-data.js";
 import { renderHandoffDetails } from "./handoff-ui.js";
 import { cardPhotoFor, cardPhotoIsGenerated } from "./recipe-utils.js";
+import { applyPersistedMealTarget } from "./schedule-utils.js";
 
 export function createScheduleUi({
   $,
@@ -66,6 +67,71 @@ export function createScheduleUi({
   let focusedDinnerChoosing = false;
   let focusedDinnerSearch = "";
   const mealSearchState = new Map();
+  let planDirty = false;
+  let planSaveBarHideTimer = 0;
+  let planSaveContext = "";
+
+  function planSaveBarElements() {
+    return {
+      bar: $("#planSaveBar"),
+      button: $("#planSaveBarButton"),
+      status: $("#planSaveBarStatus"),
+    };
+  }
+
+  function syncPlanSaveBar({
+    dirty = planDirty,
+    saving = false,
+    saved = false,
+    pending = false,
+    context = planSaveContext,
+  } = {}) {
+    const { bar, button, status } = planSaveBarElements();
+    planDirty = Boolean(dirty);
+    planSaveContext = context || planSaveContext;
+    if (planSaveBarHideTimer) {
+      globalThis.clearTimeout?.(planSaveBarHideTimer);
+      planSaveBarHideTimer = 0;
+    }
+    const show = planDirty || saving || pending || saved;
+    if (bar) {
+      bar.hidden = !show;
+      bar.setAttribute("data-plan-save-state", saving
+        ? "saving"
+        : pending
+          ? "pending"
+          : saved
+            ? "saved"
+            : planDirty
+              ? "dirty"
+              : "clean");
+    }
+    if (status) {
+      status.textContent = saving
+        ? t("mealChangeSaving")
+        : pending
+          ? t("mealChangePending")
+          : saved
+            ? t("mealChangeSaved")
+            : planDirty
+              ? t("planUnsavedHint")
+              : "";
+    }
+    if (button) {
+      button.disabled = Boolean(saving);
+      if (planSaveContext) button.dataset.saveMealContext = planSaveContext;
+    }
+    globalThis.document?.body?.classList?.toggle("plan-save-bar-visible", Boolean(show));
+    if (saved && !planDirty && bar) {
+      planSaveBarHideTimer = globalThis.setTimeout?.(() => {
+        if (planDirty) return;
+        const current = planSaveBarElements();
+        if (current.bar) current.bar.hidden = true;
+        if (current.status) current.status.textContent = "";
+        globalThis.document?.body?.classList?.remove("plan-save-bar-visible");
+      }, 1600);
+    }
+  }
 
   function renderPlanningMode() {
     const weekPanel = $("#weekPlanningPanel");
@@ -532,21 +598,20 @@ export function createScheduleUi({
   }
 
   async function persistMealTarget(context, target) {
-    const [type, key] = context.split(":");
-    const normalizedTarget = normalizeMealPlan(target);
-    const schedule = getSchedule();
-    const calendarMeals = getCalendarMeals();
-    if (type === "weekdate") {
-      const weekDate = activeWeekDateKeys().find((item) => item.dateKey === key);
-      if (!weekDate) return;
-      setSchedule({ ...schedule, [weekDate.key]: normalizedTarget });
-      const nextCalendarMeals = { ...calendarMeals };
-      delete nextCalendarMeals[key];
-      setCalendarMeals(nextCalendarMeals);
-    } else {
-      setCalendarMeals({ ...calendarMeals, [key]: normalizedTarget });
-    }
-    recordActivity("meal", t("activityMealUpdated").replace("{date}", key));
+    const visibleWeekStartKey = activeWeekDateKeys()[0]?.dateKey;
+    const result = applyPersistedMealTarget({
+      context,
+      meal: target,
+      schedule: getSchedule(),
+      calendarMeals: getCalendarMeals(),
+      visibleWeekStartKey,
+      currentWeekStartKey: getCurrentWeekStartKey(),
+    });
+    if (!result.applied) return;
+    setSchedule(result.schedule);
+    setCalendarMeals(result.calendarMeals);
+    recordActivity("meal", t("activityMealUpdated").replace("{date}", context.split(":")[1] || ""));
+    syncPlanSaveBar({ dirty: true, saving: true, context });
     render();
     const status = $(`[data-meal-save-status="${context}"]`);
     if (status) {
@@ -564,6 +629,7 @@ export function createScheduleUi({
       status.textContent = t("mealChangeSaving");
       status.classList.add("pending");
     }
+    syncPlanSaveBar({ dirty: true, saving: true, context: context || planSaveContext });
     let saved = false;
     try {
       saved = await saveSchedule();
@@ -576,6 +642,13 @@ export function createScheduleUi({
       currentStatus.classList.toggle("pending", saved === false);
     }
     if (button) button.disabled = false;
+    syncPlanSaveBar({
+      dirty: saved === false,
+      saving: false,
+      saved: saved !== false,
+      pending: saved === false,
+      context: context || planSaveContext,
+    });
     return saved;
   }
 
@@ -790,17 +863,38 @@ export function createScheduleUi({
     grid.innerHTML = weekDates
       .map((day) => {
         const meal = calendarMealForDateKey(day.dateKey);
-        const label = `${day[lang]} · ${rangeFormatter.format(day.date)}${day.dateKey === todayKey ? ` · ${t("todayTab")}` : ""}`;
+        const recipes = mealRecipes(meal);
+        const weekday = day[lang].slice(0, 3);
+        const dateLabel = rangeFormatter.format(day.date);
+        const slots = mealPeriods.map((period) => {
+          const names = recipes
+            .filter((item) => item.period === period.key)
+            .map((item) => localize(item.recipe.name))
+            .filter(Boolean);
+          const filled = names.length > 0;
+          return `<div class="week-day-slot">
+            <span>${escapeHtml(t(period.label))}</span>
+            <button
+              class="${filled ? "week-day-meal" : "week-day-add"}"
+              type="button"
+              data-edit-week-date="${day.dateKey}"
+              data-plan-period="${escapeHtml(period.key)}"
+            >${filled ? escapeHtml(names.join(", ")) : escapeHtml(t("planAddSlot"))}</button>
+          </div>`;
+        }).join("");
         return `
-          <button
-            class="week-day-summary${day.dateKey === todayKey ? " today" : ""}${day.dateKey === selectedWeekDateKey ? " selected" : ""}"
-            type="button"
-            data-edit-week-date="${day.dateKey}"
-            aria-pressed="${day.dateKey === selectedWeekDateKey}"
-          >
-            <span>${escapeHtml(label)}</span>
-            <strong class="${mealHasWarning(meal) ? "has-warning" : ""}">${escapeHtml(mealSummary(meal))}</strong>
-          </button>
+          <article class="week-day-card${day.dateKey === todayKey ? " is-today" : ""}${day.dateKey === selectedWeekDateKey ? " is-selected" : ""}">
+            <button
+              class="week-day-label"
+              type="button"
+              data-edit-week-date="${day.dateKey}"
+              aria-pressed="${day.dateKey === selectedWeekDateKey}"
+            >
+              <strong>${escapeHtml(weekday)}</strong>
+              <span>${escapeHtml(dateLabel)}</span>
+            </button>
+            <div class="week-day-meals">${slots}</div>
+          </article>
         `;
       })
       .join("");
@@ -970,6 +1064,15 @@ export function createScheduleUi({
   }
 
   function bindScheduleControls() {
+    $("#planSaveBarButton")?.addEventListener("click", async () => {
+      await saveMealContext($("#planSaveBarButton")?.dataset?.saveMealContext || planSaveContext);
+    });
+    globalThis.addEventListener?.("beforeunload", (event) => {
+      if (!planDirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    });
+
     $$("[data-planning-mode]").forEach((button) => {
       button.addEventListener("click", () => {
         planningMode = button.dataset.planningMode === "month" ? "month" : "week";
@@ -1009,6 +1112,8 @@ export function createScheduleUi({
         return;
       }
 
+      syncPlanSaveBar({ dirty: true, saving: true, context: "calendar:next-week" });
+      await saveMealContext("calendar:next-week");
       await navigateWeek(1);
       setScheduleStatus(
         t(result.skippedCount ? "weekCopiedToNextWithSkips" : "weekCopiedToNext")

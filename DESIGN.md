@@ -2,26 +2,29 @@
 name: Ryan Family Menu
 description: A calm household food concierge with the quiet material clarity of a working kitchen.
 colors:
-  ground: "#F0EFEA"
-  paper: "#FCFBF7"
-  ink: "#272823"
-  muted: "#666960"
-  rule: "#D9D6CC"
-  primary-action: "#476346"
-  focus: "#2F58B8"
-  memory: "#DCE2CC"
-  attention: "#B5674A"
+  ground: "#F5F1EA"
+  paper: "#FFFFFF"
+  ink: "#1A3A5C"
+  muted: "#7A7A7A"
+  rule: "#D9D4C8"
+  primary-action: "#1A3A5C"
+  focus: "#AFCBFF"
+  memory: "#CFE8D5"
+  attention: "#1A3A5C"
   success: "#3E6B52"
   danger: "#A33A35"
+  navy: "#1A3A5C"
+  sage: "#CFE8D5"
+  soft-blue: "#AFCBFF"
 typography:
   display:
-    fontFamily: "Iowan Old Style, Palatino Linotype, Palatino, Georgia, serif"
+    fontFamily: "ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
     fontSize: "clamp(2.35rem, 9vw, 4.8rem)"
     fontWeight: 500
     lineHeight: 1.05
     letterSpacing: "-0.025em"
   headline:
-    fontFamily: "Iowan Old Style, Palatino Linotype, Palatino, Georgia, serif"
+    fontFamily: "ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
     fontSize: "clamp(1.25rem, 4vw, 1.8rem)"
     fontWeight: 500
     lineHeight: 1.05
@@ -72,37 +75,38 @@ components:
     height: "48px"
 ---
 
-# Design System: The Honed Almanac
+# Design System: Family navy and sage
 
 ## Overview
 
-**Creative North Star: "The Honed Almanac"**
+**Creative North Star: a calm family kitchen board**
 
 Ryan Family Menu is a smart household food concierge, not meal-planning software. It makes a family's food situation recognizable in the few seconds available between school pickup, a grocery aisle, and starting dinner: what the family is eating, what is still undecided, and what needs attention next. The interface absorbs planning complexity whenever it can; technical usefulness alone never earns a permanent control or concept in the experience.
 
-The visual character is warm, editorial, calm, and exact. Mineral canvas, ceramic-paper surfaces, herb actions, clay attention, and quiet seams borrow the calm material clarity of a working kitchen without becoming literal kitchen décor. It treats meals, recipes, handoffs, shopping, and household memory as a shared food record rather than administrative modules. Warmth comes from concise language, considered type, family context, and useful recommendations—not from explanation, fake texture, or decorative objects.
+The visual character is warm, practical, and easy to scan. Warm beige ground, white cards, navy actions, sage highlights, and soft-blue secondary controls keep common family tasks readable on a phone. Warmth comes from concise language, family context, and useful recommendations—not from explanation, fake texture, or decorative objects.
 
 **Key Characteristics:**
 
 - Recognition and scanning win over instruction, especially in the first 2–3 seconds.
 - The current household food state is more important than planning mechanics.
-- Editorial serif headings and quiet paper surfaces make ordinary family content feel considered.
+- Sans-serif type and navy primary actions make ordinary family content feel clear.
 - Progressive emphasis makes the next decision clear without falsifying the complete state.
 - English and Spanish are one product experience, not separate workflows.
+- Plan never hides Save after a long scroll; unsaved meal changes stay on a fixed navy bar.
 
 ## Colors
 
-The system uses honed limestone neutrals with deep herb action, cobalt functional focus, pale herb memory, and restrained clay attention. Tonal chapters and mineral rules create reading rhythm; color never becomes a separate category-navigation system.
+The system uses warm beige, white, navy, sage, and soft blue. Color supports hierarchy and a single primary action; it is not a category-navigation system.
 
 ### Primary
 
-- **Herb action:** use `primary-action` for the single highest-value action in a task and for direct, text-level actions. Do not make every useful action primary.
-- **Cobalt focus:** use `focus` for keyboard focus, selected-day state, and other functional selection that must remain distinct from household content state.
+- **Navy action:** use `primary-action` / `--navy` for the single highest-value action in a task, including Plan Save while dirty. Do not make every useful action primary.
+- **Soft-blue focus:** use `focus` / `--soft-blue` for secondary actions such as Add on a Plan day and Find a recipe.
 
 ### Secondary
 
-- **Memory sage:** use `memory` for factual household history, gentle morning emphasis, and broad quiet chapters.
-- **Warm attention:** use `attention` for an unresolved decision that truly needs attention, including an open dinner. It may strengthen that meal, but must not remove it from the complete daily hierarchy.
+- **Sage memory:** use `memory` / `--sage` for today’s Plan highlight and gentle household history.
+- **Navy attention:** use `attention` for an unresolved decision that truly needs attention, including an open dinner. It may strengthen that meal, but must not remove it from the complete daily hierarchy.
 - **Steady success:** use `success` for completed or reliable household state.
 - **Clear danger:** use `danger` only for destructive or safety-relevant state.
 
@@ -118,7 +122,7 @@ The system uses honed limestone neutrals with deep herb action, cobalt functiona
 
 **Body Font:** the platform-aware UI stack in the frontmatter.
 
-**Character:** Serif type makes dates, meal names, recipe names, and major view headings feel like a living household record. Sans-serif type keeps controls, labels, quantities, navigation, instructions, and status clear at a glance.
+**Character:** Sans-serif type keeps meal names, recipe names, controls, labels, quantities, navigation, and status readable on a phone.
 
 ### Hierarchy
 
@@ -133,9 +137,9 @@ The system uses honed limestone neutrals with deep herb action, cobalt functiona
 
 The layout is mobile-first and task-first. Content sits within the established shell and spacing scale; desktop adds measure and breathing room but does not turn the product into a dashboard. Related content groups through proximity, typography, tonal fields, and rules before new containers are introduced.
 
-Today is the operational household food home. Its first reading order is: the complete Breakfast → Lunch → Dinner state, the unresolved decision if any, then the most useful next household action. All three periods remain in one canonical daily representation. A quiet empty breakfast or lunch stays quiet; an unresolved dinner may receive the primary action without becoming a separate information category. Editorial language such as “Tonight is still open” is secondary to, and never contradicts, the actual plan.
+Today is the operational household food home. Its first reading order is: tonight’s dinner, one Cook CTA, Plan & shop shortcuts, then breakfast and lunch under Also today. An unresolved dinner may receive the primary action without becoming a separate information category.
 
-Plan uses Day → Meal → Recipe / dish / component. On narrow screens, a compact horizontal date selector may control a full-width, vertical day editor. Never compress complete meal content into several narrow day columns that force titles to wrap, blur day boundaries, or require horizontal cognitive scanning. Meal periods may use restrained, distinct tonal chapters when that improves scanning; the treatment must remain a flat reading structure rather than a dashboard-card stack.
+Plan uses Day → Meal → Recipe / dish / component. On phones, days stack vertically and must fit the page width with no horizontal overflow. While meal changes are unsaved, a navy Save bar stays fixed above the bottom nav. Never rely on a top-of-page Save after a long week scroll.
 
 **The Busy-Moment Rule.** Every major screen must have a dominant answer to the question that caused the user to open it. Prefer recognition and direct state over explanatory copy or disconnected widgets.
 
@@ -167,9 +171,9 @@ Geometry is square and calm. Controls use the compact control radius; temporary 
 
 ### Navigation and fixed controls
 
-- The five core destinations—Today, Plan, Lunches, Shop, and Library—remain stable and labeled.
+- The four core destinations—Today, Plan, Shop, and Library—remain stable and labeled. School Lunches opens from Plan and is not a fifth bottom-nav tab.
 - Mobile navigation is fixed with safe-area-aware clearance; desktop may return it to the shell.
-- Sticky save or action bars are reserved for a focused task and must not conceal its final content or controls.
+- While Plan has unsaved meal changes, a navy Save bar stays fixed above the bottom nav so a long week scroll cannot hide Save / Guardar cambios.
 
 ### School Lunches
 

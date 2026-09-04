@@ -120,6 +120,12 @@ function harness(overrides = {}) {
       selectedRecipeSource: "Selected recipe",
       restockSource: "Restock",
       addOnsSection: "Add-ons",
+      aisleProduce: "Produce",
+      aisleDairy: "Dairy",
+      aisleMeat: "Meat",
+      aisleBakery: "Bakery",
+      aisleFrozen: "Frozen",
+      aislePantry: "Pantry",
       manualSource: "Manual",
       alreadyAtHomeLabel: "At home",
       possibleAtHomeLabel: "Possible match at home",
@@ -183,8 +189,10 @@ test("renderGroceries shows Spanish ingredient text under grocery items", () => 
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, /4 limones/);
-  assert.match(elements["#groceryList"].innerHTML, /1 taza de aceite de oliva/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>limones<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /grocery-qty">4</);
+  assert.match(elements["#groceryList"].innerHTML, /de aceite de oliva/);
+  assert.match(elements["#groceryList"].innerHTML, /grocery-qty">1 taza</);
   assert.match(elements["#groceryList"].innerHTML, /grocery-item-row is-unchecked/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /Weekly menu/);
@@ -201,7 +209,7 @@ test("grocery items without the active language still show the authored name", (
   ui.renderGroceries();
 
   assert.match(elements["#groceryList"].innerHTML, />milk</);
-  assert.match(elements["#groceryList"].innerHTML, />Add-ons</);
+  assert.match(elements["#groceryList"].innerHTML, />Dairy</);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /Translation pending/);
 });
 
@@ -217,7 +225,7 @@ test("English shopping lists show Spanish-only add-on names instead of a pending
   ui.renderGroceries();
 
   assert.match(elements["#groceryList"].innerHTML, />leche</);
-  assert.match(elements["#groceryList"].innerHTML, />Add-ons</);
+  assert.match(elements["#groceryList"].innerHTML, />Dairy</);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /Translation pending/);
 });
 
@@ -242,7 +250,8 @@ test("a valid Spanish grocery value wins even when the linked recipe is incomple
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, /1 cucharadita de sal/);
+  assert.match(elements["#groceryList"].innerHTML, /de sal/);
+  assert.match(elements["#groceryList"].innerHTML, /grocery-qty">1 cucharadita</);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /Translation pending/);
 });
 
@@ -268,7 +277,8 @@ test("legacy recipe rows map by ingredient identity after Spanish translation", 
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, />1 limón</);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>limón<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /grocery-qty">1</);
 });
 
 test("pending recipe rows offer an explicit Spanish translation action", async () => {
@@ -308,11 +318,11 @@ test("pending recipe rows offer an explicit Spanish translation action", async (
   assert.equal(translatedRecipeId, "needs-spanish");
 });
 
-test("shopping list reveals the end-of-trip action after an item is checked", () => {
+test("shopping list keeps the end-of-trip action visible while items remain", () => {
   const { elements, state, ui } = harness();
 
   ui.renderGroceries();
-  assert.equal(elements["#finishShoppingPrompt"].hidden, true);
+  assert.equal(elements["#finishShoppingPrompt"].hidden, false);
   assert.equal(elements["#restockPurchased"].textContent, "Finish shopping");
 
   state.groceries[0].checked = true;
@@ -389,7 +399,7 @@ test("meal filter shows only groceries connected to the selected planned meal", 
 
   ui.showMeal("2026-07-20", "dinner");
 
-  assert.match(elements["#groceryList"].innerHTML, /4 limones/);
+  assert.match(elements["#groceryList"].innerHTML, /limones/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /aceite de oliva/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /leche/);
   assert.equal(elements["#groceryMealFilter"].value, "2026-07-20::dinner");
@@ -416,7 +426,7 @@ test("grocery recipe matching works from localized recipe names", () => {
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, /4 limones/);
+  assert.match(elements["#groceryList"].innerHTML, /limones/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
 });
 

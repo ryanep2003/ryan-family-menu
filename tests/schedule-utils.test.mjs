@@ -17,6 +17,7 @@ import {
   recipeBatchPlan,
   removeRecipeFromPlans,
   appendRecipeToMeal,
+  applyPersistedMealTarget,
   upcomingMealDateOptions,
 } from "../schedule-utils.js";
 
@@ -281,6 +282,54 @@ test("appendRecipeToMeal ignores blank recipes and unknown meal slots", () => {
   });
   assert.equal(fallback.items[0].period, "dinner");
   assert.equal(fallback.items[0].role, "salad");
+});
+
+test("next-week meal edits write calendar dates instead of deleting them", () => {
+  const currentWeekStartKey = "2026-06-15";
+  const visibleWeekStartKey = "2026-06-22";
+  const existing = normalizeMealPlan({
+    items: [
+      { id: "breakfast-1", period: "breakfast", role: "main", recipeId: "oats" },
+      { id: "lunch-1", period: "lunch", role: "main", recipeId: "soup" },
+      { id: "dinner-1", period: "dinner", role: "main", recipeId: "tacos" },
+    ],
+  });
+  const nextDinner = normalizeMealPlan({
+    items: [
+      ...existing.items.filter((item) => item.period !== "dinner"),
+      { id: "dinner-2", period: "dinner", role: "main", recipeId: "pasta" },
+    ],
+  });
+
+  const result = applyPersistedMealTarget({
+    context: "weekdate:2026-06-22",
+    meal: nextDinner,
+    schedule: { mon: { dinner: "tacos" } },
+    calendarMeals: { "2026-06-22": existing },
+    visibleWeekStartKey,
+    currentWeekStartKey,
+  });
+
+  assert.equal(result.applied, true);
+  assert.equal(result.mode, "calendar");
+  assert.equal(result.calendarMeals["2026-06-22"].dinner, "pasta");
+  assert.equal(result.calendarMeals["2026-06-22"].breakfast, "oats");
+  assert.equal(result.calendarMeals["2026-06-22"].lunch, "soup");
+});
+
+test("this-week meal edits still update the repeating weekday template", () => {
+  const result = applyPersistedMealTarget({
+    context: "weekdate:2026-06-22",
+    meal: { dinner: "pasta" },
+    schedule: { mon: { dinner: "tacos" } },
+    calendarMeals: { "2026-06-22": { dinner: "override" } },
+    visibleWeekStartKey: "2026-06-22",
+    currentWeekStartKey: "2026-06-22",
+  });
+
+  assert.equal(result.mode, "week-template");
+  assert.equal(result.schedule.mon.dinner, "pasta");
+  assert.equal(result.calendarMeals["2026-06-22"], undefined);
 });
 
 test("removeRecipeFromPlans clears a deleted lunch salad", () => {

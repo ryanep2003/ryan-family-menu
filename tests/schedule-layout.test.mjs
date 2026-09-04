@@ -4,10 +4,12 @@ import test from "node:test";
 
 const styles = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 
-test("week planning preserves readable day records on narrow screens", () => {
-  assert.match(styles, /\.schedule-grid\s*\{[\s\S]*grid-template-columns: repeat\(7, minmax\(8rem, 1fr\)\)/s);
-  assert.match(styles, /\.schedule-grid\s*\{[\s\S]*overflow-x: auto;/s);
-  assert.match(styles, /\.week-day-summary\s*\{[\s\S]*min-width: 8rem;/s);
+test("week planning stacks days in the page width without horizontal overflow", () => {
+  const gridRule = styles.match(/\.schedule-grid\s*\{([^}]*)\}/)?.[1] || "";
+  assert.match(gridRule, /grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(gridRule, /overflow-x: hidden/);
+  assert.doesNotMatch(gridRule, /overflow-x:\s*auto/);
+  assert.match(styles, /\.week-day-card\s*\{[\s\S]*min-width: 0;/s);
 });
 
 test("mobile recipe search rows keep their natural height in the page scroll", () => {

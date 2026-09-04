@@ -94,8 +94,7 @@ export function createRecipeLibraryUi({
     const pickLabel = pick
       ? plannedIds.has(recipe.id) ? t("recipePickPlanned") : t("recipePickFavorite")
       : "";
-    return `
-      <button class="recipe-card${pick ? " recipe-pick-card" : ""}${hasPhoto || canHydratePhoto ? " has-media" : " no-media"}" style="--card-order: ${Math.min(index, 8)}" type="button" data-open="${escapeHtml(recipe.id)}">
+    const copy = `
         ${hasPhoto
           ? `<span class="recipe-photo-shell is-loaded"><img src="${escapeHtml(cardPhoto)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" /></span>`
           : canHydratePhoto
@@ -107,8 +106,22 @@ export function createRecipeLibraryUi({
         ${hasLocalizedContent(recipe.allergyWarning) ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
         <h3>${escapeHtml(name)}</h3>
         ${meta ? `<p>${escapeHtml(meta)}</p>` : ""}
-        ${short ? `<p>${escapeHtml(short)}</p>` : ""}
+        ${short && pick ? `<p>${escapeHtml(short)}</p>` : ""}
+    `;
+    if (pick) {
+      return `
+      <button class="recipe-card recipe-pick-card${hasPhoto || canHydratePhoto ? " has-media" : " no-media"}" style="--card-order: ${Math.min(index, 8)}" type="button" data-open="${escapeHtml(recipe.id)}">
+        ${copy}
       </button>
+    `;
+    }
+    return `
+      <article class="recipe-browse-card${hasPhoto || canHydratePhoto ? " has-media" : " no-media"}" style="--card-order: ${Math.min(index, 8)}">
+        <button class="recipe-card" type="button" data-open="${escapeHtml(recipe.id)}">
+          ${copy}
+        </button>
+        <button class="soft-action recipe-add-meal" type="button" data-open="${escapeHtml(recipe.id)}">${escapeHtml(t("addRecipeToMeal"))}</button>
+      </article>
     `;
   }
 

@@ -26,7 +26,7 @@ GitHub main
 
 - `index.html`: household gate and all main views.
 - `app.js`: application bootstrap, in-memory state, persistence orchestration, navigation, shared rendering, and domain-module composition.
-- `styles.css`: design tokens, component styling, responsive layout, PWA-safe bottom navigation, and motion preferences.
+- `styles.css`: design tokens, component styling, responsive layout, PWA-safe four-tab bottom navigation, the Plan dirty-save bar, and motion preferences.
 
 Recipe catalog reads use `/.netlify/functions/recipes?view=catalog`, a text-only household-scoped response that omits embedded source photos. The browser stores a versioned, household-scoped stale-while-revalidate cache and keeps cached recipes visible when a refresh fails. The unqualified recipes endpoint remains available for older clients and full recipe writes.
 - `translations.js`: English and Spanish interface strings. Both languages must expose the same keys.
@@ -135,7 +135,7 @@ The current Content Security Policy keeps scripts, styles, images, and connectio
 
 - `app.js`: application wiring and most shared workflow orchestration.
 - `netlify/functions/family-state.js`: the largest persisted record sanitizer.
-- `schedule-utils.js` and `schedule-ui.js`: canonical meals, legacy compatibility, portions, and leftovers.
+- `schedule-utils.js` and `schedule-ui.js`: canonical meals, legacy compatibility, portions, leftovers, next-week calendar persist, and the always-visible Plan save bar.
 - `grocery-logic.js`: quantity aggregation, inventory coverage, and generation idempotency.
 - `translations.js`: every interface string in both languages.
 - `service-worker.js`: manual static module list.

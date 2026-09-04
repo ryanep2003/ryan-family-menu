@@ -372,7 +372,7 @@ export function createLunchUi({
     const root = $("#lunchesView");
     if (!root) return;
     const content = packing ? packingContent() : builder ? builderContent() : ({ home: homeContent, week: weekContent, ideas: ideasContent, favorites: favoritesContent }[mode] || homeContent)();
-    root.innerHTML = `<div class="lunch-workspace">${packing || builder ? "" : navigation()}<div id="lunchContent" aria-live="polite">${content}</div><p class="lunch-status" id="lunchStatus" role="status"></p></div>`;
+    root.innerHTML = `<div class="lunch-workspace">${packing || builder ? "" : `<div class="lunch-plan-bar"><button class="text-button" type="button" data-back-to-plan>${escapeHtml(t("lunchBackToPlan"))}</button></div>${navigation()}`}<div id="lunchContent" aria-live="polite">${content}</div><p class="lunch-status" id="lunchStatus" role="status"></p></div>`;
   }
 
   async function persist(next, { groceries = false } = {}) {
@@ -418,6 +418,7 @@ export function createLunchUi({
       const modeButton = event.target.closest("[data-lunch-mode]");
       if (modeButton) { mode = modeButton.dataset.lunchMode; builder = null; packing = null; render(); return; }
       if (event.target.closest("[data-open-family]")) { setView("family"); return; }
+      if (event.target.closest("[data-back-to-plan]")) { setView("schedule"); return; }
       const edit = event.target.closest("[data-edit-lunch]");
       if (edit) { openBuilder(edit.dataset.editLunch, edit.dataset.date); return; }
       const openWeek = event.target.closest("[data-open-lunch-week]");

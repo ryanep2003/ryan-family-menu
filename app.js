@@ -103,10 +103,48 @@ function supportedLang(value) {
   return Object.prototype.hasOwnProperty.call(translations, value) ? value : "en";
 }
 
-const household = await requireHouseholdSession();
+let lang = supportedLang(readStringStorage(localStorage, "dinner-lang", "en"));
+let appReady = false;
+
+function t(key) {
+  const messages = translations[lang] || translations.en;
+  return messages[key] || translations.en[key] || key;
+}
+
+function applyStaticTranslations() {
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach((node) => {
+    node.textContent = t(node.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
+    node.placeholder = t(node.dataset.i18nPlaceholder);
+  });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((node) => {
+    node.setAttribute("aria-label", t(node.dataset.i18nAriaLabel));
+  });
+  document.querySelectorAll("[data-i18n-title]").forEach((node) => {
+    node.title = t(node.dataset.i18nTitle);
+  });
+  document.querySelectorAll("[data-lang]").forEach((button) => {
+    const active = button.dataset.lang === lang;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", `${active}`);
+  });
+}
+
+document.querySelectorAll("[data-lang]").forEach((button) => {
+  button.addEventListener("click", () => {
+    lang = supportedLang(button.dataset.lang);
+    localStorage.setItem("dinner-lang", lang);
+    applyStaticTranslations();
+    if (appReady) render();
+  });
+});
+applyStaticTranslations();
+
+const household = await requireHouseholdSession({ t });
 const householdStorage = createHouseholdStorage(localStorage, household.id);
 
-let lang = supportedLang(readStringStorage(localStorage, "dinner-lang", "en"));
 let householdMember = cleanHouseholdMember(readStringStorage(householdStorage, "dinner-household-member", "Family")) || "Family";
 let selectedRecipeId = "meatballs";
 const storedSchedule = readJsonStorage(householdStorage, "dinner-schedule", null);
@@ -118,6 +156,7 @@ let sharedStateBaseState = null;
 let scheduleVersion = readNumberStorage(householdStorage, "dinner-schedule-version", 0);
 let scheduleBase = null;
 let scheduleSaveInFlight = null;
+let scheduleSaveQueued = false;
 let favorites = readJsonStorage(householdStorage, "dinner-favorites", []);
 let tasks = readJsonStorage(householdStorage, "dinner-tasks", []);
 let availableFood = normalizeAvailableFood(readJsonStorage(householdStorage, "dinner-available-food", []));
@@ -185,11 +224,6 @@ const recipeTranslationInFlight = new Set();
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
-
-function t(key) {
-  const messages = translations[lang] || translations.en;
-  return messages[key] || translations.en[key] || key;
-}
 
 function formatItemActivity(item) {
   if (!item?.updatedBy || !item?.updatedAt) return "";
@@ -812,44 +846,67 @@ function applyScheduleRecord(data) {
 
 async function saveSchedule({ retrying = false, allowEmptySchedule = false } = {}) {
   setSharedRetryAction(() => saveSchedule({ retrying: false }));
-  if (scheduleSaveInFlight && !retrying) return scheduleSaveInFlight;
-  const local = { schedule, calendarMeals, weekStartKey };
-  persistScheduleLocally();
+  if (scheduleSaveInFlight && !retrying) {
+    scheduleSaveQueued = true;
+    return scheduleSaveInFlight;
+  }
   const run = (async () => {
+    let saved = false;
+    let conflictRetried = retrying;
     try {
-      const data = await putJson("/.netlify/functions/schedule", {
-        ...local,
-        version: scheduleVersion,
-        actor: householdMember,
-        allowEmptySchedule,
-      }, "Could not save the meal plan.");
-      applyScheduleRecord(data);
-      clearAreaStatus("shared");
-      await saveLedger("activity");
-      return true;
-    } catch (error) {
-      if (error.status === 409 && !retrying) {
-        const server = {
-          schedule: normalizeSchedule(error.data?.schedule),
-          calendarMeals: normalizeCalendar(error.data?.calendarMeals),
-          weekStartKey: error.data?.weekStartKey || weekStartKey,
-        };
-        const merged = mergeSchedule(server, local, scheduleBase || server);
-        schedule = normalizeSchedule(merged.schedule);
-        calendarMeals = normalizeCalendar(merged.calendarMeals);
-        weekStartKey = merged.weekStartKey || weekStartKey;
-        scheduleVersion = Number(error.data?.version) || scheduleVersion;
-        scheduleBase = cloneVersionedValue(server);
+      do {
+        scheduleSaveQueued = false;
+        const local = { schedule, calendarMeals, weekStartKey };
         persistScheduleLocally();
-        render();
-        return saveSchedule({ retrying: true, allowEmptySchedule });
-      }
-      setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
-      return false;
+        try {
+          const data = await putJson("/.netlify/functions/schedule", {
+            ...local,
+            version: scheduleVersion,
+            actor: householdMember,
+            allowEmptySchedule,
+          }, "Could not save the meal plan.");
+          if (scheduleSaveQueued) {
+            scheduleVersion = Number(data?.version) || scheduleVersion;
+            scheduleBase = cloneVersionedValue(local);
+            persistScheduleLocally();
+            saved = true;
+            continue;
+          }
+          applyScheduleRecord(data);
+          clearAreaStatus("shared");
+          await saveLedger("activity");
+          saved = true;
+        } catch (error) {
+          if (error.status === 409 && !conflictRetried) {
+            const server = {
+              schedule: normalizeSchedule(error.data?.schedule),
+              calendarMeals: normalizeCalendar(error.data?.calendarMeals),
+              weekStartKey: error.data?.weekStartKey || weekStartKey,
+            };
+            const merged = mergeSchedule(server, local, scheduleBase || server);
+            schedule = normalizeSchedule(merged.schedule);
+            calendarMeals = normalizeCalendar(merged.calendarMeals);
+            weekStartKey = merged.weekStartKey || weekStartKey;
+            scheduleVersion = Number(error.data?.version) || scheduleVersion;
+            scheduleBase = cloneVersionedValue(server);
+            persistScheduleLocally();
+            render();
+            conflictRetried = true;
+            scheduleSaveQueued = true;
+            saved = false;
+            continue;
+          }
+          setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
+          saved = false;
+        }
+      } while (scheduleSaveQueued);
+      return saved;
+    } finally {
+      if (scheduleSaveInFlight === run) scheduleSaveInFlight = null;
     }
   })();
   scheduleSaveInFlight = run;
-  try { return await run; } finally { scheduleSaveInFlight = null; }
+  return run;
 }
 
 async function loadSchedule() {
@@ -2333,8 +2390,9 @@ function render() {
 function setView(viewName) {
   const viewChanged = document.body.dataset.view !== viewName;
   $$(".view").forEach((view) => view.classList.toggle("active", view.id === `${viewName}View`));
+  const tabView = viewName === "add" ? "recipes" : viewName === "lunches" ? "schedule" : viewName;
   $$(".tabs button").forEach((button) => {
-    const active = button.dataset.view === (viewName === "add" ? "recipes" : viewName);
+    const active = button.dataset.view === tabView;
     button.classList.toggle("active", active);
     if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
@@ -2347,6 +2405,19 @@ function setView(viewName) {
     else addButton.removeAttribute("aria-current");
   }
   document.body.dataset.view = viewName;
+  const pageTitle = $("#viewPageTitle");
+  if (pageTitle) {
+    const titleKeys = {
+      today: "todayTab",
+      schedule: "planTab",
+      lunches: "lunchesHeading",
+      grocery: "shoppingTitle",
+      recipes: "libraryTab",
+      add: "addHeading",
+      family: "familyHeading",
+    };
+    pageTitle.textContent = t(titleKeys[viewName] || "todayTab");
+  }
   if (viewChanged) window.scrollTo({ top: 0, behavior: "auto" });
   $("#recipeDetail").hidden = true;
   $("#recipesView").classList.remove("detail-open");
@@ -2809,14 +2880,6 @@ async function recognizeReceipt(images) {
   };
 }
 
-$$("[data-lang]").forEach((button) => {
-  button.addEventListener("click", () => {
-    lang = supportedLang(button.dataset.lang);
-    localStorage.setItem("dinner-lang", lang);
-    render();
-  });
-});
-
 $("#householdMemberInput").addEventListener("change", (event) => {
   const previousMember = householdMember;
   householdMember = cleanHouseholdMember(event.target.value) || "Family";
@@ -3254,6 +3317,7 @@ bindInstallPrompt({ $, t });
 registerServiceWorker({ $, onUpdateAvailable: showAppUpdateNotice });
 
 setupLocalizedFileInputs();
+appReady = true;
 render();
 loadSharedRecipes().then(() => loadSharedState()).then(() => loadSchedule()).then(() => Promise.all([loadLedger("receipts"), loadLedger("activity")]));
 $("#householdHistoryPanel")?.addEventListener("toggle", (event) => {

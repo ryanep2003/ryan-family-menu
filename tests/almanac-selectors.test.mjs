@@ -45,28 +45,28 @@ test("family-memory selectors condense a deep history into one current record", 
   assert.equal(memory.fact, "everyoneAte");
 });
 
-test("Honed Almanac stylesheet uses only declared custom properties", async () => {
+test("family visual system uses the locked navy and sage tokens", async () => {
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
   const declared = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]));
   const referenced = new Set([...css.matchAll(/var\((--[\w-]+)/g)].map((match) => match[1]));
   assert.deepEqual([...referenced].filter((name) => !declared.has(name)), []);
-  assert.match(css, /--ground: #F0EFEA/);
-  assert.match(css, /--herb: #476346/);
-  assert.match(css, /--blue: #2F58B8/);
+  assert.match(css, /--navy: #1A3A5C/);
+  assert.match(css, /--sage: #CFE8D5/);
+  assert.match(css, /--soft-blue: #AFCBFF/);
+  assert.match(css, /--ground: #F5F1EA/);
 });
 
-test("Honed Almanac page atmosphere uses distinct material chapters", async () => {
+test("family screens keep distinct page atmosphere without leftover undeclared tokens", async () => {
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 
   for (const view of ["today", "schedule", "grocery", "recipes"]) {
     assert.match(css, new RegExp(`body\\[data-view="${view}"\\]`));
   }
   assert.match(css, /--page-wash-primary: color-mix\(in srgb, var\(--memory\)/);
-  assert.match(css, /--surface-clay: #F4E9E2/);
-  assert.match(css, /--surface-herb: #E9EBDD/);
-  assert.match(css, /--surface-utility: #ECEDEB/);
+  assert.match(css, /--surface-clay: #FFFFFF/);
+  assert.match(css, /--surface-herb: #CFE8D5/);
+  assert.match(css, /--surface-utility: #FFFFFF/);
   assert.match(css, /\.recipe-banner[\s\S]*background: var\(--surface-clay\)/);
-  assert.match(css, /\.recipe-picks[\s\S]*background: var\(--surface-herb\)/);
   assert.match(css, /\.recipe-browse[\s\S]*background: var\(--surface-utility\)/);
   const recipeBannerRule = css.match(/\.recipe-banner\s*\{([^}]*)\}/)?.[1] || "";
   const recipeBannerAfterRule = css.match(/\.recipe-banner::after\s*\{([^}]*)\}/)?.[1] || "";

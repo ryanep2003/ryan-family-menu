@@ -46,7 +46,7 @@ export async function createHousehold({ name, creationCode }, fetchImpl = fetch)
   return parseResponse(response);
 }
 
-export async function requireHouseholdSession({ documentObject = document, storage = localStorage, fetchImpl = fetch } = {}) {
+export async function requireHouseholdSession({ documentObject = document, storage = localStorage, fetchImpl = fetch, t = (key) => key } = {}) {
   const gate = documentObject.querySelector("#householdGate");
   const joinForm = documentObject.querySelector("#joinHouseholdForm");
   const createForm = documentObject.querySelector("#createHouseholdForm");
@@ -84,13 +84,13 @@ export async function requireHouseholdSession({ documentObject = document, stora
   const savedKey = storage.getItem(ACCESS_KEY) || "";
   if (savedKey) {
     try {
-      setStatus("Opening your household…");
+      setStatus(t("householdOpening"));
       return finish(await fetchHousehold(savedKey, fetchImpl), savedKey);
     } catch (error) {
       if (error.status === 401) {
         storage.removeItem(ACCESS_KEY);
         storage.removeItem(PROFILE_KEY);
-        setStatus("That saved household key no longer works. Paste a valid key to continue.", true);
+        setStatus(t("householdKeyInvalid"), true);
       } else {
         let cachedProfile = null;
         try {
@@ -100,13 +100,13 @@ export async function requireHouseholdSession({ documentObject = document, stora
           storage.removeItem(PROFILE_KEY);
         }
         if (cachedProfile) {
-          setStatus("You’re offline. Opening your saved household copy.");
+          setStatus(t("householdOfflineCopy"));
           gate.hidden = true;
           documentObject.body.classList.remove("household-locked");
           documentObject.querySelector("#householdName").textContent = cachedProfile.name;
           return { ...cachedProfile, key: savedKey, offline: true };
         }
-        setStatus("We could not reach your household. Your saved key is still safe; refresh to try again.", true);
+        setStatus(t("householdUnreachable"), true);
       }
     }
   }
@@ -120,7 +120,7 @@ export async function requireHouseholdSession({ documentObject = document, stora
       const button = joinForm.querySelector("button[type=submit]");
       const key = joinForm.elements.householdKey.value.trim();
       button.disabled = true;
-      setStatus("Checking your family key…");
+      setStatus(t("householdCheckingKey"));
       try {
         resolve(finish(await fetchHousehold(key, fetchImpl), key));
       } catch (error) {
@@ -133,7 +133,7 @@ export async function requireHouseholdSession({ documentObject = document, stora
       event.preventDefault();
       const button = createForm.querySelector("button[type=submit]");
       button.disabled = true;
-      setStatus("Setting up your shared kitchen…");
+      setStatus(t("householdCreating"));
       try {
         const created = await createHousehold({
           name: createForm.elements.householdName.value.trim(),
@@ -142,7 +142,7 @@ export async function requireHouseholdSession({ documentObject = document, stora
         documentObject.querySelector("#createdHouseholdKey").value = created.key;
         documentObject.querySelector("#householdKeyReceipt").hidden = false;
         createForm.hidden = true;
-        setStatus("Household ready. Save this key before continuing.");
+        setStatus(t("householdReadySaveKey"));
         documentObject.querySelector("#continueToHousehold").onclick = () => resolve(finish(created, created.key));
       } catch (error) {
         setStatus(error.message, true);

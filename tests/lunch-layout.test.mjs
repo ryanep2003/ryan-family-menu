@@ -7,9 +7,11 @@ const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 const ui = await readFile(new URL("../lunch-ui.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 
-test("School Lunches is a first-class app destination", () => {
-  assert.match(html, /data-view="lunches" data-i18n="lunchesTab"/);
+test("School Lunches stays available from Plan without occupying the bottom nav", () => {
   assert.match(html, /id="lunchesView"/);
+  assert.match(html, /data-view-target="lunches"/);
+  assert.match(html, /data-i18n="planLunchesEntry"/);
+  assert.doesNotMatch(html, /class="tabs"[\s\S]*data-view="lunches"/);
   assert.match(app, /createLunchUi/);
   assert.match(app, /lunchUi\.render\(\)/);
   assert.match(app, /lunchUi\.bind\(\)/);

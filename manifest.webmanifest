@@ -3,8 +3,8 @@
   "short_name": "Family Menu",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#F1F2EE",
-  "theme_color": "#F1F2EE",
+  "background_color": "#F5F1EA",
+  "theme_color": "#F5F1EA",
   "icons": [
     {
       "src": "assets/app-icon-192.png",

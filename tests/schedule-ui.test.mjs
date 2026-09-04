@@ -18,6 +18,9 @@ function element(initial = {}) {
       contains(name) {
         return classes.has(name);
       },
+      add(name) {
+        classes.add(name);
+      },
       toggle(name, force) {
         if (force) classes.add(name);
         else classes.delete(name);
@@ -70,7 +73,7 @@ function calendarDates() {
   });
 }
 
-function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedCount: 1, skippedCount: 0 }, extraRecipes = [] } = {}) {
+function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedCount: 1, skippedCount: 0 }, extraRecipes = [], currentWeekStartKey = "2026-06-22" } = {}) {
   const elements = {
     "#scheduleGrid": element(),
     "#weekDateEditor": element(),
@@ -98,6 +101,9 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     "#focusedDinnerPanel": element({ hidden: true }),
     "#comprehensivePlanner": element(),
     "#planningModeSwitch": element(),
+    "#planSaveBar": element({ hidden: true }),
+    "#planSaveBarButton": element({ dataset: {}, disabled: false }),
+    "#planSaveBarStatus": element(),
   };
   const weekButtons = weekDates().map(({ dateKey }) => element({ dataset: { editWeekDate: dateKey } }));
   const dateButtons = calendarDates().map((dateKey) => element({ dataset: { editCalendarDate: dateKey } }));
@@ -234,6 +240,10 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     t: (key) => ({
       mealPeriodsNote: "Plan breakfast, lunch, or dinner as needed. Shared ingredients stay grouped in Groceries.",
       saveMealChanges: "Save changes",
+      planUnsavedHint: "Unsaved meal changes",
+      mealChangeSaving: "Saving this meal…",
+      mealChangeSaved: "Meal changes saved.",
+      mealChangePending: "Meal changes are saved here. We’ll keep trying for everyone.",
       moreMealOptions: "More meal options",
       moreMealOptionsNote: "Add a side, salad, notes, or a handoff when you need them.",
       extraServingsCount: "Extra servings for later",
@@ -290,7 +300,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     goToCurrentWeek: async () => {
       state.currentWeekCalls += 1;
     },
-    getCurrentWeekStartKey: () => "2026-06-22",
+    getCurrentWeekStartKey: () => currentWeekStartKey,
     getVisibleMonth: () => new Date("2026-06-01T12:00:00"),
     setVisibleMonth: () => {},
     getFamilyMembers: () => [
@@ -327,12 +337,16 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
   };
 }
 
-test("week planning renders seven summaries with one focused editor", () => {
+test("week planning renders seven day cards with breakfast, lunch, and dinner slots", () => {
   const { elements, ui } = harness();
 
   ui.renderSchedule();
 
-  assert.equal((elements["#scheduleGrid"].innerHTML.match(/data-edit-week-date=/g) || []).length, 7);
+  assert.equal((elements["#scheduleGrid"].innerHTML.match(/week-day-card/g) || []).length, 7);
+  assert.ok((elements["#scheduleGrid"].innerHTML.match(/data-edit-week-date=/g) || []).length >= 7);
+  assert.match(elements["#scheduleGrid"].innerHTML, /data-plan-period="breakfast"/);
+  assert.match(elements["#scheduleGrid"].innerHTML, /data-plan-period="lunch"/);
+  assert.match(elements["#scheduleGrid"].innerHTML, /data-plan-period="dinner"/);
   assert.doesNotMatch(elements["#scheduleGrid"].innerHTML, /<select/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-context="weekdate:2026-06-22"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /Main Recipe/);
@@ -667,4 +681,61 @@ test("plan next week opens the destination week after copying", async () => {
   ui.bindScheduleControls();
   await elements["#copyWeekForward"].dispatch("click");
   assert.deepEqual(state.weekNavigation, [1]);
+  assert.equal(state.saveCalls, 1);
+});
+
+test("dirty Plan meal edits show a persistent save control and write the save path", async () => {
+  const { elements, state, ui, weekRecipeResults } = harness();
+
+  ui.renderSchedule();
+  await weekRecipeResults.dispatch("click", {
+    closest(selector) {
+      return selector === "[data-add-meal-result]" ? {
+        dataset: {
+          addMealResult: "weekdate:2026-06-22",
+          period: "breakfast",
+          recipeId: "another-main",
+        },
+      } : null;
+    },
+  });
+
+  assert.equal(elements["#planSaveBar"].hidden, false);
+  assert.equal(elements["#planSaveBar"].attributes["data-plan-save-state"], "saved");
+  assert.match(elements["#planSaveBarStatus"].textContent, /Meal changes saved/);
+  assert.equal(state.saveCalls, 1);
+  assert.equal(state.schedule.mon.items.at(-1).period, "breakfast");
+});
+
+test("next-week breakfast, lunch, and dinner edits keep calendar dates instead of wiping them", async () => {
+  const { state, ui, weekRecipeResults } = harness({ currentWeekStartKey: "2026-06-15" });
+  state.calendarMeals["2026-06-22"] = normalizeMealPlan({
+    items: [
+      { id: "keep-breakfast", period: "breakfast", role: "main", recipeId: "main-recipe" },
+      { id: "keep-lunch", period: "lunch", role: "main", recipeId: "side-recipe" },
+    ],
+  });
+  ui.renderSchedule();
+  await weekRecipeResults.dispatch("click", {
+    closest(selector) {
+      return selector === "[data-add-meal-result]" ? {
+        dataset: {
+          addMealResult: "weekdate:2026-06-22",
+          period: "dinner",
+          recipeId: "dessert-recipe",
+        },
+      } : null;
+    },
+  });
+
+  assert.equal(state.saveCalls, 1);
+  assert.ok(state.calendarMeals["2026-06-22"]);
+  assert.deepEqual(
+    state.calendarMeals["2026-06-22"].items.map(({ period, recipeId }) => [period, recipeId]),
+    [
+      ["breakfast", "main-recipe"],
+      ["lunch", "side-recipe"],
+      ["dinner", "dessert-recipe"],
+    ],
+  );
 });

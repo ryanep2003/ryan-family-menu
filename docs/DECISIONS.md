@@ -2,6 +2,16 @@
 
 This is a lightweight record of architectural and product decisions that future contributors should not reverse accidentally. Add an entry only when a decision changes enduring structure, data meaning, access, deployment, or a significant product constraint.
 
+## 2026-09-04 — Four-tab family shell and always-visible Plan save
+
+**Decision:** Present the family app with a navy/sage/beige visual system and a four-tab bottom nav: Today, Plan, Shop, and Library. Keep School Lunches as a full workspace opened from Plan. While Plan has unsaved meal changes, show a fixed navy Save bar above the tab bar, auto-save breakfast/lunch/dinner add/remove/edit, and write next-week dates as `calendarMeals` overrides instead of deleting them.
+
+**Reason:** A production household lost a full next-week plan because Save / Guardar cambios lived at the top of a long Plan scroll, edits looked accepted, and weekday persist deleted copied calendar days. Visual redesign cannot ship if Plan still loses data.
+
+**Alternatives considered:** Keep five-tab navigation, rely on the in-editor Save button, and continue treating every week-editor edit as a repeating template change.
+
+**Consequences:** Lunches remain in household state and grocery generation. Existing meal records are unchanged. Next-week planning is date-specific. Clients must keep English and Spanish Save copy in parity.
+
 ## 2026-08-23 — Keep school lunch planning inside household state and deterministic rules
 
 **Decision:** Store bounded child lunch plans, preferences, saved combinations, and packing settings as one additive `schoolLunches` field in shared family state. Generate lunch suggestions in the browser from a fixed catalog and existing household context; approved lunches contribute to the existing grocery list instead of creating separate storage, shopping, or AI systems.
