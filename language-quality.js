@@ -1,3 +1,5 @@
+import { isMeaningfulText } from "./localized-data.js";
+
 const englishMarkers = new Set([
   "add", "and", "bake", "beans", "before", "boneless", "bottles", "butter", "chicken",
   "chopped", "chunks", "cook", "corn", "cup", "cups", "cut", "dark", "diced", "family",
@@ -34,9 +36,11 @@ export function appearsEnglish(value) {
 }
 
 export function textMatchesLanguage(value, lang) {
+  if (!isMeaningfulText(value)) return false;
   return lang !== "es" || !appearsEnglish(value);
 }
 
 export function linesMatchLanguage(values, lang) {
-  return (values || []).every((value) => textMatchesLanguage(value, lang));
+  const lines = (values || []).filter((value) => isMeaningfulText(value));
+  return Boolean(lines.length) && lines.every((value) => textMatchesLanguage(value, lang));
 }

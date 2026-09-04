@@ -1,7 +1,11 @@
 function sanitizedText(value) {
   const text = `${value || ""}`.trim();
-  if (!text) return "";
-  return /^\[object [^\]]+\]$/.test(text) ? "" : text;
+  if (!text || /^\[object [^\]]+\]$/.test(text)) return "";
+  return /[\p{L}\p{N}]/u.test(text) ? text : "";
+}
+
+export function isMeaningfulText(value) {
+  return Boolean(sanitizedText(value));
 }
 
 export function isLocalizedValue(value) {

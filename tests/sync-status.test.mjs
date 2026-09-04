@@ -79,4 +79,6 @@ test("formatSyncTime uses the selected language locale", () => {
 
   assert.match(english, /AM|PM/);
   assert.match(spanish, /a\.\s*m\.|p\.\s*m\./i);
+  assert.doesNotMatch(spanish, /\.$/);
+  assert.doesNotMatch(`Sincronizado a las ${spanish}.`, /\.\.$/);
 });

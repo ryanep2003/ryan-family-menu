@@ -59,6 +59,20 @@ test("uploadToRecipe does not copy English into missing Spanish fields", () => {
   assert.deepEqual(recipe.steps.es, []);
 });
 
+test("uploadToRecipe drops punctuation-only ingredient and step lines", () => {
+  const recipe = uploadToRecipe({
+    id: "taco-meat",
+    name: "Taco meat-pre make",
+    ingredientsText: "1 lb ground beef\n.\n·",
+    stepsText: ".\nBrown the meat.\n·",
+    allergyWarning: ".",
+  }, "Shared upload", "Receta compartida");
+
+  assert.deepEqual(recipe.ingredients.en, ["1 lb ground beef"]);
+  assert.deepEqual(recipe.steps.en, ["Brown the meat."]);
+  assert.equal(recipe.allergyWarning, undefined);
+});
+
 test("uploadToRecipe keeps scanned source photos out of recipe cards", () => {
   const recipe = uploadToRecipe({
     id: "scanned-pages",

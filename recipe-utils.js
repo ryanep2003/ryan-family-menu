@@ -1,4 +1,4 @@
-import { localizedTextExact } from "./localized-data.js";
+import { hasLocalizedContent, isMeaningfulText, localizedTextExact } from "./localized-data.js";
 
 const DEFAULT_CARD_PHOTO = "assets/recipe-card-placeholder.webp";
 
@@ -48,7 +48,7 @@ const recipeCategories = {
 };
 
 function splitLines(text, fallback) {
-  const lines = (text || "").split("\n").map((line) => line.trim()).filter(Boolean);
+  const lines = (text || "").split("\n").map((line) => line.trim()).filter((line) => isMeaningfulText(line));
   return lines.length ? lines : fallback ? [fallback] : [];
 }
 
@@ -104,7 +104,7 @@ export function uploadToRecipe(upload, enMeta, esMeta) {
     tags: upload.tags || { en: enMeta, es: esMeta },
     category: upload.category || "draft",
     servings: normalizeRecipeServings(upload.servings),
-    allergyWarning: upload.allergyWarning
+    allergyWarning: hasLocalizedContent(upload.allergyWarning)
       ? localizedPair(upload.allergyWarning)
       : undefined,
     ingredients: {

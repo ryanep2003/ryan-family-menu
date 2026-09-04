@@ -38,6 +38,17 @@ test("app localizes document language, accessible names, and titles", async () =
   assert.match(html, /data-i18n-aria-label="receiptPhotoLabel"/);
 });
 
+test("language refresh keeps the current view page title instead of defaulting to Today", async () => {
+  const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
+
+  assert.match(source, /function applyViewPageTitle\(/);
+  assert.match(source, /pageTitle\.dataset\.i18n = key/);
+  assert.match(source, /schedule: "planTab"/);
+  assert.match(source, /applyStaticTranslations\(\) \{[\s\S]*applyViewPageTitle\(\);/);
+  assert.match(source, /function renderTranslations\(\) \{[\s\S]*applyViewPageTitle\(\);/);
+  assert.match(source, /document\.body\.dataset\.view = viewName;\s*applyViewPageTitle\(viewName\)/);
+});
+
 test("English and Spanish expose the same translation keys", () => {
   assert.deepEqual(Object.keys(translations.es).sort(), Object.keys(translations.en).sort());
   assert.equal(translations.es.title, "La cena, más fácil.");

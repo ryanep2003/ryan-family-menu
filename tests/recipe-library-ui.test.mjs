@@ -86,8 +86,8 @@ function harness(overrides = {}) {
     "#recipeSearch": element({ value: "" }),
     "#categoryFilter": element(),
     "#addRecipeToMealForm": element(),
-    "#addRecipeToMealDate": element({ value: "" }),
-    "#addRecipeToMealPeriod": element({ value: "dinner" }),
+    "#addRecipeToMealDate": element({ value: "", disabled: false }),
+    "#addRecipeToMealPeriod": element({ value: "dinner", disabled: false }),
     "#addRecipeToMealSubmit": element({ disabled: false }),
     "#addRecipeToMealStatus": element(),
     "#recipePicksSection": element({ hidden: false }),
@@ -107,6 +107,7 @@ function harness(overrides = {}) {
     "#publishDraftRecipe": element(),
     "#addRecipeGroceries": element(),
     "#markCooked": element(),
+    "#startCooking": element({ disabled: false }),
     "#recipeSafetyLockReason": element(),
     "#recipeDetail": element(),
     "#recipeMoreActions": element({ open: false }),
@@ -340,6 +341,7 @@ test("Spanish detail uses source content while global translation is prepared", 
   assert.match(elements["#stepList"].innerHTML, />cook</);
   assert.equal(elements["#addRecipeGroceries"].disabled, false);
   assert.equal(elements["#markCooked"].disabled, false);
+  assert.equal(elements["#addRecipeToMealForm"].classList.values.has("is-locked"), false);
   assert.equal(elements["#recipeTranslationPanel"].hidden, false);
   assert.match(elements["#recipeTranslationStatus"].textContent, /translationFallbackDetail/);
 });
@@ -420,8 +422,43 @@ test("missing Spanish safety warning keeps cooking actions disabled", () => {
   assert.equal(elements["#allergyWarning"].textContent, "Contains nuts");
   assert.equal(elements["#addRecipeGroceries"].disabled, true);
   assert.equal(elements["#addRecipeToMealSubmit"].disabled, true);
+  assert.equal(elements["#addRecipeToMealDate"].disabled, true);
+  assert.equal(elements["#addRecipeToMealPeriod"].disabled, true);
+  assert.equal(elements["#startCooking"].disabled, true);
   assert.equal(elements["#markCooked"].disabled, true);
+  assert.equal(elements["#addRecipeToMealForm"].classList.values.has("is-locked"), true);
+  assert.equal(elements["#addRecipeToMealForm"].attributes["aria-disabled"], "true");
   assert.equal(elements["#recipeTranslationPanel"].hidden, false);
   assert.equal(elements["#recipeSafetyLockReason"].hidden, false);
   assert.match(elements["#recipeSafetyLockReason"].textContent, /safetyActionsLocked/);
+});
+
+test("punctuation-only recipe chrome is treated as empty, not a warning card or step", () => {
+  const { elements, ui } = harness({
+    lang: "es",
+    recipe: {
+      name: { en: "Taco meat-pre make" },
+      meta: { en: "·" },
+      ingredients: { en: ["1 lb ground beef", "."] },
+      steps: { en: [".", "Brown the meat."] },
+      allergyWarning: { en: ".", es: "·" },
+      notes: { en: "." },
+    },
+  });
+
+  ui.renderDetail();
+
+  assert.equal(elements["#allergyWarning"].hidden, true);
+  assert.equal(elements["#allergyWarning"].textContent, "");
+  assert.doesNotMatch(elements["#ingredientList"].innerHTML, />[·.]</);
+  assert.match(elements["#ingredientList"].innerHTML, /1 lb ground beef/);
+  assert.doesNotMatch(elements["#stepList"].innerHTML, />[·.]</);
+  assert.match(elements["#stepList"].innerHTML, /Brown the meat\./);
+  assert.equal(elements["#familyNotes"].textContent, "");
+  assert.equal(elements["#addRecipeGroceries"].disabled, false);
+  assert.equal(elements["#addRecipeToMealSubmit"].disabled, false);
+  assert.equal(elements["#addRecipeToMealForm"].classList.values.has("is-locked"), false);
+  assert.equal(elements["#recipeTranslationPanel"].hidden, false);
+  assert.doesNotMatch(elements["#recipeTranslationStatus"].textContent, /safetyActionsLocked|bloqueadas/);
+  assert.equal(elements["#recipeSafetyLockReason"].hidden, true);
 });
