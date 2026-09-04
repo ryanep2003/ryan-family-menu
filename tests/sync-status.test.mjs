@@ -78,7 +78,7 @@ test("formatSyncTime uses the selected language locale", () => {
   const spanish = formatSyncTime("es", date);
 
   assert.match(english, /AM|PM/);
-  assert.match(spanish, /a\.\s*m\.|p\.\s*m\./i);
+  assert.match(spanish, /a\.\s*m\.?|p\.\s*m\.?/i);
   assert.doesNotMatch(spanish, /\.$/);
   assert.doesNotMatch(`Sincronizado a las ${spanish}.`, /\.\.$/);
 });
