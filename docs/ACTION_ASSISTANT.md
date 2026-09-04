@@ -10,11 +10,11 @@ Every write follows the same loop: choose a chip → review a structured preview
 
 Deterministic browser logic. No OpenAI call.
 
-- **Plan next week:** propose dinners for empty dinner slots in the calendar week after this week’s Monday (the week Plan shows after Next week). Dates are local, not UTC. Occupied dinners in that week are left as they are.
+- **Plan next week:** propose dinners for empty dinner slots in the calendar week after this week’s Monday (the week Plan shows after Next week). Dates are local, not UTC. Occupied dinners in that week are left as they are. Occupancy for next week comes from date-specific calendar meals only — the repeating this-week template is not projected onto next week.
 - **Fill gaps this week:** the same empty-slot fill for remaining days of the current local week from today through Sunday.
 - **Build / refresh shopping list:** preview how many planned items will be on the list from the next 7 local days, then rebuild planned groceries through the ordinary grocery save.
 - **What’s for dinner today / tomorrow:** answer from the local calendar date (today stays today; tomorrow is the next local date) and offer Open meal or Cook. This path does not write.
-- **What’s for dinner this week / next week:** typed Ask only. Lists each dinner in that local week window (remaining days of this week, or the calendar week after this week’s Monday) as a read-only preview. Empty days stay visible as “nothing planned.” Apply is not shown. Occupied dinners are never rewritten.
+- **What’s for dinner this week / next week:** typed Ask only. Lists each dinner in that local week window (remaining days of this week, or the calendar week after this week’s Monday) as a read-only preview from the same calendar/schedule source Plan uses. Occupied days show the real recipe name(s). Empty days stay visible as “nothing planned.” Apply is not shown. Occupied dinners are never rewritten.
 
 Recipe ranking reuses existing family memory (`rankedRecipes`). OpenAI is not used for Phase A ranking.
 

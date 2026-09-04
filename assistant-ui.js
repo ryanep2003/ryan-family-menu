@@ -254,16 +254,21 @@ export function createAssistantUi({
         <small>${escapeHtml(t(SOURCE_LABELS[assignment.source] || SOURCE_LABELS.library))}</small>
       </li>
     `).join("");
-    const occupiedNote = preview.occupied.length
-      ? `<p>${escapeHtml(t("assistantFillOccupiedNote").replace("{count}", `${preview.occupied.length}`))}</p>`
-      : "";
+    const occupiedRows = (preview.occupied || []).map((entry) => {
+      const names = (entry.recipeIds || []).map((id) => escapeHtml(recipeName(id))).filter(Boolean).join(", ");
+      return `<li>
+        <strong>${escapeHtml(formatDayLabel(entry.dateKey))}</strong>
+        <span>${names || escapeHtml(t("assistantDinnerRangeEmpty"))}</span>
+        <small>${escapeHtml(t("assistantFillAlreadyPlanned"))}</small>
+      </li>`;
+    }).join("");
     const emptyNote = preview.assignments.length
       ? ""
       : `<p>${escapeHtml(preview.unfilled.some((item) => item.reason === "no-recipes") ? t("assistantNoRecipes") : t("assistantNoEmptyDinners"))}</p>`;
     panel.innerHTML = `
       <h3>${escapeHtml(t(preview.action === "fill-gaps" ? "assistantFillGapsPreviewHeading" : "assistantFillPreviewHeading"))}</h3>
       ${preview.assignments.length ? `<ul class="assistant-preview-list">${rows}</ul>` : emptyNote}
-      ${occupiedNote}
+      ${occupiedRows ? `<ul class="assistant-preview-list">${occupiedRows}</ul>` : ""}
     `;
     updateApplyState();
   }

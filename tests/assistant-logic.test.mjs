@@ -18,7 +18,7 @@ import {
   remainingWeekDateKeys,
 } from "../assistant-logic.js";
 import { groceryItem } from "../grocery-logic.js";
-import { emptyMeal, formatDateKey, normalizeMealPlan } from "../schedule-utils.js";
+import { emptyMeal, formatDateKey, mealPlanForDateKey, normalizeMealPlan } from "../schedule-utils.js";
 import { translations } from "../translations.js";
 
 function localDate(year, month, day, hour = 12, minute = 0) {
@@ -287,6 +287,55 @@ test("week dinner lookups list each date without requiring Apply", () => {
   assert.equal(remaining.days[0].dateKey, "2026-09-03");
   assert.equal(remaining.days[0].items[0].recipeId, "pesto");
   assert.equal(assistantPreviewNeedsConfirm(remaining), false);
+});
+
+test("next-week fill and lookup count only real calendar dinners, not this week's template", () => {
+  const thisWeekStart = "2026-08-31";
+  const nextWeekStart = "2026-09-07";
+  const repeatingWeek = {
+    mon: mealWithDinner("meatballs"),
+    tue: mealWithDinner("chicken"),
+    wed: mealWithDinner("lemon"),
+    thu: mealWithDinner("halibut"),
+    fri: mealWithDinner("pasta"),
+    sat: mealWithDinner("tacos"),
+    sun: mealWithDinner("chili"),
+  };
+  const calendarMeals = {
+    "2026-09-08": mealWithDinner("roast"),
+    "2026-09-10": mealWithDinner("pesto"),
+  };
+  const mealForDate = (dateKey) => mealPlanForDateKey({
+    dateKey,
+    calendarMeals,
+    schedule: repeatingWeek,
+    visibleWeekStartKey: nextWeekStart,
+    currentWeekStartKey: thisWeekStart,
+  });
+
+  const fill = proposeDinnerFill({
+    action: "plan-next-week",
+    now: thursdayEvening,
+    mealForDate,
+    recipes,
+  });
+  assert.deepEqual(fill.dateKeys, nextWeek);
+  assert.equal(fill.occupied.length, 2);
+  assert.deepEqual(fill.occupied.map((entry) => entry.dateKey), ["2026-09-08", "2026-09-10"]);
+  assert.equal(fill.assignments.length, 5);
+  assert.ok(!fill.occupied.some((entry) => entry.dateKey === "2026-09-07"));
+
+  const lookup = lookupDinnersRange({
+    action: "dinners-next-week",
+    now: thursdayEvening,
+    mealForDate,
+  });
+  assert.equal(lookup.days.length, 7);
+  assert.equal(lookup.days.filter((day) => !day.empty).length, 2);
+  assert.equal(lookup.days.filter((day) => day.empty).length, 5);
+  assert.equal(lookup.days.find((day) => day.dateKey === "2026-09-08")?.items[0].recipeId, "roast");
+  assert.equal(lookup.days.find((day) => day.dateKey === "2026-09-10")?.items[0].recipeId, "pesto");
+  assert.equal(lookup.days.find((day) => day.dateKey === "2026-09-07")?.empty, true);
 });
 
 test("assistant translation keys stay in English/Spanish parity", async () => {

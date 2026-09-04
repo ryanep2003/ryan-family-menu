@@ -323,6 +323,27 @@ export function activeWeekDateKeys(weekStartKey) {
   });
 }
 
+export function mealPlanForDateKey({
+  dateKey,
+  calendarMeals = {},
+  schedule = {},
+  visibleWeekStartKey,
+  currentWeekStartKey: currentStart,
+} = {}) {
+  if (!dateKey) return normalizeMealPlan(emptyMeal);
+  const calendar = normalizeCalendar(calendarMeals);
+  if (Object.prototype.hasOwnProperty.call(calendar, dateKey)) {
+    return calendar[dateKey];
+  }
+  const currentWeekStart = currentStart || visibleWeekStartKey;
+  const visibleStart = visibleWeekStartKey || currentWeekStart;
+  if (currentWeekStart && visibleStart === currentWeekStart) {
+    const weekDate = activeWeekDateKeys(currentWeekStart).find((day) => day.dateKey === dateKey);
+    if (weekDate) return normalizeMealPlan(schedule[weekDate.key]);
+  }
+  return normalizeMealPlan(emptyMeal);
+}
+
 export function mealHasContent(meal) {
   return Boolean(
     meal.items?.length

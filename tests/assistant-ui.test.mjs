@@ -258,6 +258,19 @@ test("Ask routes a typed request to the same preview as the matching chip", asyn
   assert.equal(elements.assistantApply.disabled, false);
 });
 
+test("Plan next week fill lists only actually occupied dinners", async () => {
+  const { ui, elements } = harness();
+  ui.previewAction("plan-next-week");
+  const preview = ui.getPreview();
+  assert.equal(preview.kind, "fill-dinners");
+  assert.equal(preview.occupied.length, 1);
+  assert.equal(preview.occupied[0].dateKey, "2026-09-13");
+  assert.match(elements.assistantPreview.innerHTML, /Pot roast/);
+  assert.match(elements.assistantPreview.innerHTML, /Already planned/);
+  assert.doesNotMatch(elements.assistantPreview.innerHTML, /Leaving 7 planned/);
+  assert.doesNotMatch(elements.assistantPreview.innerHTML, /Every dinner in this window already has a plan/);
+});
+
 test("Ask what's for dinner next week lists dinners without Apply or a fill preview", async () => {
   const { ui, elements, calls } = harness();
   ui.bindAssistantControls();
@@ -271,6 +284,8 @@ test("Ask what's for dinner next week lists dinners without Apply or a fill prev
   assert.equal(preview.days[0].dateKey, "2026-09-07");
   assert.equal(preview.days[6].dateKey, "2026-09-13");
   assert.equal(preview.days[6].items[0].recipeId, "roast");
+  assert.equal(preview.days.filter((day) => !day.empty).length, 1);
+  assert.equal(preview.days.filter((day) => day.empty).length, 6);
   assert.match(elements.assistantPreview.innerHTML, /Dinners next week/);
   assert.match(elements.assistantPreview.innerHTML, /Sep 7/);
   assert.match(elements.assistantPreview.innerHTML, /Sep 13/);
@@ -278,6 +293,7 @@ test("Ask what's for dinner next week lists dinners without Apply or a fill prev
   assert.match(elements.assistantPreview.innerHTML, /Nothing planned/);
   assert.doesNotMatch(elements.assistantPreview.innerHTML, /Fill empty dinners/);
   assert.doesNotMatch(elements.assistantPreview.innerHTML, /Every dinner in this window already has a plan/);
+  assert.doesNotMatch(elements.assistantPreview.innerHTML, /Leaving 7 planned/);
   assert.doesNotMatch(elements.assistantChips.innerHTML, /is-selected/);
   assert.equal(elements.assistantApply.hidden, true);
   assert.equal(await ui.applyPreview(), false);

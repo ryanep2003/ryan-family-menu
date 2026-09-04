@@ -66,7 +66,7 @@ Important fields:
 
 - `weekStart`: visible week anchor.
 - `schedule`: seven recurring/effective day records keyed `mon` through `sun`. New clients read and write this through the household-scoped `schedule` record so meal edits do not compete with unrelated profile, budget, or recipe edits. The legacy `shared-state` schedule remains readable during the transition; do not delete it until all old clients are retired.
-- `calendarMeals`: date-specific meal records keyed `YYYY-MM-DD`, capped at 730 days. Week-editor edits for a date outside the current calendar week write that date’s calendar override and must not delete it. This-week weekday edits still update the repeating `schedule` template and clear that date’s override.
+- `calendarMeals`: date-specific meal records keyed `YYYY-MM-DD`, capped at 730 days. Week-editor edits for a date outside the current calendar week write that date’s calendar override and must not delete it. This-week weekday edits still update the repeating `schedule` template and clear that date’s override. Readers for a specific date use that calendar override when present. The repeating `schedule` template applies only to dates in the current calendar week while that week is visible; other weeks do not inherit weekday template dinners.
 - `favorites`: recipe IDs.
 - `tasks`: shared household tasks.
 - `availableFood`: leftovers and snacks to use soon.

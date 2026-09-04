@@ -19,6 +19,7 @@ import {
   appendRecipeToMeal,
   applyPersistedMealTarget,
   upcomingMealDateOptions,
+  mealPlanForDateKey,
 } from "../schedule-utils.js";
 
 test("serving plans default to two adults and two kids", () => {
@@ -341,4 +342,44 @@ test("removeRecipeFromPlans clears a deleted lunch salad", () => {
 
   assert.equal(result.schedule.mon.lunch, "sandwich");
   assert.equal(result.schedule.mon.lunchSalad, "");
+});
+
+test("next-week dates use calendar meals only and do not inherit this week's repeating dinners", () => {
+  const repeatingWeek = {
+    mon: { items: [{ id: "d1", period: "dinner", role: "main", recipeId: "tacos", sourceType: "recipe" }] },
+    tue: { items: [{ id: "d2", period: "dinner", role: "main", recipeId: "chili", sourceType: "recipe" }] },
+    wed: { items: [{ id: "d3", period: "dinner", role: "main", recipeId: "roast", sourceType: "recipe" }] },
+    thu: { items: [{ id: "d4", period: "dinner", role: "main", recipeId: "pesto", sourceType: "recipe" }] },
+    fri: { items: [{ id: "d5", period: "dinner", role: "main", recipeId: "halibut", sourceType: "recipe" }] },
+    sat: { items: [{ id: "d6", period: "dinner", role: "main", recipeId: "pasta", sourceType: "recipe" }] },
+    sun: { items: [{ id: "d7", period: "dinner", role: "main", recipeId: "soup", sourceType: "recipe" }] },
+  };
+  const nextMonday = mealPlanForDateKey({
+    dateKey: "2026-09-07",
+    calendarMeals: {},
+    schedule: repeatingWeek,
+    visibleWeekStartKey: "2026-09-07",
+    currentWeekStartKey: "2026-08-31",
+  });
+  assert.equal(nextMonday.items.length, 0);
+
+  const plannedTuesday = mealPlanForDateKey({
+    dateKey: "2026-09-08",
+    calendarMeals: {
+      "2026-09-08": { items: [{ id: "cal", period: "dinner", role: "main", recipeId: "roast", sourceType: "recipe" }] },
+    },
+    schedule: repeatingWeek,
+    visibleWeekStartKey: "2026-09-07",
+    currentWeekStartKey: "2026-08-31",
+  });
+  assert.equal(plannedTuesday.items[0].recipeId, "roast");
+
+  const thisMonday = mealPlanForDateKey({
+    dateKey: "2026-08-31",
+    calendarMeals: {},
+    schedule: repeatingWeek,
+    visibleWeekStartKey: "2026-08-31",
+    currentWeekStartKey: "2026-08-31",
+  });
+  assert.equal(thisMonday.items[0].recipeId, "tacos");
 });
