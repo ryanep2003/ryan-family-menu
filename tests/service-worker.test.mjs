@@ -18,9 +18,11 @@ test("service worker cache version matches the app shell script version", async 
 
   const cacheVersion = serviceWorker.match(/ryan-family-menu-v(\d+)/)?.[1];
   const appVersion = html.match(/app\.js\?v=(\d+)/)?.[1];
+  const stylesVersion = html.match(/styles\.css\?v=(\d+)/)?.[1];
 
   assert.ok(cacheVersion);
   assert.equal(appVersion, cacheVersion);
+  assert.equal(stylesVersion, cacheVersion);
 });
 
 test("service worker pre-caches first-party app modules", async () => {

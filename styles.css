@@ -1,6 +1,6 @@
-/* Honed Almanac — structural presentation layer
+/* Family navy/sage shell
    1. tokens  2. foundation  3. primitives  4. shell
-   5. Today / focused Plan / Recipe / Shop  6. responsive  7. states */
+   5. Today / Plan / Library / Shop  6. responsive  7. states */
 
 /* 1. Tokens */
 :root {
@@ -128,7 +128,7 @@ small, .section-note, .field-note, .upload-status, .meal-period-helper { color: 
 .upload-status { min-height: 1.25rem; font-size: .9rem; }
 .sync-status-row { display: flex; align-items: center; gap: var(--space-3); }
 .sync-status-row .sync-retry { margin-left: auto; }
-.segmented, .planning-mode-switch, .inventory-mode-switch {
+.segmented {
   display: inline-flex;
   gap: 6px;
   padding: 0;
@@ -146,7 +146,7 @@ small, .section-note, .field-note, .upload-status, .meal-period-helper { color: 
   font-weight: 650;
 }
 .segmented button { min-width: 44px; border-radius: 999px; background: var(--sage); color: var(--navy); }
-.segmented button.active, .planning-mode-switch button.active, .inventory-mode-switch button.active { background: var(--navy); color: var(--paper); }
+.segmented button.active { background: var(--navy); color: var(--paper); }
 details { border-top: 1px solid var(--rule); }
 summary { min-height: 44px; padding: 11px 0; cursor: pointer; font-weight: 600; }
 .source-process-button.is-processing { position: relative; color: transparent; pointer-events: none; }
@@ -252,7 +252,7 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   font-weight: 700;
 }
 .today-shop-button { border: 0; background: var(--navy); color: var(--paper); }
-.today-find-button { border: 1.5px solid var(--soft-blue); background: var(--paper); color: var(--navy); }
+.today-find-button { border: 0; background: var(--soft-blue); color: var(--navy); }
 .today-shortcut-icon { width: 18px; height: 18px; flex: 0 0 auto; }
 .today-shop-button .count-badge {
   display: grid;
@@ -402,12 +402,20 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .focused-dinner-action p { min-height: 1.25rem; color: var(--success); font-size: .84rem; }
 
 /* Comprehensive planning remains separate from the focused Today flow. */
-.planning-mode-switch { margin-bottom: var(--space-5); }
+.planning-mode-switch, .inventory-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+  gap: 0;
+  margin-bottom: var(--space-5);
+  border-bottom: 1px solid var(--rule);
+  border-radius: 0;
+}
 .lunch-plan-bar { margin-bottom: var(--space-3); }
-.inventory-mode-switch button { border-radius: 0; background: transparent; color: var(--muted); }
-.inventory-mode-switch button.active { background: transparent; color: var(--navy); box-shadow: inset 0 -3px 0 var(--navy); }
+.planning-mode-switch button, .inventory-mode-switch button { width: 100%; border-radius: 0; background: transparent; color: var(--muted); }
+.planning-mode-switch button.active, .inventory-mode-switch button.active { background: transparent; color: var(--navy); box-shadow: inset 0 -3px 0 var(--navy); }
 .view-banner { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); padding: 0 0 var(--space-5); border-bottom: 1px solid var(--rule); }
-.week-banner { padding: var(--space-5); border-top: 1px solid color-mix(in srgb, var(--attention) 34%, var(--rule)); border-bottom: 0; background: var(--surface-muted); }
+.week-banner { padding: 0 0 var(--space-4); border: 0; background: transparent; }
 .view-banner h2 { margin-top: var(--space-2); }
 .week-actions { display: grid; gap: var(--space-2); }
 .week-navigation { display: flex; gap: var(--space-2); }
@@ -489,16 +497,16 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .week-day-add, .week-day-meal {
   min-width: 0;
   min-height: 32px;
-  padding: 0;
+  padding: 4px 6px;
   overflow: hidden;
   border: 0;
-  background: transparent;
+  border-radius: 8px;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.week-day-add { color: var(--navy); font-weight: 650; }
-.week-day-meal { color: var(--navy); font-weight: 750; }
+.week-day-add { background: var(--soft-blue); color: var(--navy); font-weight: 650; }
+.week-day-meal { background: transparent; color: var(--navy); font-weight: 750; }
 .week-day-summary { display: none; }
 .plan-save-bar {
   position: fixed;
@@ -630,20 +638,19 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
 .photo-strip img { width: 100%; aspect-ratio: 4 / 3; border-radius: var(--radius-sheet); object-fit: cover; }
 .recipe-banner {
   position: relative;
-  display: grid;
-  min-height: 12rem;
-  grid-template-columns: minmax(0, 1fr) auto;
-  overflow: hidden;
-  padding: var(--space-6) var(--space-5);
-  border-top: 1px solid color-mix(in srgb, var(--attention) 55%, var(--rule));
-  border-bottom: 1px solid var(--rule);
-  background: var(--surface-clay);
+  display: flex;
+  min-height: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 0 0 var(--space-4);
+  border: 0;
+  background: transparent;
 }
 .recipe-banner h2 { max-width: 9ch; }
-.recipe-banner::before { position: absolute; top: var(--space-6); left: var(--space-4); width: 12px; height: 12px; border-radius: 50%; background: var(--attention); content: ""; pointer-events: none; }
-.recipe-banner::after { display: none; }
+.recipe-banner::before, .recipe-banner::after { display: none; }
 .recipe-banner > * { position: relative; z-index: 1; }
-.recipe-banner .view-kicker { margin-left: var(--space-5); }
+.recipe-banner .view-kicker { margin-left: 0; }
 .recipe-picks {
   position: relative;
   margin-inline: 0;
@@ -719,20 +726,18 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
 .recipe-catalog-empty span { color: var(--muted); }
 
 /* 5d. Shopping as a physical list */
-.inventory-mode-switch { margin-bottom: var(--space-5); }
 .grocery-banner {
   align-items: flex-start;
-  padding: var(--space-5);
-  border-top: 1px solid color-mix(in srgb, var(--herb) 48%, var(--rule));
-  background: var(--surface-utility);
+  padding: 0 0 var(--space-3);
+  border: 0;
+  background: transparent;
 }
-.grocery-banner h2 { font-size: clamp(2.5rem, 9vw, 4rem); }
+.grocery-banner h2 { font-size: 1rem; }
 .shopping-context { margin-top: var(--space-2); color: var(--muted); }
 .shopping-show-all { justify-content: flex-start; margin: var(--space-1) 0 0 -14px; }
 .finish-shopping-prompt { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-4); border: 0; border-radius: var(--radius-sheet); background: var(--navy); color: var(--paper); }
 .finish-shopping-prompt span { display: block; color: color-mix(in srgb, var(--paper) 80%, var(--soft-blue)); font-size: .84rem; }
 .finish-shopping-prompt .primary-action { background: var(--paper); color: var(--navy); border-color: var(--paper); }
-.finish-shopping-prompt span { display: block; color: var(--muted); font-size: .84rem; }
 .grocery-meal-filter { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
 .grocery-meal-filter strong { font-size: .9rem; font-weight: 600; }
 .grocery-meal-filter span { display: none; }
@@ -1029,7 +1034,7 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
   .budget-metrics { display: grid; grid-template-columns: repeat(2, 1fr); }
   .recipe-card { grid-template-columns: 72px minmax(0, 1fr) auto; min-height: 96px; gap: var(--space-3); }
   .recipe-card > .recipe-photo-shell { width: 72px; height: 72px; border-radius: var(--radius-control); }
-  .recipe-banner { margin-inline: calc(var(--space-4) * -1); }
+  .recipe-banner { margin-inline: 0; }
 }
 
 @media (min-width: 700px) {

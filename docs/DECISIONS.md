@@ -6,11 +6,11 @@ This is a lightweight record of architectural and product decisions that future 
 
 **Decision:** Present the family app with a navy/sage/beige visual system and a four-tab bottom nav: Today, Plan, Shop, and Library. Keep School Lunches as a full workspace opened from Plan. While Plan has unsaved meal changes, show a fixed navy Save bar above the tab bar, auto-save breakfast/lunch/dinner add/remove/edit, and write next-week dates as `calendarMeals` overrides instead of deleting them.
 
-**Reason:** A production household lost a full next-week plan because Save / Guardar cambios lived at the top of a long Plan scroll, edits looked accepted, and weekday persist deleted copied calendar days. Visual redesign cannot ship if Plan still loses data.
+**Reason:** The household asked for the navy/sage 4-tab family redesign and for Plan to stop losing meals. Both ship together: Save is urgent and mandatory, but it is not a substitute for the mock-matching visual redesign.
 
-**Alternatives considered:** Keep five-tab navigation, rely on the in-editor Save button, and continue treating every week-editor edit as a repeating template change.
+**Alternatives considered:** Keep five-tab navigation, ship sticky Save without the redesign, rely on the in-editor Save button, and continue treating every week-editor edit as a repeating template change.
 
-**Consequences:** Lunches remain in household state and grocery generation. Existing meal records are unchanged. Next-week planning is date-specific. Clients must keep English and Spanish Save copy in parity.
+**Consequences:** Lunches remain in household state and grocery generation. Existing meal records are unchanged. Next-week planning is date-specific. Clients must keep English and Spanish Save copy in parity. Do not drop the visual redesign to ship Save alone.
 
 ## 2026-08-23 — Keep school lunch planning inside household state and deterministic rules
 

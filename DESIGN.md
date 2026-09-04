@@ -174,10 +174,14 @@ Geometry is square and calm. Controls use the compact control radius; temporary 
 - The four core destinations—Today, Plan, Shop, and Library—remain stable and labeled. School Lunches opens from Plan and is not a fifth bottom-nav tab.
 - Mobile navigation is fixed with safe-area-aware clearance; desktop may return it to the shell.
 - While Plan has unsaved meal changes, a navy Save bar stays fixed above the bottom nav so a long week scroll cannot hide Save / Guardar cambios.
+- Today’s Plan & shop band uses a navy Shopping list action and a filled soft-blue Find a recipe action.
+- Plan empty meal slots use filled soft-blue Add controls; today’s day card uses a sage highlight.
+- Shop uses a full-width Shopping | At home switch, short aisle names, and a navy Finish shopping prompt with light text.
+- Library search is the first control on that screen, ahead of Family picks and Browse all. Add to a meal stays a soft-blue secondary action.
 
 ### School Lunches
 
-- **Visual world:** School Lunches is an additive extension of the Honed / Living Almanac direction: a flat mineral wash with warm paper, sage, clay, and blue fields grouping content without becoming a category rainbow.
+- **Visual world:** School Lunches stays in the same navy/sage/beige family shell. Sage and paper group lunch content; it is not a fifth bottom-nav destination.
 - **Lunchbox grammar:** every packed lunch uses five clear, independently interchangeable categories—Main, Fruit / veg, Crunch / side, Extra, and Drink—so one item can be swapped without rebuilding the lunch.
 - **Hierarchy and imagery:** child and day context lead, the five foods read as the editorial body, and approval or the next packing action closes the sequence. Use quiet line-drawn food and tray geometry as supporting orientation, never as cartoon decoration.
 - **Phone behavior:** present the school week as a vertical reading sequence on phones. Packing is a linear, one-handed checklist with reachable actions and controls at least 44px high.

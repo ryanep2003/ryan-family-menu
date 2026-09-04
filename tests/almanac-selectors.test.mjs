@@ -66,13 +66,11 @@ test("family screens keep distinct page atmosphere without leftover undeclared t
   assert.match(css, /--surface-clay: #FFFFFF/);
   assert.match(css, /--surface-herb: #CFE8D5/);
   assert.match(css, /--surface-utility: #FFFFFF/);
-  assert.match(css, /\.recipe-banner[\s\S]*background: var\(--surface-clay\)/);
   assert.match(css, /\.recipe-browse[\s\S]*background: var\(--surface-utility\)/);
   const recipeBannerRule = css.match(/\.recipe-banner\s*\{([^}]*)\}/)?.[1] || "";
-  const recipeBannerAfterRule = css.match(/\.recipe-banner::after\s*\{([^}]*)\}/)?.[1] || "";
+  assert.doesNotMatch(recipeBannerRule, /min-height:\s*12rem/);
+  assert.match(recipeBannerRule, /background: transparent/);
   const recipePicksEmptyRule = css.match(/\.recipe-picks #recipePicksEmpty\s*\{([^}]*)\}/)?.[1] || "";
-  assert.match(recipeBannerRule, /border-top/);
-  assert.doesNotMatch(recipeBannerAfterRule, /border\s*:/);
   assert.doesNotMatch(recipePicksEmptyRule, /border-left/);
   assert.match(css, /\.dinner-feedback\s*\{[\s\S]*linear-gradient/);
   assert.match(css, /\.today-tools > summary\s*\{[\s\S]*linear-gradient/);

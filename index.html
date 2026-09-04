@@ -8,16 +8,12 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=156" />
+    <link rel="stylesheet" href="styles.css?v=157" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
-      THESIS: The Honed Almanac gives a family's food life the calm material clarity of a working kitchen, without turning it into kitchen décor.
-      OWN-WORLD: Mineral canvas, ceramic-paper surfaces, herb actions, clay attention, and exact seams replace dashboard chrome and literal texture.
-      STORY: The day’s actual food remains the opening record; a practical next move is clear without visual noise or planning mechanics.
-      FIRST VIEWPORT: At 390px, the Breakfast–Lunch–Dinner state leads; at Plan, a selected day and its meal chapters remain distinct.
-      FORM: Flat reading surfaces, disciplined mineral rules, and tonal chapters carry the product; temporary sheets alone gain elevation.
-      FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+      Family navy/sage shell: Today, Plan, Shop, and Library on a warm beige canvas.
+      Plan keeps Save on screen while dirty. School Lunches opens from Plan.
     -->
     <section class="household-gate" id="householdGate" aria-labelledby="householdGateHeading">
       <div class="household-gate-panel">
@@ -773,6 +769,24 @@
       </section>
 
       <section class="view" id="recipesView">
+        <div class="library-tools" id="recipeLibraryTools">
+          <label>
+            <span data-i18n="searchLabel">Search recipes</span>
+            <input type="search" id="recipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" data-i18n-aria-label="searchLabel" aria-label="Search recipes" placeholder="chicken, salad, pasta" autocomplete="off" inputmode="search" />
+          </label>
+          <label>
+            <span data-i18n="categoryFilterLabel">Category</span>
+            <select id="categoryFilter">
+              <option value="all" data-i18n="categoryAll">All</option>
+              <option value="main" data-i18n="categoryMain">Mains</option>
+              <option value="side" data-i18n="categorySide">Sides</option>
+              <option value="salad" data-i18n="categorySalad">Salads</option>
+              <option value="sauce" data-i18n="categorySauce">Sauces</option>
+              <option value="dessert" data-i18n="categoryDessert">Desserts</option>
+              <option value="draft" data-i18n="categoryDraft">Drafts</option>
+            </select>
+          </label>
+        </div>
         <div class="section-heading view-banner recipe-banner">
           <div>
             <p class="view-kicker visually-hidden" data-i18n="recipeKicker">From our kitchen</p>
@@ -907,24 +921,6 @@
             </aside>
           </div>
         </section>
-        <div class="library-tools" id="recipeLibraryTools">
-          <label>
-            <span data-i18n="searchLabel">Search recipes</span>
-            <input type="search" id="recipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" data-i18n-aria-label="searchLabel" aria-label="Search recipes" placeholder="chicken, salad, pasta" autocomplete="off" inputmode="search" />
-          </label>
-          <label>
-            <span data-i18n="categoryFilterLabel">Category</span>
-            <select id="categoryFilter">
-              <option value="all" data-i18n="categoryAll">All</option>
-              <option value="main" data-i18n="categoryMain">Mains</option>
-              <option value="side" data-i18n="categorySide">Sides</option>
-              <option value="salad" data-i18n="categorySalad">Salads</option>
-              <option value="sauce" data-i18n="categorySauce">Sauces</option>
-              <option value="dessert" data-i18n="categoryDessert">Desserts</option>
-              <option value="draft" data-i18n="categoryDraft">Drafts</option>
-            </select>
-          </label>
-        </div>
         <section class="recipe-picks" id="recipePicksSection" aria-labelledby="recipePicksHeading">
           <div class="panel-heading">
             <div>
@@ -1059,6 +1055,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=156"></script>
+    <script type="module" src="app.js?v=157"></script>
   </body>
 </html>
