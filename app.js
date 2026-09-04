@@ -90,6 +90,7 @@ import {
   mealRoles,
   formatDateKey,
   mealHasContent,
+  mealPlanForDateKey,
   normalizeCalendar,
   normalizeMealPlan,
   normalizeSchedule,
@@ -699,22 +700,23 @@ function rollWeekForwardIfNeeded() {
   return true;
 }
 
-function weeklyMealForDateKey(dateKey) {
-  const weekDate = activeWeekDateKeys().find((item) => item.dateKey === dateKey);
-  return weekDate ? normalizeMealPlan(schedule[weekDate.key]) : { ...emptyMeal };
-}
-
 function calendarMealForDateKey(dateKey) {
-  return Object.prototype.hasOwnProperty.call(calendarMeals, dateKey)
-    ? normalizeMealPlan(calendarMeals[dateKey])
-    : weeklyMealForDateKey(dateKey);
+  return mealPlanForDateKey({
+    dateKey,
+    calendarMeals,
+    schedule,
+    visibleWeekStartKey: weekStartKey,
+    currentWeekStartKey: currentWeekStartKey(),
+  });
 }
 
 function plannedMealsByDate() {
   const meals = new Map(Object.entries(calendarMeals).map(([dateKey, meal]) => [dateKey, normalizeMealPlan(meal)]));
-  activeWeekDateKeys().forEach(({ key, dateKey }) => {
-    if (!meals.has(dateKey)) meals.set(dateKey, normalizeMealPlan(schedule[key]));
-  });
+  if (weekStartKey === currentWeekStartKey()) {
+    activeWeekDateKeys().forEach(({ key, dateKey }) => {
+      if (!meals.has(dateKey)) meals.set(dateKey, normalizeMealPlan(schedule[key]));
+    });
+  }
   return meals;
 }
 
