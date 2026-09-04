@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=165" />
+    <link rel="stylesheet" href="styles.css?v=166" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -96,12 +96,12 @@
           </summary>
           <div class="household-menu-panel">
             <strong id="householdMenuName">Family</strong>
-            <p>Share this key privately with family members you trust.</p>
+            <p data-i18n="shareFamilyKeyHint">Share this key privately with family members you trust.</p>
             <label>
-              <span>Family key</span>
+              <span data-i18n="familyKeyLabel">Family key</span>
               <input id="currentHouseholdKey" type="password" readonly />
             </label>
-            <button class="ghost-button" id="copyHouseholdKey" type="button">Copy family key</button>
+            <button class="ghost-button" id="copyHouseholdKey" type="button" data-i18n="copyFamilyKey">Copy family key</button>
             <div class="household-sync-status sync-status-row" id="sharedSyncStatusPanel" hidden>
               <p class="upload-status" id="sharedStateStatus" role="status"></p>
               <button class="ghost-button sync-retry" id="retrySharedState" type="button" data-i18n="retrySync" hidden>Retry sync</button>
@@ -111,10 +111,10 @@
               <button class="ghost-button sync-retry" id="retryRecipes" type="button" data-i18n="retrySync" hidden>Retry sync</button>
             </div>
             <details class="household-activity">
-              <summary>Rotate family key</summary>
-              <p class="field-note">Use the owner rotation code to revoke the old key and create a new one.</p>
-              <label><span>Rotation code</span><input id="householdRotationCode" type="password" autocomplete="off" /></label>
-              <button class="ghost-button" id="rotateHouseholdKey" type="button">Create new family key</button>
+              <summary data-i18n="rotateFamilyKey">Rotate family key</summary>
+              <p class="field-note" data-i18n="rotateFamilyKeyNote">Use the owner rotation code to revoke the old key and create a new one.</p>
+              <label><span data-i18n="rotationCodeLabel">Rotation code</span><input id="householdRotationCode" type="password" autocomplete="off" /></label>
+              <button class="ghost-button" id="rotateHouseholdKey" type="button" data-i18n="createNewFamilyKey">Create new family key</button>
             </details>
             <button class="primary-action" id="openFamily" type="button" data-i18n="openFamily">Family &amp; preferences</button>
             <details class="household-activity" id="householdActivityPanel">
@@ -125,7 +125,7 @@
               <summary data-i18n="changeHistory">Change history</summary>
               <div id="householdHistory"></div>
             </details>
-            <button class="text-button" id="leaveHousehold" type="button">Use a different household</button>
+            <button class="text-button" id="leaveHousehold" type="button" data-i18n="leaveHousehold">Use a different household</button>
             <p class="household-menu-status" id="householdMenuStatus" role="status"></p>
           </div>
         </details>
@@ -670,10 +670,10 @@
             </div>
           </div>
           <div class="inventory-utility-row">
-            <details class="inventory-tools-menu">
+            <details class="inventory-tools-menu" id="inventoryToolsMenu">
               <summary data-i18n="inventoryManageShort">Manage</summary>
               <div class="inventory-tools">
-                <details>
+                <details id="inventoryAddPanel">
                   <summary data-i18n="addInventoryItem">Add item</summary>
                   <form class="inventory-add" id="inventoryForm">
                     <input type="text" id="inventoryInput" data-i18n-placeholder="inventoryPlaceholder" data-i18n-aria-label="inventoryItemLabel" aria-label="Inventory item" placeholder="Add eggs, milk, paper towels..." />
@@ -702,7 +702,7 @@
                     <button class="primary-action" type="submit" data-i18n="addInventoryItem">Add item</button>
                   </form>
                 </details>
-                <details>
+                <details id="inventoryScanPanel">
                   <summary data-i18n="scanShelf">Scan shelf</summary>
                   <div class="inventory-scan-panel">
                     <p data-i18n="inventoryScanNote">Upload fridge, freezer, pantry, or receipt photos. Review the suggestions before adding them.</p>
@@ -1094,6 +1094,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=165"></script>
+    <script type="module" src="app.js?v=166"></script>
   </body>
 </html>

@@ -165,9 +165,13 @@ export function createDashboardUi({
         .replace(/\.$/, "");
       const plan = meal.servingPlans?.dinner || meal.servingPlan || {};
       const people = Math.max(1, (Number(plan.adults) || 0) + (Number(plan.kids) || 0) + (Number(plan.guests) || 0)) || 4;
+      const recipeBlurb = [mainRecipe?.meta, mainRecipe?.short]
+        .filter((value) => value != null && value !== "")
+        .map((value) => localize(value))
+        .find(Boolean) || "";
       const metaBits = [
         weekday,
-        localize(mainRecipe?.meta || "") || localize(mainRecipe?.short || ""),
+        recipeBlurb,
         t("heroPeople").replace("{count}", `${people}`),
       ].filter(Boolean);
       dinnerMeta.textContent = metaBits.join(" • ");

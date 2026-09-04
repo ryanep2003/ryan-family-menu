@@ -32,10 +32,15 @@ test("receipt upload remains available without preceding the working list", () =
 
 test("inventory remains a progressive-disclosure maintenance surface", () => {
   assert.match(html, /class="inventory-tools-menu"/);
-  assert.match(html, /class="inventory-tools">\s*<details>/);
+  assert.match(html, /id="inventoryToolsMenu"/);
+  assert.match(html, /id="inventoryAddPanel"/);
+  assert.match(html, /id="inventoryScanPanel"/);
+  assert.match(html, /class="inventory-tools">\s*<details/);
   assert.match(html, /id="inventoryLocationFilter"/);
   assert.ok(app.includes("inventoryLocationFilter") && app.includes('addEventListener("change"'));
   assert.match(inventoryUi, /#inventoryStatus.+addedToShopping/);
+  assert.match(inventoryUi, /data-open-inventory-add/);
+  assert.match(inventoryUi, /syncInventoryToolsDisclosure/);
 });
 
 test("inventory controls retain practical touch targets", () => {

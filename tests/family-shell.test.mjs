@@ -61,3 +61,9 @@ test("Library search is the first library control and IDs stay unique", () => {
   const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
   assert.deepEqual(duplicates, []);
 });
+
+test("family preference section links are styled as compact chips", () => {
+  assert.match(html, /class="family-section-links"/);
+  assert.match(css, /\.family-section-links\s*\{/);
+  assert.match(css, /\.family-section-links a\s*\{/);
+});
