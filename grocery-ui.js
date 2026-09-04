@@ -1,6 +1,7 @@
 import { allLocalizedText, canonicalText, localizedTextExact, usableLocalizedText } from "./localized-data.js";
 import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
 import {
+  collapseGroceryItemsByDisplayName,
   formatCompactGroceryMealCue,
   groceryAisleFor,
   groceryAisleLabelKey,
@@ -219,10 +220,18 @@ export function createGroceryUi({
     return Boolean(shopRowParts(item).name);
   }
 
+  function shopDisplayRows(items) {
+    return collapseGroceryItemsByDisplayName(items.filter(isShopDisplayableItem), (item) => shopRowParts(item).name)
+      .map((row) => ({ ...row.item, collapsedIds: row.ids }));
+  }
+
+  function groceryRowIds(item) {
+    return Array.isArray(item.collapsedIds) && item.collapsedIds.length ? item.collapsedIds : [item.id];
+  }
+
   function groupGroceriesByAisle(items) {
     const groups = new Map();
     items.forEach((item) => {
-      if (!isShopDisplayableItem(item)) return;
       const aisle = groceryAisleFor(shopRowParts(item).name || groceryDisplayText(item) || canonicalText(item.text));
       if (!groups.has(aisle)) groups.set(aisle, []);
       groups.get(aisle).push(item);
@@ -304,7 +313,7 @@ export function createGroceryUi({
   }
 
   function grocerySection(label, items, options = {}) {
-    const sectionIds = items.map((item) => item.id).join("|");
+    const sectionIds = items.flatMap(groceryRowIds).join("|");
     const content = `
       <section class="grocery-section${options.checkedSection ? " checked-section" : ""}">
         <div class="grocery-section-header">
@@ -320,6 +329,7 @@ export function createGroceryUi({
         ${items.map((item) => {
           const parts = shopRowParts(item);
           if (!parts.name) return "";
+          const rowIds = groceryRowIds(item);
           const atHomeNote = groceryAtHomeNote(item);
           const activity = formatItemActivity(item);
           const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
@@ -327,7 +337,7 @@ export function createGroceryUi({
           return `
             <article class="grocery-item-row${inventoryDecisionFor(item) === "review" ? " inventory-review" : ""}${item.checked && inventoryDecisionFor(item) !== "review" ? " is-checked" : " is-unchecked"}">
               <label class="grocery-item">
-                <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" ${item.checked && inventoryDecisionFor(item) !== "review" ? "checked" : ""} />
+                <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" data-collapsed-ids="${escapeHtml(rowIds.join("|"))}" ${item.checked && inventoryDecisionFor(item) !== "review" ? "checked" : ""} />
                   <span>
                     <strong>${escapeHtml(parts.name)}</strong>
                     ${mealMeta.inline}
@@ -363,9 +373,9 @@ export function createGroceryUi({
           || mealUsesFor(item).some((use) => use.recipeId === selectedRecipeFilter))
         : getGroceries();
     const visibleGroceries = groceries.filter(isShopDisplayableItem);
-    const activeItems = visibleGroceries.filter((item) => inventoryDecisionFor(item) === "review" || (!item.checked && !isConfirmedAtHome(item)));
-    const inventoryItems = visibleGroceries.filter(isConfirmedAtHome);
-    const checkedItems = visibleGroceries.filter((item) => item.checked && inventoryDecisionFor(item) !== "review" && !isConfirmedAtHome(item));
+    const activeItems = shopDisplayRows(visibleGroceries.filter((item) => inventoryDecisionFor(item) === "review" || (!item.checked && !isConfirmedAtHome(item))));
+    const inventoryItems = shopDisplayRows(visibleGroceries.filter(isConfirmedAtHome));
+    const checkedItems = shopDisplayRows(visibleGroceries.filter((item) => item.checked && inventoryDecisionFor(item) !== "review" && !isConfirmedAtHome(item)));
     const sections = groupGroceriesByAisle(activeItems);
 
     if (!visibleGroceries.length) {
@@ -402,14 +412,17 @@ export function createGroceryUi({
       if (!checkbox) return;
 
       const groceries = getGroceries();
-      const item = groceries.find((grocery) => grocery.id === checkbox.dataset.groceryId);
-      if (!item) return;
-      const nextItem = { ...item, checked: checkbox.checked };
-      if (!checkbox.checked && isConfirmedAtHome(item)) nextItem.inventoryDecision = "need";
-      if (checkbox.checked && item.inventorySuggested) nextItem.inventoryDecision = "need";
-      nextItem.inInventory = isConfirmedAtHome(item);
-      touchItem(nextItem);
-      setGroceries(groceries.map((entry) => entry.id === item.id ? nextItem : entry));
+      const ids = new Set(`${checkbox.dataset.collapsedIds || checkbox.dataset.groceryId || ""}`.split("|").filter(Boolean));
+      if (!ids.size) return;
+      setGroceries(groceries.map((grocery) => {
+        if (!ids.has(grocery.id)) return grocery;
+        const nextItem = { ...grocery, checked: checkbox.checked };
+        if (!checkbox.checked && isConfirmedAtHome(grocery)) nextItem.inventoryDecision = "need";
+        if (checkbox.checked && grocery.inventorySuggested) nextItem.inventoryDecision = "need";
+        nextItem.inInventory = isConfirmedAtHome(grocery);
+        touchItem(nextItem);
+        return nextItem;
+      }));
       renderGroceries();
       await saveGroceries();
     });

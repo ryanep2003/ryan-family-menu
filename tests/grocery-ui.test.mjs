@@ -193,7 +193,7 @@ test("renderGroceries shows Spanish ingredient text under grocery items", () => 
 
   assert.match(elements["#groceryList"].innerHTML, /<strong>limones<\/strong>/);
   assert.match(elements["#groceryList"].innerHTML, /grocery-qty">4</);
-  assert.match(elements["#groceryList"].innerHTML, /de aceite de oliva/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>aceite de oliva<\/strong>/);
   assert.match(elements["#groceryList"].innerHTML, /grocery-qty">1 taza</);
   assert.match(elements["#groceryList"].innerHTML, /grocery-item-row is-unchecked/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
@@ -252,7 +252,7 @@ test("a valid Spanish grocery value wins even when the linked recipe is incomple
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, /de sal/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>sal<\/strong>/);
   assert.match(elements["#groceryList"].innerHTML, /grocery-qty">1 cucharadita</);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /Translation pending/);
 });
@@ -336,6 +336,33 @@ test("shopping rows omit recipe translation actions and instruction paste", () =
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /filetes/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /Dip each fillet/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /peeled and chopped/);
+});
+
+test("shopping rows drop leading de fragments and collapse duplicate aisle names", () => {
+  const { elements, ui } = harness({
+    state: {
+      lang: "es",
+      groceries: [
+        { id: "cilantro", text: { es: "de hojas de cilantro fresco bien compactadas" }, checked: false, store: "any", source: "meal-plan" },
+        { id: "garlic-long", text: { es: "de ajo" }, checked: false, store: "any", source: "meal-plan" },
+        { id: "garlic-short", text: { es: "Ajo" }, checked: false, store: "any", source: "meal-plan" },
+        { id: "panko", text: { es: "de pan rallado panko — el pan rallado normal también sirve, pero el panko da un crujiente más ligero" }, checked: false, store: "any", source: "meal-plan" },
+        { id: "pork", text: { es: "de carne molida de cerdo" }, checked: false, store: "any", source: "meal-plan" },
+      ],
+      recipes: [],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /<strong>hojas de cilantro<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>ajo<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>pan rallado panko<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>carne molida de cerdo<\/strong>/);
+  assert.equal(elements["#groceryList"].innerHTML.match(/<strong>ajo<\/strong>/g)?.length, 1);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /bien compactadas/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /también sirve/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, />de ajo</);
 });
 
 test("shopping list keeps the end-of-trip action visible while items remain", () => {

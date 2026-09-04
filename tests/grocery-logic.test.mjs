@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   applyInventoryCoverage,
+  collapseGroceryItemsByDisplayName,
   cleanIngredientForGrocery,
   formatCompactGroceryMealCue,
   groceryAisleFor,
@@ -293,6 +294,29 @@ test("grocery names drop recipe headers, serving lines, and prep parentheses", (
     name: "",
     quantityLabel: "",
   });
+});
+
+test("Spanish recipe fragments become short aisle names", () => {
+  assert.equal(groceryRowParts("de hojas de cilantro fresco bien compactadas").name, "hojas de cilantro");
+  assert.equal(groceryRowParts("1 taza de hojas de cilantro fresco bien compactadas").name, "hojas de cilantro");
+  assert.equal(groceryRowParts("de ajo").name, "ajo");
+  assert.equal(groceryRowParts("2 dientes de ajo").name, "ajo");
+  assert.equal(groceryRowParts("de hojuelas de pimiento rojo").name, "hojuelas de pimiento rojo");
+  assert.equal(groceryRowParts("de lechuga romana").name, "lechuga romana");
+  assert.equal(groceryRowParts("de cebolla blanca grande").name, "cebolla blanca");
+  assert.equal(groceryRowParts("de carne molida de cerdo").name, "carne molida de cerdo");
+  assert.equal(
+    groceryRowParts("de pan rallado panko — el pan rallado normal también sirve, pero el panko da un crujiente más ligero").name,
+    "pan rallado panko",
+  );
+  assert.equal(groceryRowParts("crushed red pepper").name, "crushed red pepper");
+  assert.equal(groceryRowParts("sweet paprika").name, "sweet paprika");
+  const collapsed = collapseGroceryItemsByDisplayName([
+    { id: "garlic-1", text: "de ajo" },
+    { id: "garlic-2", text: "Ajo" },
+  ], (item) => groceryRowParts(item.text).name);
+  assert.equal(collapsed.length, 1);
+  assert.deepEqual(collapsed[0].ids, ["garlic-1", "garlic-2"]);
 });
 
 test("shopping rows collapse shared meal provenance to a count", () => {

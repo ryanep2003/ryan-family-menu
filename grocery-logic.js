@@ -41,7 +41,7 @@ const INSTRUCTION_START = /^(?:combine|mix|coat|dip|stir|whisk|pour|place|heat|c
 const INSTRUCTION_SCENE = /^(?:in a |in the |en un |en una |en el |en la |with the |into |onto )/i;
 const INSTRUCTION_FLOW = /\b(then|until|hasta(?:\s+que)?|combine|mix|coat|dip|stir|mezcla|reboza|cubre)\b/i;
 const SIZE_PREFIX = /^(?:extra[-\s]?(?:large|small)|medium[-\s]large|very\s+large|large|small|medium|jumbo|big|grandes?|pequeñ[oa]s?|median[oa]s?)\s+/i;
-const FRESH_PREFIX = /^(?:freshly\s+ground|freshly|fresh|recién\s+molid[oa]s?|frescos?|frescas?)\s+/i;
+const FRESH_PREFIX = /^(?:freshly\s+ground|freshly|fresh|roughly|recién\s+molid[oa]s?|frescos?|frescas?)\s+/i;
 const TRAILING_PREP = /(?:,\s*)?(?:\s+(?:divided|plus more(?:\s+if needed)?|for serving|para servir|for garnish|or more as needed(?:\s+to coat)?|as needed(?:\s+to coat)?|cut into wedges(?:[\/,]?\s*sliced for serving)?|peeled and chopped|and chopped))\s*$/i;
 
 function cleanIngredientLine(line) {
@@ -78,13 +78,73 @@ function isIngredientJunkLine(line) {
   return false;
 }
 
+const LEADING_NAME_PREP = /^(?:de las|de los|de la|del|de|of)\s+/i;
+const PACKING_FLUFF = /\s+(?:bien compactadas?|well packed|packed(?:\s+down)?)\b/gi;
+const TRAILING_SIZE = /\s+(?:grandes?|pequeñ[oa]s?|chicos?|large|small)$/i;
+const TRAILING_FRESH = /\s+(?:frescos?|frescas?|fresh)$/i;
+const ADVICE_SPLIT = /\s*[—–]\s*|\s+-\s+|\s*;\s*/;
+
+function truncateGroceryAdviceTail(value) {
+  const text = `${value || ""}`.trim();
+  const parts = text.split(ADVICE_SPLIT).map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 2) return text;
+  return parts[0];
+}
+
+function shortenLongAisleName(value) {
+  const text = `${value || ""}`.trim();
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length <= 8 && text.length <= 50) return text;
+  const cut = [];
+  for (const word of words) {
+    if (/^(?:y|e|o|u|con|para|and|or|with|for)$/i.test(word) && cut.length >= 2) break;
+    cut.push(word);
+    if (cut.length >= 4) break;
+  }
+  return cut.join(" ");
+}
+
+export function groceryNameDedupeKey(name) {
+  return `${name || ""}`
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function collapseGroceryItemsByDisplayName(items, getName) {
+  const groups = [];
+  const indexByKey = new Map();
+  (Array.isArray(items) ? items : []).forEach((item) => {
+    const key = groceryNameDedupeKey(getName(item));
+    if (!key) return;
+    if (!indexByKey.has(key)) {
+      indexByKey.set(key, groups.length);
+      groups.push({ item, ids: [item.id].filter(Boolean) });
+      return;
+    }
+    const ids = groups[indexByKey.get(key)].ids;
+    if (item.id && !ids.includes(item.id)) ids.push(item.id);
+  });
+  return groups;
+}
+
 export function stripGroceryPrepChrome(value) {
-  let text = `${value || ""}`.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s*[\(\)]\s*/g, " ");
+  let text = truncateGroceryAdviceTail(value);
+  text = text.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s*[\(\)]\s*/g, " ");
   text = text.replace(/\s+/g, " ").trim().replace(/[.,;:*_`-]+$/g, "").trim();
+  while (LEADING_NAME_PREP.test(text)) text = text.replace(LEADING_NAME_PREP, "");
   while (SIZE_PREFIX.test(text)) text = text.replace(SIZE_PREFIX, "");
   text = text.replace(FRESH_PREFIX, "");
+  text = text.replace(PACKING_FLUFF, " ");
   text = text.replace(TRAILING_PREP, "").trim();
-  return text.replace(/\s+/g, " ").trim();
+  const wordCount = () => text.split(/\s+/).filter(Boolean).length;
+  if (wordCount() >= 2) text = text.replace(TRAILING_SIZE, "").trim();
+  if (wordCount() >= 3) text = text.replace(TRAILING_FRESH, "").trim();
+  text = text.replace(/\s+/g, " ").trim();
+  return shortenLongAisleName(text);
 }
 
 export function cleanIngredientForGrocery(item) {

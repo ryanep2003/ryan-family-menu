@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-const CACHE_NAME = "ryan-family-menu-v164";
-=======
-const CACHE_NAME = "ryan-family-menu-v162";
->>>>>>> c461959 (Tighten shopping names: skip headers, instructions, and prep notes.)
+const CACHE_NAME = "ryan-family-menu-v165";
 const ASSETS = [
   "./",
   "./index.html",
