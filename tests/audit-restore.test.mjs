@@ -40,6 +40,7 @@ test("saved-menu history keeps the title and actor on separate lines", () => {
       historyBy: "{name} · {time}",
       restoreMenu: "Restore this menu",
       historyEmpty: "No recoverable menu history yet.",
+      householdFamily: "Family",
     }[key] || key),
     escapeHtml: (value) => value,
     getHistory: () => ({
