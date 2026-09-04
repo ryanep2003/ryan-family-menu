@@ -493,3 +493,24 @@ test("punctuation-only steps show a Spanish empty state instead of numbered chro
   assert.equal(elements["#addRecipeToMealForm"].hidden, true);
   assert.equal(elements["#addRecipeGroceries"].hidden, true);
 });
+
+test("English placeholder steps do not leak as numbered steps in Spanish", () => {
+  const { elements, ui } = harness({
+    lang: "es",
+    recipe: {
+      name: { en: "Taco meat- pre make" },
+      short: { en: "Needs review", es: "Necesita revisión" },
+      ingredients: { en: ["1 lb ground beef"] },
+      steps: { en: ["Add cooking steps after review."] },
+    },
+  });
+
+  ui.renderDetail();
+
+  assert.doesNotMatch(elements["#stepList"].innerHTML, /Add cooking steps after review/i);
+  assert.equal(elements["#stepList"].innerHTML, "");
+  assert.equal(elements["#stepList"].hidden, true);
+  assert.equal(elements["#stepListEmpty"].hidden, false);
+  assert.equal(elements["#stepListEmpty"].textContent, "recipeStepsEmpty");
+  assert.match(elements["#ingredientList"].innerHTML, /1 lb ground beef/);
+});

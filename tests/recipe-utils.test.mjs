@@ -81,6 +81,20 @@ test("numbered empty step chrome is not treated as a cooking step", () => {
   assert.equal(isUsableRecipeLine("1."), false);
   assert.equal(isUsableRecipeLine("Brown the meat."), true);
   assert.equal(isUsableRecipeLine("1 lb ground beef"), true);
+  assert.equal(isUsableRecipeLine("Add cooking steps after review."), false);
+  assert.equal(isUsableRecipeLine("Add ingredients after review."), false);
+});
+
+test("uploadToRecipe does not invent English placeholder steps for empty recipes", () => {
+  const recipe = uploadToRecipe({
+    id: "needs-review",
+    name: "Taco meat- pre make",
+    ingredientsText: "1 lb ground beef",
+    stepsText: "",
+  }, "Shared upload", "Receta compartida");
+
+  assert.deepEqual(recipe.steps.en, []);
+  assert.deepEqual(recipe.steps.es, []);
 });
 
 test("uploadToRecipe keeps scanned source photos out of recipe cards", () => {

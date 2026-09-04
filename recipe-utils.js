@@ -47,10 +47,18 @@ const recipeCategories = {
   "basil-pesto-pasta": "main",
 };
 
+const recipeLinePlaceholders = new Set([
+  "add cooking steps after review.",
+  "add cooking steps after review",
+  "add ingredients after review.",
+  "add ingredients after review",
+]);
+
 export function isUsableRecipeLine(value) {
   const text = `${value || ""}`.trim();
   if (!isMeaningfulText(text)) return false;
-  return !/^\d+[.)]?\s*[·.•.-]*$/.test(text);
+  if (/^\d+[.)]?\s*[·.•.-]*$/.test(text)) return false;
+  return !recipeLinePlaceholders.has(text.toLowerCase());
 }
 
 function splitLines(text, fallback) {
@@ -114,12 +122,12 @@ export function uploadToRecipe(upload, enMeta, esMeta) {
       ? localizedPair(upload.allergyWarning)
       : undefined,
     ingredients: {
-      en: splitLines(localizedTextExact(upload.ingredientsText, "en"), "Add ingredients after review."),
-      es: splitLines(localizedTextExact(upload.ingredientsText, "es"), ""),
+      en: splitLines(localizedTextExact(upload.ingredientsText, "en")),
+      es: splitLines(localizedTextExact(upload.ingredientsText, "es")),
     },
     steps: {
-      en: splitLines(localizedTextExact(upload.stepsText, "en"), "Add cooking steps after review."),
-      es: splitLines(localizedTextExact(upload.stepsText, "es"), ""),
+      en: splitLines(localizedTextExact(upload.stepsText, "en")),
+      es: splitLines(localizedTextExact(upload.stepsText, "es")),
     },
     notes: localizedPair(upload.notes, "No notes yet.", "Sin notas todavía."),
     photos,
