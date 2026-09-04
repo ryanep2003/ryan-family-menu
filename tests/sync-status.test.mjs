@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "../sync-status.js";
+import { formatSyncTime, formatSyncedAtMessage, renderSyncStatus, syncRetryLabel } from "../sync-status.js";
 
 test("sync recovery always uses a simple retry label", () => {
   assert.equal(syncRetryLabel("shared", "sharedMenuUnavailable"), "retrySync");
@@ -73,12 +73,36 @@ test("renderSyncStatus clears pending and retry after synchronization", () => {
 });
 
 test("formatSyncTime uses the selected language locale", () => {
-  const date = new Date("2026-07-10T18:30:00Z");
-  const english = formatSyncTime("en", date);
-  const spanish = formatSyncTime("es", date);
+  const now = new Date("2026-09-04T18:30:00Z");
+  const date = new Date("2026-09-04T18:30:00Z");
+  const english = formatSyncTime("en", date, now);
+  const spanish = formatSyncTime("es", date, now);
 
   assert.match(english, /AM|PM/);
   assert.match(spanish, /a\.\s*m\.?|p\.\s*m\.?/i);
   assert.doesNotMatch(spanish, /\.$/);
   assert.doesNotMatch(`Sincronizado a las ${spanish}.`, /\.\.$/);
+  assert.doesNotMatch(english, /Sep|Sept|Jul/);
+});
+
+test("formatSyncTime includes the date when the last sync is not today", () => {
+  const now = new Date("2026-09-04T18:30:00Z");
+  const earlier = new Date("2026-09-03T12:24:00Z");
+  const english = formatSyncTime("en", earlier, now);
+  assert.match(english, /Sep|Sept/);
+  assert.match(english, /3/);
+});
+
+test("Spanish synced-at copy does not add a second period after a.m.", () => {
+  const now = new Date("2026-09-04T12:24:00Z");
+  const message = formatSyncedAtMessage("es", "Sincronizado a las {time}.", now, now);
+  assert.match(message, /Sincronizado a las /);
+  assert.doesNotMatch(message, /\.\s*\.$/);
+  assert.doesNotMatch(message, /m\.\.$/i);
+});
+
+test("English synced-at copy keeps a single sentence period", () => {
+  const now = new Date("2026-09-04T18:30:00Z");
+  const message = formatSyncedAtMessage("en", "Synced at {time}.", now, now);
+  assert.match(message, /^Synced at .+[AP]M\.$/);
 });

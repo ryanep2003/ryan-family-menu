@@ -104,6 +104,8 @@ function harness(overrides = {}) {
       groceryMealServings: "{count} servings",
       groceryMealBatches: "cook {count}×",
       groceryMealUseMore: "+{count} more planned meals",
+      groceryMealCountOne: "1 meal",
+      groceryMealCountMany: "{count} meals",
       breakfastSlot: "Desayuno",
       lunchSlot: "Almuerzo",
       dinnerSlot: "Cena",
@@ -191,7 +193,7 @@ test("renderGroceries shows Spanish ingredient text under grocery items", () => 
 
   assert.match(elements["#groceryList"].innerHTML, /<strong>limones<\/strong>/);
   assert.match(elements["#groceryList"].innerHTML, /grocery-qty">4</);
-  assert.match(elements["#groceryList"].innerHTML, /de aceite de oliva/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>aceite de oliva<\/strong>/);
   assert.match(elements["#groceryList"].innerHTML, /grocery-qty">1 taza</);
   assert.match(elements["#groceryList"].innerHTML, /grocery-item-row is-unchecked/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 lemons/);
@@ -250,7 +252,7 @@ test("a valid Spanish grocery value wins even when the linked recipe is incomple
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, /de sal/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>sal<\/strong>/);
   assert.match(elements["#groceryList"].innerHTML, /grocery-qty">1 cucharadita</);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /Translation pending/);
 });
@@ -281,21 +283,41 @@ test("legacy recipe rows map by ingredient identity after Spanish translation", 
   assert.match(elements["#groceryList"].innerHTML, /grocery-qty">1</);
 });
 
-test("pending recipe rows offer an explicit Spanish translation action", async () => {
-  let translatedRecipeId = "";
+test("shopping rows omit recipe translation actions and instruction paste", () => {
   const { elements, ui } = harness({
-    translateRecipe: async (recipeId) => {
-      translatedRecipeId = recipeId;
-    },
+    translateRecipe: async () => {},
     state: {
-      groceries: [{
-        id: "needs-translation",
-        text: { en: "4 lemons" },
-        checked: false,
-        source: "week-plan",
-        store: "any",
-        recipeId: "needs-spanish",
-      }],
+      groceries: [
+        {
+          id: "needs-translation",
+          text: { en: "4 lemons" },
+          checked: false,
+          source: "week-plan",
+          store: "any",
+          recipeId: "needs-spanish",
+        },
+        {
+          id: "header",
+          text: { en: "Para ~4–6 filetes:" },
+          checked: false,
+          source: "meal-plan",
+          store: "any",
+        },
+        {
+          id: "instruction",
+          text: { en: "Dip each fillet in the egg, then coat with panko breadcrumbs until fully covered" },
+          checked: false,
+          source: "meal-plan",
+          store: "any",
+        },
+        {
+          id: "prepped",
+          text: { en: "medium-large russet potato (peeled and chopped )" },
+          checked: false,
+          source: "meal-plan",
+          store: "any",
+        },
+      ],
       recipes: [{
         id: "needs-spanish",
         name: { en: "Lemon recipe", es: "Receta de limón" },
@@ -305,17 +327,42 @@ test("pending recipe rows offer an explicit Spanish translation action", async (
   });
 
   ui.renderGroceries();
-  assert.match(elements["#groceryList"].innerHTML, /data-translate-grocery-recipe="needs-spanish"/);
 
-  await elements["#groceryList"].dispatch("click", {
-    closest(selector) {
-      return selector === "[data-translate-grocery-recipe]"
-        ? { dataset: { translateGroceryRecipe: "needs-spanish" } }
-        : null;
+  assert.match(elements["#groceryList"].innerHTML, /<strong>lemons<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>russet potato<\/strong>/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /data-translate-grocery-recipe/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Traducir receta|Translate recipe/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Para ~4/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /filetes/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Dip each fillet/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /peeled and chopped/);
+});
+
+test("shopping rows drop leading de fragments and collapse duplicate aisle names", () => {
+  const { elements, ui } = harness({
+    state: {
+      lang: "es",
+      groceries: [
+        { id: "cilantro", text: { es: "de hojas de cilantro fresco bien compactadas" }, checked: false, store: "any", source: "meal-plan" },
+        { id: "garlic-long", text: { es: "de ajo" }, checked: false, store: "any", source: "meal-plan" },
+        { id: "garlic-short", text: { es: "Ajo" }, checked: false, store: "any", source: "meal-plan" },
+        { id: "panko", text: { es: "de pan rallado panko — el pan rallado normal también sirve, pero el panko da un crujiente más ligero" }, checked: false, store: "any", source: "meal-plan" },
+        { id: "pork", text: { es: "de carne molida de cerdo" }, checked: false, store: "any", source: "meal-plan" },
+      ],
+      recipes: [],
     },
   });
 
-  assert.equal(translatedRecipeId, "needs-spanish");
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /<strong>hojas de cilantro<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>ajo<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>pan rallado panko<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>carne molida de cerdo<\/strong>/);
+  assert.equal(elements["#groceryList"].innerHTML.match(/<strong>ajo<\/strong>/g)?.length, 1);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /bien compactadas/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /también sirve/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, />de ajo</);
 });
 
 test("shopping list keeps the end-of-trip action visible while items remain", () => {
@@ -345,7 +392,7 @@ test("receipt matching prefers a checked purchase over an unchecked duplicate", 
   assert.equal(ui.shoppingMatchForReceiptItem("lemons")?.id, "checked");
 });
 
-test("renderGroceries explains the meals, servings, and batches behind generated items", () => {
+test("renderGroceries keeps shared meal provenance collapsed until expanded", () => {
   const { elements, ui } = harness({
     state: {
       groceries: [{
@@ -364,10 +411,48 @@ test("renderGroceries explains the meals, servings, and batches behind generated
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, /Cena · Pollo al limon · 4 servings · cook 1×/);
-  assert.match(elements["#groceryList"].innerHTML, /Almuerzo · Pollo al limon · 2 servings · cook 0.5×/);
+  assert.match(elements["#groceryList"].innerHTML, /<summary>2 meals<\/summary>/);
+  assert.match(elements["#groceryList"].innerHTML, /Cena/);
+  assert.match(elements["#groceryList"].innerHTML, /Almuerzo/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Pollo al limon/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 servings/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /cook 1×/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /cook 0.5×/);
   assert.equal(elements["#groceryMealFilterPanel"].hidden, false);
   assert.match(elements["#groceryMealFilter"].innerHTML, /2026-07-20::dinner/);
+});
+
+test("a single planned meal shows a compact date and slot without recipe prose", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{
+        id: "one-meal",
+        text: { en: "**crushed red pepper**", es: "**crushed red pepper**" },
+        checked: false,
+        store: "any",
+        source: "meal-plan",
+        mealUses: [{
+          dateKey: "2026-09-03",
+          mealSlot: "lunch",
+          recipeId: "skewers",
+          recipeName: { en: "Yogurt Marinated Grilled Chicken Skewers" },
+          servings: 3,
+          batches: 0.5,
+        }],
+      }],
+      recipes: [],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /<strong>crushed red pepper<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /item-meal-note/);
+  assert.match(elements["#groceryList"].innerHTML, /Almuerzo/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Yogurt Marinated/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /3 servings/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /cook 0.5×/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /grocery-meal-meta/);
 });
 
 test("meal filter shows only groceries connected to the selected planned meal", async () => {

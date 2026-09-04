@@ -1,10 +1,12 @@
-import { allLocalizedText, canonicalText, localizedText, localizedTextExact, updateLocalizedText, usableLocalizedText } from "./localized-data.js";
+import { allLocalizedText, canonicalText, localizedTextExact, usableLocalizedText } from "./localized-data.js";
 import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
 import {
-  cleanIngredientForGrocery,
+  collapseGroceryItemsByDisplayName,
+  formatCompactGroceryMealCue,
   groceryAisleFor,
   groceryAisleLabelKey,
   groceryAisleOrder,
+  groceryMealRowState,
   groceryRowParts,
   normalizedWords,
   parseIngredientAmount,
@@ -28,14 +30,10 @@ export function createGroceryUi({
   formatItemActivity = () => "",
   saveGroceries,
   offerUndo,
-  translateRecipe = null,
 }) {
   let controlsBound = false;
   let selectedMealFilter = "";
   let selectedRecipeFilter = "";
-  let translationEditorId = "";
-  const recipeTranslationsInFlight = new Set();
-  const translationErrors = new Map();
 
   function mealFilterKey(use) {
     const dateKey = /^\d{4}-\d{2}-\d{2}$/.test(use?.dateKey) ? use.dateKey : "";
@@ -64,31 +62,40 @@ export function createGroceryUi({
     }).format(date);
   }
 
-  function mealUseRecipeName(use) {
-    const recipe = use.recipeId ? allRecipes().find((entry) => entry.id === use.recipeId) : null;
-    return recipe ? usableLocalizedText(recipe.name, getLang()) || localize(recipe.name) : usableLocalizedText(use.recipeName, getLang());
-  }
-
   function mealFilterLabel(use) {
     return t("groceryMealFilterOption")
       .replace("{date}", mealDateLabel(use.dateKey))
       .replace("{meal}", t(`${use.mealSlot}Slot`));
   }
 
-  function groceryMealUseNote(use) {
-    const note = t("groceryMealUse")
-      .replace("{date}", mealDateLabel(use.dateKey))
-      .replace("{meal}", t(`${use.mealSlot}Slot`))
-      .replace("{recipe}", mealUseRecipeName(use) || t("addOnsSection"));
-    const details = [
-      Number(use.servings) > 0
-        ? t("groceryMealServings").replace("{count}", `${use.servings}`)
-        : "",
-      Number(use.batches) > 0
-        ? t("groceryMealBatches").replace("{count}", `${use.batches}`)
-        : "",
-    ].filter(Boolean);
-    return [note, ...details].join(" · ");
+  function visibleMealUses(item) {
+    const uses = mealUsesFor(item);
+    if (!selectedMealFilter) return uses;
+    return uses.filter((use) => mealFilterKey(use) === selectedMealFilter);
+  }
+
+  function compactMealUseNote(use) {
+    return formatCompactGroceryMealCue({
+      dateLabel: mealDateLabel(use.dateKey),
+      mealLabel: t(`${use.mealSlot}Slot`),
+    });
+  }
+
+  function groceryMealMetaParts(item) {
+    const summary = groceryMealRowState(visibleMealUses(item));
+    if (!summary.count) return { inline: "", extra: "" };
+    const notes = summary.uses.map((use) => escapeHtml(compactMealUseNote(use)));
+    if (!summary.collapsed) {
+      return { inline: `<em class="item-meal-note">${notes[0]}</em>`, extra: "" };
+    }
+    const countLabel = t("groceryMealCountMany").replace("{count}", `${summary.count}`);
+    return {
+      inline: "",
+      extra: `<details class="grocery-meal-meta">
+        <summary>${escapeHtml(countLabel)}</summary>
+        <div>${notes.map((note) => `<em class="item-meal-note">${note}</em>`).join("")}</div>
+      </details>`,
+    };
   }
 
   function availableMealFilters() {
@@ -127,7 +134,7 @@ export function createGroceryUi({
         ? t("shoppingForRecipe").replace("{recipe}", usableLocalizedText(selectedRecipe.name, getLang()) || localize(selectedRecipe.name))
         : selected
         ? mealFilterLabel(selected.use)
-        : t("shoppingToBuyForWeek").replace("{count}", `${getGroceries().filter((item) => !item.checked && !isConfirmedAtHome(item)).length}`);
+        : t("shoppingToBuyForWeek").replace("{count}", `${getGroceries().filter((item) => !item.checked && !isConfirmedAtHome(item) && shopRowParts(item).name).length}`);
     }
     const showAll = $("#shoppingShowAll");
     if (showAll) showAll.hidden = !selectedRecipeFilter && !selectedMealFilter;
@@ -205,29 +212,27 @@ export function createGroceryUi({
       : fallback;
   }
 
-  function groceryTranslationAction(item, displayText) {
-    if (getLang() !== "es") return "";
-    const exactSpanish = localizedTextExact(item.text, "es");
-    if (exactSpanish && textMatchesLanguage(exactSpanish, "es")) return "";
-    if (displayText && textMatchesLanguage(displayText, "es") && displayText !== localizedText(item.text, "en")) return "";
-    const recipe = recipeForGroceryItem(item);
-    if (recipe?.id && translateRecipe) {
-      if (recipeTranslationsInFlight.has(recipe.id)) return `<span class="translation-status">${escapeHtml(t("translatingGroceryRecipe"))}</span>`;
-      const error = translationErrors.get(recipe.id);
-      return `<div class="grocery-translation-action"><button class="text-button" type="button" data-translate-grocery-recipe="${escapeHtml(recipe.id)}">${escapeHtml(t("translateGroceryRecipe"))}</button>${error ? `<span class="translation-error">${escapeHtml(error)}</span>` : ""}</div>`;
-    }
-    if (!item?.text || !canonicalText(item.text)) return "";
-    if (translationEditorId === item.id) {
-      const source = canonicalText(item.text);
-      return `<div class="grocery-translation-editor"><input type="text" data-grocery-translation-input="${escapeHtml(item.id)}" value="" placeholder="${escapeHtml(t("spanishTranslationPlaceholder").replace("{source}", source))}" aria-label="${escapeHtml(t("spanishTranslationLabel"))}" /><button class="text-button" type="button" data-save-grocery-translation="${escapeHtml(item.id)}">${escapeHtml(t("saveTranslation"))}</button></div>`;
-    }
-    return `<div class="grocery-translation-action"><button class="text-button" type="button" data-edit-grocery-translation="${escapeHtml(item.id)}">${escapeHtml(t("addSpanishTranslation"))}</button></div>`;
+  function shopRowParts(item) {
+    return groceryRowParts(groceryDisplayText(item));
+  }
+
+  function isShopDisplayableItem(item) {
+    return Boolean(shopRowParts(item).name);
+  }
+
+  function shopDisplayRows(items) {
+    return collapseGroceryItemsByDisplayName(items.filter(isShopDisplayableItem), (item) => shopRowParts(item).name)
+      .map((row) => ({ ...row.item, collapsedIds: row.ids }));
+  }
+
+  function groceryRowIds(item) {
+    return Array.isArray(item.collapsedIds) && item.collapsedIds.length ? item.collapsedIds : [item.id];
   }
 
   function groupGroceriesByAisle(items) {
     const groups = new Map();
     items.forEach((item) => {
-      const aisle = groceryAisleFor(groceryDisplayText(item) || canonicalText(item.text));
+      const aisle = groceryAisleFor(shopRowParts(item).name || groceryDisplayText(item) || canonicalText(item.text));
       if (!groups.has(aisle)) groups.set(aisle, []);
       groups.get(aisle).push(item);
     });
@@ -308,7 +313,7 @@ export function createGroceryUi({
   }
 
   function grocerySection(label, items, options = {}) {
-    const sectionIds = items.map((item) => item.id).join("|");
+    const sectionIds = items.flatMap(groceryRowIds).join("|");
     const content = `
       <section class="grocery-section${options.checkedSection ? " checked-section" : ""}">
         <div class="grocery-section-header">
@@ -322,27 +327,27 @@ export function createGroceryUi({
           </details>
         </div>
         ${items.map((item) => {
-          const displayText = groceryDisplayText(item);
-          const parts = groceryRowParts(displayText);
-          const translationAction = groceryTranslationAction(item, displayText);
+          const parts = shopRowParts(item);
+          if (!parts.name) return "";
+          const rowIds = groceryRowIds(item);
           const atHomeNote = groceryAtHomeNote(item);
           const activity = formatItemActivity(item);
           const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
-          const mealNotes = mealUsesFor(item).map(groceryMealUseNote);
+          const mealMeta = groceryMealMetaParts(item);
           return `
             <article class="grocery-item-row${inventoryDecisionFor(item) === "review" ? " inventory-review" : ""}${item.checked && inventoryDecisionFor(item) !== "review" ? " is-checked" : " is-unchecked"}">
               <label class="grocery-item">
-                <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" ${item.checked && inventoryDecisionFor(item) !== "review" ? "checked" : ""} />
+                <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" data-collapsed-ids="${escapeHtml(rowIds.join("|"))}" ${item.checked && inventoryDecisionFor(item) !== "review" ? "checked" : ""} />
                   <span>
-                    <strong>${escapeHtml(parts.name || displayText)}</strong>
-                    ${mealNotes.length ? `<em class="item-meal-note">${escapeHtml(mealNotes.slice(0, 2).join(" · "))}</em>` : ""}
+                    <strong>${escapeHtml(parts.name)}</strong>
+                    ${mealMeta.inline}
                     ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
                     ${activity ? `<em class="item-activity">${escapeHtml(activity)}</em>` : ""}
                 </span>
                 ${parts.quantityLabel ? `<span class="grocery-qty">${escapeHtml(parts.quantityLabel)}</span>` : ""}
                 ${store ? `<small>${escapeHtml(store)}</small>` : ""}
               </label>
-              ${translationAction}
+              ${mealMeta.extra}
               ${inventoryDecisionFor(item) === "review" ? `<div class="inventory-review-actions" aria-label="${escapeHtml(t("reviewInventoryMatch"))}">
                 <button class="ghost-button" type="button" data-inventory-need="${escapeHtml(item.id)}">${t("keepOnList")}</button>
                 <button class="text-button" type="button" data-inventory-have="${escapeHtml(item.id)}">${t("haveEnough")}</button>
@@ -367,12 +372,13 @@ export function createGroceryUi({
         ? getGroceries().filter((item) => item.recipeId === selectedRecipeFilter
           || mealUsesFor(item).some((use) => use.recipeId === selectedRecipeFilter))
         : getGroceries();
-    const activeItems = groceries.filter((item) => inventoryDecisionFor(item) === "review" || (!item.checked && !isConfirmedAtHome(item)));
-    const inventoryItems = groceries.filter(isConfirmedAtHome);
-    const checkedItems = groceries.filter((item) => item.checked && inventoryDecisionFor(item) !== "review" && !isConfirmedAtHome(item));
+    const visibleGroceries = groceries.filter(isShopDisplayableItem);
+    const activeItems = shopDisplayRows(visibleGroceries.filter((item) => inventoryDecisionFor(item) === "review" || (!item.checked && !isConfirmedAtHome(item))));
+    const inventoryItems = shopDisplayRows(visibleGroceries.filter(isConfirmedAtHome));
+    const checkedItems = shopDisplayRows(visibleGroceries.filter((item) => item.checked && inventoryDecisionFor(item) !== "review" && !isConfirmedAtHome(item)));
     const sections = groupGroceriesByAisle(activeItems);
 
-    if (!groceries.length) {
+    if (!visibleGroceries.length) {
       $("#groceryList").innerHTML = `<p class="empty-state">${t(selectedMealFilter ? "groceryMealFilterEmpty" : "groceryEmpty")}</p>`;
       renderPurchasedAction();
       return;
@@ -406,14 +412,17 @@ export function createGroceryUi({
       if (!checkbox) return;
 
       const groceries = getGroceries();
-      const item = groceries.find((grocery) => grocery.id === checkbox.dataset.groceryId);
-      if (!item) return;
-      const nextItem = { ...item, checked: checkbox.checked };
-      if (!checkbox.checked && isConfirmedAtHome(item)) nextItem.inventoryDecision = "need";
-      if (checkbox.checked && item.inventorySuggested) nextItem.inventoryDecision = "need";
-      nextItem.inInventory = isConfirmedAtHome(item);
-      touchItem(nextItem);
-      setGroceries(groceries.map((entry) => entry.id === item.id ? nextItem : entry));
+      const ids = new Set(`${checkbox.dataset.collapsedIds || checkbox.dataset.groceryId || ""}`.split("|").filter(Boolean));
+      if (!ids.size) return;
+      setGroceries(groceries.map((grocery) => {
+        if (!ids.has(grocery.id)) return grocery;
+        const nextItem = { ...grocery, checked: checkbox.checked };
+        if (!checkbox.checked && isConfirmedAtHome(grocery)) nextItem.inventoryDecision = "need";
+        if (checkbox.checked && grocery.inventorySuggested) nextItem.inventoryDecision = "need";
+        nextItem.inInventory = isConfirmedAtHome(grocery);
+        touchItem(nextItem);
+        return nextItem;
+      }));
       renderGroceries();
       await saveGroceries();
     });
@@ -423,52 +432,6 @@ export function createGroceryUi({
       const deleteButton = event.target.closest("[data-delete-grocery-section]");
       const needButton = event.target.closest("[data-inventory-need]");
       const haveButton = event.target.closest("[data-inventory-have]");
-      const translateButton = event.target.closest("[data-translate-grocery-recipe]");
-      const editTranslationButton = event.target.closest("[data-edit-grocery-translation]");
-      const saveTranslationButton = event.target.closest("[data-save-grocery-translation]");
-
-      if (translateButton) {
-        event.preventDefault();
-        const recipeId = translateButton.dataset.translateGroceryRecipe;
-        if (!recipeId || recipeTranslationsInFlight.has(recipeId)) return;
-        recipeTranslationsInFlight.add(recipeId);
-        translationErrors.delete(recipeId);
-        renderGroceries();
-        try {
-          await translateRecipe(recipeId);
-        } catch (error) {
-          translationErrors.set(recipeId, error?.message || t("groceryTranslationError"));
-        } finally {
-          recipeTranslationsInFlight.delete(recipeId);
-          renderGroceries();
-        }
-        return;
-      }
-
-      if (editTranslationButton) {
-        event.preventDefault();
-        translationEditorId = editTranslationButton.dataset.editGroceryTranslation || "";
-        renderGroceries();
-        document.querySelector("[data-grocery-translation-input]")?.focus();
-        return;
-      }
-
-      if (saveTranslationButton) {
-        event.preventDefault();
-        const id = saveTranslationButton.dataset.saveGroceryTranslation;
-        const input = saveTranslationButton.closest(".grocery-item-row")?.querySelector("[data-grocery-translation-input]");
-        const value = input?.value?.trim() || "";
-        if (!id || !value) return;
-        const item = getGroceries().find((entry) => entry.id === id);
-        if (!item) return;
-        const nextItem = { ...item, text: updateLocalizedText(item.text, value, "es") };
-        touchItem(nextItem);
-        setGroceries(getGroceries().map((entry) => entry.id === id ? nextItem : entry));
-        translationEditorId = "";
-        renderGroceries();
-        await saveGroceries();
-        return;
-      }
 
       if (needButton || haveButton) {
         event.preventDefault();

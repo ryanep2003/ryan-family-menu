@@ -786,6 +786,9 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
 .grocery-item > span { display: grid; min-width: 0; gap: 2px; }
 .grocery-item strong { overflow-wrap: anywhere; font-size: 1.04rem; font-weight: 600; line-height: 1.35; }
 .grocery-item em, .grocery-item small { color: var(--muted); font-size: .8rem; font-style: normal; }
+.grocery-item-row > .grocery-meal-meta { padding: 0 0 var(--space-2) 56px; }
+.grocery-meal-meta > summary { color: var(--muted); font-size: .8rem; cursor: pointer; min-height: 32px; display: flex; align-items: center; }
+.grocery-meal-meta .item-meal-note { display: block; color: var(--muted); font-size: .8rem; font-style: normal; }
 .grocery-translation-action, .grocery-translation-editor { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .grocery-item-row > .grocery-translation-action, .grocery-item-row > .grocery-translation-editor { padding: 0 0 var(--space-2) 56px; }
 .grocery-translation-editor { margin-top: var(--space-1); }
