@@ -380,6 +380,44 @@ export function appendRecipeToMeal(meal, {
   });
 }
 
+export function applyPersistedMealTarget({
+  context,
+  meal,
+  schedule,
+  calendarMeals,
+  visibleWeekStartKey,
+  currentWeekStartKey,
+} = {}) {
+  const [type, key] = `${context || ""}`.split(":");
+  const normalizedTarget = normalizeMealPlan(meal);
+  const nextSchedule = normalizeSchedule(schedule);
+  const nextCalendarMeals = { ...normalizeCalendar(calendarMeals) };
+  const isDateKey = /^\d{4}-\d{2}-\d{2}$/.test(key);
+
+  if (type === "calendar" && isDateKey) {
+    nextCalendarMeals[key] = normalizedTarget;
+    return { schedule: nextSchedule, calendarMeals: nextCalendarMeals, applied: true, mode: "calendar" };
+  }
+
+  if (type === "weekdate" && isDateKey) {
+    const weekDates = activeWeekDateKeys(visibleWeekStartKey);
+    const weekDate = weekDates.find((item) => item.dateKey === key);
+    if (!weekDate) {
+      return { schedule: nextSchedule, calendarMeals: nextCalendarMeals, applied: false, mode: "" };
+    }
+    nextSchedule[weekDate.key] = normalizedTarget;
+    const visibleIsCurrentWeek = weekDates[0]?.dateKey === currentWeekStartKey;
+    if (!visibleIsCurrentWeek) {
+      nextCalendarMeals[key] = normalizedTarget;
+      return { schedule: nextSchedule, calendarMeals: nextCalendarMeals, applied: true, mode: "calendar" };
+    }
+    delete nextCalendarMeals[key];
+    return { schedule: nextSchedule, calendarMeals: nextCalendarMeals, applied: true, mode: "week-template" };
+  }
+
+  return { schedule: nextSchedule, calendarMeals: nextCalendarMeals, applied: false, mode: "" };
+}
+
 export function copyCurrentWeekToNextWeek(weekStartKey, schedule, calendarMeals) {
   const normalizedSchedule = normalizeSchedule(schedule);
   const normalizedCalendar = normalizeCalendar(calendarMeals);

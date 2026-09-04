@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { auditEvent, hasPlannedMeals, normalizeAuditEvents, normalizeStateSnapshots, stateSnapshot } from "../audit-logic.js";
+import { auditEvent, hasPlannedMeals, normalizeAuditEvents, normalizeStateSnapshots, persistRestoredMealPlan, stateSnapshot } from "../audit-logic.js";
 
 test("audit history recognizes legacy and current meal plans", () => {
   assert.equal(hasPlannedMeals({ schedule: { mon: { dinner: "pasta" } } }), true);
@@ -30,4 +30,26 @@ test("state snapshots retain only recoverable schedule data", () => {
   assert.equal(normalized[0].actor, "Eric");
   assert.equal(normalized[0].schedule.mon.dinner, "pasta");
   assert.equal(normalizeStateSnapshots([{ id: "bad" }]).length, 0);
+});
+
+test("restoring a snapshot persists meals through the Plan schedule save path", async () => {
+  const sharedCalls = [];
+  const scheduleCalls = [];
+  const result = await persistRestoredMealPlan({
+    saveSharedState: async (options) => {
+      sharedCalls.push(options);
+      return true;
+    },
+    saveSchedule: async (options) => {
+      scheduleCalls.push(options);
+      return true;
+    },
+  });
+
+  assert.equal(sharedCalls.length, 1);
+  assert.equal(sharedCalls[0].auditAction, "restore-menu");
+  assert.equal(sharedCalls[0].allowEmptySchedule, true);
+  assert.equal(scheduleCalls.length, 1);
+  assert.equal(scheduleCalls[0].allowEmptySchedule, true);
+  assert.deepEqual(result, { sharedSaved: true, scheduleSaved: true });
 });

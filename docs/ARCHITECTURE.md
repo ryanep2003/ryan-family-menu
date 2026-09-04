@@ -26,7 +26,7 @@ GitHub main
 
 - `index.html`: household gate and all main views.
 - `app.js`: application bootstrap, in-memory state, persistence orchestration, navigation, shared rendering, and domain-module composition.
-- `styles.css`: design tokens, component styling, responsive layout, PWA-safe bottom navigation, and motion preferences.
+- `styles.css`: design tokens, component styling, responsive layout, PWA-safe four-tab bottom navigation, the Plan dirty-save bar, and motion preferences.
 
 Recipe catalog reads use `/.netlify/functions/recipes?view=catalog`, a text-only household-scoped response that omits embedded source photos. The browser stores a versioned, household-scoped stale-while-revalidate cache and keeps cached recipes visible when a refresh fails. The unqualified recipes endpoint remains available for older clients and full recipe writes.
 - `translations.js`: English and Spanish interface strings. Both languages must expose the same keys.
@@ -91,7 +91,7 @@ Shared menu and grocery conflicts now perform a small three-way merge before ret
 
 School lunch plans, child lunch preferences, saved combinations, and lunch constraints are an additive, bounded field in `shared-state`. Approved lunch components are converted into ordinary planned grocery contributions with lunch/date/child provenance, then rebuilt through the same idempotent grocery merge used by the family meal plan. Lunch generation is pure browser logic; it reads household preferences, meal-plan ingredients, groceries, inventory, and realistically available leftovers without creating a second catalog, grocery record, or AI endpoint.
 
-Meal planning has an additive, household-scoped `schedule` record and endpoint. New clients read and write schedule/calendar changes through that smaller versioned record, so meal edits do not compete with unrelated profile, budget, or recipe edits. The legacy schedule fields remain in `shared-state` as a fallback for older clients while the transition completes.
+Meal planning has an additive, household-scoped `schedule` record and endpoint. New clients read and write schedule/calendar changes through that smaller versioned record, so meal edits do not compete with unrelated profile, budget, or recipe edits. The legacy schedule fields remain in `shared-state` as a fallback for older clients while the transition completes. Restore this menu therefore writes both the audit/shared-state path and `saveSchedule`; otherwise the next `loadSchedule` replaces the restored meals.
 
 Shared recipes use a platform catalog plus household index and individual recipe records. The authorized catalog read idempotently backfills the twelve platform starters into `platform:recipe-index` and `platform:recipe:<id>` records, then returns them together with household recipes; household IDs win on collisions. Published household recipes are appended through `POST`; recipe edits and hidden/deleted IDs are stored in family state. Unpublished drafts remain local to the browser. The browser has no bundled recipe fallback: the platform/household Blob catalog is the runtime source of truth. The server-only migration seed remains isolated under `netlify/migrations/` until the platform record count is verified, after which it can be deleted.
 
@@ -135,7 +135,7 @@ The current Content Security Policy keeps scripts, styles, images, and connectio
 
 - `app.js`: application wiring and most shared workflow orchestration.
 - `netlify/functions/family-state.js`: the largest persisted record sanitizer.
-- `schedule-utils.js` and `schedule-ui.js`: canonical meals, legacy compatibility, portions, and leftovers.
+- `schedule-utils.js` and `schedule-ui.js`: canonical meals, legacy compatibility, portions, leftovers, next-week calendar persist, and the always-visible Plan save bar.
 - `grocery-logic.js`: quantity aggregation, inventory coverage, and generation idempotency.
 - `translations.js`: every interface string in both languages.
 - `service-worker.js`: manual static module list.

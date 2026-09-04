@@ -65,7 +65,7 @@ Important fields:
 
 - `weekStart`: visible week anchor.
 - `schedule`: seven recurring/effective day records keyed `mon` through `sun`. New clients read and write this through the household-scoped `schedule` record so meal edits do not compete with unrelated profile, budget, or recipe edits. The legacy `shared-state` schedule remains readable during the transition; do not delete it until all old clients are retired.
-- `calendarMeals`: date-specific meal records keyed `YYYY-MM-DD`, capped at 730 days.
+- `calendarMeals`: date-specific meal records keyed `YYYY-MM-DD`, capped at 730 days. Week-editor edits for a date outside the current calendar week write that date’s calendar override and must not delete it. This-week weekday edits still update the repeating `schedule` template and clear that date’s override.
 - `favorites`: recipe IDs.
 - `tasks`: shared household tasks.
 - `availableFood`: leftovers and snacks to use soon.
@@ -95,7 +95,7 @@ Food IDs and grocery quantities come from the code-owned catalog in `lunch-logic
 
 ## Household audit history
 
-The `family-menu-audit` record is separate from editable shared state so a stale or empty browser save cannot erase the recovery trail. It contains bounded arrays of `events` (actor, time, version, action, and changed dates) and `snapshots` (the prior schedule/calendar meal plan). The server keeps at most 200 events and 30 snapshots. Reading requires the same household key as the main menu. Restoring a snapshot writes a new shared-state version and creates another audit entry; it never deletes history.
+The `family-menu-audit` record is separate from editable shared state so a stale or empty browser save cannot erase the recovery trail. It contains bounded arrays of `events` (actor, time, version, action, and changed dates) and `snapshots` (the prior schedule/calendar meal plan). The server keeps at most 200 events and 30 snapshots. Reading requires the same household key as the main menu. Restoring a snapshot writes a new shared-state version for the audit trail **and** writes the same `schedule` / `calendarMeals` / `weekStart` through the household `schedule` record Plan uses day-to-day. A reload then keeps the restored meals instead of replacing them from the live schedule record. Restore never deletes history.
 
 ## Meal Record
 

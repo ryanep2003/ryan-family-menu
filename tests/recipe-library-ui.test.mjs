@@ -276,7 +276,7 @@ test("photo-less recipes stay typographic instead of showing generic food art", 
   ui.renderRecipes();
   ui.renderDetail();
 
-  assert.match(elements["#recipeList"].innerHTML, /recipe-card no-media/);
+  assert.match(elements["#recipeList"].innerHTML, /recipe-browse-card no-media/);
   assert.doesNotMatch(elements["#recipeList"].innerHTML, /data:image\/svg\+xml,/);
   assert.doesNotMatch(elements["#recipeList"].innerHTML, /<img/);
   assert.equal(elements["#photoStrip"].innerHTML, "");

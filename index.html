@@ -3,77 +3,97 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#F0EFEA" />
+    <meta name="theme-color" content="#F5F1EA" />
     <title>Family Menu</title>
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=155" />
+    <link rel="stylesheet" href="styles.css?v=158" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
-      THESIS: The Honed Almanac gives a family's food life the calm material clarity of a working kitchen, without turning it into kitchen décor.
-      OWN-WORLD: Mineral canvas, ceramic-paper surfaces, herb actions, clay attention, and exact seams replace dashboard chrome and literal texture.
-      STORY: The day’s actual food remains the opening record; a practical next move is clear without visual noise or planning mechanics.
-      FIRST VIEWPORT: At 390px, the Breakfast–Lunch–Dinner state leads; at Plan, a selected day and its meal chapters remain distinct.
-      FORM: Flat reading surfaces, disciplined mineral rules, and tonal chapters carry the product; temporary sheets alone gain elevation.
-      FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+      Family navy/sage shell: Today, Plan, Shop, and Library on a warm beige canvas.
+      Plan keeps Save on screen while dirty. School Lunches opens from Plan.
     -->
     <section class="household-gate" id="householdGate" aria-labelledby="householdGateHeading">
       <div class="household-gate-panel">
-        <div class="household-gate-brand" aria-hidden="true">F</div>
-        <h1 id="householdGateHeading">Your family’s shared kitchen</h1>
-        <p class="household-gate-intro">Meal plans, groceries, recipes, and food at home stay private to one household.</p>
-        <div class="household-gate-tabs" role="group" aria-label="Choose how to continue">
-          <button id="showJoinHousehold" type="button" aria-pressed="true">Join my household</button>
-          <button id="showCreateHousehold" type="button" aria-pressed="false">Create a household</button>
+        <div class="household-gate-top">
+          <div class="household-gate-brand" aria-hidden="true">F</div>
+          <div class="segmented" aria-label="Language" data-i18n-aria-label="languageLabel">
+            <button type="button" class="active" data-lang="en" aria-pressed="true">EN</button>
+            <button type="button" data-lang="es" aria-pressed="false">ES</button>
+          </div>
+        </div>
+        <h1 id="householdGateHeading" data-i18n="gateHeading">Your family’s shared kitchen</h1>
+        <p class="household-gate-intro" data-i18n="gateIntro">Meal plans, groceries, recipes, and food at home stay private to one household.</p>
+        <div class="household-gate-tabs" role="group" aria-label="Choose how to continue" data-i18n-aria-label="chooseHowToContinue">
+          <button id="showJoinHousehold" type="button" aria-pressed="true" data-i18n="joinHousehold">Join my household</button>
+          <button id="showCreateHousehold" type="button" aria-pressed="false" data-i18n="createHousehold">Create a household</button>
         </div>
 
         <form class="household-access-form" id="joinHouseholdForm">
           <label>
-            <span>Family key</span>
-            <input name="householdKey" type="password" autocomplete="off" spellcheck="false" required placeholder="Paste the key shared by your family" />
+            <span data-i18n="familyKeyLabel">Family key</span>
+            <input name="householdKey" type="password" autocomplete="off" spellcheck="false" required placeholder="Paste the key shared by your family" data-i18n-placeholder="familyKeyPlaceholder" />
           </label>
-          <p class="field-note">Treat this key like a password. Everyone with it can see and update your family menu.</p>
-          <button class="primary-action" type="submit">Open our family menu</button>
+          <p class="field-note" data-i18n="familyKeyNote">Treat this key like a password. Everyone with it can see and update your family menu.</p>
+          <button class="primary-action" type="submit" data-i18n="openFamilyMenu">Open our family menu</button>
         </form>
 
         <form class="household-access-form" id="createHouseholdForm" hidden>
           <label>
-            <span>Household name</span>
-            <input name="householdName" type="text" autocomplete="organization" maxlength="80" required placeholder="The Rivera family" />
+            <span data-i18n="householdNameLabel">Household name</span>
+            <input name="householdName" type="text" autocomplete="organization" maxlength="80" required placeholder="The Rivera family" data-i18n-placeholder="householdNamePlaceholder" />
           </label>
           <label>
-            <span>New-family invite code</span>
-            <input name="creationCode" type="password" autocomplete="off" required placeholder="Provided by the app owner" />
+            <span data-i18n="inviteCodeLabel">New-family invite code</span>
+            <input name="creationCode" type="password" autocomplete="off" required placeholder="Provided by the app owner" data-i18n-placeholder="inviteCodePlaceholder" />
           </label>
-          <button class="primary-action" type="submit">Create our household</button>
+          <button class="primary-action" type="submit" data-i18n="createHouseholdSubmit">Create our household</button>
         </form>
 
         <section class="household-key-receipt" id="householdKeyReceipt" hidden>
-          <h2>Save your family key now</h2>
-          <p>This is the only way to open this household on another device. Store it in your family password manager, then share it privately.</p>
+          <h2 data-i18n="saveKeyHeading">Save your family key now</h2>
+          <p data-i18n="saveKeyIntro">This is the only way to open this household on another device. Store it in your family password manager, then share it privately.</p>
           <label>
-            <span>Family key</span>
+            <span data-i18n="familyKeyLabel">Family key</span>
             <input id="createdHouseholdKey" type="text" readonly />
           </label>
-          <button class="primary-action" id="continueToHousehold" type="button">I saved it — continue</button>
+          <button class="primary-action" id="continueToHousehold" type="button" data-i18n="savedKeyContinue">I saved it — continue</button>
         </section>
         <p class="household-gate-status" id="householdGateStatus" role="status"></p>
       </div>
     </section>
 
     <header class="app-header">
-      <div class="brand-lockup">
+      <div class="app-header-top">
         <span class="brand-mark" aria-hidden="true">F</span>
-        <div>
-          <p class="eyebrow"><span id="householdName">Family</span> · <span data-i18n="eyebrow">Family Menu</span></p>
-          <h1>Ryan Family Menu</h1>
+        <div class="header-actions">
+          <button class="guide-button" id="quickGuideToggle" type="button" aria-controls="quickGuide" aria-expanded="false" data-i18n="quickGuide">Quick guide</button>
+          <button class="shell-add-button" id="globalAddRecipe" type="button" aria-label="Add recipe" data-i18n="addTab" data-i18n-aria-label="addRecipe">Add</button>
+          <div class="install-prompt" id="installPrompt" role="group" aria-label="Install / Add to Home Screen" data-i18n-aria-label="installApp" hidden>
+            <button class="install-button" id="installButton" type="button" title="Install / Add to Home Screen" aria-label="Install / Add to Home Screen" data-i18n-title="installApp" data-i18n-aria-label="installApp">
+              <span aria-hidden="true">+</span>
+              <span data-i18n="installShort">Install</span>
+            </button>
+            <button class="install-dismiss" id="dismissInstall" type="button" aria-label="Hide install suggestion" data-i18n-aria-label="dismissInstall">&times;</button>
+          </div>
+          <div class="segmented" aria-label="Language" data-i18n-aria-label="languageLabel">
+            <button type="button" class="active" data-lang="en">EN</button>
+            <button type="button" data-lang="es">ES</button>
+          </div>
         </div>
       </div>
-      <div class="header-actions">
+      <div class="app-header-title-row">
+        <h1 id="viewPageTitle" data-i18n="todayTab">Today</h1>
         <details class="household-menu">
-          <summary class="household-button">Household</summary>
+          <summary class="household-button">
+            <span class="household-summary-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1z"/></svg>
+            </span>
+            <span id="householdName">Family</span>
+            <span class="household-summary-chevron" aria-hidden="true">▾</span>
+          </summary>
           <div class="household-menu-panel">
             <strong id="householdMenuName">Family</strong>
             <p>Share this key privately with family members you trust.</p>
@@ -97,11 +117,11 @@
               <button class="ghost-button" id="rotateHouseholdKey" type="button">Create new family key</button>
             </details>
             <button class="primary-action" id="openFamily" type="button" data-i18n="openFamily">Family &amp; preferences</button>
-            <details class="household-activity" id="householdHistoryPanel">
+            <details class="household-activity" id="householdActivityPanel">
               <summary data-i18n="recentActivity">Recent activity</summary>
               <div id="householdActivity"></div>
             </details>
-            <details class="household-activity">
+            <details class="household-activity" id="householdHistoryPanel">
               <summary data-i18n="changeHistory">Change history</summary>
               <div id="householdHistory"></div>
             </details>
@@ -109,19 +129,6 @@
             <p class="household-menu-status" id="householdMenuStatus" role="status"></p>
           </div>
         </details>
-        <button class="guide-button" id="quickGuideToggle" type="button" aria-controls="quickGuide" aria-expanded="false" data-i18n="quickGuide">Quick guide</button>
-        <button class="shell-add-button" id="globalAddRecipe" type="button" aria-label="Add recipe" data-i18n="addTab" data-i18n-aria-label="addRecipe">Add</button>
-        <div class="install-prompt" id="installPrompt" role="group" aria-label="Install / Add to Home Screen" data-i18n-aria-label="installApp" hidden>
-          <button class="install-button" id="installButton" type="button" title="Install / Add to Home Screen" aria-label="Install / Add to Home Screen" data-i18n-title="installApp" data-i18n-aria-label="installApp">
-            <span aria-hidden="true">+</span>
-            <span data-i18n="installShort">Install</span>
-          </button>
-          <button class="install-dismiss" id="dismissInstall" type="button" aria-label="Hide install suggestion" data-i18n-aria-label="dismissInstall">&times;</button>
-        </div>
-        <div class="segmented" aria-label="Language" data-i18n-aria-label="languageLabel">
-          <button type="button" class="active" data-lang="en">EN</button>
-          <button type="button" data-lang="es">ES</button>
-        </div>
       </div>
     </header>
 
@@ -132,11 +139,22 @@
 
     <main>
       <nav class="tabs" aria-label="Views" data-i18n-aria-label="viewsLabel">
-        <button type="button" class="active" data-view="today" data-i18n="todayTab">Today</button>
-        <button type="button" data-view="schedule" data-i18n="planTab">Plan</button>
-        <button type="button" data-view="lunches" data-i18n="lunchesTab">Lunches</button>
-        <button type="button" data-view="grocery" data-i18n="shopTab">Shop</button>
-        <button type="button" data-view="recipes" data-i18n="libraryTab">Library</button>
+        <button type="button" class="active" data-view="today">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="M9 14h2M9 17h6"/></svg>
+          <span data-i18n="todayTab">Today</span>
+        </button>
+        <button type="button" data-view="schedule">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/><path d="M8 14h3v3H8zM13 14h3v3h-3z"/></svg>
+          <span data-i18n="planTab">Plan</span>
+        </button>
+        <button type="button" data-view="grocery">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 6h2l1.2 9.2a2 2 0 0 0 2 1.8h7.3a2 2 0 0 0 2-1.6L21 9H8"/><circle cx="10" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg>
+          <span data-i18n="shopTab">Shop</span>
+        </button>
+        <button type="button" data-view="recipes">
+          <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4h9a3 3 0 0 1 3 3v13H8a2 2 0 0 1-2-2V4z"/><path d="M6 18a2 2 0 0 1 2-2h12"/></svg>
+          <span data-i18n="libraryTab">Library</span>
+        </button>
       </nav>
 
       <div class="sync-status-row app-sync-status">
@@ -179,55 +197,66 @@
             </button>
           </div>
         </section>
-        <section class="today-story" id="todayBand" aria-labelledby="todayMealsHeading">
-          <div class="today-story-main">
-            <p class="today-date" id="todayDate"></p>
-            <h2 id="todayMealsHeading" data-i18n="todayMeals">Today's meals</h2>
-            <div class="today-meals" id="todayMealsList"></div>
-            <div class="today-memory-record" id="todayMemory" hidden>
-              <p id="todayMemoryFact"></p>
-              <p id="todayMemoryWhen"></p>
+        <section class="today-story" id="todayBand" aria-labelledby="todayDinnerName">
+          <div class="today-hero-card">
+            <div class="today-hero-copy">
+              <p class="today-hero-kicker" id="todayHeroKicker" data-i18n="dinnerSlot">Dinner</p>
+              <p class="today-date" id="todayDate" hidden></p>
+              <h2 id="todayDinnerName">Tonight</h2>
+              <p class="today-hero-meta" id="todayDinnerMeta"></p>
             </div>
-            <div class="today-temporal-notes">
-              <div class="today-temporal-note" id="todayBefore" hidden>
-                <span data-i18n="beforeDinner">Before dinner</span>
-                <p id="todayBeforeText"></p>
-              </div>
-              <div class="today-temporal-note" id="todayAfter" hidden>
-                <span data-i18n="afterDinner">After tonight</span>
-                <p id="todayAfterText"></p>
-              </div>
-            </div>
-            <button class="primary-action" id="cookToday" type="button" data-i18n="cookButton">Cook</button>
+            <figure class="today-image" id="todayImage" hidden>
+              <img class="today-backdrop" id="todayBackdrop" src="assets/meatballs-2.webp" alt="" />
+            </figure>
+            <button class="primary-action" id="cookToday" type="button" data-i18n="cookTonight">Cook tonight</button>
           </div>
-          <div class="today-date-mark" id="todayDateMark" aria-hidden="true">
+          <div class="today-date-mark" id="todayDateMark" hidden aria-hidden="true">
             <span id="todayDayName"></span>
             <strong id="todayDayNumber"></strong>
           </div>
-          <figure class="today-image" id="todayImage" hidden>
-            <img class="today-backdrop" id="todayBackdrop" src="assets/meatballs-2.webp" alt="" />
-          </figure>
         </section>
 
         <section class="today-daily-loop" id="todayDailyLoop" aria-labelledby="todayDailyLoopHeading">
-          <div class="today-daily-loop-copy">
-            <p class="section-label" data-i18n="todayDailyLoopLabel">Plan and shop</p>
-            <h2 id="todayDailyLoopHeading" data-i18n="todayDailyLoopHeading">Find a recipe or open the shopping list</h2>
-          </div>
-          <form class="today-recipe-search" id="todayRecipeSearchForm">
-            <label for="todayRecipeSearch">
-              <span data-i18n="searchLabel">Search recipes</span>
-              <input type="search" id="todayRecipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" data-i18n-aria-label="searchLabel" aria-label="Search recipes" placeholder="chicken, salad, pasta" autocomplete="off" inputmode="search" />
-            </label>
-            <button class="primary-action" type="submit" data-i18n="searchRecipes">Search recipes</button>
-          </form>
+          <p class="section-label" id="todayDailyLoopHeading" data-i18n="todayDailyLoopLabel">Plan &amp; shop</p>
           <div class="today-shortcuts">
-            <button type="button" data-view-target="grocery" data-inventory-target="shopping">
+            <button class="today-shop-button" type="button" data-view-target="grocery" data-inventory-target="shopping">
+              <svg class="today-shortcut-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 6h2l1.2 9.2a2 2 0 0 0 2 1.8h7.3a2 2 0 0 0 2-1.6L21 9H8"/><circle cx="10" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg>
               <span data-i18n="groceryShortcut">Shopping list</span>
-              <strong id="todayGrocerySummary">0 items to buy</strong>
+              <strong class="count-badge" id="todayGrocerySummary">0</strong>
             </button>
+            <form class="today-recipe-search" id="todayRecipeSearchForm">
+              <label class="visually-hidden" for="todayRecipeSearch">
+                <span data-i18n="searchLabel">Search recipes</span>
+              </label>
+              <input class="visually-hidden" type="search" id="todayRecipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" data-i18n-aria-label="searchLabel" aria-label="Search recipes" placeholder="chicken, salad, pasta" autocomplete="off" inputmode="search" />
+              <button class="today-find-button" type="submit">
+                <svg class="today-shortcut-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6"/><path d="m16 16 4 4"/></svg>
+                <span data-i18n="findRecipe">Find a recipe</span>
+              </button>
+            </form>
           </div>
         </section>
+
+        <section class="today-also" aria-labelledby="todayAlsoHeading">
+          <p class="section-label" id="todayAlsoHeading" data-i18n="alsoToday">Also today</p>
+          <h2 id="todayMealsHeading" class="visually-hidden" data-i18n="todayMeals">Today's meals</h2>
+          <div class="today-meals" id="todayMealsList"></div>
+        </section>
+
+        <div class="today-memory-record" id="todayMemory" hidden>
+          <p id="todayMemoryFact"></p>
+          <p id="todayMemoryWhen"></p>
+        </div>
+        <div class="today-temporal-notes">
+          <div class="today-temporal-note" id="todayBefore" hidden>
+            <span data-i18n="beforeDinner">Before dinner</span>
+            <p id="todayBeforeText"></p>
+          </div>
+          <div class="today-temporal-note" id="todayAfter" hidden>
+            <span data-i18n="afterDinner">After tonight</span>
+            <p id="todayAfterText"></p>
+          </div>
+        </div>
 
         <section class="dinner-feedback" id="dinnerFeedback" aria-live="polite" hidden></section>
 
@@ -396,16 +425,23 @@
         </div>
 
         <div id="weekPlanningPanel" role="tabpanel" aria-labelledby="weekPlanningTab">
+          <button class="plan-lunches-entry" type="button" data-view-target="lunches">
+            <span>
+              <strong data-i18n="planLunchesEntry">School lunches</strong>
+              <small data-i18n="planLunchesEntryCopy">Pack tomorrow’s lunchboxes</small>
+            </span>
+            <span class="plan-lunches-chevron" aria-hidden="true">›</span>
+          </button>
           <div class="section-heading view-banner week-banner">
             <div>
-              <p class="view-kicker">Plan</p>
+              <p class="view-kicker visually-hidden">Plan</p>
               <h2 id="weekTitle" tabindex="-1" data-i18n="weekHeading">This week</h2>
             </div>
             <div class="week-actions">
               <div class="week-navigation" role="group" aria-label="Week navigation" data-i18n-aria-label="weekNavigationLabel">
-                <button class="ghost-button" id="previousWeek" type="button"><span class="week-nav-icon" aria-hidden="true">←</span><span data-i18n="previousWeek">Previous week</span></button>
+                <button class="week-nav-circle" id="previousWeek" type="button"><span class="week-nav-icon" aria-hidden="true">←</span><span class="visually-hidden" data-i18n="previousWeek">Previous week</span></button>
                 <button class="ghost-button" id="thisWeek" type="button"><span data-i18n="thisWeek">This week</span></button>
-                <button class="ghost-button" id="nextWeek" type="button"><span class="week-nav-icon" aria-hidden="true">→</span><span data-i18n="nextWeek">Next week</span></button>
+                <button class="week-nav-circle" id="nextWeek" type="button"><span class="week-nav-icon" aria-hidden="true">→</span><span class="visually-hidden" data-i18n="nextWeek">Next week</span></button>
               </div>
               <button class="primary-action" id="copyWeekForward" type="button" data-i18n="copyWeekForward">Plan next week</button>
               <button class="ghost-button" id="resetWeek" type="button" data-i18n="reset">Clear week</button>
@@ -414,6 +450,10 @@
           <p class="upload-status" id="scheduleStatus" role="status"></p>
           <div class="schedule-grid" id="scheduleGrid"></div>
           <section class="schedule-editor" id="weekDateEditor"></section>
+          <div class="plan-save-bar" id="planSaveBar" data-plan-save-bar hidden>
+            <p class="plan-save-bar-status" id="planSaveBarStatus" role="status"></p>
+            <button class="primary-action" id="planSaveBarButton" type="button" data-plan-save-bar-button data-i18n="saveMealChanges">Save changes</button>
+          </div>
         </div>
 
         <div id="monthPlanningPanel" role="tabpanel" aria-labelledby="monthPlanningTab" hidden>
@@ -450,7 +490,7 @@
         <div id="shoppingPanel" role="tabpanel" aria-labelledby="shoppingModeTab">
           <div class="section-heading grocery-heading view-banner grocery-banner">
             <div>
-              <h2 data-i18n="shoppingTitle">Shopping</h2>
+              <h2 class="visually-hidden" data-i18n="shoppingTitle">Shopping</h2>
               <p class="shopping-context" id="shoppingContext" data-i18n="shoppingContextAll">Everything the family needs.</p>
               <button class="text-action shopping-show-all" id="shoppingShowAll" type="button" data-i18n="shoppingShowAll" hidden>Show everything</button>
             </div>
@@ -729,10 +769,28 @@
       </section>
 
       <section class="view" id="recipesView">
+        <div class="library-tools" id="recipeLibraryTools">
+          <label>
+            <span data-i18n="searchLabel">Search recipes</span>
+            <input type="search" id="recipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" data-i18n-aria-label="searchLabel" aria-label="Search recipes" placeholder="chicken, salad, pasta" autocomplete="off" inputmode="search" />
+          </label>
+          <label>
+            <span data-i18n="categoryFilterLabel">Category</span>
+            <select id="categoryFilter">
+              <option value="all" data-i18n="categoryAll">All</option>
+              <option value="main" data-i18n="categoryMain">Mains</option>
+              <option value="side" data-i18n="categorySide">Sides</option>
+              <option value="salad" data-i18n="categorySalad">Salads</option>
+              <option value="sauce" data-i18n="categorySauce">Sauces</option>
+              <option value="dessert" data-i18n="categoryDessert">Desserts</option>
+              <option value="draft" data-i18n="categoryDraft">Drafts</option>
+            </select>
+          </label>
+        </div>
         <div class="section-heading view-banner recipe-banner">
           <div>
-            <p class="view-kicker" data-i18n="recipeKicker">From our kitchen</p>
-            <h2 data-i18n="libraryHeading">Recipe library</h2>
+            <p class="view-kicker visually-hidden" data-i18n="recipeKicker">From our kitchen</p>
+            <h2 class="visually-hidden" data-i18n="libraryHeading">Recipe library</h2>
           </div>
           <div class="recipe-banner-actions">
             <span class="view-count" id="recipeCount"></span>
@@ -773,7 +831,7 @@
                   </select>
                 </label>
               </div>
-              <button class="primary-action" id="addRecipeToMealSubmit" type="submit" data-i18n="addRecipeToMealSubmit">Add to this meal</button>
+              <button class="soft-action" id="addRecipeToMealSubmit" type="submit" data-i18n="addRecipeToMealSubmit">Add to this meal</button>
               <p class="form-status" id="addRecipeToMealStatus" role="status"></p>
             </form>
             <button class="ghost-button" id="addRecipeGroceries" type="button" aria-describedby="recipeSafetyLockReason" data-i18n="addRecipeToGroceries">Add ingredients to groceries</button>
@@ -863,24 +921,6 @@
             </aside>
           </div>
         </section>
-        <div class="library-tools" id="recipeLibraryTools">
-          <label>
-            <span data-i18n="searchLabel">Search recipes</span>
-            <input type="search" id="recipeSearch" data-i18n-placeholder="recipeSearchPlaceholder" data-i18n-aria-label="searchLabel" aria-label="Search recipes" placeholder="chicken, salad, pasta" autocomplete="off" inputmode="search" />
-          </label>
-          <label>
-            <span data-i18n="categoryFilterLabel">Category</span>
-            <select id="categoryFilter">
-              <option value="all" data-i18n="categoryAll">All</option>
-              <option value="main" data-i18n="categoryMain">Mains</option>
-              <option value="side" data-i18n="categorySide">Sides</option>
-              <option value="salad" data-i18n="categorySalad">Salads</option>
-              <option value="sauce" data-i18n="categorySauce">Sauces</option>
-              <option value="dessert" data-i18n="categoryDessert">Desserts</option>
-              <option value="draft" data-i18n="categoryDraft">Drafts</option>
-            </select>
-          </label>
-        </div>
         <section class="recipe-picks" id="recipePicksSection" aria-labelledby="recipePicksHeading">
           <div class="panel-heading">
             <div>
@@ -1015,6 +1055,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=155"></script>
+    <script type="module" src="app.js?v=158"></script>
   </body>
 </html>

@@ -86,6 +86,12 @@ export function auditEvent({ action = "state-updated", actor = "Family", updated
   };
 }
 
+export async function persistRestoredMealPlan({ saveSharedState, saveSchedule }) {
+  const sharedSaved = await saveSharedState({ allowEmptySchedule: true, auditAction: "restore-menu" });
+  const scheduleSaved = await saveSchedule({ allowEmptySchedule: true });
+  return { sharedSaved: Boolean(sharedSaved), scheduleSaved: Boolean(scheduleSaved) };
+}
+
 export function stateSnapshot({ state = {}, actor = "Family", version = 0, updatedAt = new Date().toISOString() } = {}) {
   return {
     id: `snapshot-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

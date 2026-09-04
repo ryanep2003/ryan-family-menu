@@ -17,8 +17,9 @@ Family Menu is the shared operating system for a household's food life. It helps
 The shipped product currently supports:
 
 - Private household creation and shared access through a family key.
-- A Today view for the current meal, with recipe search and the persistent shopping list on the primary surface. Inventory, leftovers/snacks, household handoffs, tasks, favorites, and recent activity remain available without sitting in the daily loop.
-- Weekly and monthly planning across breakfast, lunch, and dinner.
+- A Today view for tonight’s dinner, with Plan & shop shortcuts, breakfast/lunch under Also today, and household tools remaining available without sitting in the daily loop.
+- Four primary destinations: Today, Plan, Shop, and Library. School Lunches stays in the product and opens from Plan.
+- Weekly and monthly planning across breakfast, lunch, and dinner. Plan keeps a navy Save bar on screen while a meal change is unsaved, and meal add/remove/edit auto-saves.
 - A child-specific School Lunches workspace for tomorrow, a Monday–Friday plan, interchangeable lunchbox components, ready-made ideas, easy swaps, packing checklists, and progressively learned favorites.
 - Flexible meal composition using mains, sides, salads, desserts, sauces, drinks, and other recipe roles.
 - Per-meal serving plans for adults, children, and guests, with batch and leftover estimates.
@@ -40,7 +41,7 @@ The product does not currently provide individual user accounts, verified identi
 
 1. **Open a household:** create an invited household or enter the private family key on a new device.
 2. **Plan food:** choose meals for a week or specific month date, compose each meal, adjust eaters, and estimate leftovers.
-3. **Pack school lunch:** approve or swap tomorrow's lunch, fill a simple school week, mark no-packing days, and check items off in packing mode.
+3. **Pack school lunch:** from Plan, open School Lunches to approve or swap tomorrow's lunch, fill a simple school week, mark no-packing days, and check items off in packing mode.
 4. **Prepare and hand off:** use Today to see what is planned, what should be used soon, and who is helping.
 5. **Shop:** open the persistent shopping list from Today or the Shop tab, review possible inventory matches, check items while shopping, or upload a receipt directly so purchases move home and spending stays current. The Shop tab always opens the list, not home inventory.
 6. **Manage food at home:** optionally track location, amount, stock, and expiration; scan photos for suggested items. Inventory is not required to plan meals or shop.

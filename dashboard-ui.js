@@ -133,21 +133,43 @@ export function createDashboardUi({
       todayMealsList.innerHTML = [
         { key: "breakfast", label: "breakfastSlot" },
         { key: "lunch", label: "lunchSlot" },
-        { key: "dinner", label: "dinnerSlot" },
       ].map((period) => {
         const items = recipesForMeal.filter((item) => item.period === period.key);
         const recipes = items.map((item) => item.recipe).filter(Boolean);
-        const isDinner = period.key === "dinner";
-        return `<section class="today-meal-row${!recipes.length ? " is-open" : ""}${isDinner ? " is-dinner" : ""}">
-          <span>${escapeHtml(t(period.label))}</span>
-          <div>${recipes.length
-            ? recipes.map((recipe) => `<button class="today-meal-open" type="button" data-open-today-recipe="${escapeHtml(recipe.id)}">${escapeHtml(localize(recipe.name))}</button>`).join("")
-            : isDinner
-              ? `<span class="today-meal-empty">${escapeHtml(t("nothingForTonight"))}</span><button class="text-action today-meal-plan" type="button" data-plan-today-period="dinner">${escapeHtml(t("planDinner"))}</button>`
-              : `<span class="today-meal-empty">${escapeHtml(t("mealPeriodEmpty"))}</span>`
-          }</div>
-        </section>`;
+        return `<button class="today-also-row" type="button"${recipes[0] ? ` data-open-today-recipe="${escapeHtml(recipes[0].id)}"` : ` data-plan-today-period="${escapeHtml(period.key)}"`}>
+          <span class="today-also-icon" aria-hidden="true"></span>
+          <span class="today-also-copy">
+            <strong>${escapeHtml(t(period.label))}</strong>
+            <small>${recipes.length
+              ? escapeHtml(recipes.map((recipe) => localize(recipe.name)).join(" · "))
+              : escapeHtml(t("mealPeriodEmpty"))
+            }</small>
+          </span>
+          <span class="today-also-chevron" aria-hidden="true">›</span>
+        </button>`;
       }).join("");
+    }
+    const dinnerName = $("#todayDinnerName");
+    const dinnerMeta = $("#todayDinnerMeta");
+    const heroKicker = $("#todayHeroKicker");
+    if (heroKicker) heroKicker.textContent = t("dinnerSlot");
+    if (dinnerName) {
+      dinnerName.textContent = mainRecipe
+        ? localize(mainRecipe.name)
+        : t("nothingForTonight");
+    }
+    if (dinnerMeta) {
+      const weekday = new Intl.DateTimeFormat(getLang() === "es" ? "es-US" : "en-US", { weekday: "short" })
+        .format(new Date())
+        .replace(/\.$/, "");
+      const plan = meal.servingPlans?.dinner || meal.servingPlan || {};
+      const people = Math.max(1, (Number(plan.adults) || 0) + (Number(plan.kids) || 0) + (Number(plan.guests) || 0)) || 4;
+      const metaBits = [
+        weekday,
+        localize(mainRecipe?.meta || "") || localize(mainRecipe?.short || ""),
+        t("heroPeople").replace("{count}", `${people}`),
+      ].filter(Boolean);
+      dinnerMeta.textContent = metaBits.join(" • ");
     }
     const story = selectTodayStory({
       recipe: mainRecipe,
@@ -234,11 +256,11 @@ export function createDashboardUi({
     }
     renderAvailableFood();
     const toBuy = getGroceries().filter((item) => !item.checked && !item.inInventory).length;
-    $("#todayGrocerySummary").textContent = `${toBuy} ${t("itemsToBuy")}`;
+    $("#todayGrocerySummary").textContent = `${toBuy}`;
     $("#todayInventorySummary").textContent = `${getInventory().filter((item) => item.stockState !== "out").length} ${t("itemsAtHome")}`;
-    $("#cookToday").hidden = !mainRecipe;
-    $("#cookToday").disabled = !mainRecipe;
-    $("#cookToday").textContent = t("cookButton");
+    $("#cookToday").hidden = false;
+    $("#cookToday").disabled = false;
+    $("#cookToday").textContent = mainRecipe ? t("cookTonight") : t("planDinner");
   }
 
   function taskAssigneeLabel(assignee) {

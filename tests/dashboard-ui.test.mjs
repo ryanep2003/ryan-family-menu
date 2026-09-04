@@ -37,7 +37,9 @@ function element() {
 
 function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
   const elements = Object.fromEntries([
-    "todayMealsHeading",
+    "todayDinnerName",
+    "todayDinnerMeta",
+    "todayHeroKicker",
     "todayMealsList",
     "todayDate",
     "todayBand",
@@ -95,6 +97,7 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
       plannedRecipeMany: "{count} planned recipes",
       noMealSet: "No meal set yet.",
       cookButton: "Cook this",
+      cookTonight: "Cook tonight",
       planDinner: "Plan dinner",
       nothingForTonight: "Nothing planned for tonight.",
       nothingForTonightNote: "Choose one meal and bring tonight into focus.",
@@ -146,6 +149,7 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [] } = {}) {
       lunchSlot: "Lunch",
       dinnerSlot: "Dinner",
       mealPeriodEmpty: "Nothing planned for this meal yet.",
+      heroPeople: "{count} people",
     })[key] || key,
     escapeHtml: (value) => value,
     localize: (value) => value,
@@ -214,7 +218,7 @@ test("Today presents one dinner, its family memory, and its companions", () => {
 
   assert.equal(elements.todayMemoryFact.textContent, "Everyone ate this last time.");
   assert.equal(elements.todayBackdrop.src, "main.jpg");
-  assert.equal(elements.cookToday.textContent, "Cook this");
+  assert.equal(elements.cookToday.textContent, "Cook tonight");
 });
 
 test("Today surfaces the most urgent available food first", () => {
@@ -307,11 +311,13 @@ test("empty Today offers a direct planning action", () => {
 
   assert.equal(elements.todayBand.classList.contains("empty"), true);
   assert.equal(elements.todayBackdrop.hidden, true);
-  assert.equal(elements.cookToday.hidden, true);
-  assert.match(elements.todayMealsList.innerHTML, /Dinner[\s\S]*Nothing planned for this meal yet|Dinner[\s\S]*Nothing planned for tonight/);
-  assert.match(elements.todayMealsList.innerHTML, /Plan dinner/);
+  assert.equal(elements.cookToday.hidden, false);
+  assert.equal(elements.cookToday.textContent, "Plan dinner");
+  assert.match(elements.todayMealsList.innerHTML, /Breakfast/);
+  assert.match(elements.todayMealsList.innerHTML, /Lunch/);
+  assert.doesNotMatch(elements.todayMealsList.innerHTML, /Dinner/);
 
-  elements.todayMealsList.handlers.click({ target: { closest: (selector) => selector === "[data-plan-today-period]" ? { dataset: { planTodayPeriod: "dinner" } } : null } });
+  elements.cookToday.handlers.click();
   assert.equal(events.focusedDate, "2026-07-10");
 });
 
@@ -327,7 +333,7 @@ test("Today keeps a planned lunch visible when dinner is open", () => {
 
   assert.match(elements.todayMealsList.innerHTML, /Lunch/);
   assert.match(elements.todayMealsList.innerHTML, /Green Monster Salad/);
-  assert.match(elements.todayMealsList.innerHTML, /<span>Lunch<\/span>[\s\S]*Green Monster Salad/);
-  assert.match(elements.todayMealsList.innerHTML, /<span>Dinner<\/span>[\s\S]*Nothing planned for tonight[\s\S]*Plan dinner/);
-  assert.equal(elements.cookToday.hidden, true);
+  assert.doesNotMatch(elements.todayMealsList.innerHTML, /Dinner/);
+  assert.equal(elements.cookToday.hidden, false);
+  assert.equal(elements.cookToday.textContent, "Plan dinner");
 });

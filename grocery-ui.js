@@ -1,6 +1,14 @@
 import { allLocalizedText, canonicalText, localizedText, localizedTextExact, updateLocalizedText, usableLocalizedText } from "./localized-data.js";
 import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
-import { normalizedWords, parseIngredientAmount } from "./grocery-logic.js";
+import {
+  cleanIngredientForGrocery,
+  groceryAisleFor,
+  groceryAisleLabelKey,
+  groceryAisleOrder,
+  groceryRowParts,
+  normalizedWords,
+  parseIngredientAmount,
+} from "./grocery-logic.js";
 
 export function createGroceryUi({
   $,
@@ -119,7 +127,7 @@ export function createGroceryUi({
         ? t("shoppingForRecipe").replace("{recipe}", usableLocalizedText(selectedRecipe.name, getLang()) || localize(selectedRecipe.name))
         : selected
         ? mealFilterLabel(selected.use)
-        : t("shoppingContextAll");
+        : t("shoppingToBuyForWeek").replace("{count}", `${getGroceries().filter((item) => !item.checked && !isConfirmedAtHome(item)).length}`);
     }
     const showAll = $("#shoppingShowAll");
     if (showAll) showAll.hidden = !selectedRecipeFilter && !selectedMealFilter;
@@ -216,14 +224,20 @@ export function createGroceryUi({
     return `<div class="grocery-translation-action"><button class="text-button" type="button" data-edit-grocery-translation="${escapeHtml(item.id)}">${escapeHtml(t("addSpanishTranslation"))}</button></div>`;
   }
 
-  function groupGroceriesBySource(items) {
+  function groupGroceriesByAisle(items) {
     const groups = new Map();
     items.forEach((item) => {
-      const label = grocerySourceLabel(item);
-      if (!groups.has(label)) groups.set(label, []);
-      groups.get(label).push(item);
+      const aisle = groceryAisleFor(groceryDisplayText(item) || canonicalText(item.text));
+      if (!groups.has(aisle)) groups.set(aisle, []);
+      groups.get(aisle).push(item);
     });
-    return [...groups.entries()].map(([label, groupItems]) => ({ label, items: groupItems }));
+    return groceryAisleOrder()
+      .filter((aisle) => groups.has(aisle))
+      .map((aisle) => ({
+        aisle,
+        label: t(groceryAisleLabelKey(aisle)),
+        items: groups.get(aisle),
+      }));
   }
 
   function shoppingOverlapFor(text) {
@@ -284,7 +298,7 @@ export function createGroceryUi({
         ? t("finishShoppingCount").replace("{count}", `${count}`)
         : t("finishShopping");
     }
-    const showPrompt = count > 0 && !Boolean($("body")?.classList?.contains?.("finish-shopping-open"));
+    const showPrompt = hasShoppingItems && !Boolean($("body")?.classList?.contains?.("finish-shopping-open"));
     if (prompt) prompt.hidden = !showPrompt;
     $("body")?.classList?.toggle("finish-shopping-visible", showPrompt);
     if (!hasShoppingItems) {
@@ -295,11 +309,10 @@ export function createGroceryUi({
 
   function grocerySection(label, items, options = {}) {
     const sectionIds = items.map((item) => item.id).join("|");
-    const groupUseNotes = [...new Set(items.flatMap((item) => mealUsesFor(item).map(groceryMealUseNote)))];
     const content = `
       <section class="grocery-section${options.checkedSection ? " checked-section" : ""}">
         <div class="grocery-section-header">
-          ${options.collapsed ? "" : `<div><h3>${escapeHtml(label)}</h3>${groupUseNotes.length ? `<p>${groupUseNotes.slice(0, 3).map((note) => escapeHtml(note)).join(" · ")}${groupUseNotes.length > 3 ? ` · ${escapeHtml(t("groceryMealUseMore").replace("{count}", `${groupUseNotes.length - 3}`))}` : ""}</p>` : ""}</div>`}
+          ${options.collapsed ? "" : `<div><h3>${escapeHtml(label)}</h3>${options.count != null ? `<span class="aisle-count">${escapeHtml(`${options.count}`)}</span>` : ""}</div>`}
           <details class="grocery-section-menu">
             <summary>${t("listTools")}</summary>
             <div class="grocery-section-actions">
@@ -310,19 +323,23 @@ export function createGroceryUi({
         </div>
         ${items.map((item) => {
           const displayText = groceryDisplayText(item);
+          const parts = groceryRowParts(displayText);
           const translationAction = groceryTranslationAction(item, displayText);
           const atHomeNote = groceryAtHomeNote(item);
           const activity = formatItemActivity(item);
           const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
+          const mealNotes = mealUsesFor(item).map(groceryMealUseNote);
           return `
             <article class="grocery-item-row${inventoryDecisionFor(item) === "review" ? " inventory-review" : ""}${item.checked && inventoryDecisionFor(item) !== "review" ? " is-checked" : " is-unchecked"}">
               <label class="grocery-item">
                 <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" ${item.checked && inventoryDecisionFor(item) !== "review" ? "checked" : ""} />
                   <span>
-                    <strong>${escapeHtml(displayText)}</strong>
+                    <strong>${escapeHtml(parts.name || displayText)}</strong>
+                    ${mealNotes.length ? `<em class="item-meal-note">${escapeHtml(mealNotes.slice(0, 2).join(" · "))}</em>` : ""}
                     ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
                     ${activity ? `<em class="item-activity">${escapeHtml(activity)}</em>` : ""}
                 </span>
+                ${parts.quantityLabel ? `<span class="grocery-qty">${escapeHtml(parts.quantityLabel)}</span>` : ""}
                 ${store ? `<small>${escapeHtml(store)}</small>` : ""}
               </label>
               ${translationAction}
@@ -353,7 +370,7 @@ export function createGroceryUi({
     const activeItems = groceries.filter((item) => inventoryDecisionFor(item) === "review" || (!item.checked && !isConfirmedAtHome(item)));
     const inventoryItems = groceries.filter(isConfirmedAtHome);
     const checkedItems = groceries.filter((item) => item.checked && inventoryDecisionFor(item) !== "review" && !isConfirmedAtHome(item));
-    const sections = groupGroceriesBySource(activeItems);
+    const sections = groupGroceriesByAisle(activeItems);
 
     if (!groceries.length) {
       $("#groceryList").innerHTML = `<p class="empty-state">${t(selectedMealFilter ? "groceryMealFilterEmpty" : "groceryEmpty")}</p>`;
@@ -362,7 +379,7 @@ export function createGroceryUi({
     }
 
     $("#groceryList").innerHTML = [
-      ...sections.map((section) => grocerySection(section.label, section.items)),
+      ...sections.map((section) => grocerySection(section.label, section.items, { count: section.items.length })),
       inventoryItems.length ? grocerySection(t("alreadyHave"), inventoryItems, { checkedSection: true, collapsed: true }) : "",
       checkedItems.length ? grocerySection(t("checkedOffSection"), checkedItems, { checkedSection: true, collapsed: true }) : "",
     ].join("");

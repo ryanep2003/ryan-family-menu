@@ -5,8 +5,83 @@ import {
   updateLocalizedText,
 } from "./localized-data.js";
 
+const GROCERY_AISLE_ORDER = ["produce", "dairy", "meat", "bakery", "frozen", "pantry"];
+
+const GROCERY_AISLE_PATTERNS = {
+  produce: /\b(lemon|lime|spinach|lettuce|tomato|onion|garlic|apple|banana|berr|avocado|carrot|cucumber|pepper|cilantro|parsley|herb|potato|onion|fruit|vegetable|produce|celery|kale|broccoli|cabbage|zucchini|mango|grape|orange|strawberry|blueberry|lim[oó]n|espinaca|lechuga|tomate|cebolla|ajo|manzana|pl[aá]tano|aguacate|zanahoria|pepino|pimiento|cilantro|papa|patata|verdura|fruta|apio|br[oó]coli)\b/i,
+  dairy: /\b(milk|cheese|yogurt|yoghurt|butter|cream|egg|leche|queso|yogur|mantequilla|crema|huevo|cheddar|mozzarella|parmesan|parmesano)\b/i,
+  meat: /\b(chicken|beef|pork|turkey|fish|salmon|shrimp|bacon|sausage|pollo|res|cerdo|carne|pavo|pescado|camar[oó]n|tocino|salchicha)\b/i,
+  bakery: /\b(bread|tortilla|bun|roll|bagel|pita|croissant|pan|bollo)\b/i,
+  frozen: /\b(frozen|congelad)\b/i,
+};
+
+const GROCERY_UNIT_WORDS = new Set([
+  "cup", "cups", "taza", "tazas",
+  "tbsp", "tablespoon", "tablespoons", "cucharada", "cucharadas",
+  "tsp", "teaspoon", "teaspoons", "cucharadita", "cucharaditas",
+  "lb", "lbs", "pound", "pounds", "libra", "libras",
+  "oz", "ounce", "ounces", "onza", "onzas",
+  "g", "gram", "grams", "gramo", "gramos",
+  "kg", "kilogram", "kilograms", "kilogramo", "kilogramos",
+  "package", "packages", "paquete", "paquetes",
+  "container", "containers", "envase", "envases",
+  "bunch", "bunches", "manojo", "manojos",
+  "clove", "cloves", "diente", "dientes",
+  "can", "cans", "lata", "latas",
+  "bag", "bags", "bolsa", "bolsas",
+  "gal", "gallon", "gallons", "galon", "galón", "galones",
+]);
+
 export function cleanIngredientForGrocery(item) {
-  return `${item || ""}`.replace(/\s+/g, " ").trim();
+  return `${item || ""}`
+    .replace(/[*_`]+/g, "")
+    .replace(/^\s*#+\s*/, "")
+    .replace(/^\s*[-•]+\s*/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function groceryAisleFor(text) {
+  const haystack = canonicalText(text).toLowerCase();
+  for (const key of GROCERY_AISLE_ORDER) {
+    if (key === "pantry") return "pantry";
+    if (GROCERY_AISLE_PATTERNS[key].test(haystack)) return key;
+  }
+  return "pantry";
+}
+
+export function groceryAisleLabelKey(aisle) {
+  const keys = {
+    produce: "aisleProduce",
+    dairy: "aisleDairy",
+    meat: "aisleMeat",
+    bakery: "aisleBakery",
+    frozen: "aisleFrozen",
+    pantry: "aislePantry",
+  };
+  return keys[aisle] || keys.pantry;
+}
+
+export function groceryAisleOrder() {
+  return [...GROCERY_AISLE_ORDER];
+}
+
+export function groceryRowParts(text) {
+  const cleaned = cleanIngredientForGrocery(text);
+  const parsed = parseIngredientAmount(cleaned);
+  if (!(parsed.quantity > 0)) return { name: cleaned, quantityLabel: "" };
+  const tokens = `${parsed.remainder || ""}`.trim().split(/\s+/).filter(Boolean);
+  const first = (tokens[0] || "").toLowerCase().replace(/\.$/, "");
+  if (tokens.length > 1 && GROCERY_UNIT_WORDS.has(first)) {
+    return {
+      name: tokens.slice(1).join(" "),
+      quantityLabel: `${formatIngredientAmount(parsed.quantity)} ${tokens[0]}`,
+    };
+  }
+  return {
+    name: parsed.remainder || cleaned,
+    quantityLabel: formatIngredientAmount(parsed.quantity),
+  };
 }
 
 function fractionValue(value) {

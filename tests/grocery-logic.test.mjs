@@ -3,8 +3,11 @@ import assert from "node:assert/strict";
 
 import {
   applyInventoryCoverage,
+  cleanIngredientForGrocery,
+  groceryAisleFor,
   groceryItem,
   groceryItemsFromRecipe,
+  groceryRowParts,
   inventoryMatchFor,
   mergeGroceries,
   parseIngredientAmount,
@@ -222,4 +225,13 @@ test("groceryItem records optional household attribution", () => {
 
   assert.equal(item.updatedBy, "Eric");
   assert.ok(item.updatedAt);
+});
+
+test("grocery names drop markdown markers and split quantity badges", () => {
+  assert.equal(cleanIngredientForGrocery("**4 lemons**"), "4 lemons");
+  assert.equal(cleanIngredientForGrocery("# Garlic"), "Garlic");
+  assert.deepEqual(groceryRowParts("4 lemons"), { name: "lemons", quantityLabel: "4" });
+  assert.equal(groceryAisleFor("spinach"), "produce");
+  assert.equal(groceryAisleFor("whole milk"), "dairy");
+  assert.equal(groceryAisleFor("olive oil"), "pantry");
 });

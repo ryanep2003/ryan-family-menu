@@ -65,11 +65,11 @@ test("inventory maintenance does not replace shopping context", () => {
   assert.doesNotMatch(inventoryUi, /setInventoryMode\("shopping"\)/);
 });
 
-test("mobile shell preserves room for the fixed five-view navigation", () => {
+test("mobile shell preserves room for the fixed four-view navigation", () => {
   assert.ok(styles.includes("--bottom-nav-space: calc(76px + env(safe-area-inset-bottom))"));
   assert.ok(styles.includes("padding: 0 var(--space-4) calc(var(--bottom-nav-space) + var(--space-6))"));
   assert.ok(styles.includes("env(safe-area-inset-top)"));
-  assert.ok(styles.includes(".tabs { position: fixed") && styles.includes("grid-template-columns: repeat(5, 1fr)"));
+  assert.ok(styles.includes(".tabs { position: fixed") && styles.includes("grid-template-columns: repeat(4, 1fr)"));
   assert.match(html, /class="sync-status-row app-sync-status"/);
   assert.match(html, /id="sharedSyncStatusPanel"[^>]*hidden/);
   assert.match(html, /id="recipeSyncStatusPanel"[^>]*hidden/);
@@ -81,11 +81,15 @@ test("mobile shell preserves room for the fixed five-view navigation", () => {
 });
 
 test("the new core navigation keeps the existing route mapping intact", () => {
-  assert.match(html, /data-view="schedule" data-i18n="planTab"/);
-  assert.match(html, /data-view="lunches" data-i18n="lunchesTab"/);
-  assert.match(html, /data-view="grocery" data-i18n="shopTab"/);
-  assert.match(html, /data-view="recipes" data-i18n="libraryTab"/);
-  assert.ok(app.includes('viewName === "add" ? "recipes" : viewName'));
+  assert.match(html, /data-view="schedule"/);
+  assert.match(html, /data-i18n="planTab"/);
+  assert.doesNotMatch(html, /class="tabs"[\s\S]*data-view="lunches"/);
+  assert.match(html, /data-view="grocery"/);
+  assert.match(html, /data-i18n="shopTab"/);
+  assert.match(html, /data-view="recipes"/);
+  assert.match(html, /data-i18n="libraryTab"/);
+  assert.ok(app.includes('viewName === "add" ? "recipes"'));
+  assert.ok(app.includes('viewName === "lunches" ? "schedule"'));
 });
 
 test("the compact mobile shell keeps account actions separate from content", () => {
@@ -136,7 +140,7 @@ test("Today keeps the meal, memory, and next actions ahead of household utilitie
 
 test("Today puts recipe search and the shopping list on the primary surface", () => {
   assert.ok(html.indexOf('id="todayDailyLoop"') < html.indexOf('class="today-tools"'));
-  assert.ok(html.indexOf('id="todayRecipeSearch"') < html.indexOf('class="today-tools"'));
+  assert.ok(html.indexOf('id="todayRecipeSearchForm"') < html.indexOf('class="today-tools"'));
   assert.ok(html.indexOf('id="todayGrocerySummary"') < html.indexOf('class="today-tools"'));
   assert.ok(html.indexOf('id="todayInventorySummary"') > html.indexOf('class="today-tools"'));
   assert.match(html, /id="todayRecipeSearchForm"/);
@@ -147,7 +151,8 @@ test("Today puts recipe search and the shopping list on the primary surface", ()
 
 test("the Shop tab always opens the persistent shopping list", () => {
   assert.match(app, /button\.dataset\.view === "grocery"[\s\S]*inventoryMode = "shopping"/);
-  assert.match(html, /data-view="grocery" data-i18n="shopTab"/);
+  assert.match(html, /data-view="grocery"/);
+  assert.match(html, /data-i18n="shopTab"/);
 });
 
 test("grocery loads keep a local checked item instead of clobbering it", () => {
@@ -172,8 +177,9 @@ test("household attribution remains available for any family", () => {
 });
 
 test("Today has an explicit empty-state path to planning", () => {
-  assert.match(html, /id="cookToday"[^>]*data-i18n="cookButton"/);
-  assert.match(html, /data-view="schedule" data-i18n="planTab"/);
+  assert.match(html, /id="cookToday"[^>]*data-i18n="cookTonight"/);
+  assert.match(html, /data-view="schedule"/);
+  assert.match(html, /data-i18n="planTab"/);
   assert.match(html, /id="focusedDinnerPanel"[^>]*hidden/);
   assert.match(styles, /\.today-story\s*\{/);
   assert.match(app, /openFocusedDinnerPlan:[\s\S]*scheduleUi\.openFocusedDinner/);
