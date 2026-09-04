@@ -104,6 +104,8 @@ function harness(overrides = {}) {
       groceryMealServings: "{count} servings",
       groceryMealBatches: "cook {count}×",
       groceryMealUseMore: "+{count} more planned meals",
+      groceryMealCountOne: "1 meal",
+      groceryMealCountMany: "{count} meals",
       breakfastSlot: "Desayuno",
       lunchSlot: "Almuerzo",
       dinnerSlot: "Cena",
@@ -345,7 +347,7 @@ test("receipt matching prefers a checked purchase over an unchecked duplicate", 
   assert.equal(ui.shoppingMatchForReceiptItem("lemons")?.id, "checked");
 });
 
-test("renderGroceries explains the meals, servings, and batches behind generated items", () => {
+test("renderGroceries keeps shared meal provenance collapsed until expanded", () => {
   const { elements, ui } = harness({
     state: {
       groceries: [{
@@ -364,10 +366,48 @@ test("renderGroceries explains the meals, servings, and batches behind generated
 
   ui.renderGroceries();
 
-  assert.match(elements["#groceryList"].innerHTML, /Cena · Pollo al limon · 4 servings · cook 1×/);
-  assert.match(elements["#groceryList"].innerHTML, /Almuerzo · Pollo al limon · 2 servings · cook 0.5×/);
+  assert.match(elements["#groceryList"].innerHTML, /<summary>2 meals<\/summary>/);
+  assert.match(elements["#groceryList"].innerHTML, /Cena/);
+  assert.match(elements["#groceryList"].innerHTML, /Almuerzo/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Pollo al limon/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /4 servings/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /cook 1×/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /cook 0.5×/);
   assert.equal(elements["#groceryMealFilterPanel"].hidden, false);
   assert.match(elements["#groceryMealFilter"].innerHTML, /2026-07-20::dinner/);
+});
+
+test("a single planned meal shows a compact date and slot without recipe prose", () => {
+  const { elements, ui } = harness({
+    state: {
+      groceries: [{
+        id: "one-meal",
+        text: { en: "**crushed red pepper**", es: "**crushed red pepper**" },
+        checked: false,
+        store: "any",
+        source: "meal-plan",
+        mealUses: [{
+          dateKey: "2026-09-03",
+          mealSlot: "lunch",
+          recipeId: "skewers",
+          recipeName: { en: "Yogurt Marinated Grilled Chicken Skewers" },
+          servings: 3,
+          batches: 0.5,
+        }],
+      }],
+      recipes: [],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /<strong>crushed red pepper<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /item-meal-note/);
+  assert.match(elements["#groceryList"].innerHTML, /Almuerzo/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Yogurt Marinated/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /3 servings/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /cook 0.5×/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /grocery-meal-meta/);
 });
 
 test("meal filter shows only groceries connected to the selected planned meal", async () => {

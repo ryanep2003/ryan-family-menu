@@ -1,10 +1,11 @@
 import { allLocalizedText, canonicalText, localizedText, localizedTextExact, updateLocalizedText, usableLocalizedText } from "./localized-data.js";
 import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
 import {
-  cleanIngredientForGrocery,
+  formatCompactGroceryMealCue,
   groceryAisleFor,
   groceryAisleLabelKey,
   groceryAisleOrder,
+  groceryMealRowState,
   groceryRowParts,
   normalizedWords,
   parseIngredientAmount,
@@ -64,31 +65,40 @@ export function createGroceryUi({
     }).format(date);
   }
 
-  function mealUseRecipeName(use) {
-    const recipe = use.recipeId ? allRecipes().find((entry) => entry.id === use.recipeId) : null;
-    return recipe ? usableLocalizedText(recipe.name, getLang()) || localize(recipe.name) : usableLocalizedText(use.recipeName, getLang());
-  }
-
   function mealFilterLabel(use) {
     return t("groceryMealFilterOption")
       .replace("{date}", mealDateLabel(use.dateKey))
       .replace("{meal}", t(`${use.mealSlot}Slot`));
   }
 
-  function groceryMealUseNote(use) {
-    const note = t("groceryMealUse")
-      .replace("{date}", mealDateLabel(use.dateKey))
-      .replace("{meal}", t(`${use.mealSlot}Slot`))
-      .replace("{recipe}", mealUseRecipeName(use) || t("addOnsSection"));
-    const details = [
-      Number(use.servings) > 0
-        ? t("groceryMealServings").replace("{count}", `${use.servings}`)
-        : "",
-      Number(use.batches) > 0
-        ? t("groceryMealBatches").replace("{count}", `${use.batches}`)
-        : "",
-    ].filter(Boolean);
-    return [note, ...details].join(" · ");
+  function visibleMealUses(item) {
+    const uses = mealUsesFor(item);
+    if (!selectedMealFilter) return uses;
+    return uses.filter((use) => mealFilterKey(use) === selectedMealFilter);
+  }
+
+  function compactMealUseNote(use) {
+    return formatCompactGroceryMealCue({
+      dateLabel: mealDateLabel(use.dateKey),
+      mealLabel: t(`${use.mealSlot}Slot`),
+    });
+  }
+
+  function groceryMealMetaParts(item) {
+    const summary = groceryMealRowState(visibleMealUses(item));
+    if (!summary.count) return { inline: "", extra: "" };
+    const notes = summary.uses.map((use) => escapeHtml(compactMealUseNote(use)));
+    if (!summary.collapsed) {
+      return { inline: `<em class="item-meal-note">${notes[0]}</em>`, extra: "" };
+    }
+    const countLabel = t("groceryMealCountMany").replace("{count}", `${summary.count}`);
+    return {
+      inline: "",
+      extra: `<details class="grocery-meal-meta">
+        <summary>${escapeHtml(countLabel)}</summary>
+        <div>${notes.map((note) => `<em class="item-meal-note">${note}</em>`).join("")}</div>
+      </details>`,
+    };
   }
 
   function availableMealFilters() {
@@ -328,20 +338,21 @@ export function createGroceryUi({
           const atHomeNote = groceryAtHomeNote(item);
           const activity = formatItemActivity(item);
           const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
-          const mealNotes = mealUsesFor(item).map(groceryMealUseNote);
+          const mealMeta = groceryMealMetaParts(item);
           return `
             <article class="grocery-item-row${inventoryDecisionFor(item) === "review" ? " inventory-review" : ""}${item.checked && inventoryDecisionFor(item) !== "review" ? " is-checked" : " is-unchecked"}">
               <label class="grocery-item">
                 <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" ${item.checked && inventoryDecisionFor(item) !== "review" ? "checked" : ""} />
                   <span>
                     <strong>${escapeHtml(parts.name || displayText)}</strong>
-                    ${mealNotes.length ? `<em class="item-meal-note">${escapeHtml(mealNotes.slice(0, 2).join(" · "))}</em>` : ""}
+                    ${mealMeta.inline}
                     ${atHomeNote ? `<em class="at-home-note">${escapeHtml(atHomeNote)}</em>` : ""}
                     ${activity ? `<em class="item-activity">${escapeHtml(activity)}</em>` : ""}
                 </span>
                 ${parts.quantityLabel ? `<span class="grocery-qty">${escapeHtml(parts.quantityLabel)}</span>` : ""}
                 ${store ? `<small>${escapeHtml(store)}</small>` : ""}
               </label>
+              ${mealMeta.extra}
               ${translationAction}
               ${inventoryDecisionFor(item) === "review" ? `<div class="inventory-review-actions" aria-label="${escapeHtml(t("reviewInventoryMatch"))}">
                 <button class="ghost-button" type="button" data-inventory-need="${escapeHtml(item.id)}">${t("keepOnList")}</button>

@@ -32,13 +32,54 @@ const GROCERY_UNIT_WORDS = new Set([
   "gal", "gallon", "gallons", "galon", "galón", "galones",
 ]);
 
-export function cleanIngredientForGrocery(item) {
-  return `${item || ""}`
+const INGREDIENT_SECTION_HEADER = /^(ingredients?|ingredientes?|directions?|instrucciones?|method|m[eé]todo|preparaci[oó]n|notes?|notas?|yield|rendimiento|serves?|servings?|porciones?)\s*:?\s*$/i;
+const INGREDIENT_HEADER_PREFIX = /^(?:ingredients?|ingredientes?)\s*:\s*/i;
+
+function cleanIngredientLine(line) {
+  return `${line || ""}`
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/[*_`]+/g, "")
     .replace(/^\s*#+\s*/, "")
     .replace(/^\s*[-•]+\s*/, "")
+    .replace(INGREDIENT_HEADER_PREFIX, "")
+    .replace(/^["'“”]+|["'“”]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function isIngredientJunkLine(line) {
+  if (!line) return true;
+  if (INGREDIENT_SECTION_HEADER.test(line)) return true;
+  if (/^[-—–_=*]{3,}$/.test(line)) return true;
+  return false;
+}
+
+export function cleanIngredientForGrocery(item) {
+  const lines = `${item || ""}`
+    .split(/\r?\n/)
+    .map(cleanIngredientLine)
+    .filter((line) => !isIngredientJunkLine(line));
+  if (!lines.length) return "";
+  if (lines.length === 1) return lines[0];
+  const withAmount = [...lines].reverse().find((line) => /^\d/.test(line));
+  return withAmount || lines[lines.length - 1];
+}
+
+export function formatCompactGroceryMealCue({ dateLabel = "", mealLabel = "" } = {}) {
+  return [dateLabel, mealLabel].filter(Boolean).join(" · ");
+}
+
+export function groceryMealRowState(uses) {
+  const meals = Array.isArray(uses)
+    ? uses.filter((use) => use
+      && /^\d{4}-\d{2}-\d{2}$/.test(use.dateKey)
+      && ["breakfast", "lunch", "dinner"].includes(use.mealSlot))
+    : [];
+  return {
+    count: meals.length,
+    uses: meals,
+    collapsed: meals.length > 1,
+  };
 }
 
 export function groceryAisleFor(text) {

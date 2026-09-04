@@ -4,9 +4,11 @@ import assert from "node:assert/strict";
 import {
   applyInventoryCoverage,
   cleanIngredientForGrocery,
+  formatCompactGroceryMealCue,
   groceryAisleFor,
   groceryItem,
   groceryItemsFromRecipe,
+  groceryMealRowState,
   groceryRowParts,
   inventoryMatchFor,
   mergeGroceries,
@@ -234,4 +236,28 @@ test("grocery names drop markdown markers and split quantity badges", () => {
   assert.equal(groceryAisleFor("spinach"), "produce");
   assert.equal(groceryAisleFor("whole milk"), "dairy");
   assert.equal(groceryAisleFor("olive oil"), "pantry");
+});
+
+test("grocery names drop recipe headers and multi-line paste junk", () => {
+  assert.equal(cleanIngredientForGrocery("### Ingredients\n* crushed red pepper"), "crushed red pepper");
+  assert.equal(
+    cleanIngredientForGrocery("Yogurt Marinated Grilled Chicken Skewers\nIngredients:\n- 1 tsp crushed red pepper"),
+    "1 tsp crushed red pepper",
+  );
+  assert.equal(cleanIngredientForGrocery("Ingredientes:\n**ajo**"), "ajo");
+  assert.deepEqual(groceryRowParts("1 tsp **crushed red pepper**"), {
+    name: "crushed red pepper",
+    quantityLabel: "1 tsp",
+  });
+});
+
+test("shopping rows collapse shared meal provenance to a count", () => {
+  const state = groceryMealRowState([
+    { dateKey: "2026-09-03", mealSlot: "lunch", recipeName: { en: "Yogurt Marinated Grilled Chicken Skewers" }, servings: 3, batches: 0.5 },
+    { dateKey: "2026-09-08", mealSlot: "dinner", recipeName: { en: "Yogurt Marinated Grilled Chicken Skewers" }, servings: 4, batches: 1 },
+  ]);
+  assert.equal(state.count, 2);
+  assert.equal(state.collapsed, true);
+  assert.equal(formatCompactGroceryMealCue({ dateLabel: "Thu, Sep 3", mealLabel: "Lunch" }), "Thu, Sep 3 · Lunch");
+  assert.equal(formatCompactGroceryMealCue({ dateLabel: "jue, 3 de sept", mealLabel: "Almuerzo" }), "jue, 3 de sept · Almuerzo");
 });

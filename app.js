@@ -43,7 +43,7 @@ import { createScheduleUi } from "./schedule-ui.js";
 import { createAssistantUi } from "./assistant-ui.js";
 import { createSharedStateLoader } from "./shared-state-loader.js";
 import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage-utils.js";
-import { formatSyncTime, renderSyncStatus, syncRetryLabel } from "./sync-status.js";
+import { formatSyncedAtMessage, renderSyncStatus, syncRetryLabel } from "./sync-status.js";
 import { translations } from "./translations.js";
 import { selectRecipeMemory, selectTodayStory } from "./almanac-selectors.js";
 import { recipesFromCatalogResponse } from "./recipe-catalog-utils.js";
@@ -321,10 +321,8 @@ const syncAreas = {
 };
 
 function syncMessage(key, time = "") {
-  const localizedTime = key === "syncedAt" && time
-    ? formatSyncTime(lang, new Date(time))
-    : time;
-  return t(key).replace("{time}", localizedTime);
+  if (key === "syncedAt") return formatSyncedAtMessage(lang, t(key), time);
+  return t(key).replace("{time}", time);
 }
 
 function setSyncStatus(area, key, { state = "success", canRetry = false, syncedAt = "" } = {}) {
