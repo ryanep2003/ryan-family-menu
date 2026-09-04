@@ -20,7 +20,7 @@ This is a lightweight record of architectural and product decisions that future 
 
 **Alternatives considered:** A chat transcript, a dedicated Help tab, automatic week generation, and OpenAI ranking in Phase A.
 
-**Consequences:** Occupied dinners, inventory, and lunches stay untouched. Typed requests stay stubbed until Phase B. Any future model or usage-ranking layer must keep preview-and-confirm and the empty-slot rule.
+**Consequences:** Occupied dinners, inventory, and lunches stay untouched. Typed requests map onto the same chips with keyword matching (Phase B lite) and still require preview and Apply; they do not call a model. Any future model or usage-ranking layer must keep preview-and-confirm and the empty-slot rule.
 
 ## 2026-08-23 — Keep school lunch planning inside household state and deterministic rules
 

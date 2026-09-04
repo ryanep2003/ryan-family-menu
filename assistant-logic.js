@@ -20,6 +20,144 @@ export const ASSISTANT_ACTIONS = [
   "dinner-tomorrow",
 ];
 
+export function normalizeAskText(text) {
+  return String(text ?? "")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[''`´]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function paddedAsk(text) {
+  return ` ${text} `;
+}
+
+function askHasAny(text, phrases) {
+  const haystack = paddedAsk(text);
+  return phrases.some((phrase) => haystack.includes(` ${phrase} `));
+}
+
+function askHasTomorrow(query) {
+  if (askHasAny(query, ["esta manana", "this morning"])) return false;
+  return askHasAny(query, ["tomorrow", "tomorrow night", "tomorrow evening", "manana"]);
+}
+
+function askHasToday(query) {
+  return askHasAny(query, [
+    "today",
+    "tonight",
+    "this evening",
+    "this afternoon",
+    "this morning",
+    "hoy",
+    "esta noche",
+    "esta tarde",
+    "esta manana",
+  ]);
+}
+
+export function matchAskAction(text) {
+  const query = normalizeAskText(text);
+  if (!query) return null;
+
+  if (askHasAny(query, [
+    "shopping list",
+    "grocery list",
+    "lista de compras",
+    "lista de la compra",
+    "lista del super",
+    "build shopping",
+    "refresh shopping",
+    "shopping",
+    "groceries",
+    "grocery",
+    "compras",
+    "supermercado",
+  ])) {
+    return "refresh-shopping";
+  }
+
+  if (askHasAny(query, [
+    "next week",
+    "coming week",
+    "following week",
+    "the week after",
+    "proxima semana",
+    "la semana proxima",
+    "semana que viene",
+    "la semana que viene",
+    "semana siguiente",
+  ])) {
+    return "plan-next-week";
+  }
+
+  if (askHasAny(query, [
+    "this week",
+    "esta semana",
+    "rest of the week",
+    "rest of week",
+    "remaining days",
+    "current week",
+    "fill gaps",
+    "fill the gaps",
+    "fill empty",
+    "empty dinners",
+    "empty dinner",
+    "huecos",
+    "completar huecos",
+    "lo que falta",
+  ])) {
+    return "fill-gaps";
+  }
+
+  const dinner = askHasAny(query, ["dinner", "supper", "cena", "cenar", "cenamos"]);
+  const meals = askHasAny(query, ["lunch", "almuerzo", "breakfast", "desayuno", "comida", "meals", "meal"]);
+  const whatsFor = askHasAny(query, [
+    "whats for",
+    "what is for",
+    "what for",
+    "que hay",
+    "que hay de",
+    "que hay para",
+    "que comemos",
+    "que cenamos",
+  ]);
+  const foodAsk = dinner || meals || whatsFor;
+  const tomorrow = askHasTomorrow(query);
+  const today = askHasToday(query);
+
+  if (tomorrow && foodAsk) return "dinner-tomorrow";
+  if (today && foodAsk) return "dinner-today";
+
+  if ((dinner && meals) || askHasAny(query, [
+    "lunch and dinner",
+    "dinner and lunch",
+    "almuerzo y cena",
+    "cena y almuerzo",
+  ])) {
+    return "plan-next-week";
+  }
+
+  if (dinner || whatsFor) return "dinner-today";
+
+  if (askHasAny(query, [
+    "plan dinners",
+    "plan meals",
+    "plan the week",
+    "help me plan",
+    "planear",
+    "planea",
+    "planificar",
+  ]) || query === "plan") {
+    return "plan-next-week";
+  }
+
+  return null;
+}
+
 const NON_DINNER_CATEGORIES = new Set(["side", "salad", "sauce", "dessert", "drink"]);
 
 function dateAtNoon(now = new Date()) {

@@ -15,13 +15,19 @@ Deterministic browser logic. No OpenAI call.
 - **Build / refresh shopping list:** preview how many planned items will be on the list from the next 7 local days, then rebuild planned groceries through the ordinary grocery save.
 - **What’s for dinner today / tomorrow:** answer from the local calendar date (today stays today; tomorrow is the next local date) and offer Open meal or Cook. This path does not write.
 
-The optional “ask in your own words” field is a Phase B stub. It shows “coming soon” and does not call a model or write data.
-
 Recipe ranking reuses existing family memory (`rankedRecipes`). OpenAI is not used for Phase A ranking.
+
+## Phase B lite — keyword routing (this release)
+
+Typed “ask in your own words” text is matched in the browser to the same Phase A chips (`plan-next-week`, `fill-gaps`, `refresh-shopping`, `dinner-today`, `dinner-tomorrow`). Matching uses English and Spanish keywords and phrases (accents and case are ignored). There is still no LLM and no network model call.
+
+A match opens the same preview as tapping that chip. Apply / Aplicar is still required before any write. While Apply is saving the schedule or grocery list, the sheet shows a spinner in the status area and disables Apply, chips, and Ask submit.
+
+If the text does not match, a short message points back at the chips. Unmatched text never writes and never calls a model.
 
 ## Phase B — natural language
 
-A typed request may eventually map onto the same chips (fill empty dinners, refresh shopping, look up tonight). Free text must still produce a structured preview and require Apply. It must not silently write, invent meals, or bypass household restrictions.
+A later typed-request phase may use a model only to rank or interpret a request after household validation. Free text must still produce a structured preview and require Apply. It must not silently write, invent meals, or bypass household restrictions.
 
 ## Phase C — more household actions
 

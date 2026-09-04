@@ -9,6 +9,7 @@ import {
   dinnerIsOccupied,
   horizonDateKeys,
   lookupDinner,
+  matchAskAction,
   nextWeekDateKeys,
   proposeDinnerFill,
   proposeShoppingRefresh,
@@ -208,6 +209,44 @@ test("dinner lookup answers without writing and keeps today vs tomorrow labels",
   assert.equal(tomorrow.dateKey, "2026-09-04");
   assert.equal(tomorrow.empty, true);
   assert.equal(assistantPreviewNeedsConfirm(today), false);
+});
+
+test("Ask text maps to existing chip actions in English and Spanish without a model", () => {
+  const cases = [
+    ["What's for lunch and dinner next week?", "plan-next-week"],
+    ["whats for lunch and dinner next week", "plan-next-week"],
+    ["Plan next week", "plan-next-week"],
+    ["plan dinners", "plan-next-week"],
+    ["¿Qué hay de almuerzo y cena la próxima semana?", "plan-next-week"],
+    ["planear la próxima semana", "plan-next-week"],
+    ["PRÓXIMA SEMANA", "plan-next-week"],
+    ["Fill gaps this week", "fill-gaps"],
+    ["fill empty dinners this week", "fill-gaps"],
+    ["completar huecos de esta semana", "fill-gaps"],
+    ["esta semana", "fill-gaps"],
+    ["Build shopping list", "refresh-shopping"],
+    ["refresh the shopping list", "refresh-shopping"],
+    ["grocery list", "refresh-shopping"],
+    ["shopping list for next week", "refresh-shopping"],
+    ["crear lista de compras", "refresh-shopping"],
+    ["lista de compras", "refresh-shopping"],
+    ["What's for dinner today?", "dinner-today"],
+    ["what's for dinner", "dinner-today"],
+    ["cena hoy", "dinner-today"],
+    ["¿Qué hay de cena hoy?", "dinner-today"],
+    ["What's for dinner tomorrow?", "dinner-tomorrow"],
+    ["cena mañana", "dinner-tomorrow"],
+    ["¿Qué hay de cena mañana?", "dinner-tomorrow"],
+    ["what's for lunch and dinner tomorrow", "dinner-tomorrow"],
+    ["what's for dinner next week", "plan-next-week"],
+  ];
+  for (const [phrase, action] of cases) {
+    assert.equal(matchAskAction(phrase), action, phrase);
+  }
+  assert.equal(matchAskAction(""), null);
+  assert.equal(matchAskAction("   "), null);
+  assert.equal(matchAskAction("tell me a joke"), null);
+  assert.equal(matchAskAction("invent a new meal plan with AI"), null);
 });
 
 test("assistant translation keys stay in English/Spanish parity", async () => {

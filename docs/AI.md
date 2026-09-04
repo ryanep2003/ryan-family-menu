@@ -26,7 +26,7 @@ This intentionally keeps the interaction immediate, offline-capable, explainable
 
 ## Action Assistant
 
-Phase A of the Family Menu Action Assistant is also deterministic and browser-first. Filling empty dinners and refreshing the shopping list reuse existing ranking and grocery helpers; they do not call OpenAI. A later typed-request phase may use the model only after household validation and the existing AI usage caps, and only to rank or interpret a request. The assistant must still preview and require Apply; it must never silent-write a plan.
+Phase A of the Family Menu Action Assistant is also deterministic and browser-first. Filling empty dinners and refreshing the shopping list reuse existing ranking and grocery helpers; they do not call OpenAI. Typed requests currently map onto those same chips with keyword matching in the browser (Phase B lite); they do not call a model. A later typed-request phase may use the model only after household validation and the existing AI usage caps, and only to rank or interpret a request. The assistant must still preview and require Apply; it must never silent-write a plan.
 
 See `docs/ACTION_ASSISTANT.md`.
 

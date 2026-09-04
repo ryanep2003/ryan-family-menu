@@ -21,7 +21,18 @@ function element(initial = {}) {
     value: "",
     dataset: {},
     classList: {
+      add(name) {
+        classes.add(name);
+      },
+      remove(name) {
+        classes.delete(name);
+      },
       toggle(name, force) {
+        if (force === undefined) {
+          if (classes.has(name)) classes.delete(name);
+          else classes.add(name);
+          return;
+        }
         if (force) classes.add(name);
         else classes.delete(name);
       },
@@ -49,7 +60,7 @@ function mealWithDinner(recipeId) {
   });
 }
 
-function harness({ occupied = true } = {}) {
+function harness({ occupied = true, saveSchedule, saveGroceries } = {}) {
   const calls = {
     saveSchedule: 0,
     saveGroceries: 0,
@@ -71,12 +82,15 @@ function harness({ occupied = true } = {}) {
     assistantSheet: element({ hidden: true }),
     assistantChips: element(),
     assistantPreview: element(),
+    assistantStatusRow: element(),
     assistantStatus: element(),
+    assistantSpinner: element({ hidden: true }),
     assistantApply: element({ hidden: true, disabled: true }),
     assistantClose: element(),
     assistantSheetTitle: element(),
     assistantAskForm: element(),
     assistantAskInput: element({ value: "" }),
+    assistantAskSubmit: element(),
   };
   const recipes = [
     { id: "tacos", name: { en: "Tacos" }, category: "main" },
@@ -106,10 +120,12 @@ function harness({ occupied = true } = {}) {
     now: () => localDate(2026, 9, 3, 20, 15),
     saveSchedule: async () => {
       calls.saveSchedule += 1;
+      if (saveSchedule) return saveSchedule();
       return true;
     },
     saveGroceries: async () => {
       calls.saveGroceries += 1;
+      if (saveGroceries) return saveGroceries();
       return true;
     },
     setCalendarMeals: (next) => {
@@ -212,6 +228,9 @@ test("Today and Plan expose Help entry points and the action sheet", async () =>
   assert.match(html, /id="assistantHelpPlanSticky"[^>]*data-open-assistant="plan"/);
   assert.match(html, /id="assistantSheet"/);
   assert.match(html, /id="assistantApply"[^>]*data-i18n="assistantApply"/);
+  assert.match(html, /id="assistantAskSubmit"/);
+  assert.match(html, /id="assistantSpinner"/);
+  assert.match(html, /id="assistantStatusRow"[^>]*aria-live="polite"/);
   assert.doesNotMatch(html, /id="groceryView"[\s\S]*data-open-assistant="shop"/);
   const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
   assert.match(app, /createAssistantUi\(/);
@@ -219,4 +238,75 @@ test("Today and Plan expose Help entry points and the action sheet", async () =>
   const schedule = await readFile(new URL("../schedule-ui.js", import.meta.url), "utf8");
   assert.match(schedule, /data-open-assistant="plan"/);
   assert.match(schedule, /saveMealChanges/);
+});
+
+test("Ask routes a typed request to the same preview as the matching chip", async () => {
+  const { ui, elements, calls } = harness();
+  ui.bindAssistantControls();
+  ui.openSheet("today");
+  elements.assistantAskInput.value = "What's for lunch and dinner next week?";
+  await elements.assistantAskForm.dispatch("submit");
+  const preview = ui.getPreview();
+  assert.equal(preview.kind, "fill-dinners");
+  assert.equal(preview.action, "plan-next-week");
+  assert.deepEqual(preview.dateKeys[0], "2026-09-07");
+  assert.match(elements.assistantPreview.innerHTML, /Fill empty dinners/);
+  assert.doesNotMatch(elements.assistantPreview.innerHTML, /coming soon/i);
+  assert.equal(calls.saveSchedule, 0);
+  assert.equal(elements.assistantApply.hidden, false);
+  assert.equal(elements.assistantApply.disabled, false);
+});
+
+test("unmatched Ask stays on chips and does not write", async () => {
+  const { ui, elements, calls } = harness();
+  ui.bindAssistantControls();
+  ui.openSheet("today");
+  elements.assistantAskInput.value = "tell me a joke";
+  await elements.assistantAskForm.dispatch("submit");
+  assert.equal(ui.getPreview().kind, "ask-unmatched");
+  assert.match(elements.assistantPreview.innerHTML, /Try the buttons above/);
+  assert.equal(elements.assistantStatus.textContent, translations.en.assistantAskUnmatched);
+  assert.equal(elements.assistantApply.hidden, true);
+  assert.equal(calls.saveSchedule, 0);
+  assert.equal(calls.saveGroceries, 0);
+});
+
+test("Apply shows a spinner and disables controls until save finishes", async () => {
+  let finish;
+  const pending = new Promise((resolve) => {
+    finish = resolve;
+  });
+  const { ui, elements } = harness({
+    saveSchedule: () => pending,
+  });
+  ui.openSheet("plan");
+  ui.previewAction("plan-next-week");
+  const applying = ui.applyPreview();
+  assert.equal(ui.isApplying(), true);
+  assert.equal(elements.assistantSpinner.hidden, false);
+  assert.equal(elements.assistantSpinner["aria-hidden"], "false");
+  assert.equal(elements.assistantStatusRow["aria-busy"], "true");
+  assert.equal(elements.assistantStatus["aria-busy"], "true");
+  assert.equal(elements.assistantStatus.textContent, translations.en.assistantApplying);
+  assert.equal(elements.assistantApply.disabled, true);
+  assert.equal(elements.assistantAskInput.disabled, true);
+  assert.equal(elements.assistantAskSubmit.disabled, true);
+  assert.match(elements.assistantChips.innerHTML, /disabled/);
+  finish(true);
+  assert.equal(await applying, true);
+  assert.equal(ui.isApplying(), false);
+  assert.equal(elements.assistantSpinner.hidden, true);
+});
+
+test("Apply error keeps the message and hides the spinner", async () => {
+  const { ui, elements } = harness({
+    saveSchedule: async () => false,
+  });
+  ui.previewAction("plan-next-week");
+  assert.equal(await ui.applyPreview(), false);
+  assert.equal(ui.isApplying(), false);
+  assert.equal(elements.assistantSpinner.hidden, true);
+  assert.equal(elements.assistantStatus.textContent, translations.en.assistantApplyError);
+  assert.equal(elements.assistantStatus.classList.contains("error"), true);
+  assert.equal(elements.assistantAskSubmit.disabled, false);
 });

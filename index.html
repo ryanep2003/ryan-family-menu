@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=159" />
+    <link rel="stylesheet" href="styles.css?v=160" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -1072,12 +1072,15 @@
         <form class="assistant-ask" id="assistantAskForm">
           <label for="assistantAskInput">
             <span data-i18n="assistantAskLabel">Ask in your own words</span>
-            <input id="assistantAskInput" type="text" maxlength="200" data-i18n-placeholder="assistantAskPlaceholder" placeholder="Coming soon" autocomplete="off" />
+            <input id="assistantAskInput" type="text" maxlength="200" data-i18n-placeholder="assistantAskPlaceholder" placeholder="What’s for dinner tomorrow?" autocomplete="off" />
           </label>
-          <button class="assistant-secondary" type="submit" data-i18n="assistantAskSubmit">Ask</button>
+          <button class="assistant-secondary" id="assistantAskSubmit" type="submit" data-i18n="assistantAskSubmit">Ask</button>
         </form>
         <div class="assistant-preview" id="assistantPreview"></div>
-        <p class="form-status" id="assistantStatus" role="status"></p>
+        <div class="assistant-status-row" id="assistantStatusRow" aria-live="polite" aria-busy="false">
+          <span class="assistant-spinner" id="assistantSpinner" hidden aria-hidden="true"></span>
+          <p class="form-status" id="assistantStatus" role="status"></p>
+        </div>
         <div class="assistant-sheet-actions">
           <button class="assistant-apply" id="assistantApply" type="button" data-i18n="assistantApply" hidden disabled>Apply</button>
         </div>
@@ -1089,6 +1092,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=159"></script>
+    <script type="module" src="app.js?v=160"></script>
   </body>
 </html>

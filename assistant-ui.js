@@ -4,6 +4,7 @@ import {
   assistantPreviewNeedsConfirm,
   dateKeysForAction,
   lookupDinner,
+  matchAskAction,
   proposeDinnerFill,
   proposeShoppingRefresh,
   relativeDinnerDateKey,
@@ -93,11 +94,40 @@ export function createAssistantUi({
     status.classList.toggle("error", isError);
   }
 
+  function setBusyControls(isBusy) {
+    const panel = sheet();
+    panel?.classList?.toggle("is-applying", isBusy);
+    panel?.setAttribute?.("aria-busy", isBusy ? "true" : "false");
+    const statusRow = $("#assistantStatusRow");
+    statusRow?.classList?.toggle("is-busy", isBusy);
+    statusRow?.setAttribute?.("aria-busy", isBusy ? "true" : "false");
+    const status = $("#assistantStatus");
+    status?.setAttribute?.("aria-busy", isBusy ? "true" : "false");
+    const spinner = $("#assistantSpinner");
+    if (spinner) {
+      spinner.hidden = !isBusy;
+      spinner.setAttribute("aria-hidden", isBusy ? "false" : "true");
+    }
+    const askInput = $("#assistantAskInput");
+    if (askInput) askInput.disabled = isBusy;
+    const askSubmit = $("#assistantAskSubmit");
+    if (askSubmit) askSubmit.disabled = isBusy;
+    const chips = $("#assistantChips");
+    chips?.setAttribute?.("aria-disabled", isBusy ? "true" : "false");
+  }
+
+  function setApplying(isApplying) {
+    applying = isApplying;
+    setBusyControls(isApplying);
+    renderChips();
+    updateApplyState();
+  }
+
   function updateApplyState() {
     const apply = $("#assistantApply");
     if (!apply) return;
     const canApply = assistantPreviewNeedsConfirm(preview) && !applying;
-    apply.hidden = !preview || preview.kind === "dinner-lookup" || preview.kind === "coming-soon";
+    apply.hidden = !preview || preview.kind === "dinner-lookup" || preview.kind === "ask-unmatched";
     apply.disabled = !canApply;
   }
 
@@ -105,7 +135,7 @@ export function createAssistantUi({
     const list = $("#assistantChips");
     if (!list) return;
     list.innerHTML = ASSISTANT_ACTIONS.map((action) => `
-      <button type="button" class="assistant-chip${activeAction === action ? " is-selected" : ""}" data-assistant-action="${escapeHtml(action)}" aria-pressed="${activeAction === action}">
+      <button type="button" class="assistant-chip${activeAction === action ? " is-selected" : ""}" data-assistant-action="${escapeHtml(action)}" aria-pressed="${activeAction === action}"${applying ? " disabled" : ""}>
         ${escapeHtml(t(ACTION_LABELS[action]))}
       </button>
     `).join("");
@@ -129,8 +159,8 @@ export function createAssistantUi({
       return;
     }
 
-    if (preview.kind === "coming-soon") {
-      panel.innerHTML = `<p>${escapeHtml(t("assistantAskComingSoon"))}</p>`;
+    if (preview.kind === "ask-unmatched") {
+      panel.innerHTML = `<p>${escapeHtml(t("assistantAskUnmatched"))}</p>`;
       updateApplyState();
       return;
     }
@@ -243,7 +273,7 @@ export function createAssistantUi({
     documentObject?.body?.classList?.remove("assistant-open");
     preview = null;
     activeAction = "";
-    applying = false;
+    setApplying(false);
     setStatus("");
     const ask = $("#assistantAskInput");
     if (ask) ask.value = "";
@@ -261,6 +291,7 @@ export function createAssistantUi({
     documentObject?.body?.classList?.add("assistant-open");
     preview = null;
     activeAction = "";
+    setApplying(false);
     setStatus("");
     renderChips();
     renderPreview();
@@ -271,8 +302,7 @@ export function createAssistantUi({
 
   async function applyPreview() {
     if (!assistantPreviewNeedsConfirm(preview) || applying) return false;
-    applying = true;
-    updateApplyState();
+    setApplying(true);
     setStatus(t("assistantApplying"));
     try {
       if (preview.kind === "fill-dinners") {
@@ -283,8 +313,7 @@ export function createAssistantUi({
         });
         if (!result.applied.length) {
           setStatus(t("assistantNothingToApply"), true);
-          applying = false;
-          updateApplyState();
+          setApplying(false);
           return false;
         }
         setCalendarMeals(result.calendarMeals);
@@ -292,13 +321,12 @@ export function createAssistantUi({
         const saved = await saveSchedule();
         if (saved === false) {
           setStatus(t("assistantApplyError"), true);
-          applying = false;
-          updateApplyState();
+          setApplying(false);
           return false;
         }
         recordActivity("meal", t("assistantAppliedPlan"));
         setStatus(t("assistantAppliedPlan"));
-        applying = false;
+        setApplying(false);
         closeSheet();
         return true;
       }
@@ -318,34 +346,38 @@ export function createAssistantUi({
         const saved = await saveGroceries();
         if (saved === false) {
           setStatus(t("assistantApplyError"), true);
-          applying = false;
-          updateApplyState();
+          setApplying(false);
           return false;
         }
         recordActivity("grocery", t("assistantAppliedShopping"));
         setStatus(t("assistantAppliedShopping"));
-        applying = false;
+        setApplying(false);
         closeSheet();
         return true;
       }
     } catch {
       setStatus(t("assistantApplyError"), true);
-      applying = false;
-      updateApplyState();
+      setApplying(false);
       return false;
     }
-    applying = false;
-    updateApplyState();
+    setApplying(false);
     return false;
   }
 
   function handleAsk(event) {
     event.preventDefault();
-    activeAction = "";
-    preview = { kind: "coming-soon" };
-    renderChips();
-    renderPreview();
-    setStatus(t("assistantAskComingSoon"));
+    if (applying) return;
+    const asked = $("#assistantAskInput")?.value || "";
+    const action = matchAskAction(asked);
+    if (!action) {
+      activeAction = "";
+      preview = { kind: "ask-unmatched" };
+      renderChips();
+      renderPreview();
+      setStatus(t("assistantAskUnmatched"));
+      return;
+    }
+    previewAction(action);
   }
 
   function bindAssistantControls() {
@@ -359,6 +391,7 @@ export function createAssistantUi({
       const action = event.target.closest?.("[data-assistant-action]");
       if (action && isOpen()) {
         event.preventDefault();
+        if (applying) return;
         previewAction(action.dataset.assistantAction);
         return;
       }
@@ -407,6 +440,7 @@ export function createAssistantUi({
     previewAction,
     applyPreview,
     getPreview: () => preview,
+    isApplying: () => applying,
     isOpen,
   };
 }
