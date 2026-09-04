@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=157" />
+    <link rel="stylesheet" href="styles.css?v=158" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -117,11 +117,11 @@
               <button class="ghost-button" id="rotateHouseholdKey" type="button">Create new family key</button>
             </details>
             <button class="primary-action" id="openFamily" type="button" data-i18n="openFamily">Family &amp; preferences</button>
-            <details class="household-activity" id="householdHistoryPanel">
+            <details class="household-activity" id="householdActivityPanel">
               <summary data-i18n="recentActivity">Recent activity</summary>
               <div id="householdActivity"></div>
             </details>
-            <details class="household-activity">
+            <details class="household-activity" id="householdHistoryPanel">
               <summary data-i18n="changeHistory">Change history</summary>
               <div id="householdHistory"></div>
             </details>
@@ -1055,6 +1055,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=157"></script>
+    <script type="module" src="app.js?v=158"></script>
   </body>
 </html>

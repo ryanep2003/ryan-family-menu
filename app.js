@@ -20,7 +20,7 @@ import { createBudgetUi } from "./budget-ui.js";
 import { normalizeBudgetSettings, normalizeReceipt, normalizeReceipts } from "./budget-logic.js";
 import { createActivityUi } from "./activity-ui.js?v=132";
 import { createAuditUi } from "./audit-ui.js";
-import { normalizeAuditEvents, normalizeStateSnapshots } from "./audit-logic.js";
+import { normalizeAuditEvents, normalizeStateSnapshots, persistRestoredMealPlan } from "./audit-logic.js";
 import { createFamilyUi } from "./family-ui.js";
 import { activityEntry, normalizeActivity } from "./activity-logic.js";
 import { addAvailableFood, normalizeAvailableFood } from "./available-food.js";
@@ -1677,8 +1677,10 @@ async function restoreAuditSnapshot(snapshotId) {
     calendarMeals: snapshot.calendarMeals,
   }, currentSharedState());
   applySharedState(restored);
+  persistScheduleLocally();
+  saveSharedStateLocally();
   render();
-  await saveSharedState({ allowEmptySchedule: true, auditAction: "restore-menu" });
+  await persistRestoredMealPlan({ saveSharedState, saveSchedule });
   setSyncStatus("shared", "menuRestored", { state: "success" });
 }
 

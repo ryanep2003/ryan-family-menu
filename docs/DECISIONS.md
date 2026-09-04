@@ -10,7 +10,7 @@ This is a lightweight record of architectural and product decisions that future 
 
 **Alternatives considered:** Keep five-tab navigation, ship sticky Save without the redesign, rely on the in-editor Save button, and continue treating every week-editor edit as a repeating template change.
 
-**Consequences:** Lunches remain in household state and grocery generation. Existing meal records are unchanged. Next-week planning is date-specific. Clients must keep English and Spanish Save copy in parity. Do not drop the visual redesign to ship Save alone.
+**Consequences:** Lunches remain in household state and grocery generation. Existing meal records are unchanged. Next-week planning is date-specific. Clients must keep English and Spanish Save copy in parity. Do not drop the visual redesign to ship Save alone. Restore this menu must save the schedule record as well as shared-state, or a reload will replace restored meals.
 
 ## 2026-08-23 — Keep school lunch planning inside household state and deterministic rules
 

@@ -177,6 +177,10 @@ summary { min-height: 44px; padding: 11px 0; cursor: pointer; font-weight: 600; 
 .household-menu > summary::-webkit-details-marker { display: none; }
 .household-summary-icon { display: grid; place-items: center; }
 .household-menu-panel { position: absolute; top: calc(100% + 8px); right: 0; z-index: 20; display: grid; width: min(23rem, calc(100vw - 32px)); gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--rule); border-radius: var(--radius-sheet); background: var(--paper); box-shadow: 0 16px 36px rgba(26,58,92,.14); }
+.household-history-item, .household-activity-item { display: grid; gap: 2px; padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
+.household-history-item > div { display: grid; gap: 2px; min-width: 0; }
+.household-history-meta { display: block; color: var(--muted); font-size: .84rem; }
+.household-history-restore { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); }
 .app-update-notice { position: fixed; z-index: 24; right: var(--space-4); bottom: calc(80px + env(safe-area-inset-bottom)); left: var(--space-4); display: flex; max-width: 34rem; align-items: center; justify-content: space-between; gap: var(--space-3); margin: auto; padding: var(--space-3); border-radius: var(--radius-sheet); background: var(--ink); color: var(--paper); }
 main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min-height: calc(100vh - 60px); margin: 0 auto; padding: 0 var(--space-4) calc(var(--bottom-nav-space) + var(--space-6)); }
 .tabs { position: fixed; right: 0; bottom: 0; left: 0; z-index: 12; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom)); background: var(--paper); box-shadow: 0 -8px 20px rgba(26, 58, 92, .06); }

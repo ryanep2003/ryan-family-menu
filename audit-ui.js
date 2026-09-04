@@ -14,8 +14,8 @@ export function createAuditUi({ $, t, escapeHtml, getHistory, onRestore }) {
       target.innerHTML = `<p class="empty-state">${escapeHtml(t("historyEmpty"))}</p>`;
       return;
     }
-    const eventHtml = events.map((event) => `<article class="household-history-item"><strong>${escapeHtml(event.summary || t("historyChanged"))}</strong><span>${escapeHtml(t("historyBy").replace("{name}", event.actor).replace("{time}", formatWhen(event.updatedAt)))}</span></article>`).join("");
-    const snapshotHtml = snapshots.map((snapshot) => `<article class="household-history-item household-history-restore"><div><strong>${escapeHtml(t("historySnapshot"))}</strong><span>${escapeHtml(t("historyBy").replace("{name}", snapshot.actor).replace("{time}", formatWhen(snapshot.updatedAt)))}</span></div><button class="text-button" type="button" data-restore-snapshot="${escapeHtml(snapshot.id)}">${escapeHtml(t("restoreMenu"))}</button></article>`).join("");
+    const eventHtml = events.map((event) => `<article class="household-history-item"><strong>${escapeHtml(event.summary || t("historyChanged"))}</strong><span class="household-history-meta">${escapeHtml(t("historyBy").replace("{name}", event.actor).replace("{time}", formatWhen(event.updatedAt)))}</span></article>`).join("");
+    const snapshotHtml = snapshots.map((snapshot) => `<article class="household-history-item household-history-restore"><div><strong>${escapeHtml(t("historySnapshot"))}</strong><span class="household-history-meta">${escapeHtml(t("historyBy").replace("{name}", snapshot.actor).replace("{time}", formatWhen(snapshot.updatedAt)))}</span></div><button class="text-button" type="button" data-restore-snapshot="${escapeHtml(snapshot.id)}">${escapeHtml(t("restoreMenu"))}</button></article>`).join("");
     target.innerHTML = `${eventHtml}${snapshotHtml}`;
     target.querySelectorAll("[data-restore-snapshot]").forEach((button) => button.addEventListener("click", () => onRestore(button.dataset.restoreSnapshot)));
   }
