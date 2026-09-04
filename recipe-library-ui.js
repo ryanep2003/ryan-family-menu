@@ -1,6 +1,6 @@
-import { allLocalizedText, hasLocalizedContent } from "./localized-data.js";
-import { linesMatchLanguage } from "./language-quality.js";
-import { cardPhotoFor, cardPhotoIsGenerated, servingsForRecipe } from "./recipe-utils.js";
+import { allLocalizedText, hasLocalizedContent, isMeaningfulText, localizedTextExact } from "./localized-data.js";
+import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
+import { cardPhotoFor, cardPhotoIsGenerated, isUsableRecipeLine, servingsForRecipe } from "./recipe-utils.js";
 import { appendRecipeToMeal, mealRoles, upcomingMealDateOptions } from "./schedule-utils.js";
 
 export function createRecipeLibraryUi({
@@ -40,17 +40,34 @@ export function createRecipeLibraryUi({
   let lastLibraryButton = null;
 
   function requiredText(value) {
-    return localizeExact(value) || localize(value) || t("translationPendingShort");
+    return exactText(value) || fallbackText(value) || t("translationPendingShort");
+  }
+
+  function exactText(value) {
+    const lang = getLang();
+    const text = localizedTextExact(value, lang);
+    return text && textMatchesLanguage(text, lang) ? text : "";
+  }
+
+  function fallbackText(value) {
+    const text = localize(value) || localizeExact(value);
+    return isMeaningfulText(text) ? text : "";
+  }
+
+  function usableLines(value) {
+    return (Array.isArray(value) ? value : [])
+      .map((line) => `${line || ""}`.trim())
+      .filter((line) => isUsableRecipeLine(line));
   }
 
   function localizedLines(value) {
     const lang = getLang();
-    const lines = value?.[lang] || [];
+    const lines = usableLines(value?.[lang]);
     if (lines.length && linesMatchLanguage(lines, lang)) {
       return { lines, fallback: false };
     }
     const fallbackLang = lang === "es" ? "en" : "es";
-    const fallbackLines = value?.[fallbackLang] || [];
+    const fallbackLines = usableLines(value?.[fallbackLang]);
     return {
       lines: fallbackLines.length && linesMatchLanguage(fallbackLines, fallbackLang) ? fallbackLines : [],
       fallback: Boolean(fallbackLines.length),
@@ -58,9 +75,9 @@ export function createRecipeLibraryUi({
   }
 
   function displayText(value) {
-    const translated = localizeExact(value);
+    const translated = exactText(value);
     if (translated) return { text: translated, fallback: false };
-    const fallback = localize(value);
+    const fallback = fallbackText(value);
     return { text: fallback, fallback: Boolean(fallback) };
   }
 
@@ -179,6 +196,19 @@ export function createRecipeLibraryUi({
     onRecipeMediaRendered();
   }
 
+  function renderLocalizedList(list, emptyNode, lines, emptyKey) {
+    if (list) {
+      list.innerHTML = lines.length
+        ? lines.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
+        : "";
+      list.hidden = !lines.length;
+    }
+    if (emptyNode) {
+      emptyNode.hidden = Boolean(lines.length);
+      emptyNode.textContent = lines.length ? "" : t(emptyKey);
+    }
+  }
+
   function renderDetail() {
     const recipe = recipeById(getSelectedRecipeId());
     if (!recipe) {
@@ -192,8 +222,8 @@ export function createRecipeLibraryUi({
     const ingredientsDisplay = localizedLines(recipe.ingredients);
     const stepsDisplay = localizedLines(recipe.steps);
     const hasWarning = hasLocalizedContent(recipe.allergyWarning);
-    const warningTranslated = localizeExact(recipe.allergyWarning);
-    const warningFallback = localize(recipe.allergyWarning);
+    const warningTranslated = exactText(recipe.allergyWarning);
+    const warningFallback = fallbackText(recipe.allergyWarning);
     const warningReady = !hasWarning || Boolean(warningTranslated);
     const contentReady = Boolean(
       nameDisplay.text
@@ -217,6 +247,7 @@ export function createRecipeLibraryUi({
       : contentReady ? "" : t("recipeDetailsRequired");
     const translationPending = isRecipeTranslationPending(recipe.id, getLang());
     const showTranslationState = translationPending || !contentReady || usingFallback;
+    const actionsLocked = showTranslationState;
     $("#recipeDetail").classList.remove("editing");
     $("#recipeMoreActions").open = false;
     if ($("#recipeOutcomePanel")) $("#recipeOutcomePanel").hidden = true;
@@ -245,12 +276,8 @@ export function createRecipeLibraryUi({
     $("#recipeTranslationStatus").textContent = usingFallback
       ? translationPending ? t("translatingRecipe") : t("translationFallbackDetail")
       : contentReady ? "" : t("translationPendingDetail");
-    $("#ingredientList").innerHTML = ingredientsDisplay.lines.length
-      ? ingredientsDisplay.lines.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
-      : `<li class="translation-placeholder">${t("translationPendingShort")}</li>`;
-    $("#stepList").innerHTML = stepsDisplay.lines.length
-      ? stepsDisplay.lines.map((item) => `<li>${escapeHtml(item)}</li>`).join("")
-      : `<li class="translation-placeholder">${t("translationPendingShort")}</li>`;
+    renderLocalizedList($("#ingredientList"), $("#ingredientListEmpty"), ingredientsDisplay.lines, "recipeIngredientsEmpty");
+    renderLocalizedList($("#stepList"), $("#stepListEmpty"), stepsDisplay.lines, "recipeStepsEmpty");
     $("#familyNotes").textContent = displayText(recipe.notes).text || (contentReady ? "" : t("translationPendingShort"));
     const photos = Array.isArray(recipe.photos) ? recipe.photos : [];
     $("#photoStrip").innerHTML = photos
@@ -263,16 +290,27 @@ export function createRecipeLibraryUi({
     $("#favoriteRecipe").setAttribute("aria-pressed", `${isFavorite}`);
     $("#publishDraftRecipe").hidden = !isLocalDraft;
     $("#addRecipeGroceries").textContent = t("addRecipeToGroceries");
-    $("#addRecipeGroceries").disabled = !contentReady;
-    if ($("#markCooked")) $("#markCooked").disabled = !contentReady;
-    if ($("#startCooking")) $("#startCooking").disabled = !contentReady;
-    if ($("#startCooking")) $("#startCooking").textContent = t("cookButton");
+    $("#addRecipeGroceries").hidden = actionsLocked;
+    $("#addRecipeGroceries").disabled = actionsLocked;
+    if ($("#markCooked")) $("#markCooked").disabled = actionsLocked;
+    if ($("#startCooking")) {
+      $("#startCooking").disabled = actionsLocked;
+      $("#startCooking").textContent = t("cookButton");
+    }
     $("#recipeSafetyLockReason").hidden = !actionLockReason;
     $("#recipeSafetyLockReason").textContent = actionLockReason;
     const addForm = $("#addRecipeToMealForm");
     const addSubmit = $("#addRecipeToMealSubmit");
-    if (addForm) addForm.hidden = false;
-    if (addSubmit) addSubmit.disabled = !contentReady;
+    if (addForm) {
+      addForm.hidden = actionsLocked;
+      addForm.classList.toggle("is-locked", actionsLocked);
+      addForm.setAttribute("aria-disabled", `${actionsLocked}`);
+    }
+    ["#addRecipeToMealDate", "#addRecipeToMealPeriod"].forEach((selector) => {
+      const control = $(selector);
+      if (control) control.disabled = actionsLocked;
+    });
+    if (addSubmit) addSubmit.disabled = actionsLocked;
     renderMealDateOptions();
     setDetailStatus("");
   }

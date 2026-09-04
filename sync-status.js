@@ -3,7 +3,7 @@ export function formatSyncTime(language, value = new Date()) {
   return new Intl.DateTimeFormat(locale, {
     hour: "numeric",
     minute: "2-digit",
-  }).format(value);
+  }).format(value).replace(/\.+$/, "");
 }
 
 export function syncRetryLabel() {

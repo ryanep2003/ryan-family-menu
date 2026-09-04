@@ -82,7 +82,7 @@ Do not weaken host checks, timeouts, redirect restrictions, content limits, or i
 
 ## Translation
 
-Translation preserves quantities, temperatures, timing, ordered steps, and safety warnings. When a selected recipe is missing the current language, the app shows its original content and offers an explicit action to translate that recipe. One action creates at most one provider call and one shared-state save. The app does not scan or translate the library in the background. It avoids copying untranslated safety content into a translated field and can disable cooking actions when required safety text is unavailable.
+Translation preserves quantities, temperatures, timing, ordered steps, and safety warnings. When a selected recipe is missing the current language, the app shows its original content and offers an explicit action to translate that recipe. One action creates at most one provider call and one shared-state save. The app does not scan or translate the library in the background. It avoids copying untranslated safety content into a translated field and can disable cooking actions when required safety text is unavailable. Punctuation-only strings, leftover numbered chrome such as `.`, `·`, or `01 .`, and stock English review placeholders such as “Add cooking steps after review.” are not recipe or safety content; they must not render as empty cards or numbered blank steps. Add-to-meal and grocery actions stay hidden while that translation gate is showing.
 
 Changing translation behavior must preserve:
 

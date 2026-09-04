@@ -7,6 +7,7 @@ import {
   cardPhotoFor,
   cardPhotoIsGenerated,
   compactRecipeEditsForSync,
+  isUsableRecipeLine,
   recipeById,
   recipeToEditableUpload,
   normalizeRecipeServings,
@@ -56,6 +57,43 @@ test("uploadToRecipe does not copy English into missing Spanish fields", () => {
 
   assert.equal(recipe.name.es, "");
   assert.deepEqual(recipe.ingredients.es, []);
+  assert.deepEqual(recipe.steps.es, []);
+});
+
+test("uploadToRecipe drops punctuation-only ingredient and step lines", () => {
+  const recipe = uploadToRecipe({
+    id: "taco-meat",
+    name: "Taco meat-pre make",
+    ingredientsText: "1 lb ground beef\n.\n·",
+    stepsText: ".\nBrown the meat.\n·\n01 .",
+    allergyWarning: ".",
+  }, "Shared upload", "Receta compartida");
+
+  assert.deepEqual(recipe.ingredients.en, ["1 lb ground beef"]);
+  assert.deepEqual(recipe.steps.en, ["Brown the meat."]);
+  assert.equal(recipe.allergyWarning, undefined);
+});
+
+test("numbered empty step chrome is not treated as a cooking step", () => {
+  assert.equal(isUsableRecipeLine("."), false);
+  assert.equal(isUsableRecipeLine("·"), false);
+  assert.equal(isUsableRecipeLine("01 ."), false);
+  assert.equal(isUsableRecipeLine("1."), false);
+  assert.equal(isUsableRecipeLine("Brown the meat."), true);
+  assert.equal(isUsableRecipeLine("1 lb ground beef"), true);
+  assert.equal(isUsableRecipeLine("Add cooking steps after review."), false);
+  assert.equal(isUsableRecipeLine("Add ingredients after review."), false);
+});
+
+test("uploadToRecipe does not invent English placeholder steps for empty recipes", () => {
+  const recipe = uploadToRecipe({
+    id: "needs-review",
+    name: "Taco meat- pre make",
+    ingredientsText: "1 lb ground beef",
+    stepsText: "",
+  }, "Shared upload", "Receta compartida");
+
+  assert.deepEqual(recipe.steps.en, []);
   assert.deepEqual(recipe.steps.es, []);
 });
 

@@ -81,7 +81,7 @@ body[data-view="recipes"], body[data-view="add"] {
 }
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
-button:disabled { cursor: not-allowed; opacity: .48; }
+button:disabled, select:disabled { cursor: not-allowed; opacity: .48; }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--blue) 55%, white);
   outline-offset: 3px;
@@ -609,6 +609,14 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
 .add-recipe-to-meal label { display: grid; gap: var(--space-1); }
 .add-recipe-to-meal label > span { color: var(--muted); font-size: .78rem; font-weight: 600; }
 .add-recipe-to-meal button { min-height: 44px; width: 100%; }
+.add-recipe-to-meal.is-locked {
+  opacity: .48;
+  pointer-events: none;
+}
+.add-recipe-to-meal.is-locked button:disabled,
+.add-recipe-to-meal.is-locked select:disabled {
+  opacity: 1;
+}
 .recipe-banner-actions { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-3); text-align: right; }
 .view-count { color: var(--muted); font-variant-numeric: tabular-nums; }
 .recipe-detail { width: 100%; max-width: 70rem; margin: 0 auto; padding: 0 0 var(--space-8); }
@@ -641,6 +649,7 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
 .detail-layout article h3, .detail-layout aside h3 { margin: var(--space-8) 0 var(--space-4); font-family: var(--font-reading); font-size: 1.65rem; font-weight: 500; letter-spacing: -.02em; text-transform: none; }
 .detail-layout article h3:first-child { margin-top: 0; }
 #ingredientList, #stepList { margin: 0; padding: 0; list-style: none; }
+#ingredientList:empty, #stepList:empty { display: none; }
 #ingredientList li { padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
 #stepList { counter-reset: instructions; }
 #stepList li { position: relative; padding: var(--space-4) 0 var(--space-4) 2.75rem; border-bottom: 1px solid var(--rule); line-height: 1.65; }

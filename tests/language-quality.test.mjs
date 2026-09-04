@@ -20,3 +20,12 @@ test("language quality preserves Spanish food content and English mode", () => {
   assert.equal(appearsEnglish("Sirve caliente con aceite de oliva y sal."), false);
   assert.equal(textMatchesLanguage("Lemony Butter Beans", "en"), true);
 });
+
+test("punctuation-only text is not treated as a translated language match", () => {
+  assert.equal(textMatchesLanguage(".", "es"), false);
+  assert.equal(textMatchesLanguage("·", "es"), false);
+  assert.equal(textMatchesLanguage(".", "en"), false);
+  assert.equal(linesMatchLanguage(["."], "es"), false);
+  assert.equal(linesMatchLanguage(["Brown the meat.", "."], "en"), true);
+  assert.equal(linesMatchLanguage(["Brown the meat."], "en"), true);
+});

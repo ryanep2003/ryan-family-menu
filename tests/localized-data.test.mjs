@@ -28,6 +28,12 @@ test("localizedTextExact does not treat fallback text as translated content", ()
   assert.equal(localizedTextExact({ en: "Milk" }, "es"), "");
 });
 
+test("localized helpers ignore punctuation-only strings", () => {
+  assert.equal(localizedText(".", "en"), "");
+  assert.equal(localizedTextExact({ en: "·", es: "." }, "es"), "");
+  assert.deepEqual(cleanLocalizedText({ en: ".", es: "·" }, 120), "");
+});
+
 test("localized helpers ignore legacy object-string corruption", () => {
   assert.equal(localizedText("[object Object]", "en"), "");
   assert.equal(localizedText({ en: "[object Object]", es: "Aviso" }, "en"), "Aviso");

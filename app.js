@@ -73,6 +73,7 @@ import {
   categoryFor,
   categoryLabel as localizedCategoryLabel,
   compactRecipeEditsForSync,
+  isUsableRecipeLine,
   recipeToEditableUpload as recipeToEditable,
   servingsForRecipe,
   uploadToRecipe,
@@ -112,6 +113,24 @@ function t(key) {
   return messages[key] || translations.en[key] || key;
 }
 
+const viewTitleKeys = {
+  today: "todayTab",
+  schedule: "planTab",
+  lunches: "lunchesHeading",
+  grocery: "shoppingTitle",
+  recipes: "libraryTab",
+  add: "addHeading",
+  family: "familyHeading",
+};
+
+function applyViewPageTitle(viewName = document.body.dataset.view || "today") {
+  const pageTitle = document.getElementById("viewPageTitle");
+  if (!pageTitle) return;
+  const key = viewTitleKeys[viewName] || "todayTab";
+  pageTitle.dataset.i18n = key;
+  pageTitle.textContent = t(key);
+}
+
 function applyStaticTranslations() {
   document.documentElement.lang = lang;
   document.querySelectorAll("[data-i18n]").forEach((node) => {
@@ -131,6 +150,7 @@ function applyStaticTranslations() {
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", `${active}`);
   });
+  applyViewPageTitle();
 }
 
 document.querySelectorAll("[data-lang]").forEach((button) => {
@@ -468,7 +488,7 @@ function rawRecipeLines(value, locale) {
   return rawRecipeText(value, locale)
     .split("\n")
     .map((line) => line.trim())
-    .filter(Boolean);
+    .filter((line) => isUsableRecipeLine(line));
 }
 
 function recipeUploadFieldHasText(value) {
@@ -1786,6 +1806,7 @@ function renderTranslations() {
     if (button.classList.contains("active")) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
   });
+  applyViewPageTitle();
   refreshSyncStatuses();
   if ($("#householdMemberInput")) $("#householdMemberInput").value = householdMember;
   syncTaskAssigneeInput();
@@ -2478,19 +2499,7 @@ function setView(viewName) {
     else addButton.removeAttribute("aria-current");
   }
   document.body.dataset.view = viewName;
-  const pageTitle = $("#viewPageTitle");
-  if (pageTitle) {
-    const titleKeys = {
-      today: "todayTab",
-      schedule: "planTab",
-      lunches: "lunchesHeading",
-      grocery: "shoppingTitle",
-      recipes: "libraryTab",
-      add: "addHeading",
-      family: "familyHeading",
-    };
-    pageTitle.textContent = t(titleKeys[viewName] || "todayTab");
-  }
+  applyViewPageTitle(viewName);
   if (viewChanged) window.scrollTo({ top: 0, behavior: "auto" });
   $("#recipeDetail").hidden = true;
   $("#recipesView").classList.remove("detail-open");

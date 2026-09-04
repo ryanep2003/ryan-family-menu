@@ -85,9 +85,9 @@ function harness(overrides = {}) {
     "#recipeList": element(),
     "#recipeSearch": element({ value: "" }),
     "#categoryFilter": element(),
-    "#addRecipeToMealForm": element(),
-    "#addRecipeToMealDate": element({ value: "" }),
-    "#addRecipeToMealPeriod": element({ value: "dinner" }),
+    "#addRecipeToMealForm": element({ hidden: false }),
+    "#addRecipeToMealDate": element({ value: "", disabled: false }),
+    "#addRecipeToMealPeriod": element({ value: "dinner", disabled: false }),
     "#addRecipeToMealSubmit": element({ disabled: false }),
     "#addRecipeToMealStatus": element(),
     "#recipePicksSection": element({ hidden: false }),
@@ -100,13 +100,16 @@ function harness(overrides = {}) {
     "#recipeTranslationStatus": element(),
     "#translateSelectedRecipe": element(),
     "#ingredientList": element(),
+    "#ingredientListEmpty": element({ hidden: true, textContent: "" }),
     "#stepList": element(),
+    "#stepListEmpty": element({ hidden: true, textContent: "" }),
     "#familyNotes": element(),
     "#photoStrip": element(),
     "#favoriteRecipe": element(),
     "#publishDraftRecipe": element(),
-    "#addRecipeGroceries": element(),
+    "#addRecipeGroceries": element({ hidden: false, disabled: false }),
     "#markCooked": element(),
+    "#startCooking": element({ disabled: false }),
     "#recipeSafetyLockReason": element(),
     "#recipeDetail": element(),
     "#recipeMoreActions": element({ open: false }),
@@ -338,10 +341,14 @@ test("Spanish detail uses source content while global translation is prepared", 
   assert.equal(elements["#detailName"].textContent, "Recipe");
   assert.match(elements["#ingredientList"].innerHTML, />one</);
   assert.match(elements["#stepList"].innerHTML, />cook</);
-  assert.equal(elements["#addRecipeGroceries"].disabled, false);
-  assert.equal(elements["#markCooked"].disabled, false);
   assert.equal(elements["#recipeTranslationPanel"].hidden, false);
   assert.match(elements["#recipeTranslationStatus"].textContent, /translationFallbackDetail/);
+  assert.equal(elements["#addRecipeToMealForm"].hidden, true);
+  assert.equal(elements["#addRecipeGroceries"].hidden, true);
+  assert.equal(elements["#addRecipeGroceries"].disabled, true);
+  assert.equal(elements["#addRecipeToMealSubmit"].disabled, true);
+  assert.equal(elements["#startCooking"].disabled, true);
+  assert.equal(elements["#addRecipeToMealForm"].classList.values.has("is-locked"), true);
 });
 
 test("global recipe translation shows a pending status without a second action", () => {
@@ -369,6 +376,9 @@ test("complete translated recipe does not show translation controls", () => {
   ui.renderDetail();
 
   assert.equal(elements["#recipeTranslationPanel"].hidden, true);
+  assert.equal(elements["#addRecipeToMealForm"].hidden, false);
+  assert.equal(elements["#addRecipeGroceries"].hidden, false);
+  assert.equal(elements["#addRecipeGroceries"].disabled, false);
 });
 
 test("searching hides family picks so results are immediate", () => {
@@ -420,8 +430,87 @@ test("missing Spanish safety warning keeps cooking actions disabled", () => {
   assert.equal(elements["#allergyWarning"].textContent, "Contains nuts");
   assert.equal(elements["#addRecipeGroceries"].disabled, true);
   assert.equal(elements["#addRecipeToMealSubmit"].disabled, true);
+  assert.equal(elements["#addRecipeToMealDate"].disabled, true);
+  assert.equal(elements["#addRecipeToMealPeriod"].disabled, true);
+  assert.equal(elements["#startCooking"].disabled, true);
   assert.equal(elements["#markCooked"].disabled, true);
+  assert.equal(elements["#addRecipeToMealForm"].classList.values.has("is-locked"), true);
+  assert.equal(elements["#addRecipeToMealForm"].attributes["aria-disabled"], "true");
   assert.equal(elements["#recipeTranslationPanel"].hidden, false);
   assert.equal(elements["#recipeSafetyLockReason"].hidden, false);
   assert.match(elements["#recipeSafetyLockReason"].textContent, /safetyActionsLocked/);
+});
+
+test("punctuation-only recipe chrome is treated as empty, not a warning card or step", () => {
+  const { elements, ui } = harness({
+    lang: "es",
+    recipe: {
+      name: { en: "Taco meat-pre make" },
+      meta: { en: "·" },
+      ingredients: { en: ["1 lb ground beef", "."] },
+      steps: { en: [".", "Brown the meat."] },
+      allergyWarning: { en: ".", es: "·" },
+      notes: { en: "." },
+    },
+  });
+
+  ui.renderDetail();
+
+  assert.equal(elements["#allergyWarning"].hidden, true);
+  assert.equal(elements["#allergyWarning"].textContent, "");
+  assert.doesNotMatch(elements["#ingredientList"].innerHTML, />[·.]</);
+  assert.match(elements["#ingredientList"].innerHTML, /1 lb ground beef/);
+  assert.doesNotMatch(elements["#stepList"].innerHTML, />[·.]</);
+  assert.match(elements["#stepList"].innerHTML, /Brown the meat\./);
+  assert.equal(elements["#familyNotes"].textContent, "");
+  assert.equal(elements["#addRecipeToMealForm"].hidden, true);
+  assert.equal(elements["#addRecipeGroceries"].hidden, true);
+  assert.equal(elements["#addRecipeGroceries"].disabled, true);
+  assert.equal(elements["#recipeTranslationPanel"].hidden, false);
+  assert.match(elements["#recipeTranslationStatus"].textContent, /translationFallbackDetail/);
+  assert.equal(elements["#recipeSafetyLockReason"].hidden, true);
+});
+
+test("punctuation-only steps show a Spanish empty state instead of numbered chrome", () => {
+  const { elements, ui } = harness({
+    lang: "es",
+    recipe: {
+      name: { en: "Taco meat- pre make" },
+      ingredients: { en: ["1 lb ground beef"] },
+      steps: { en: [".", "·", "01 ."] },
+      allergyWarning: { en: "." },
+    },
+  });
+
+  ui.renderDetail();
+
+  assert.equal(elements["#stepList"].innerHTML, "");
+  assert.equal(elements["#stepList"].hidden, true);
+  assert.equal(elements["#stepListEmpty"].hidden, false);
+  assert.equal(elements["#stepListEmpty"].textContent, "recipeStepsEmpty");
+  assert.doesNotMatch(elements["#stepList"].innerHTML, /<li/);
+  assert.equal(elements["#allergyWarning"].hidden, true);
+  assert.equal(elements["#addRecipeToMealForm"].hidden, true);
+  assert.equal(elements["#addRecipeGroceries"].hidden, true);
+});
+
+test("English placeholder steps do not leak as numbered steps in Spanish", () => {
+  const { elements, ui } = harness({
+    lang: "es",
+    recipe: {
+      name: { en: "Taco meat- pre make" },
+      short: { en: "Needs review", es: "Necesita revisión" },
+      ingredients: { en: ["1 lb ground beef"] },
+      steps: { en: ["Add cooking steps after review."] },
+    },
+  });
+
+  ui.renderDetail();
+
+  assert.doesNotMatch(elements["#stepList"].innerHTML, /Add cooking steps after review/i);
+  assert.equal(elements["#stepList"].innerHTML, "");
+  assert.equal(elements["#stepList"].hidden, true);
+  assert.equal(elements["#stepListEmpty"].hidden, false);
+  assert.equal(elements["#stepListEmpty"].textContent, "recipeStepsEmpty");
+  assert.match(elements["#ingredientList"].innerHTML, /1 lb ground beef/);
 });

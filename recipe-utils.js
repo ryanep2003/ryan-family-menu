@@ -1,4 +1,4 @@
-import { localizedTextExact } from "./localized-data.js";
+import { hasLocalizedContent, isMeaningfulText, localizedTextExact } from "./localized-data.js";
 
 const DEFAULT_CARD_PHOTO = "assets/recipe-card-placeholder.webp";
 
@@ -47,8 +47,22 @@ const recipeCategories = {
   "basil-pesto-pasta": "main",
 };
 
+const recipeLinePlaceholders = new Set([
+  "add cooking steps after review.",
+  "add cooking steps after review",
+  "add ingredients after review.",
+  "add ingredients after review",
+]);
+
+export function isUsableRecipeLine(value) {
+  const text = `${value || ""}`.trim();
+  if (!isMeaningfulText(text)) return false;
+  if (/^\d+[.)]?\s*[·.•.-]*$/.test(text)) return false;
+  return !recipeLinePlaceholders.has(text.toLowerCase());
+}
+
 function splitLines(text, fallback) {
-  const lines = (text || "").split("\n").map((line) => line.trim()).filter(Boolean);
+  const lines = (text || "").split("\n").map((line) => line.trim()).filter(isUsableRecipeLine);
   return lines.length ? lines : fallback ? [fallback] : [];
 }
 
@@ -104,16 +118,16 @@ export function uploadToRecipe(upload, enMeta, esMeta) {
     tags: upload.tags || { en: enMeta, es: esMeta },
     category: upload.category || "draft",
     servings: normalizeRecipeServings(upload.servings),
-    allergyWarning: upload.allergyWarning
+    allergyWarning: hasLocalizedContent(upload.allergyWarning)
       ? localizedPair(upload.allergyWarning)
       : undefined,
     ingredients: {
-      en: splitLines(localizedTextExact(upload.ingredientsText, "en"), "Add ingredients after review."),
-      es: splitLines(localizedTextExact(upload.ingredientsText, "es"), ""),
+      en: splitLines(localizedTextExact(upload.ingredientsText, "en")),
+      es: splitLines(localizedTextExact(upload.ingredientsText, "es")),
     },
     steps: {
-      en: splitLines(localizedTextExact(upload.stepsText, "en"), "Add cooking steps after review."),
-      es: splitLines(localizedTextExact(upload.stepsText, "es"), ""),
+      en: splitLines(localizedTextExact(upload.stepsText, "en")),
+      es: splitLines(localizedTextExact(upload.stepsText, "es")),
     },
     notes: localizedPair(upload.notes, "No notes yet.", "Sin notas todavía."),
     photos,
