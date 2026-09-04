@@ -34,31 +34,66 @@ const GROCERY_UNIT_WORDS = new Set([
 
 const INGREDIENT_SECTION_HEADER = /^(ingredients?|ingredientes?|directions?|instrucciones?|method|m[eé]todo|preparaci[oó]n|notes?|notas?|yield|rendimiento|serves?|servings?|porciones?)\s*:?\s*$/i;
 const INGREDIENT_HEADER_PREFIX = /^(?:ingredients?|ingredientes?)\s*:\s*/i;
+const SERVING_COUNT_HEADER = /^(?:para|for)\s*~?\s*\d/i;
+const YIELD_HEADER = /^(?:makes?|rinde|yield(?:s)?|serves?|porciones?|enough for|para servir)\b/i;
+const FOR_THE_HEADER = /^(?:for the|para (?:el|la|los|las|un|una))\b/i;
+const INSTRUCTION_START = /^(?:combine|mix|coat|dip|stir|whisk|pour|place|heat|cook|bake|fry|simmer|bring|season|serve|toss|spread|drizzle|marinate|blend|beat|fold|transfer|remove|preheat|using|then|while|until|pat|press|dredge|bread|combina(?:r)?|mezcla(?:r)?|cubre|cubrir|reboza(?:r)?|bate|batir|a[nñ]ade|agrega(?:r)?|coloca(?:r)?|calienta(?:r)?|cocina(?:r)?|hornea(?:r)?|fr[ií]e|sazona(?:r)?|sirve|servir|esparce|marina(?:r)?|precalienta(?:r)?|reserva(?:r)?|retira(?:r)?|unta(?:r)?|moja(?:r)?|empana(?:r)?)\b/i;
+const INSTRUCTION_SCENE = /^(?:in a |in the |en un |en una |en el |en la |with the |into |onto )/i;
+const INSTRUCTION_FLOW = /\b(then|until|hasta(?:\s+que)?|combine|mix|coat|dip|stir|mezcla|reboza|cubre)\b/i;
+const SIZE_PREFIX = /^(?:extra[-\s]?(?:large|small)|medium[-\s]large|very\s+large|large|small|medium|jumbo|big|grandes?|pequeñ[oa]s?|median[oa]s?)\s+/i;
+const FRESH_PREFIX = /^(?:freshly\s+ground|freshly|fresh|recién\s+molid[oa]s?|frescos?|frescas?)\s+/i;
+const TRAILING_PREP = /(?:,\s*)?(?:\s+(?:divided|plus more(?:\s+if needed)?|to taste|al gusto|for serving|para servir|for garnish|or more as needed(?:\s+to coat)?|as needed(?:\s+to coat)?|cut into wedges(?:[\/,]?\s*sliced for serving)?|peeled and chopped|and chopped))\s*$/i;
 
 function cleanIngredientLine(line) {
   return `${line || ""}`
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/[*_`]+/g, "")
     .replace(/^\s*#+\s*/, "")
-    .replace(/^\s*[-•]+\s*/, "")
+    .replace(/^\s*[-•●◦]+\s*/, "")
     .replace(INGREDIENT_HEADER_PREFIX, "")
     .replace(/^["'“”]+|["'“”]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
 }
 
+function isServingOrSectionHeader(line) {
+  if (SERVING_COUNT_HEADER.test(line) || YIELD_HEADER.test(line) || FOR_THE_HEADER.test(line)) return true;
+  if (/:$/.test(line) && !/^\d/.test(line) && line.split(/\s+/).length <= 10) return true;
+  return false;
+}
+
+function isCookingInstructionLine(line) {
+  if (/^\d+[\.)]\s+\S/.test(line)) return true;
+  if (INSTRUCTION_START.test(line) || INSTRUCTION_SCENE.test(line)) return true;
+  const words = line.split(/\s+/).filter(Boolean);
+  return words.length >= 12 && INSTRUCTION_FLOW.test(line);
+}
+
 function isIngredientJunkLine(line) {
   if (!line) return true;
   if (INGREDIENT_SECTION_HEADER.test(line)) return true;
-  if (/^[-—–_=*]{3,}$/.test(line)) return true;
+  if (isServingOrSectionHeader(line)) return true;
+  if (isCookingInstructionLine(line)) return true;
+  if (/^[-—–_=*:~]+$/.test(line)) return true;
   return false;
+}
+
+export function stripGroceryPrepChrome(value) {
+  let text = `${value || ""}`.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s*[\(\)]\s*/g, " ");
+  text = text.replace(/\s+/g, " ").trim().replace(/[.,;:*_`-]+$/g, "").trim();
+  while (SIZE_PREFIX.test(text)) text = text.replace(SIZE_PREFIX, "");
+  text = text.replace(FRESH_PREFIX, "");
+  text = text.replace(TRAILING_PREP, "").trim();
+  return text.replace(/\s+/g, " ").trim();
 }
 
 export function cleanIngredientForGrocery(item) {
   const lines = `${item || ""}`
     .split(/\r?\n/)
     .map(cleanIngredientLine)
-    .filter((line) => !isIngredientJunkLine(line));
+    .filter((line) => !isIngredientJunkLine(line))
+    .map(stripGroceryPrepChrome)
+    .filter(Boolean);
   if (!lines.length) return "";
   if (lines.length === 1) return lines[0];
   const withAmount = [...lines].reverse().find((line) => /^\d/.test(line));
@@ -109,18 +144,19 @@ export function groceryAisleOrder() {
 
 export function groceryRowParts(text) {
   const cleaned = cleanIngredientForGrocery(text);
+  if (!cleaned) return { name: "", quantityLabel: "" };
   const parsed = parseIngredientAmount(cleaned);
-  if (!(parsed.quantity > 0)) return { name: cleaned, quantityLabel: "" };
+  if (!(parsed.quantity > 0)) return { name: stripGroceryPrepChrome(cleaned), quantityLabel: "" };
   const tokens = `${parsed.remainder || ""}`.trim().split(/\s+/).filter(Boolean);
   const first = (tokens[0] || "").toLowerCase().replace(/\.$/, "");
   if (tokens.length > 1 && GROCERY_UNIT_WORDS.has(first)) {
     return {
-      name: tokens.slice(1).join(" "),
+      name: stripGroceryPrepChrome(tokens.slice(1).join(" ")),
       quantityLabel: `${formatIngredientAmount(parsed.quantity)} ${tokens[0]}`,
     };
   }
   return {
-    name: parsed.remainder || cleaned,
+    name: stripGroceryPrepChrome(parsed.remainder || cleaned),
     quantityLabel: formatIngredientAmount(parsed.quantity),
   };
 }

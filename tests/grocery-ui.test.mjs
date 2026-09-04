@@ -283,21 +283,41 @@ test("legacy recipe rows map by ingredient identity after Spanish translation", 
   assert.match(elements["#groceryList"].innerHTML, /grocery-qty">1</);
 });
 
-test("pending recipe rows offer an explicit Spanish translation action", async () => {
-  let translatedRecipeId = "";
+test("shopping rows omit recipe translation actions and instruction paste", () => {
   const { elements, ui } = harness({
-    translateRecipe: async (recipeId) => {
-      translatedRecipeId = recipeId;
-    },
+    translateRecipe: async () => {},
     state: {
-      groceries: [{
-        id: "needs-translation",
-        text: { en: "4 lemons" },
-        checked: false,
-        source: "week-plan",
-        store: "any",
-        recipeId: "needs-spanish",
-      }],
+      groceries: [
+        {
+          id: "needs-translation",
+          text: { en: "4 lemons" },
+          checked: false,
+          source: "week-plan",
+          store: "any",
+          recipeId: "needs-spanish",
+        },
+        {
+          id: "header",
+          text: { en: "Para ~4–6 filetes:" },
+          checked: false,
+          source: "meal-plan",
+          store: "any",
+        },
+        {
+          id: "instruction",
+          text: { en: "Dip each fillet in the egg, then coat with panko breadcrumbs until fully covered" },
+          checked: false,
+          source: "meal-plan",
+          store: "any",
+        },
+        {
+          id: "prepped",
+          text: { en: "medium-large russet potato (peeled and chopped )" },
+          checked: false,
+          source: "meal-plan",
+          store: "any",
+        },
+      ],
       recipes: [{
         id: "needs-spanish",
         name: { en: "Lemon recipe", es: "Receta de limón" },
@@ -307,17 +327,15 @@ test("pending recipe rows offer an explicit Spanish translation action", async (
   });
 
   ui.renderGroceries();
-  assert.match(elements["#groceryList"].innerHTML, /data-translate-grocery-recipe="needs-spanish"/);
 
-  await elements["#groceryList"].dispatch("click", {
-    closest(selector) {
-      return selector === "[data-translate-grocery-recipe]"
-        ? { dataset: { translateGroceryRecipe: "needs-spanish" } }
-        : null;
-    },
-  });
-
-  assert.equal(translatedRecipeId, "needs-spanish");
+  assert.match(elements["#groceryList"].innerHTML, /<strong>limones<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>russet potato<\/strong>/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /data-translate-grocery-recipe/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Traducir receta|Translate recipe/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Para ~4/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /filetes/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /Dip each fillet/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /peeled and chopped/);
 });
 
 test("shopping list keeps the end-of-trip action visible while items remain", () => {

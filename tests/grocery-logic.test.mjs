@@ -60,6 +60,28 @@ test("groceryItemsFromRecipe flags possible inventory matches without hiding the
   assert.equal(items[1].inInventory, false);
 });
 
+test("groceryItemsFromRecipe skips serving headers and cooking-instruction paste", () => {
+  const recipe = {
+    id: "panko-fish",
+    name: { en: "Panko fish" },
+    ingredients: {
+      en: [
+        "Para ~4–6 filetes:",
+        "4 garlic cloves (roughly chopped)",
+        "Dip each fillet in the egg, then coat with panko breadcrumbs until fully covered",
+        "1 cup panko breadcrumbs",
+        "lemon (cut into wedges/sliced for serving)",
+      ],
+    },
+  };
+
+  const items = groceryItemsFromRecipe(recipe, "en", []);
+  const names = items.map((item) => groceryRowParts(item.text.en).name);
+
+  assert.deepEqual(names, ["garlic cloves", "panko breadcrumbs", "lemon"]);
+  assert.ok(items.every((item) => !/para ~|filetes|dip each|coat with/i.test(item.text.en)));
+});
+
 test("groceryItemsFromRecipe records the meal that will use an ingredient", () => {
   const recipe = {
     id: "bean-salad",
@@ -238,16 +260,38 @@ test("grocery names drop markdown markers and split quantity badges", () => {
   assert.equal(groceryAisleFor("olive oil"), "pantry");
 });
 
-test("grocery names drop recipe headers and multi-line paste junk", () => {
+test("grocery names drop recipe headers, serving lines, and prep parentheses", () => {
   assert.equal(cleanIngredientForGrocery("### Ingredients\n* crushed red pepper"), "crushed red pepper");
   assert.equal(
     cleanIngredientForGrocery("Yogurt Marinated Grilled Chicken Skewers\nIngredients:\n- 1 tsp crushed red pepper"),
     "1 tsp crushed red pepper",
   );
   assert.equal(cleanIngredientForGrocery("Ingredientes:\n**ajo**"), "ajo");
+  assert.equal(cleanIngredientForGrocery("Para ~4–6 filetes:"), "");
+  assert.equal(cleanIngredientForGrocery("For ~4-6 steaks:"), "");
+  assert.equal(
+    cleanIngredientForGrocery("Dip each fillet in the egg, then coat with panko breadcrumbs until fully covered"),
+    "",
+  );
+  assert.equal(cleanIngredientForGrocery("garlic cloves (roughly chopped)"), "garlic cloves");
+  assert.equal(cleanIngredientForGrocery("lemon (juiced)"), "lemon");
+  assert.equal(cleanIngredientForGrocery("lemon (cut into wedges/sliced for serving)"), "lemon");
+  assert.equal(cleanIngredientForGrocery("medium-large russet potato (peeled and chopped )"), "russet potato");
   assert.deepEqual(groceryRowParts("1 tsp **crushed red pepper**"), {
     name: "crushed red pepper",
     quantityLabel: "1 tsp",
+  });
+  assert.deepEqual(groceryRowParts("garlic cloves (roughly chopped)"), {
+    name: "garlic cloves",
+    quantityLabel: "",
+  });
+  assert.deepEqual(groceryRowParts("1 tsp freshly ground black pepper"), {
+    name: "black pepper",
+    quantityLabel: "1 tsp",
+  });
+  assert.deepEqual(groceryRowParts("Para ~4–6 filetes:"), {
+    name: "",
+    quantityLabel: "",
   });
 });
 

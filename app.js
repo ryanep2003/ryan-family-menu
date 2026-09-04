@@ -1534,7 +1534,6 @@ const groceryUi = createGroceryUi({
   formatItemActivity,
   saveGroceries,
   offerUndo,
-  translateRecipe: async (recipeId) => backfillRecipeLocale(recipeId, lang),
 });
 
 const renderGroceries = () => groceryUi.renderGroceries();
