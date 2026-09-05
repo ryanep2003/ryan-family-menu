@@ -52,6 +52,8 @@ Netlify supplies Blob access to deployed Functions through `@netlify/blobs`; no 
 
 Use `$pre-deploy-check` for a meaningful release and require its `READY TO DEPLOY` decision. Use `$test-mobile-pwa` whenever the release affects visible mobile behavior, the app shell, or PWA state. At minimum:
 
+Before a recovery or release-readiness review, run `npm run check:fresh-main`. It compares the local `HEAD` to live `origin/main`; a mismatch means the checkout is stale and must be refreshed in an isolated copy before conclusions are made. This check does not deploy or modify files.
+
 1. Confirm the intended repository and `main` branch.
 2. Review `git status` and the complete diff for unrelated or secret material.
 3. Run `npm test` and `git diff --check`.

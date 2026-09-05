@@ -1,5 +1,21 @@
 # Durable Decisions
 
+## 2026-09-04 — Keep family-key rotation hidden until recovery is production-ready
+
+**Decision:** Do not present key rotation in the household menu while the product still uses capability-key access without roles, recovery, or revocation guarantees. The existing server-side gated path remains available for future completion, but the current UI does not imply that rotation is supported.
+
+**Reason:** A rotation control without documented authorization, old-key invalidation, and recovery behavior could strand a household or create false security confidence.
+
+**Consequences:** Existing keys and stored data are unchanged. Reintroduce the control only with explicit authorization, recovery, invalidation, failure-state, and end-to-end tests.
+
+## 2026-09-04 — Keep “Plan from what we have” advisory and deterministic
+
+**Decision:** Rank up to three dinner candidates from existing recipes, inventory, leftovers, family rules, prep limits, servings, and budget. Show the ingredients used and remaining before opening Plan; never write a meal automatically.
+
+**Reason:** Families get a useful next step from data already in the product without introducing an AI dependency or surprising schedule changes.
+
+**Consequences:** The feature is offline-capable and testable. Matching remains conservative, restrictions exclude candidates, and no new persisted record or migration is required.
+
 This is a lightweight record of architectural and product decisions that future contributors should not reverse accidentally. Add an entry only when a decision changes enduring structure, data meaning, access, deployment, or a significant product constraint.
 
 ## 2026-09-04 — Four-tab family shell and always-visible Plan save

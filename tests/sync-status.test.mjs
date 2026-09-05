@@ -23,7 +23,7 @@ test("normal shared menu startup stays visually quiet", async () => {
 
 test("same-device save conflicts stay a pending sync state", async () => {
   const source = await import("node:fs/promises").then(({ readFile }) => readFile(new URL("../app.js", import.meta.url), "utf8"));
-  assert.match(source, /if \(!retrying\) return performSaveSharedState\(\{ retrying: true, allowEmptySchedule, auditAction \}\);\s*\/\/ A second conflict/);
+  assert.match(source, /if \(!retrying\) return performSaveSharedState\(\{[\s\S]*?dirtySnapshot: savedDirtySnapshot,[\s\S]*?submittedCurrentState: cloneVersionedValue\(retryIntentState\),[\s\S]*?\}\);\s*\/\/ A second conflict/);
   assert.match(source, /setSyncStatus\("shared", "savedLocallyPending", \{ state: "pending", canRetry: true \}\);/);
   assert.doesNotMatch(source, /if \(!retrying\)[\s\S]{0,220}setSyncStatus\("shared", "sharedStateConflict", \{ state: "error" \}\)/);
 });

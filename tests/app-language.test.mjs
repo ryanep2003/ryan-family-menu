@@ -63,16 +63,10 @@ test("household menu chrome is localized in English and Spanish", async () => {
     "shareFamilyKeyHint",
     "familyKeyLabel",
     "copyFamilyKey",
-    "rotateFamilyKey",
-    "rotateFamilyKeyNote",
-    "rotationCodeLabel",
-    "createNewFamilyKey",
     "leaveHousehold",
     "leaveHouseholdConfirm",
     "familyKeyCopied",
     "familyKeySelected",
-    "familyKeyRotated",
-    "rotateFamilyKeyError",
   ]) {
     assert.ok(translations.en[key], `English missing ${key}`);
     assert.ok(translations.es[key], `Spanish missing ${key}`);
@@ -84,7 +78,7 @@ test("household menu chrome is localized in English and Spanish", async () => {
   assert.match(translations.es.shareFamilyKeyHint, /clave/);
   assert.match(html, /data-i18n="shareFamilyKeyHint"/);
   assert.match(html, /id="copyHouseholdKey"[^>]*data-i18n="copyFamilyKey"/);
-  assert.match(html, /data-i18n="rotateFamilyKey"/);
+  assert.doesNotMatch(html, /id="rotateHouseholdKey"|data-i18n="rotateFamilyKey"/);
   assert.match(html, /id="leaveHousehold"[^>]*data-i18n="leaveHousehold"/);
   assert.match(app, /t\("familyKeyCopied"\)/);
   assert.match(app, /t\("leaveHouseholdConfirm"\)/);

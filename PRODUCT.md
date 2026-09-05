@@ -14,6 +14,8 @@ Family Menu is the shared operating system for a household's food life. It helps
 
 ## Current Experience
 
+Today can offer up to three advisory “Plan from what we have” dinner options using existing inventory, leftovers, recipes, family rules, prep time, and budget. Choosing an option only opens Plan for review; it never changes the meal plan silently.
+
 The shipped product currently supports:
 
 - Private household creation and shared access through a family key.

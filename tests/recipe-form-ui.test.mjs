@@ -122,6 +122,7 @@ function harness(overrides = {}) {
     updatedMealsFor: [],
     view: "",
     statuses: [],
+    clearedDirtyForms: [],
     ...overrides.state,
   };
   const currentRecipe = overrides.currentRecipe || {
@@ -245,6 +246,9 @@ function harness(overrides = {}) {
     setDetailStatus: (message, isError = false) => {
       state.statuses.push({ message, isError });
     },
+    clearDirtyForm: (target) => {
+      state.clearedDirtyForms.push(target);
+    },
   });
 
   ui.bind();
@@ -286,7 +290,7 @@ test("recipe edit uses replacement photos when selected", async () => {
 });
 
 test("edit recipe only shows the edit panel while editing", async () => {
-  const { elements } = harness();
+  const { elements, state } = harness();
 
   await elements["#editRecipe"].dispatch("click");
   assert.equal(elements["#editRecipeForm"].hidden, false);
@@ -298,6 +302,18 @@ test("edit recipe only shows the edit panel while editing", async () => {
   assert.equal(elements["#editRecipeForm"].hidden, true);
   assert.equal(elements["#recipeDetail"].classList.values.has("editing"), false);
   assert.equal(elements["#editRecipe"].focused, true);
+  assert.deepEqual(state.clearedDirtyForms, [elements["#editRecipeForm"]]);
+});
+
+test("successful add-recipe completion clears only the add form's dirty state", async () => {
+  const { elements, state } = harness();
+  elements["#nameInput"].value = "New recipe";
+  elements["#ingredientsInput"].value = "beans";
+  elements["#stepsInput"].value = "cook";
+
+  await elements["#uploadForm"].dispatch("submit");
+
+  assert.deepEqual(state.clearedDirtyForms, [elements["#uploadForm"]]);
 });
 
 test("delete recipe clears related local state and meal references", async () => {

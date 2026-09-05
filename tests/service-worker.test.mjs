@@ -2,6 +2,27 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+test("service worker pre-caches the complete first-party import graph", async () => {
+  const root = new URL("../", import.meta.url);
+  const worker = await readFile(new URL("service-worker.js", root), "utf8");
+  const assetList = worker.slice(worker.indexOf("const ASSETS"), worker.indexOf("];"));
+  const cached = new Set([...assetList.matchAll(/"(\.\/[^\"]*)"/g)].map((match) => new URL(match[1], root).href));
+  const pending = [new URL("app.js", root)];
+  const visited = new Set();
+  while (pending.length) {
+    const module = pending.pop();
+    module.search = "";
+    module.hash = "";
+    if (visited.has(module.href)) continue;
+    visited.add(module.href);
+    assert.ok(cached.has(module.href), `Missing pre-cache entry: ${module.pathname.split("/").pop()}`);
+    const source = await readFile(module, "utf8");
+    for (const match of source.matchAll(/(?:from\s*|import\s*)["'](\.[^"']+)["']/g)) {
+      pending.push(new URL(match[1], module));
+    }
+  }
+});
+
 test("service worker reuses cached static assets before requesting the network", async () => {
   const source = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
 
@@ -57,6 +78,9 @@ test("service worker pre-caches first-party app modules", async () => {
     "./assistant-logic.js",
     "./assistant-ui.js",
     "./shared-state-loader.js",
+    "./shared-state-authority.js",
+    "./dirty-form-state.js",
+    "./shared-save-coordinator.js",
   ]) {
     assert.match(serviceWorker, new RegExp(path.replace(".", "\\.")), path);
   }

@@ -64,6 +64,8 @@ Treat these as release blockers unless a requested, reviewed migration explicitl
 
 ## Before Making Changes
 
+For recovery, review, or release-readiness work based on current product behavior, run `npm run check:fresh-main` first. It compares the checkout `HEAD` with live `origin/main` and must pass before making baseline-sensitive claims. If it fails, fetch and create a fresh isolated checkout; never reset a dirty user checkout to repair freshness.
+
 For meaningful features, persisted-data changes, or architectural work:
 
 1. Inspect the relevant UI, state, logic, endpoint, sanitizer, persistence, localization, and tests.

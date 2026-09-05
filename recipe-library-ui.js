@@ -36,6 +36,7 @@ export function createRecipeLibraryUi({
   setCalendarMeals = () => {},
   saveSchedule = async () => true,
   render = () => {},
+  clearDirtyForm = () => {},
 }) {
   let lastLibraryButton = null;
 
@@ -359,6 +360,7 @@ export function createRecipeLibraryUi({
       $("#recipesView").classList.remove("detail-open");
       $("#recipeDetail").classList.remove("editing");
       $("#editRecipeForm").hidden = true;
+      clearDirtyForm($("#editRecipeForm"));
       setDetailStatus("");
       if (lastLibraryButton) {
         lastLibraryButton.focus();

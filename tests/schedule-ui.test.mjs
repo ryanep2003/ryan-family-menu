@@ -32,8 +32,8 @@ function element(initial = {}) {
     addEventListener(type, listener) {
       listeners.set(type, listener);
     },
-    async dispatch(type, target = this) {
-      await listeners.get(type)?.({ target });
+    async dispatch(type, target = this, extras = {}) {
+      await listeners.get(type)?.({ target, preventDefault() { this.prevented = true; }, ...extras });
     },
     scrollIntoView() {
       this.scrolled = true;
@@ -637,6 +637,19 @@ test("calendar stays read-only until a date opens its focused editor", async () 
   assert.match(elements["#calendarDateEditor"].innerHTML, /data-meal-recipe-results="calendar:2026-06-24"/);
   assert.equal(elements["#calendarDateEditor"].scrolled, true);
   assert.equal(elements["#calendarEditorHeading"].focused, true);
+});
+
+test("calendar arrow navigation keeps focus on the live date button", async () => {
+  const { dateButtons, elements, ui } = harness();
+
+  ui.renderCalendar();
+  const first = dateButtons.find((button) => button.dataset.editCalendarDate === "2026-06-24");
+  await first.dispatch("keydown", first, { key: "ArrowRight" });
+  const second = dateButtons.find((button) => button.dataset.editCalendarDate === "2026-06-25");
+  await second.dispatch("keydown", second, { key: "ArrowRight" });
+
+  assert.equal(second.focused, true);
+  assert.equal(elements["#calendarEditorHeading"].focused, undefined);
 });
 
 test("week and month planning are separate focused views", async () => {

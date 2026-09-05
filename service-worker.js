@@ -1,4 +1,4 @@
-const CACHE_NAME = "ryan-family-menu-v166";
+const CACHE_NAME = "ryan-family-menu-v173";
 const ASSETS = [
   "./",
   "./index.html",
@@ -22,6 +22,10 @@ const ASSETS = [
   "./family-state.js",
   "./family-ui.js",
   "./memory-logic.js",
+  "./plan-from-what-we-have.js",
+  "./dirty-form-state.js",
+  "./shared-save-coordinator.js",
+  "./shared-state-authority.js",
   "./images.js",
   "./localized-data.js",
   "./language-quality.js",
@@ -45,6 +49,7 @@ const ASSETS = [
   "./grocery-logic.js",
   "./inventory-logic.js",
   "./recipe-utils.js",
+  "./recipe-catalog-utils.js",
   "./schedule-utils.js",
   "./manifest.webmanifest",
   "./assets/app-icon.svg",

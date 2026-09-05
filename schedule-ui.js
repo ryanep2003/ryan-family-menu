@@ -66,6 +66,7 @@ export function createScheduleUi({
   let focusedDinnerDraft = null;
   let focusedDinnerChoosing = false;
   let focusedDinnerSearch = "";
+  let focusedDinnerSuggestionId = "";
   const mealSearchState = new Map();
   let planDirty = false;
   let planSaveBarHideTimer = 0;
@@ -239,7 +240,9 @@ export function createScheduleUi({
   }
 
   function focusedSearchMarkup() {
+    const suggestion = focusedDinnerSuggestionId ? recipeById(focusedDinnerSuggestionId) : null;
     return `
+      ${suggestion ? `<aside class="focused-dinner-suggestion"><strong>${escapeHtml(localize(suggestion.name))}</strong><p>${t("planFromHomePreview")}</p><button class="ghost-button" type="button" data-focused-recipe="${escapeHtml(suggestion.id)}">${t("chooseThisRecipe")}</button></aside>` : ""}
       <label class="focused-dinner-search">
         <span>${t("whatShouldWeHave")}</span>
         <input id="focusedDinnerSearch" type="search" autocomplete="off" inputmode="search" value="${escapeHtml(focusedDinnerSearch)}" placeholder="${escapeHtml(t("recipeSearchPlaceholder"))}" />
@@ -401,11 +404,12 @@ export function createScheduleUi({
     });
   }
 
-  function openFocusedDinner(dateKey) {
+  function openFocusedDinner(dateKey, suggestedRecipeId = "") {
     focusedDinnerDateKey = /^\d{4}-\d{2}-\d{2}$/.test(dateKey || "") ? dateKey : formatDateKey(new Date());
     focusedDinnerDraft = normalizeMealPlan(calendarMealForDateKey(focusedDinnerDateKey));
     focusedDinnerChoosing = !focusedDinnerItem(focusedDinnerDraft);
     focusedDinnerSearch = "";
+    focusedDinnerSuggestionId = recipeById(suggestedRecipeId)?.id || "";
     renderFocusedDinner();
     globalThis.requestAnimationFrame?.(() => $(focusedDinnerChoosing ? "#focusedDinnerSearch" : "#focusedDinnerHeading")?.focus?.({ preventScroll: true }));
   }
@@ -415,6 +419,7 @@ export function createScheduleUi({
     focusedDinnerDraft = null;
     focusedDinnerChoosing = false;
     focusedDinnerSearch = "";
+    focusedDinnerSuggestionId = "";
     renderFocusedDinner();
     if (navigate) onFocusedDinnerComplete();
   }
@@ -953,6 +958,20 @@ export function createScheduleUi({
     });
   }
 
+  function selectCalendarDate(dateKey, { focusEditor = true, scrollEditor = true } = {}) {
+    selectedCalendarDateKey = dateKey;
+    const selectedDate = new Date(`${selectedCalendarDateKey}T12:00:00`);
+    const currentMonth = getVisibleMonth();
+    if (selectedDate.getMonth() !== currentMonth.getMonth() || selectedDate.getFullYear() !== currentMonth.getFullYear()) {
+      selectedDate.setDate(1);
+      setVisibleMonth(selectedDate);
+    }
+    renderCalendar();
+    if (!focusEditor) return;
+    if (scrollEditor) $("#calendarDateEditor").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("#calendarEditorHeading").focus({ preventScroll: true });
+  }
+
   function renderCalendar() {
     const lang = getLang();
     const visibleMonth = getVisibleMonth();
@@ -966,7 +985,7 @@ export function createScheduleUi({
     });
 
     $("#monthTitle").textContent = monthName(visibleMonth);
-    $("#calendarWeekdays").innerHTML = days.map((day) => `<span>${day[lang].slice(0, 3)}</span>`).join("");
+    $("#calendarWeekdays").innerHTML = `<div role="row">${days.map((day) => `<span role="columnheader">${escapeHtml(day[lang].slice(0, 3))}</span>`).join("")}</div>`;
     $("#calendarGrid").innerHTML = calendarDateRange()
       .map((date) => {
         const dateKey = formatDateKey(date);
@@ -982,20 +1001,26 @@ export function createScheduleUi({
           mealHasContent(meal) ? "has-meal" : "",
         ].filter(Boolean).join(" ");
 
+        const isSelected = dateKey === selectedCalendarDateKey;
+        const isToday = dateKey === todayKey;
+        const mealLabel = summary || t("calendarAgendaEmpty");
         return `
-          <button
-            class="${classes}${hasOverride ? " custom-date" : isThisWeek ? " weekly-date" : ""}"
-            type="button"
-            data-edit-calendar-date="${dateKey}"
-            aria-pressed="${dateKey === selectedCalendarDateKey}"
-            aria-label="${escapeHtml(`${dateFormatter.format(date)}: ${summary}`)}"
-          >
+          <div class="calendar-cell" role="gridcell" aria-selected="${isSelected}">
+            <button
+              class="${classes}${hasOverride ? " custom-date" : isThisWeek ? " weekly-date" : ""}"
+              type="button"
+              data-edit-calendar-date="${dateKey}"
+              ${isToday ? 'aria-current="date"' : ""}
+              tabindex="${isSelected || (!selectedCalendarDateKey && isToday) ? "0" : "-1"}"
+              aria-label="${escapeHtml(`${dateFormatter.format(date)}: ${mealLabel}`)}"
+            >
             <div class="calendar-date">
               <span class="date-number">${date.getDate()}</span>
               ${hasOverride || isThisWeek ? `<span class="calendar-source">${t(hasOverride ? "customDate" : "weeklyPlan")}</span>` : ""}
             </div>
             <span class="calendar-meal-summary">${escapeHtml(summary)}</span>
-          </button>
+            </button>
+          </div>
         `;
       })
       .join("");
@@ -1046,16 +1071,20 @@ export function createScheduleUi({
 
     $$("[data-edit-calendar-date]").forEach((button) => {
       button.addEventListener("click", () => {
-        selectedCalendarDateKey = button.dataset.editCalendarDate;
-        const selectedDate = new Date(`${selectedCalendarDateKey}T12:00:00`);
-        const visibleMonth = getVisibleMonth();
-        if (selectedDate.getMonth() !== visibleMonth.getMonth() || selectedDate.getFullYear() !== visibleMonth.getFullYear()) {
-          selectedDate.setDate(1);
-          setVisibleMonth(selectedDate);
-        }
-        renderCalendar();
-        $("#calendarDateEditor").scrollIntoView({ behavior: "smooth", block: "start" });
-        $("#calendarEditorHeading").focus({ preventScroll: true });
+        selectCalendarDate(button.dataset.editCalendarDate);
+      });
+      button.addEventListener("keydown", (event) => {
+        const delta = ({ ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 })[event.key];
+        if (!delta) return;
+        const buttons = $$("[data-edit-calendar-date]");
+        const index = buttons.indexOf(button);
+        const next = buttons[index + delta];
+        if (!next) return;
+        event.preventDefault();
+        const nextDateKey = next.dataset.editCalendarDate;
+        selectCalendarDate(nextDateKey, { focusEditor: false, scrollEditor: false });
+        const liveTarget = $$(`[data-edit-calendar-date]`).find((candidate) => candidate.dataset.editCalendarDate === nextDateKey);
+        liveTarget?.focus({ preventScroll: true });
       });
     });
     $$('[data-use-weekly-plan]').forEach((button) => {

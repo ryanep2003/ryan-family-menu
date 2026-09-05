@@ -1,6 +1,6 @@
 import { budgetForMonth } from "./budget-logic.js";
 
-export function createBudgetUi({ $, $$, t, escapeHtml, getBudgetSettings, setBudgetSettings, getReceipts, setReceipts, saveSharedState }) {
+export function createBudgetUi({ $, $$, t, escapeHtml, getBudgetSettings, setBudgetSettings, getReceipts, setReceipts, saveSharedState, markDirtySurface = () => {}, clearDirtySurface = () => {} }) {
   const money = (value) => new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(Number(value) || 0);
 
   function renderBudget() {
@@ -24,10 +24,12 @@ export function createBudgetUi({ $, $$, t, escapeHtml, getBudgetSettings, setBud
   function bindBudgetControls() {
     $("#budgetForm").addEventListener("submit", async (event) => {
       event.preventDefault();
+      markDirtySurface(event.currentTarget);
       setBudgetSettings({ monthlyTarget: Number($("#monthlyBudgetInput").value) || 0 });
       renderBudget();
       bindReceiptRemoval();
-      await saveSharedState();
+      const saved = await saveSharedState({ dirtySurface: "budget" });
+      void saved;
     });
     bindReceiptRemoval();
   }
@@ -39,9 +41,11 @@ export function createBudgetUi({ $, $$, t, escapeHtml, getBudgetSettings, setBud
     history.addEventListener("click", async (event) => {
       const button = event.target.closest("[data-remove-receipt]");
       if (!button) return;
+      markDirtySurface($("#budgetForm"));
       setReceipts(getReceipts().filter((receipt) => receipt.id !== button.dataset.removeReceipt));
       renderBudget();
-      await saveSharedState();
+      const saved = await saveSharedState({ dirtySurface: "budget" });
+      void saved;
     });
   }
   return { bindBudgetControls, renderBudget };

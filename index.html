@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=166" />
+    <link rel="stylesheet" href="styles.css?v=173" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -67,7 +67,10 @@
 
     <header class="app-header">
       <div class="app-header-top">
-        <span class="brand-mark" aria-hidden="true">F</span>
+        <div class="brand-lockup" aria-label="Family Menu">
+          <span class="brand-mark" aria-hidden="true">F</span>
+          <span class="brand-name">Family Menu</span>
+        </div>
         <div class="header-actions">
           <button class="guide-button" id="quickGuideToggle" type="button" aria-controls="quickGuide" aria-expanded="false" data-i18n="quickGuide">Quick guide</button>
           <button class="shell-add-button" id="globalAddRecipe" type="button" aria-label="Add recipe" data-i18n="addTab" data-i18n-aria-label="addRecipe">Add</button>
@@ -105,17 +108,13 @@
             <div class="household-sync-status sync-status-row" id="sharedSyncStatusPanel" hidden>
               <p class="upload-status" id="sharedStateStatus" role="status"></p>
               <button class="ghost-button sync-retry" id="retrySharedState" type="button" data-i18n="retrySync" hidden>Retry sync</button>
+              <button class="text-button" id="keepLocalChanges" type="button" data-i18n="keepLocalChanges" hidden>Keep local edits</button>
+              <button class="text-button" id="acceptRemoteChanges" type="button" data-i18n="acceptRemoteChanges" hidden>Accept remote edits</button>
             </div>
             <div class="household-sync-status sync-status-row" id="recipeSyncStatusPanel" hidden>
               <p class="upload-status" id="recipeSyncStatus" role="status"></p>
               <button class="ghost-button sync-retry" id="retryRecipes" type="button" data-i18n="retrySync" hidden>Retry sync</button>
             </div>
-            <details class="household-activity">
-              <summary data-i18n="rotateFamilyKey">Rotate family key</summary>
-              <p class="field-note" data-i18n="rotateFamilyKeyNote">Use the owner rotation code to revoke the old key and create a new one.</p>
-              <label><span data-i18n="rotationCodeLabel">Rotation code</span><input id="householdRotationCode" type="password" autocomplete="off" /></label>
-              <button class="ghost-button" id="rotateHouseholdKey" type="button" data-i18n="createNewFamilyKey">Create new family key</button>
-            </details>
             <button class="primary-action" id="openFamily" type="button" data-i18n="openFamily">Family &amp; preferences</button>
             <details class="household-activity" id="householdActivityPanel">
               <summary data-i18n="recentActivity">Recent activity</summary>
@@ -261,7 +260,7 @@
           </div>
         </div>
 
-        <section class="dinner-feedback" id="dinnerFeedback" aria-live="polite" hidden></section>
+        <section class="dinner-feedback" id="dinnerFeedback" aria-live="polite" data-dirty-area="dinner" data-dirty-surface="dinner" hidden></section>
 
         <section class="smart-suggestions" id="smartSuggestions" aria-labelledby="smartSuggestionsHeading" hidden>
           <div class="panel-heading">
@@ -270,7 +269,14 @@
           <div id="smartSuggestionList"></div>
         </section>
 
-        <details class="today-handoff" id="todayHandoff">
+        <section class="plan-from-home" id="planFromHome" aria-labelledby="planFromHomeHeading" hidden>
+          <p class="section-label" data-i18n="planFromHomeLabel">Use what is already here</p>
+          <h2 id="planFromHomeHeading" data-i18n="planFromHomeHeading">Plan from what we have</h2>
+          <p class="section-note" data-i18n="planFromHomeHelper">Preview up to three dinners using food at home. Nothing changes until you choose one.</p>
+          <div id="planFromHomeList"></div>
+        </section>
+
+        <details class="today-handoff" id="todayHandoff" data-dirty-area="shared" data-dirty-surface="today">
           <summary>
             <span id="todayHandoffSummary" data-i18n="handoffAdd">Leave a note for the next cook</span>
             <small data-i18n="editHandoff">Edit handoff</small>
@@ -303,7 +309,7 @@
           <div class="available-food-list" id="todayAvailableFoodList"></div>
           <details class="available-food-add">
             <summary data-i18n="availableFoodAdd">Record a snack or leftover</summary>
-            <form id="todayAvailableFoodForm">
+            <form id="todayAvailableFoodForm" data-dirty-area="shared" data-dirty-surface="today">
               <label>
                 <span data-i18n="availableFoodLabel">What is available?</span>
                 <input id="todayAvailableFoodLabel" type="text" maxlength="160" data-i18n-placeholder="availableFoodLabelPlaceholder" placeholder="Apple slices or Tuesday's pasta" required />
@@ -352,7 +358,7 @@
               </div>
               <span id="taskProgress"></span>
             </div>
-            <form class="task-add" id="taskForm">
+            <form class="task-add" id="taskForm" data-dirty-area="shared" data-dirty-surface="today">
               <input type="text" id="taskInput" data-i18n-placeholder="taskPlaceholder" data-i18n-aria-label="taskInputLabel" aria-label="Cooking task" placeholder="Prep chicken, make rice..." required />
               <input id="taskAssigneeInput" type="text" maxlength="40" list="householdMemberSuggestions" aria-label="Assigned to" data-i18n-aria-label="assignedToLabel" data-i18n-placeholder="assignedToPlaceholder" placeholder="Who is helping?" />
               <button class="primary-action" type="submit" data-i18n="addTask">Add task</button>
@@ -375,7 +381,7 @@
         </details>
       </section>
 
-      <section class="view family-view" id="familyView">
+      <section class="view family-view" id="familyView" data-dirty-area="shared" data-dirty-surface="family">
         <div class="section-heading view-banner family-banner">
           <div>
             <h2 tabindex="-1" id="familyHeading" data-i18n="familyHeading">Your family</h2>
@@ -427,7 +433,7 @@
           <button id="monthPlanningTab" type="button" role="tab" aria-controls="monthPlanningPanel" aria-selected="false" data-planning-mode="month" data-i18n="planByMonth">Month</button>
         </div>
 
-        <div id="weekPlanningPanel" role="tabpanel" aria-labelledby="weekPlanningTab">
+        <div id="weekPlanningPanel" role="tabpanel" aria-labelledby="weekPlanningTab" data-dirty-area="schedule" data-dirty-surface="schedule">
           <button class="plan-lunches-entry" type="button" data-view-target="lunches">
             <span>
               <strong data-i18n="planLunchesEntry">School lunches</strong>
@@ -463,7 +469,7 @@
           </div>
         </div>
 
-        <div id="monthPlanningPanel" role="tabpanel" aria-labelledby="monthPlanningTab" hidden>
+        <div id="monthPlanningPanel" role="tabpanel" aria-labelledby="monthPlanningTab" data-dirty-area="schedule" data-dirty-surface="schedule" hidden>
           <div class="section-heading view-banner month-banner">
             <div>
               <p class="view-kicker" data-i18n="monthLabel">Monthly plan</p>
@@ -477,8 +483,8 @@
             </div>
           </div>
           <div class="calendar-scroll">
-            <div class="calendar-weekdays" id="calendarWeekdays"></div>
-            <div class="calendar-grid" id="calendarGrid"></div>
+            <div class="calendar-weekdays" id="calendarWeekdays" role="rowgroup"></div>
+            <div class="calendar-grid" id="calendarGrid" role="grid" aria-labelledby="monthTitle"></div>
             <div class="calendar-agenda" id="calendarAgenda" aria-live="polite"></div>
           </div>
           <section class="schedule-editor calendar-date-editor" id="calendarDateEditor" hidden></section>
@@ -486,7 +492,7 @@
         </div>
       </section>
 
-      <section class="view lunch-view" id="lunchesView" aria-label="School lunches" data-i18n-aria-label="lunchesHeading"></section>
+      <section class="view lunch-view" id="lunchesView" aria-label="School lunches" data-i18n-aria-label="lunchesHeading" data-dirty-area="shared" data-dirty-surface="lunches"></section>
 
       <section class="view" id="groceryView">
         <div class="inventory-mode-switch" role="tablist" aria-label="Shopping and home inventory" data-i18n-aria-label="inventoryModeLabel">
@@ -494,7 +500,7 @@
           <button id="homeModeTab" type="button" role="tab" aria-controls="homePanel" data-inventory-mode="home" data-i18n="atHomeMode">At Home</button>
         </div>
 
-        <div id="shoppingPanel" role="tabpanel" aria-labelledby="shoppingModeTab">
+        <div id="shoppingPanel" role="tabpanel" aria-labelledby="shoppingModeTab" data-dirty-area="groceries" data-dirty-surface="shopping">
           <div class="section-heading grocery-heading view-banner grocery-banner">
             <div>
               <h2 class="visually-hidden" data-i18n="shoppingTitle">Shopping</h2>
@@ -637,7 +643,7 @@
               <strong id="budgetSpent">$0.00</strong>
             </summary>
             <div class="monthly-budget-content">
-              <form id="budgetForm">
+              <form id="budgetForm" data-dirty-area="shared" data-dirty-surface="budget">
                 <label><span data-i18n="monthlyBudgetTarget">Monthly target</span><input id="monthlyBudgetInput" type="number" min="0" max="100000" step="1" inputmode="decimal" placeholder="$800" /></label>
                 <button class="ghost-button" type="submit" data-i18n="saveBudget">Save</button>
               </form>
@@ -662,7 +668,7 @@
           </details>
         </div>
 
-        <div id="homePanel" role="tabpanel" aria-labelledby="homeModeTab" hidden>
+        <div id="homePanel" role="tabpanel" aria-labelledby="homeModeTab" data-dirty-area="inventory" data-dirty-surface="inventory" hidden>
           <div class="section-heading inventory-heading view-banner inventory-banner" id="inventoryHeading">
             <div>
               <p class="view-kicker" data-i18n="inventoryLabel">Home inventory</p>
@@ -675,7 +681,7 @@
               <div class="inventory-tools">
                 <details id="inventoryAddPanel">
                   <summary data-i18n="addInventoryItem">Add item</summary>
-                  <form class="inventory-add" id="inventoryForm">
+                  <form class="inventory-add" id="inventoryForm" data-dirty-area="inventory" data-dirty-surface="inventory">
                     <input type="text" id="inventoryInput" data-i18n-placeholder="inventoryPlaceholder" data-i18n-aria-label="inventoryItemLabel" aria-label="Inventory item" placeholder="Add eggs, milk, paper towels..." />
                     <input type="number" id="inventoryQuantityInput" min="0" max="10000" step="0.25" data-i18n-placeholder="inventoryQuantityPlaceholder" data-i18n-aria-label="inventoryAmountLabel" aria-label="Inventory amount" placeholder="Amount" />
                     <select id="inventoryUnitInput" aria-label="Inventory unit" data-i18n-aria-label="inventoryUnitLabel">
@@ -857,7 +863,7 @@
             <p id="recipeTranslationStatus" role="status"></p>
           </div>
 
-          <form class="upload-panel edit-recipe-panel" id="editRecipeForm" hidden>
+          <form class="upload-panel edit-recipe-panel" id="editRecipeForm" data-dirty-area="recipes" data-dirty-surface="recipes" hidden>
             <label>
               <span data-i18n="nameLabel">Recipe name</span>
               <input type="text" id="editNameInput" />
@@ -960,7 +966,7 @@
           </div>
           <button class="ghost-button" id="backToRecipeLibrary" type="button" data-i18n="backToRecipes">Back to recipes</button>
         </div>
-        <form class="upload-panel" id="uploadForm">
+        <form class="upload-panel" id="uploadForm" data-dirty-area="recipes" data-dirty-surface="recipes">
           <p class="upload-note" data-i18n="sharedUploadNote">Recipes added here save to the live family site for everyone.</p>
           <fieldset class="recipe-source-fieldset">
             <legend data-i18n="recipeSourceLegend">Start with what you have</legend>
@@ -1094,6 +1100,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=166"></script>
+    <script type="module" src="app.js?v=173"></script>
   </body>
 </html>

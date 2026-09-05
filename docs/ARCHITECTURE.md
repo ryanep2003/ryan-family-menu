@@ -14,7 +14,7 @@ GitHub main
   -> Browser loads index.html, styles.css, and app.js
   -> household-access.js opens or creates a household session
   -> app.js renders household-scoped local fallbacks immediately
-  -> browser requests recipes, shared state, dinner history, groceries, and inventory
+  -> browser renders local state, then loads independent recipes, shared state, schedule, ledgers, history, groceries, lists, and inventory requests together
   -> Netlify Functions validate x-household-key
   -> functions read/write household-scoped Netlify Blob records
   -> AI functions call OpenAI only after household validation
@@ -27,12 +27,15 @@ GitHub main
 - `index.html`: household gate and all main views.
 - `app.js`: application bootstrap, in-memory state, persistence orchestration, navigation, shared rendering, and domain-module composition.
 - `styles.css`: design tokens, component styling, responsive layout, PWA-safe four-tab bottom navigation, the Plan dirty-save bar, the Action Assistant sheet, and motion preferences.
+- `plan-from-what-we-have.js`: deterministic, advisory dinner ranking from inventory, leftovers, recipes, family rules, prep time, and budget.
 
 Recipe catalog reads use `/.netlify/functions/recipes?view=catalog`, a text-only household-scoped response that omits embedded source photos. The browser stores a versioned, household-scoped stale-while-revalidate cache and keeps cached recipes visible when a refresh fails. The unqualified recipes endpoint remains available for older clients and full recipe writes.
 - `translations.js`: English and Spanish interface strings. Both languages must expose the same keys.
 - `DESIGN.md`: authoritative visual and interaction guidance.
 
 `app.js` waits for `requireHouseholdSession()` before initializing household state. It reads household-scoped browser fallbacks, creates the domain UI modules, renders, then loads remote collections asynchronously.
+
+The initial remote collections use independent settled requests so one unavailable domain does not block the shell or other data. Input/change events mark editable surfaces dirty; background refresh queues shared remote data for an explicit keep-local or accept-remote choice instead of replacing active edits.
 
 ### Domain modules
 

@@ -36,6 +36,7 @@ export function createRecipeFormUi({
   render,
   renderRecipes,
   setDetailStatus,
+  clearDirtyForm = () => {},
 }) {
   let uploadPhotoFiles = [];
 
@@ -213,6 +214,7 @@ export function createRecipeFormUi({
     clearUploadPhotoFiles();
     setImportedRecipePhotos([]);
     setImportedRecipeCardPhoto("");
+    clearDirtyForm($("#uploadForm"));
   }
 
   async function readUploadPhotos() {
@@ -472,6 +474,7 @@ export function createRecipeFormUi({
       setEditMode(false);
       $("#editPhotoInput").value = "";
       $("#editPhotoCameraInput").value = "";
+      clearDirtyForm($("#editRecipeForm"));
       setDetailStatus("");
       $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
       $("#editRecipe").focus({ preventScroll: true });

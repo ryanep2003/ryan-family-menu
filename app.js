@@ -47,6 +47,10 @@ import { formatSyncedAtMessage, renderSyncStatus, syncRetryLabel } from "./sync-
 import { translations } from "./translations.js";
 import { selectRecipeMemory, selectTodayStory } from "./almanac-selectors.js";
 import { recipesFromCatalogResponse } from "./recipe-catalog-utils.js";
+import { planFromWhatWeHave } from "./plan-from-what-we-have.js";
+import { reconcileUninitializedLedger, sharedStateWithAuthoritativeDomains } from "./shared-state-authority.js";
+import { createDirtyFormTracker } from "./dirty-form-state.js";
+import { createSerializedSaveCoordinator, finishSharedSave, preserveLaterState } from "./shared-save-coordinator.js";
 import { normalizeShoppingList, normalizeShoppingLists, shoppingListScopeLabelKey } from "./shopping-list-logic.js";
 import { approvedLunchDateKeys, approvedLunchFoodUses, normalizeSchoolLunches } from "./lunch-logic.js";
 import {
@@ -174,6 +178,7 @@ let calendarMeals = normalizeCalendar(readJsonStorage(householdStorage, "dinner-
 let weekStartKey = readStringStorage(householdStorage, "dinner-week-start", currentWeekStartKey());
 let sharedStateVersion = readNumberStorage(householdStorage, "dinner-state-version", 0);
 let sharedStateBaseState = null;
+let pendingRemoteSharedData = null;
 let scheduleVersion = readNumberStorage(householdStorage, "dinner-schedule-version", 0);
 let scheduleBase = null;
 let scheduleSaveInFlight = null;
@@ -224,6 +229,19 @@ let receipts = normalizeReceipts(readJsonStorage(householdStorage, "dinner-recei
 let activity = normalizeActivity(readJsonStorage(householdStorage, "dinner-activity", []));
 let receiptsVersion = readNumberStorage(householdStorage, "dinner-receipts-version", 0);
 let activityVersion = readNumberStorage(householdStorage, "dinner-activity-version", 0);
+let receiptsDirty = false;
+let activityDirty = false;
+let scheduleAuthoritativeLoaded = false;
+let receiptsAuthoritativeLoaded = false;
+let activityAuthoritativeLoaded = false;
+let sharedStateLoadPromise = null;
+let sharedStateLoadReady = false;
+const ledgerLoadStatus = { receipts: "pending", activity: "pending" };
+const ledgerLoadResolvers = {};
+const ledgerLoadPromises = {
+  receipts: new Promise((resolve) => { ledgerLoadResolvers.receipts = resolve; }),
+  activity: new Promise((resolve) => { ledgerLoadResolvers.activity = resolve; }),
+};
 let auditHistory = { events: [], snapshots: [] };
 let familyMembers = normalizeFamilyMembers(readJsonStorage(householdStorage, "dinner-family-members", []));
 let familyPreferences = normalizeFamilyPreferences(readJsonStorage(householdStorage, "dinner-family-preferences", []), familyMembers);
@@ -245,6 +263,34 @@ const recipeTranslationInFlight = new Set();
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
+
+const {
+  dirtyFormArea,
+  dirtyFormSurface,
+  dirtyFormTarget,
+  markDirtyForm,
+  clearDirtyForm,
+  clearDirtyArea,
+  clearDirtySurface,
+  hasDirtyArea,
+  hasDirtySurface,
+  dirtySnapshotForSurface,
+  clearDirtySnapshot,
+} = createDirtyFormTracker();
+const markDirtySurface = markDirtyForm;
+function isNonEditingControl(target) {
+  return target.matches?.(
+    'input[type="search"], [data-inventory-filter], [data-inventory-mode], [data-planning-mode], [data-view], [data-meal-item-search], [data-meal-category-filter], #groceryPlanRange, #groceryMealFilter, #recipeSearch, #categoryFilter'
+  );
+}
+document.addEventListener("input", (event) => {
+  if (event.target.closest?.("#householdGate") || isNonEditingControl(event.target)) return;
+  if (event.target.closest?.("form,[data-dirty-area]")) markDirtyForm(event.target);
+});
+document.addEventListener("change", (event) => {
+  if (event.target.closest?.("#householdGate") || isNonEditingControl(event.target)) return;
+  if (event.target.closest?.("form,[data-dirty-area]")) markDirtyForm(event.target);
+});
 
 function displayedHouseholdMember(name = householdMember) {
   return displayHouseholdMember(name, t) || name;
@@ -331,8 +377,12 @@ function setSyncStatus(area, key, { state = "success", canRetry = false, syncedA
   const status = $(elements.status);
   const retryButton = $(elements.retry);
   const panel = elements.panel ? $(elements.panel) : null;
+  const reviewActions = area === "shared" ? [$("#keepLocalChanges"), $("#acceptRemoteChanges")] : [];
   if (!status) return;
   if (panel) panel.hidden = false;
+  reviewActions.forEach((button) => {
+    if (button) button.hidden = key !== "remoteUpdateNeedsReview";
+  });
   if (retryButton) {
     const retryKey = syncRetryLabel(area, key);
     retryButton.dataset.i18n = retryKey;
@@ -357,6 +407,11 @@ function clearAreaStatus(area) {
   const status = $(elements.status);
   const panel = elements.panel ? $(elements.panel) : null;
   if (panel) panel.hidden = true;
+  if (area === "shared") {
+    [$("#keepLocalChanges"), $("#acceptRemoteChanges")].forEach((button) => {
+      if (button) button.hidden = true;
+    });
+  }
   if (status) {
     delete status.dataset.syncKey;
     delete status.dataset.syncTime;
@@ -754,22 +809,22 @@ function availableLeftoversForDate(targetDateKey, targetPeriod = "") {
     .sort((left, right) => right.sourceDate.localeCompare(left.sourceDate));
 }
 
-function sharedStateSnapshot() {
+function sharedStateSnapshot(source = currentSharedState()) {
   return familyStateSnapshot({
-    weekStartKey,
-    schedule,
-    calendarMeals,
-    favorites,
-    tasks,
-    availableFood,
-    recipeFeedback,
-    budgetSettings,
-    familyMembers,
-    familyPreferences,
-    familyRules,
-    schoolLunches,
-    recipeEdits: compactRecipeEditsForSync(recipeEdits, sharedRecipes),
-    deletedRecipeIds,
+    weekStartKey: source.weekStartKey,
+    schedule: source.schedule,
+    calendarMeals: source.calendarMeals,
+    favorites: source.favorites,
+    tasks: source.tasks,
+    availableFood: source.availableFood,
+    recipeFeedback: source.recipeFeedback,
+    budgetSettings: source.budgetSettings,
+    familyMembers: source.familyMembers,
+    familyPreferences: source.familyPreferences,
+    familyRules: source.familyRules,
+    schoolLunches: source.schoolLunches,
+    recipeEdits: compactRecipeEditsForSync(source.recipeEdits, sharedRecipes),
+    deletedRecipeIds: source.deletedRecipeIds,
   });
 }
 
@@ -788,15 +843,50 @@ async function loadLedger(kind) {
     const items = kind === "receipts" ? normalizeReceipts(data.items) : normalizeActivity(data.items);
     const version = Number(data.version) || 0;
     const legacyItems = kind === "receipts" ? receipts : activity;
-    if (kind === "receipts") { receipts = items.length ? items : legacyItems; receiptsVersion = version; }
-    else { activity = items.length ? items : legacyItems; activityVersion = version; }
-    persistLedger(kind, items, version);
-    if (!items.length && legacyItems.length) await saveLedger(kind);
+    const loaded = await reconcileUninitializedLedger({
+      items,
+      version,
+      localItems: legacyItems,
+      sharedReady: () => sharedStateLoadReady,
+      waitForShared: async () => {
+        if (sharedStateLoadPromise) await sharedStateLoadPromise;
+      },
+      getCurrentItems: () => kind === "receipts" ? receipts : activity,
+      setCurrentItems: (nextItems) => {
+        if (kind === "receipts") receipts = nextItems;
+        else activity = nextItems;
+      },
+      setVersion: (nextVersion) => {
+        if (kind === "receipts") receiptsVersion = nextVersion;
+        else activityVersion = nextVersion;
+      },
+      setDirty: (dirty) => {
+        if (kind === "receipts") receiptsDirty = dirty;
+        else activityDirty = dirty;
+      },
+      isAuthoritative: () => kind === "receipts" ? receiptsAuthoritativeLoaded : activityAuthoritativeLoaded,
+      setAuthoritative: (authoritative) => {
+        if (kind === "receipts") receiptsAuthoritativeLoaded = authoritative;
+        else activityAuthoritativeLoaded = authoritative;
+      },
+      save: () => saveLedger(kind, false, { allowPending: true }),
+    });
+    ledgerLoadStatus[kind] = loaded.authoritative ? "initialized" : "uninitialized";
+    if (loaded.initialized || (!loaded.authoritative && !loaded.migrated)) {
+      persistLedger(kind, loaded.items, version);
+    }
     render();
-  } catch (error) { console.warn(error); }
+  } catch (error) {
+    ledgerLoadStatus[kind] = "failed";
+    console.warn(error);
+  } finally {
+    ledgerLoadResolvers[kind]?.();
+    delete ledgerLoadResolvers[kind];
+  }
 }
 
-async function saveLedger(kind, retrying = false) {
+async function saveLedger(kind, retrying = false, { allowPending = false } = {}) {
+  if (!allowPending && ledgerLoadStatus[kind] === "pending") await ledgerLoadPromises[kind];
   const items = kind === "receipts" ? receipts : activity;
   const version = kind === "receipts" ? receiptsVersion : activityVersion;
   try {
@@ -804,12 +894,19 @@ async function saveLedger(kind, retrying = false) {
     if (kind === "receipts") receiptsVersion = Number(data.version) || version;
     else activityVersion = Number(data.version) || version;
     persistLedger(kind, items, kind === "receipts" ? receiptsVersion : activityVersion);
+    if (kind === "receipts") {
+      receiptsDirty = false;
+      receiptsAuthoritativeLoaded = true;
+    } else {
+      activityDirty = false;
+      activityAuthoritativeLoaded = true;
+    }
     return true;
   } catch (error) {
     if (error.status === 409 && Array.isArray(error.data?.items) && !retrying) {
       if (kind === "receipts") { receipts = normalizeReceipts([...receipts, ...error.data.items]); receiptsVersion = Number(error.data.version) || version; }
       else { activity = normalizeActivity([...activity, ...error.data.items]); activityVersion = Number(error.data.version) || version; }
-      return saveLedger(kind, true);
+      return saveLedger(kind, true, { allowPending: true });
     }
     console.warn(error);
     return false;
@@ -818,26 +915,34 @@ async function saveLedger(kind, retrying = false) {
 
 function recordActivity(type, label) {
   const entry = activityEntry(type, label, householdMember);
-  if (entry) activity = [entry, ...activity].slice(0, 200);
+  if (entry) {
+    activity = [entry, ...activity].slice(0, 200);
+    activityDirty = true;
+  }
 }
 
 function applySharedState(nextState) {
-  schedule = nextState.schedule;
-  calendarMeals = nextState.calendarMeals;
-  weekStartKey = nextState.weekStartKey || weekStartKey;
-  favorites = nextState.favorites;
-  tasks = nextState.tasks;
-  availableFood = normalizeAvailableFood(nextState.availableFood);
-  recipeFeedback = normalizeRecipeFeedback(nextState.recipeFeedback);
-  budgetSettings = normalizeBudgetSettings(nextState.budgetSettings);
-  receipts = normalizeReceipts(nextState.receipts);
-  activity = normalizeActivity(nextState.activity);
-  familyMembers = normalizeFamilyMembers(nextState.familyMembers);
-  familyPreferences = normalizeFamilyPreferences(nextState.familyPreferences, familyMembers);
-  familyRules = normalizeFamilyRules(nextState.familyRules);
-  schoolLunches = normalizeSchoolLunches(nextState.schoolLunches);
-  recipeEdits = nextState.recipeEdits;
-  deletedRecipeIds = nextState.deletedRecipeIds;
+  const incoming = sharedStateWithAuthoritativeDomains({ schedule, calendarMeals, weekStartKey, receipts, activity }, nextState, {
+    schedule: scheduleAuthoritativeLoaded,
+    receipts: receiptsAuthoritativeLoaded,
+    activity: activityAuthoritativeLoaded,
+  });
+  schedule = incoming.schedule;
+  calendarMeals = incoming.calendarMeals;
+  weekStartKey = incoming.weekStartKey || weekStartKey;
+  favorites = incoming.favorites;
+  tasks = incoming.tasks;
+  availableFood = normalizeAvailableFood(incoming.availableFood);
+  recipeFeedback = normalizeRecipeFeedback(incoming.recipeFeedback);
+  budgetSettings = normalizeBudgetSettings(incoming.budgetSettings);
+  receipts = normalizeReceipts(incoming.receipts);
+  activity = normalizeActivity(incoming.activity);
+  familyMembers = normalizeFamilyMembers(incoming.familyMembers);
+  familyPreferences = normalizeFamilyPreferences(incoming.familyPreferences, familyMembers);
+  familyRules = normalizeFamilyRules(incoming.familyRules);
+  schoolLunches = normalizeSchoolLunches(incoming.schoolLunches);
+  recipeEdits = incoming.recipeEdits;
+  deletedRecipeIds = incoming.deletedRecipeIds;
 }
 
 function saveSharedStateLocally() {
@@ -882,6 +987,7 @@ function applyScheduleRecord(data) {
   calendarMeals = normalizeCalendar(next?.calendarMeals || calendarMeals);
   if (next?.weekStartKey) weekStartKey = next.weekStartKey;
   scheduleVersion = Number(data?.version) || 0;
+  scheduleAuthoritativeLoaded = true;
   scheduleBase = cloneVersionedValue({ schedule, calendarMeals, weekStartKey });
   persistScheduleLocally();
 }
@@ -898,6 +1004,7 @@ async function saveSchedule({ retrying = false, allowEmptySchedule = false } = {
     try {
       do {
         scheduleSaveQueued = false;
+        const savedDirtySnapshot = dirtySnapshotForSurface("schedule");
         const local = { schedule, calendarMeals, weekStartKey };
         persistScheduleLocally();
         try {
@@ -916,7 +1023,8 @@ async function saveSchedule({ retrying = false, allowEmptySchedule = false } = {
           }
           applyScheduleRecord(data);
           clearAreaStatus("shared");
-          await saveLedger("activity");
+          if (activityDirty) await saveLedger("activity");
+          clearDirtySnapshot(savedDirtySnapshot);
           saved = true;
         } catch (error) {
           if (error.status === 409 && !conflictRetried) {
@@ -1009,11 +1117,25 @@ function mergeSharedState(serverState, localState, baseState) {
   return merged;
 }
 
-let sharedSaveInFlight = null;
-let sharedSaveQueued = false;
-let sharedSaveQueuedOptions = null;
-
-async function performSaveSharedState({ retrying = false, allowEmptySchedule = false, auditAction = "" } = {}) {
+async function performSaveSharedState({
+  retrying = false,
+  allowEmptySchedule = false,
+  auditAction = "",
+  dirtySurface = "",
+  dirtySnapshot = null,
+  submittedCurrentState = null,
+  submittedBaseState = null,
+} = {}) {
+  const savedDirtySnapshot = dirtySnapshot || dirtySnapshotForSurface(dirtySurface);
+  const capturedIntentState = submittedCurrentState || cloneVersionedValue(currentSharedState());
+  const capturedBaseState = submittedBaseState || cloneVersionedValue(sharedStateBaseState || capturedIntentState);
+  const requestBaseState = preserveLaterState(
+    sharedStateBaseState || capturedBaseState,
+    capturedIntentState,
+    capturedBaseState,
+    mergeSharedState,
+  );
+  const requestState = cloneVersionedValue(sharedStateSnapshot(requestBaseState));
   setSharedRetryAction(saveSharedState);
   saveSharedStateLocally();
   setSyncStatus("shared", "savedLocallySyncing", { state: "pending" });
@@ -1022,7 +1144,7 @@ async function performSaveSharedState({ retrying = false, allowEmptySchedule = f
     const data = await putJson(
       "/.netlify/functions/family-state",
       {
-        state: sharedStateSnapshot(),
+        state: requestState,
         version: sharedStateVersion,
         actor: householdMember,
         auditAction,
@@ -1032,11 +1154,19 @@ async function performSaveSharedState({ retrying = false, allowEmptySchedule = f
     );
     sharedStateVersion = Number(data.version) || sharedStateVersion;
     if (data.state) {
-      applySharedState(normalizeSharedState(data.state, currentSharedState()));
-      sharedStateBaseState = cloneVersionedValue(sharedStateSnapshot());
+      const serverState = normalizeSharedState(data.state, requestBaseState);
+      const mergedState = preserveLaterState(serverState, currentSharedState(), requestBaseState, mergeSharedState);
+      applySharedState(mergedState);
+      sharedStateBaseState = cloneVersionedValue(serverState);
       saveSharedStateLocally();
     }
-    markSynced("shared");
+    clearDirtySnapshot(savedDirtySnapshot);
+    if (dirtySurface && hasDirtySurface(dirtySurface)) {
+      setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
+    } else {
+      markSynced("shared");
+    }
+    pendingRemoteSharedData = null;
     return true;
   } catch (error) {
     console.warn(error);
@@ -1046,23 +1176,34 @@ async function performSaveSharedState({ retrying = false, allowEmptySchedule = f
     }
     if (error.status === 409 && error.data?.code === "empty-overwrite-blocked" && error.data?.state) {
       sharedStateVersion = Number(error.data.version) || sharedStateVersion;
-      applySharedState(normalizeSharedState(error.data.state, currentSharedState()));
-      sharedStateBaseState = cloneVersionedValue(sharedStateSnapshot());
+      const serverState = normalizeSharedState(error.data.state, requestBaseState);
+      const mergedState = preserveLaterState(serverState, currentSharedState(), requestBaseState, mergeSharedState);
+      applySharedState(mergedState);
+      sharedStateBaseState = cloneVersionedValue(serverState);
       saveSharedStateLocally();
       render();
       setSyncStatus("shared", "emptyOverwriteBlocked", { state: "error" });
       return false;
     }
     if (error.status === 409 && error.data?.state) {
-      const serverState = normalizeSharedState(error.data.state, currentSharedState());
-      const localState = sharedStateSnapshot();
-      const mergedState = mergeSharedState(serverState, localState, sharedStateBaseState || serverState);
+      const serverState = normalizeSharedState(error.data.state, requestBaseState);
+      const previousBaseState = sharedStateBaseState || capturedBaseState;
+      const retryIntentState = mergeSharedState(serverState, requestBaseState, previousBaseState);
+      const mergedState = preserveLaterState(retryIntentState, currentSharedState(), requestBaseState, mergeSharedState);
       sharedStateVersion = Number(error.data.version) || sharedStateVersion;
-      applySharedState(normalizeSharedState(mergedState, currentSharedState()));
+      applySharedState(mergedState);
       sharedStateBaseState = cloneVersionedValue(serverState);
       saveSharedStateLocally();
       render();
-      if (!retrying) return performSaveSharedState({ retrying: true, allowEmptySchedule, auditAction });
+      if (!retrying) return performSaveSharedState({
+        retrying: true,
+        allowEmptySchedule,
+        auditAction,
+        dirtySurface,
+        dirtySnapshot: savedDirtySnapshot,
+        submittedCurrentState: cloneVersionedValue(retryIntentState),
+        submittedBaseState: cloneVersionedValue(sharedStateBaseState || serverState),
+      });
       // A second conflict can be caused by this same phone refreshing while a
       // save is in flight. Keep the change recoverable without presenting it
       // as proof that another person edited the menu.
@@ -1074,39 +1215,38 @@ async function performSaveSharedState({ retrying = false, allowEmptySchedule = f
   }
 }
 
-async function saveSharedState(options = {}) {
-  if (sharedSaveInFlight && !options.retrying) {
-    sharedSaveQueued = true;
-    sharedSaveQueuedOptions = { ...options };
-    await sharedSaveInFlight;
-    return true;
-  }
-  if (options.retrying) return performSaveSharedState(options);
+const sharedSaveCoordinator = createSerializedSaveCoordinator({
+  capture: (options = {}) => {
+    const submittedCurrentState = options.submittedCurrentState || cloneVersionedValue(currentSharedState());
+    return {
+      ...options,
+      dirtySnapshot: options.dirtySnapshot || dirtySnapshotForSurface(options.dirtySurface || ""),
+      submittedCurrentState,
+      submittedBaseState: options.submittedBaseState || cloneVersionedValue(sharedStateBaseState || submittedCurrentState),
+    };
+  },
+  execute: async (request) => {
+    const result = await performSaveSharedState(request);
+    return finishSharedSave(result, request, {
+      activityDirty,
+      receiptsDirty,
+      saveLedger,
+    });
+  },
+});
 
-  sharedSaveInFlight = performSaveSharedState(options);
-  try {
-    const result = await sharedSaveInFlight;
-    if (result) {
-      const ledgerResults = await Promise.all([saveLedger("activity"), saveLedger("receipts")]);
-      // Most shared-state edits should remain successful even if the
-      // auxiliary activity ledger is temporarily unavailable. Receipt
-      // capture is different: the budget depends on its receipt ledger.
-      return options.requireLedger === "receipts" ? ledgerResults[1] === true : result;
-    }
-    return result;
-  } finally {
-    sharedSaveInFlight = null;
-    if (sharedSaveQueued) {
-      sharedSaveQueued = false;
-      const queuedOptions = sharedSaveQueuedOptions || {};
-      sharedSaveQueuedOptions = null;
-      await saveSharedState(queuedOptions);
-    }
-  }
+function saveSharedState(options = {}) {
+  return sharedSaveCoordinator.save(options);
 }
 
-async function applyLoadedSharedState(data) {
+async function applyLoadedSharedState(data, { force = false } = {}) {
+  if (appReady && hasDirtyArea("shared") && !force) {
+    pendingRemoteSharedData = data;
+    setSyncStatus("shared", "remoteUpdateNeedsReview", { state: "error", canRetry: true });
+    return false;
+  }
   sharedStateVersion = Number(data.version) || 0;
+  sharedStateLoadReady = true;
 
   if (!data.state) {
     rollWeekForwardIfNeeded();
@@ -1116,7 +1256,7 @@ async function applyLoadedSharedState(data) {
   }
 
   const missingWeekStart = !data.state.weekStart;
-  applySharedState(normalizeSharedState(data.state, {
+  const normalizedIncoming = normalizeSharedState(data.state, {
     weekStartKey: currentWeekStartKey(),
     favorites: [],
     tasks: [],
@@ -1131,8 +1271,20 @@ async function applyLoadedSharedState(data) {
     schoolLunches,
     recipeEdits: {},
     deletedRecipeIds: [],
-  }));
-  sharedStateBaseState = cloneVersionedValue(sharedStateSnapshot());
+  });
+  // Legacy shared state has no collection version. Keep a non-empty local
+  // ledger when that older copy responds with an empty array; the version-zero
+  // ledger request will then migrate the preserved data safely.
+  if (!force && ledgerLoadStatus.receipts === "uninitialized" && receipts.length && !normalizedIncoming.receipts.length) {
+    normalizedIncoming.receipts = receipts;
+  }
+  if (!force && ledgerLoadStatus.activity === "uninitialized" && activity.length && !normalizedIncoming.activity.length) {
+    normalizedIncoming.activity = activity;
+  }
+  applySharedState(normalizedIncoming);
+  if (ledgerLoadStatus.receipts === "uninitialized" && receipts.length) receiptsDirty = true;
+  if (ledgerLoadStatus.activity === "uninitialized" && activity.length) activityDirty = true;
+  sharedStateBaseState = cloneVersionedValue(currentSharedState());
   const rolledForward = rollWeekForwardIfNeeded();
   const compactEdits = compactRecipeEditsForSync(recipeEdits, sharedRecipes);
   const compactedDuplicateMedia = JSON.stringify(compactEdits) !== JSON.stringify(recipeEdits);
@@ -1162,7 +1314,13 @@ const sharedStateLoader = createSharedStateLoader({
 function loadSharedState({ restart = false } = {}) {
   setSharedRetryAction(() => loadSharedState({ restart: true }));
   clearAreaStatus("shared");
-  return sharedStateLoader.load({ restart });
+  const request = sharedStateLoader.load({ restart });
+  sharedStateLoadPromise = request;
+  request.then(
+    () => { if (sharedStateLoadPromise === request) sharedStateLoadPromise = null; },
+    () => { if (sharedStateLoadPromise === request) sharedStateLoadPromise = null; },
+  );
+  return request;
 }
 
 let lastForegroundSyncAt = 0;
@@ -1171,7 +1329,9 @@ async function refreshSharedDataOnReturn() {
   const now = Date.now();
   if (now - lastForegroundSyncAt < 12000) return;
   lastForegroundSyncAt = now;
-  await Promise.allSettled([loadSharedState({ restart: true }), loadGroceries(), loadShoppingLists()]);
+  const requests = [loadSharedState({ restart: true })];
+  if (!hasDirtySurface("shopping")) requests.push(loadGroceries(), loadShoppingLists());
+  await Promise.allSettled(requests);
 }
 
 document.addEventListener("visibilitychange", refreshSharedDataOnReturn);
@@ -1202,6 +1362,7 @@ async function loadDinnerHistory() {
 }
 
 async function saveDinnerHistory() {
+  const savedDirtySnapshot = dirtySnapshotForSurface("dinner");
   const localEvents = normalizeDinnerEvents(dinnerEvents);
   dinnerEvents = localEvents;
   persistDinnerHistoryLocally();
@@ -1218,6 +1379,7 @@ async function saveDinnerHistory() {
     });
     dinnerHistoryPending = false;
     householdStorage.removeItem("dinner-history-pending");
+    clearDirtySnapshot(savedDirtySnapshot);
     return result.saved;
   } catch (error) {
     if (error.status === 409 && Array.isArray(error.data?.items)) {
@@ -1235,6 +1397,7 @@ async function saveDinnerHistory() {
         persistDinnerHistoryLocally();
         dinnerHistoryPending = false;
         householdStorage.removeItem("dinner-history-pending");
+        clearDirtySnapshot(savedDirtySnapshot);
         return true;
       } catch (retryError) {
         console.warn(retryError);
@@ -1617,8 +1780,9 @@ const renderInventorySuggestions = () => inventoryUi.renderInventorySuggestions(
 
 async function addHouseholdReceipt(receipt) {
   receipts = [normalizeReceipt({ ...receipt, updatedBy: householdMember }), ...receipts];
+  receiptsDirty = true;
   recordActivity("receipt", t("activityReceiptAdded").replace("{store}", receipt.store || t("receiptStore")));
-  return saveSharedState({ requireLedger: "receipts" });
+  return saveSharedState({ requireLedger: "receipts", dirtySurface: "budget" });
 }
 
 const receiptUi = createReceiptUi({
@@ -1679,8 +1843,11 @@ const budgetUi = createBudgetUi({
   getReceipts: () => receipts,
   setReceipts: (items) => {
     receipts = normalizeReceipts(items);
+    receiptsDirty = true;
   },
   saveSharedState,
+  markDirtySurface,
+  clearDirtySurface,
 });
 
 const renderBudget = () => budgetUi.renderBudget();
@@ -1782,6 +1949,36 @@ function renderSmartSuggestions() {
       inventoryMode = button.dataset.suggestionInventory;
       renderInventoryMode();
     }
+  }));
+}
+
+function renderPlanFromHome() {
+  const panel = $("#planFromHome");
+  const list = $("#planFromHomeList");
+  if (!panel || !list) return;
+  const candidates = planFromWhatWeHave({
+    inventory,
+    recipes: allRecipes(),
+    preferences: familyPreferences,
+    members: familyMembers,
+    rules: familyRules,
+    recipeFeedback,
+    events: dinnerEvents,
+    leftovers: availableFood.filter((item) => item.type === "leftover"),
+    budget: budgetSettings,
+    servings: 4,
+    maxPrepMinutes: Number(familyRules.maxWeeknightMinutes) || 90,
+  });
+  panel.hidden = !candidates.length;
+  list.innerHTML = candidates.map((option) => {
+    const name = localizeDisplayed(option.recipe.name) || t("recipeUntitled");
+    const uses = option.uses.map((item) => escapeHtml(localizeDisplayed(item) || item)).join(", ");
+    const remaining = option.remaining.map((item) => escapeHtml(localizeDisplayed(item) || item)).join(", ");
+    return `<article class="plan-from-home-option"><div><h3>${escapeHtml(name)}</h3><p>${escapeHtml(t(option.reason))}</p></div><p class="plan-from-home-meta"><strong>${escapeHtml(t("planFromHomeUses"))}</strong> ${uses}</p><p class="plan-from-home-meta"><strong>${escapeHtml(t(option.groceryImpact))}</strong> ${remaining || escapeHtml(t("planFromHomeCovered"))}</p><button class="ghost-button" type="button" data-plan-from-home="${escapeHtml(option.recipeId)}">${escapeHtml(t("reviewInPlan"))}</button></article>`;
+  }).join("");
+  $$('[data-plan-from-home]').forEach((button) => button.addEventListener("click", () => {
+    setView("schedule");
+    scheduleUi.openFocusedDinner(formatDateKey(new Date()), button.dataset.planFromHome);
   }));
 }
 
@@ -1931,7 +2128,7 @@ const dashboardUi = createDashboardUi({
   recipeBatchPlan,
   allRecipes,
   getRecipeCatalogStatus: () => sharedRecipesStatus,
-  saveSharedState,
+  saveSharedState: (options = {}) => saveSharedState({ ...options, dirtySurface: "today" }),
   offerUndo,
   render,
   renderDetail: () => {
@@ -2105,6 +2302,7 @@ const recipeLibraryUi = createRecipeLibraryUi({
     calendarMeals = normalizeCalendar(nextCalendarMeals);
   },
   saveSchedule,
+  clearDirtyForm,
   render: () => render(),
 });
 
@@ -2237,7 +2435,7 @@ const familyUi = createFamilyUi({
   getTodaysMeal: todaysMealPlan,
   recipeById,
   allRecipes,
-  saveSharedState,
+  saveSharedState: (options = {}) => saveSharedState({ ...options, dirtySurface: "family" }),
   saveDinnerEvents: saveDinnerHistory,
   recordDinnerOutcome: (event, previous) => {
     if (previous || event.status !== "cooked") return;
@@ -2287,7 +2485,7 @@ const lunchUi = createLunchUi({
   getRestrictionsByMember: schoolLunchRestrictionsByMember,
   getLunchContext: schoolLunchContext,
   getHouseholdMember: () => householdMember,
-  saveSharedState,
+  saveSharedState: (options = {}) => saveSharedState({ ...options, dirtySurface: "lunches" }),
   syncApprovedLunchGroceries,
   setView,
 });
@@ -2456,25 +2654,36 @@ function bindSavedShoppingListControls() {
 function render() {
   renderTranslations();
   renderInventoryMode();
-  renderToday();
+  if (!hasDirtySurface("today")) {
+    renderToday();
+    renderTasks();
+    renderFavorites();
+  }
   renderSmartSuggestions();
-  renderTasks();
-  renderFavorites();
-  renderSchedule();
-  renderCalendar();
-  renderGroceries();
-  renderSavedShoppingLists();
-  renderBudget();
+  if (!hasDirtySurface("today")) renderPlanFromHome();
+  if (!hasDirtySurface("schedule")) {
+    renderSchedule();
+    renderCalendar();
+  }
+  if (!hasDirtySurface("shopping")) {
+    renderGroceries();
+    renderSavedShoppingLists();
+  }
+  if (!hasDirtySurface("budget")) renderBudget();
   renderActivity();
   renderAuditHistory();
-  familyUi.renderFamily();
-  familyUi.renderTodayFeedback();
-  lunchUi.render();
-  renderInventory();
-  renderInventorySuggestions();
-  renderRecipes();
-  renderDetail();
-  if ($("#recipesView").classList.contains("detail-open")) hydrateOpenRecipeLocale();
+  if (!hasDirtySurface("family")) familyUi.renderFamily();
+  if (!hasDirtySurface("dinner")) familyUi.renderTodayFeedback();
+  if (!hasDirtySurface("lunches")) lunchUi.render();
+  if (!hasDirtySurface("inventory")) {
+    renderInventory();
+    renderInventorySuggestions();
+  }
+  if (!hasDirtySurface("recipes")) {
+    renderRecipes();
+    renderDetail();
+    if ($("#recipesView").classList.contains("detail-open")) hydrateOpenRecipeLocale();
+  }
   cookAlongUi.render();
   bindOpenButtons();
   bindGroceryControls();
@@ -2596,7 +2805,10 @@ async function loadRecipeDetail(id) {
 }
 
 async function saveSharedRecipe(recipe) {
-  return postJson("/.netlify/functions/recipes", recipe, t("sharedRecipeError"));
+  const savedDirtySnapshot = dirtySnapshotForSurface("recipes");
+  const saved = await postJson("/.netlify/functions/recipes", recipe, t("sharedRecipeError"));
+  if (saved) clearDirtySnapshot(savedDirtySnapshot);
+  return saved;
 }
 
 async function loadGroceries() {
@@ -2635,6 +2847,7 @@ async function saveGroceries({ retrying = false } = {}) {
     await grocerySaveInFlight;
     return true;
   }
+  const savedDirtySnapshot = dirtySnapshotForSurface("shopping");
   setSyncStatus("groceries", "savedLocallySyncing", { state: "pending" });
   grocerySaveInFlight = (async () => {
     const send = async (isRetry) => {
@@ -2655,7 +2868,8 @@ async function saveGroceries({ retrying = false } = {}) {
         });
         groceryBaseItems = cloneVersionedItems(saved.items || groceries);
         if (grocerySaveQueued) persistGroceriesLocally(groceries, groceryVersion);
-        markSynced("groceries");
+    markSynced("groceries");
+        clearDirtySnapshot(savedDirtySnapshot);
         return true;
       } catch (error) {
         console.warn(error);
@@ -2718,6 +2932,7 @@ async function loadShoppingLists() {
 }
 
 async function saveShoppingLists({ retrying = false } = {}) {
+  const savedDirtySnapshot = dirtySnapshotForSurface("shopping");
   shoppingListsPending = true;
   householdStorage.setItem(shoppingListsPendingKey, "1");
   try {
@@ -2738,6 +2953,7 @@ async function saveShoppingLists({ retrying = false } = {}) {
     shoppingListsBase = cloneVersionedItems(shoppingLists);
     shoppingListsPending = false;
     householdStorage.removeItem(shoppingListsPendingKey);
+    clearDirtySnapshot(savedDirtySnapshot);
     return true;
   } catch (error) {
     console.warn(error);
@@ -2779,6 +2995,7 @@ async function loadInventory() {
 }
 
 async function saveInventory({ retrying = false } = {}) {
+  const savedDirtySnapshot = dirtySnapshotForSurface("inventory");
   setSyncStatus("inventory", "savedLocallySyncing", { state: "pending" });
   try {
     await saveVersionedCollection({
@@ -2797,6 +3014,7 @@ async function saveInventory({ retrying = false } = {}) {
     });
     inventoryBaseItems = cloneVersionedItems(inventory);
     markSynced("inventory");
+    clearDirtySnapshot(savedDirtySnapshot);
     return true;
   } catch (error) {
     console.warn(error);
@@ -2910,7 +3128,7 @@ const recipeFormUi = createRecipeFormUi({
   recognizeRecipe,
   importRecipeUrl,
   saveSharedRecipe,
-  saveSharedState,
+  saveSharedState: (options = {}) => saveSharedState({ ...options, dirtySurface: "recipes" }),
   getLang: () => lang,
   recipeById,
   allRecipes,
@@ -2954,6 +3172,7 @@ const recipeFormUi = createRecipeFormUi({
   render,
   renderRecipes,
   setDetailStatus,
+  clearDirtyForm,
 });
 
 async function recognizeReceipt(images) {
@@ -3060,6 +3279,13 @@ $$('[data-view-target]').forEach((button) => {
       });
     }
   });
+});
+
+$("#groceryList")?.addEventListener("click", (event) => {
+  if (!event.target.closest("[data-open-shopping-generator]")) return;
+  const setup = $("#shoppingListSetup");
+  if (setup) setup.open = true;
+  requestAnimationFrame(() => $("#groceryPlanRange")?.focus());
 });
 
 $$("[data-scroll-to]").forEach((button) => {
@@ -3361,27 +3587,25 @@ $("#retrySharedState").addEventListener("click", async () => {
   if (sharedRetryAction) await sharedRetryAction();
 });
 
+$("#keepLocalChanges")?.addEventListener("click", () => {
+  pendingRemoteSharedData = null;
+  setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
+});
+
+$("#acceptRemoteChanges")?.addEventListener("click", async () => {
+  if (!pendingRemoteSharedData) return;
+  const remote = pendingRemoteSharedData;
+  pendingRemoteSharedData = null;
+  clearDirtyArea("shared");
+  await applyLoadedSharedState(remote, { force: true });
+  clearAreaStatus("shared");
+});
+
 $("#retryRecipes").addEventListener("click", () => loadSharedRecipes({ restart: true }));
 document.addEventListener("click", (event) => {
   if (event.target.closest("[data-retry-recipe-catalog]")) loadSharedRecipes({ restart: true });
 });
 
-$("#rotateHouseholdKey")?.addEventListener("click", async () => {
-  const code = $("#householdRotationCode")?.value.trim();
-  if (!code) return;
-  const button = $("#rotateHouseholdKey");
-  button.disabled = true;
-  try {
-    const data = await putJson("/.netlify/functions/households", { rotateKey: true, rotationCode: code }, t("rotateFamilyKeyError"));
-    localStorage.setItem("family-menu-household-key", data.key);
-    $("#currentHouseholdKey").value = data.key;
-    $("#householdMenuStatus").textContent = t("familyKeyRotated");
-  } catch (error) {
-    $("#householdMenuStatus").textContent = error.message || t("rotateFamilyKeyError");
-  } finally {
-    button.disabled = false;
-  }
-});
 $("#retryGroceries").addEventListener("click", saveGroceries);
 $("#retryInventory").addEventListener("click", saveInventory);
 
@@ -3402,14 +3626,20 @@ registerServiceWorker({ $, onUpdateAvailable: showAppUpdateNotice });
 setupLocalizedFileInputs();
 appReady = true;
 render();
-loadSharedRecipes().then(() => loadSharedState()).then(() => loadSchedule()).then(() => Promise.all([loadLedger("receipts"), loadLedger("activity")]));
+Promise.allSettled([
+  loadSharedRecipes(),
+  loadSharedState(),
+  loadSchedule(),
+  loadLedger("receipts"),
+  loadLedger("activity"),
+  loadDinnerHistory(),
+  loadGroceries(),
+  loadShoppingLists(),
+  loadInventory(),
+]).then(() => render());
 $("#householdHistoryPanel")?.addEventListener("toggle", (event) => {
   if (event.target.open && !event.target.dataset.loaded) {
     event.target.dataset.loaded = "true";
     loadAuditHistory();
   }
 });
-loadDinnerHistory();
-loadGroceries();
-loadShoppingLists();
-loadInventory();

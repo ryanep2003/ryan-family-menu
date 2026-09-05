@@ -379,7 +379,7 @@ export function createGroceryUi({
     const sections = groupGroceriesByAisle(activeItems);
 
     if (!visibleGroceries.length) {
-      $("#groceryList").innerHTML = `<p class="empty-state">${t(selectedMealFilter ? "groceryMealFilterEmpty" : "groceryEmpty")}</p>`;
+      $("#groceryList").innerHTML = `<div class="grocery-empty-state"><p class="empty-state">${t(selectedMealFilter ? "groceryMealFilterEmpty" : "groceryEmpty")}</p>${!selectedMealFilter && !selectedRecipeFilter ? `<button class="primary-action grocery-empty-action" type="button" data-open-shopping-generator>${t("buildListFromMealPlan")}</button>` : ""}</div>`;
       renderPurchasedAction();
       return;
     }

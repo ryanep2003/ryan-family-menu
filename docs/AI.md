@@ -100,6 +100,8 @@ Do not add raw household recipes, photos, receipts, preferences, household keys,
 
 ## Cost Controls
 
+Daily usage reservations are serialized per household and route within each running function instance before the Blob read/write. This narrows concurrent races without changing the existing household scope or limit. It is not a distributed compare-and-set guarantee across multiple serverless instances; a future storage primitive would be needed for that stronger guarantee.
+
 Existing controls include household access, request/image limits, deterministic URL parsing, finite retries, no background polling, and a site-level Netlify traffic cap.
 
 Before increasing image counts, image detail, translation breadth, automatic triggers, or retry behavior, estimate the multiplication effect across households. A single user action should create a predictable, bounded number of provider calls.
