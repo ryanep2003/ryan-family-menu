@@ -14,6 +14,31 @@ function sameValue(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function boundedVersion(value) {
+  const version = Number(value);
+  return Number.isSafeInteger(version) && version > 0 ? version : 0;
+}
+
+export function normalizeVersionedIntent(value, { maxItems = 500 } = {}) {
+  if (!value || value.schemaVersion !== 1 || !Array.isArray(value.baseItems) || !Array.isArray(value.items)) return null;
+  return {
+    schemaVersion: 1,
+    baseItems: cloneVersionedItems(value.baseItems).slice(0, maxItems),
+    baseVersion: boundedVersion(value.baseVersion),
+    items: cloneVersionedItems(value.items).slice(0, maxItems),
+  };
+}
+
+export function createVersionedIntent({ items, version, baseItems, pendingIntent } = {}) {
+  const pending = normalizeVersionedIntent(pendingIntent);
+  return {
+    schemaVersion: 1,
+    baseItems: cloneVersionedItems(pending?.baseItems || baseItems).slice(0, 500),
+    baseVersion: pending?.baseVersion ?? boundedVersion(version),
+    items: cloneVersionedItems(items).slice(0, 500),
+  };
+}
+
 export function mergeVersionedItems(localItems, baseItems, remoteItems) {
   const local = new Map((Array.isArray(localItems) ? localItems : []).map((item) => [item?.id, item]));
   const base = new Map((Array.isArray(baseItems) ? baseItems : []).map((item) => [item?.id, item]));
@@ -67,6 +92,149 @@ export function applyLoadedVersionedCollection({
     items: merged,
     version: remoteVer,
     shouldSave: !sameValue(merged, remote),
+  };
+}
+
+export function reconcileLoadedVersionedCollection({ pendingIntent, ...options } = {}) {
+  const pending = normalizeVersionedIntent(pendingIntent);
+  if (!pending) return applyLoadedVersionedCollection(options);
+  if (options.saveInFlight) return { apply: false, reason: "save-in-flight" };
+
+  const remoteVersion = boundedVersion(options.remoteVersion);
+  if (remoteVersion < pending.baseVersion) return { apply: false, reason: "stale-remote" };
+
+  const remoteItems = cloneVersionedItems(options.remoteItems);
+  const items = mergeVersionedItems(pending.items, pending.baseItems, remoteItems);
+  const shouldSave = !sameValue(items, remoteItems);
+  return {
+    apply: true,
+    items,
+    version: remoteVersion,
+    baseItems: remoteItems,
+    shouldSave,
+    clearPending: !shouldSave,
+    pendingIntent: shouldSave ? {
+      schemaVersion: 1,
+      baseItems: remoteItems,
+      baseVersion: remoteVersion,
+      items: cloneVersionedItems(items),
+    } : null,
+  };
+}
+
+export function createVersionedCollectionSaveCoordinator({
+  getItems,
+  setItems,
+  getVersion,
+  setVersion,
+  getBaseItems,
+  setBaseItems,
+  getPendingIntent,
+  setPendingIntent,
+  persist,
+  put,
+  invalidateLoads = () => {},
+  onSaving = () => {},
+  onSaved = () => {},
+  onPending = () => {},
+} = {}) {
+  let tail = Promise.resolve();
+  let pendingCount = 0;
+  let sequence = 0;
+
+  function storePending(baseItems, baseVersion, items) {
+    const pending = {
+      schemaVersion: 1,
+      baseItems: cloneVersionedItems(baseItems),
+      baseVersion: boundedVersion(baseVersion),
+      items: cloneVersionedItems(items).slice(0, 500),
+    };
+    setPendingIntent(pending);
+    return pending;
+  }
+
+  function capture() {
+    const request = {
+      sequence: ++sequence,
+      intent: cloneVersionedItems(getItems()),
+      captureBase: cloneVersionedItems(getBaseItems()),
+    };
+    const pending = createVersionedIntent({
+      items: request.intent,
+      version: getVersion(),
+      baseItems: request.captureBase,
+      pendingIntent: getPendingIntent(),
+    });
+    setPendingIntent(pending);
+    persist(request.intent, getVersion());
+    invalidateLoads();
+    return request;
+  }
+
+  async function execute(request) {
+    onSaving();
+    let sendBase = cloneVersionedItems(getBaseItems());
+    let sendVersion = getVersion();
+    let outgoing = mergeVersionedItems(request.intent, request.captureBase, sendBase);
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const data = await put(cloneVersionedItems(outgoing), sendVersion);
+        const savedItems = cloneVersionedItems(Array.isArray(data?.items) ? data.items : outgoing);
+        const savedVersion = boundedVersion(data?.version) || boundedVersion(sendVersion);
+        const currentItems = mergeVersionedItems(getItems(), outgoing, savedItems);
+        setItems(currentItems);
+        setVersion(savedVersion);
+        setBaseItems(savedItems);
+        persist(currentItems, savedVersion);
+        const settled = request.sequence === sequence && sameValue(currentItems, savedItems);
+        if (settled) setPendingIntent(null);
+        else storePending(savedItems, savedVersion, currentItems);
+        onSaved({ settled });
+        return true;
+      } catch (error) {
+        if (error?.status === 409 && Array.isArray(error.data?.items)) {
+          const remoteItems = cloneVersionedItems(error.data.items);
+          const remoteVersion = boundedVersion(error.data.version) || boundedVersion(sendVersion);
+          const retryIntent = mergeVersionedItems(outgoing, sendBase, remoteItems);
+          const currentItems = mergeVersionedItems(getItems(), outgoing, retryIntent);
+          setItems(currentItems);
+          setVersion(remoteVersion);
+          setBaseItems(remoteItems);
+          persist(currentItems, remoteVersion);
+          storePending(remoteItems, remoteVersion, currentItems);
+          if (attempt === 0) {
+            outgoing = retryIntent;
+            sendBase = remoteItems;
+            sendVersion = remoteVersion;
+            continue;
+          }
+        }
+        const currentItems = cloneVersionedItems(getItems());
+        persist(currentItems, getVersion());
+        const pending = normalizeVersionedIntent(getPendingIntent());
+        if (!pending) storePending(getBaseItems(), getVersion(), currentItems);
+        onPending(error);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  function save() {
+    const request = capture();
+    pendingCount += 1;
+    const result = tail.then(() => execute(request), () => execute(request));
+    tail = result.then(
+      () => { pendingCount -= 1; },
+      () => { pendingCount -= 1; },
+    );
+    return result;
+  }
+
+  return {
+    save,
+    isBusy: () => pendingCount > 0,
   };
 }
 

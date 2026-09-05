@@ -103,6 +103,6 @@ test("Help Ask placeholder is an example question, not coming soon", async () =>
 });
 
 test("offline collection status never exposes an internal translation key", () => {
-  assert.equal(translations.en.usingSavedCopy, "Offline. Changes will sync when the connection returns.");
-  assert.equal(translations.es.usingSavedCopy, "Sin conexión. Los cambios se sincronizarán cuando vuelva la conexión.");
+  assert.equal(translations.en.usingSavedCopy, "Couldn’t sync right now. Showing this device’s saved copy.");
+  assert.equal(translations.es.usingSavedCopy, "No se pudo sincronizar ahora. Se muestra la copia guardada en este dispositivo.");
 });

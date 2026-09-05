@@ -296,20 +296,14 @@ export function createGroceryUi({
     const button = $("#restockPurchased");
     const prompt = $("#finishShoppingPrompt");
     const count = purchasedGroceries().length;
-    const hasShoppingItems = getGroceries().some((item) => !isConfirmedAtHome(item));
     if (button) {
-      button.hidden = !hasShoppingItems;
-      button.textContent = count
-        ? t("finishShoppingCount").replace("{count}", `${count}`)
-        : t("finishShopping");
+      button.hidden = count === 0;
+      button.textContent = t(count === 1 ? "movePurchasedCountOne" : "movePurchasedCountMany")
+        .replace("{count}", `${count}`);
     }
-    const showPrompt = hasShoppingItems && !Boolean($("body")?.classList?.contains?.("finish-shopping-open"));
+    const showPrompt = count > 0 && !Boolean($("body")?.classList?.contains?.("finish-shopping-open"));
     if (prompt) prompt.hidden = !showPrompt;
     $("body")?.classList?.toggle("finish-shopping-visible", showPrompt);
-    if (!hasShoppingItems) {
-      const panel = $("#finishShoppingPanel");
-      if (panel) panel.hidden = true;
-    }
   }
 
   function grocerySection(label, items, options = {}) {

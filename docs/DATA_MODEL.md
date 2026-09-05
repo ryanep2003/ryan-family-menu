@@ -160,7 +160,9 @@ An approved packed lunch contributes catalog grocery quantities with `mealSlot: 
 
 Do not change `source`, `ingredientKey`, `mealUses`, or quantity semantics without regression tests for rebuilding a plan, changing servings, shared ingredients, legacy generated rows, and months with many meal uses.
 
-At the store, `checked` means the shopper says the item was purchased. Finishing a trip removes those checked rows and merges them into home inventory. A scanned receipt may match additional rows before completion. A manually entered receipt total has no line-item knowledge, so it only moves rows the shopper checked.
+At the store, `checked` means the shopper says the item was purchased. Moving bought items to At Home removes those checked rows and merges them into home inventory. A scanned receipt may match additional rows before that transfer. A manually entered receipt total has no line-item knowledge, so it only moves rows the shopper checked.
+
+Until a grocery write succeeds, the browser keeps `dinner-groceries-pending-v1` in household-scoped storage. This bounded local journal contains `schemaVersion`, `baseItems`, `baseVersion`, and the intended `items` (up to the server's 500-item limit). It is a retry aid, not a new shared schema: newer remote additions are merged in, known local deletions remain deleted, and the key is removed after success. Older clients ignore the key and can still display the ordinary cached grocery list, but they cannot replay its deletion baseline after a failed write; rolling back to an older client before sync completes can therefore lose the pending intent.
 
 Receipt summaries live in the household receipt ledger and include store, date, total, item count, and attribution. They drive monthly budget totals; they are not a second inventory or grocery-item ledger. Receipt-photo review requires a positive total before purchases can be finalized, so a scan that misses the printed total cannot silently produce a zero-dollar budget entry.
 
@@ -197,6 +199,8 @@ family-menu:<household-id>:<local-key>
 ```
 
 Important local keys include schedule, calendar, versions, favorites, tasks, groceries, inventory, budget, receipts, activity, family memory, `school-lunches`, dinner history, recipe edits, deleted recipe IDs, and drafts.
+
+The grocery fallback also uses the additive `dinner-groceries-pending-v1` retry journal described above. It remains inside `createHouseholdStorage()` and is safe to discard only after the matching grocery write succeeds.
 
 Changing these names without migration can make existing browser fallbacks disappear. Never move household data to unscoped local storage.
 

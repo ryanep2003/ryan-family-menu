@@ -109,9 +109,8 @@ function harness(overrides = {}) {
       breakfastSlot: "Desayuno",
       lunchSlot: "Almuerzo",
       dinnerSlot: "Cena",
-      movePurchasedHome: "Move purchased home",
-      finishShopping: "Finish shopping",
-      finishShoppingCount: "Finish shopping ({count})",
+      movePurchasedCountOne: "Move 1 bought item to At Home",
+      movePurchasedCountMany: "Move {count} bought items to At Home",
       checkSection: "Check section",
       deleteSection: "Delete section",
       alreadyHave: "Already have",
@@ -365,18 +364,23 @@ test("shopping rows drop leading de fragments and collapse duplicate aisle names
   assert.doesNotMatch(elements["#groceryList"].innerHTML, />de ajo</);
 });
 
-test("shopping list keeps the end-of-trip action visible while items remain", () => {
+test("shopping only offers the compact At Home transfer after an item is bought", () => {
   const { elements, state, ui } = harness();
 
   ui.renderGroceries();
-  assert.equal(elements["#finishShoppingPrompt"].hidden, false);
-  assert.equal(elements["#restockPurchased"].textContent, "Finish shopping");
+  assert.equal(elements["#finishShoppingPrompt"].hidden, true);
+  assert.equal(elements["#restockPurchased"].hidden, true);
 
   state.groceries[0].checked = true;
   ui.renderGroceries();
   assert.equal(elements["#finishShoppingPrompt"].hidden, false);
-  assert.equal(elements["#restockPurchased"].textContent, "Finish shopping (1)");
+  assert.equal(elements["#restockPurchased"].hidden, false);
+  assert.equal(elements["#restockPurchased"].textContent, "Move 1 bought item to At Home");
   assert.match(elements["#groceryList"].innerHTML, /grocery-item-row is-checked/);
+
+  state.groceries[1].checked = true;
+  ui.renderGroceries();
+  assert.equal(elements["#restockPurchased"].textContent, "Move 2 bought items to At Home");
 });
 
 test("receipt matching prefers a checked purchase over an unchecked duplicate", () => {

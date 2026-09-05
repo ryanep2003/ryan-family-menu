@@ -15,11 +15,17 @@ test("shopping keeps the active list before occasional utility controls", () => 
   assert.ok(styles.includes(".grocery-list { margin-top: 0; }"));
 });
 
-test("shopping completion and receipt capture remain available", () => {
+test("shopping uses an optional bought-item transfer while keeping receipt capture available", () => {
   assert.ok(html.includes('id="finishShoppingPanel"') && html.includes('id="scanReceiptToggle"'));
   assert.ok(html.includes('id="manualReceiptForm"') && html.includes('id="manualReceiptTotal"'));
   assert.ok(app.includes("#finishWithoutReceipt") && app.includes("movePurchasedItemsHome()"));
-  assert.ok(styles.includes(".finish-shopping-prompt { display: flex"));
+  assert.match(html, /id="restockPurchased"[^>]*data-i18n="movePurchasedCountMany"/);
+  assert.match(html, /id="finishWithoutReceipt"[^>]*data-i18n="moveWithoutReceipt"/);
+  assert.match(html, /id="manualReceiptForm"[\s\S]*data-i18n="saveReceiptAndMove"/);
+  assert.match(styles, /\.finish-shopping-prompt \{ display: flex[\s\S]*border-top: 1px solid var\(--rule\)/);
+  assert.match(app, /#restockPurchased"\)\.addEventListener\("click", moveBoughtItemsWithoutReceipt\)/);
+  assert.match(app, /function stayInShoppingAfterTransfer\(\) \{\s*inventoryMode = "shopping"/);
+  assert.doesNotMatch(app, /#restockPurchased"\)\.addEventListener\("click", \(\) => \{\s*openFinishShopping/);
   assert.doesNotMatch(html, /class="grocery-tools-menu"[\s\S]*id="scanReceiptToggle"/);
 });
 
@@ -161,8 +167,9 @@ test("the Shop tab always opens the persistent shopping list", () => {
 });
 
 test("grocery loads keep a local checked item instead of clobbering it", () => {
-  assert.ok(app.includes("applyLoadedVersionedCollection"));
-  assert.ok(app.includes("grocerySaveInFlight"));
+  assert.ok(app.includes("reconcileLoadedVersionedCollection"));
+  assert.ok(app.includes("grocerySaveCoordinator"));
+  assert.ok(app.includes("dinner-groceries-pending-v1"));
   assert.ok(app.includes("shouldSave"));
   assert.doesNotMatch(app, /setSyncStatus\("groceries", "groceryConflict"/);
 });

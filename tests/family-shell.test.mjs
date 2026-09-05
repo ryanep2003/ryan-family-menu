@@ -35,7 +35,7 @@ test("Plan keeps a sticky navy Save bar and next-week calendar persist", () => {
   assert.match(utils, /mode: "week-template"/);
 });
 
-test("navy/sage mock controls stay filled and readable", () => {
+test("navy/sage controls stay filled while the bought-item transfer remains compact", () => {
   assert.match(css, /--navy: #1A3A5C/);
   assert.match(css, /--sage: #CFE8D5/);
   assert.match(css, /--soft-blue: #AFCBFF/);
@@ -47,9 +47,9 @@ test("navy/sage mock controls stay filled and readable", () => {
   assert.match(css, /\.inventory-mode-switch \{[\s\S]*grid-template-columns: 1fr 1fr/);
   const finishPromptRule = css.match(/\.finish-shopping-prompt\s*\{([^}]*)\}/)?.[1] || "";
   const finishSpanRule = css.match(/\.finish-shopping-prompt span\s*\{([^}]*)\}/)?.[1] || "";
-  assert.match(finishPromptRule, /background: var\(--navy\)/);
-  assert.match(finishSpanRule, /var\(--paper\)/);
-  assert.doesNotMatch(finishSpanRule, /var\(--muted\)/);
+  assert.match(finishPromptRule, /border-top: 1px solid var\(--rule\)/);
+  assert.match(finishPromptRule, /color: var\(--ink\)/);
+  assert.match(finishSpanRule, /var\(--muted\)/);
   assert.match(css, /\.soft-action[\s\S]*background: var\(--soft-blue\)/);
 });
 

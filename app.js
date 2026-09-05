@@ -63,8 +63,10 @@ import {
   rankedRecipes,
 } from "./memory-logic.js";
 import {
-  applyLoadedVersionedCollection,
+  createVersionedCollectionSaveCoordinator,
   applyVersionConflict,
+  normalizeVersionedIntent,
+  reconcileLoadedVersionedCollection,
   loadVersionedCollection,
   mergeVersionedItems,
   cloneVersionedItems,
@@ -205,13 +207,13 @@ const groceryStorageKeys = { itemsKey: "dinner-groceries", versionKey: "dinner-g
 const shoppingListsStorageKeys = { itemsKey: "dinner-shopping-lists", versionKey: "dinner-shopping-lists-version" };
 const inventoryStorageKeys = { itemsKey: "dinner-inventory", versionKey: "dinner-inventory-version" };
 const storedGroceries = readVersionedCollectionStorage(householdStorage, groceryStorageKeys);
+const groceryPendingKey = "dinner-groceries-pending-v1";
+let groceryPendingIntent = normalizeVersionedIntent(readJsonStorage(householdStorage, groceryPendingKey, null));
 const storedShoppingLists = readVersionedCollectionStorage(householdStorage, shoppingListsStorageKeys);
 const storedInventory = readVersionedCollectionStorage(householdStorage, inventoryStorageKeys);
-let groceries = storedGroceries.items;
-let groceryVersion = storedGroceries.version;
-let groceryBaseItems = cloneVersionedItems(storedGroceries.items);
-let grocerySaveInFlight = null;
-let grocerySaveQueued = false;
+let groceries = cloneVersionedItems(groceryPendingIntent?.items || storedGroceries.items);
+let groceryVersion = groceryPendingIntent?.baseVersion ?? storedGroceries.version;
+let groceryBaseItems = cloneVersionedItems(groceryPendingIntent?.baseItems || storedGroceries.items);
 let groceryLoadGeneration = 0;
 let shoppingLists = normalizeShoppingLists(storedShoppingLists.items);
 let shoppingListsVersion = storedShoppingLists.version;
@@ -514,6 +516,40 @@ function persistDrafts() {
 function persistGroceriesLocally(items = groceries, version = groceryVersion) {
   persistVersionedCollection(householdStorage, groceryStorageKeys, items, version);
 }
+
+function setGroceryPendingIntent(intent) {
+  groceryPendingIntent = normalizeVersionedIntent(intent);
+  if (groceryPendingIntent) householdStorage.setItem(groceryPendingKey, JSON.stringify(groceryPendingIntent));
+  else householdStorage.removeItem(groceryPendingKey);
+}
+
+const grocerySaveCoordinator = createVersionedCollectionSaveCoordinator({
+  getItems: () => groceries,
+  setItems: (items) => { groceries = items; },
+  getVersion: () => groceryVersion,
+  setVersion: (version) => { groceryVersion = version; },
+  getBaseItems: () => groceryBaseItems,
+  setBaseItems: (items) => { groceryBaseItems = cloneVersionedItems(items); },
+  getPendingIntent: () => groceryPendingIntent,
+  setPendingIntent: setGroceryPendingIntent,
+  persist: persistGroceriesLocally,
+  put: (items, version) => putJson(
+    "/.netlify/functions/groceries",
+    { items, version },
+    "Could not save groceries.",
+  ),
+  invalidateLoads: () => { groceryLoadGeneration += 1; },
+  onSaving: () => setSyncStatus("groceries", "savedLocallySyncing", { state: "pending" }),
+  onSaved: ({ settled }) => {
+    renderGroceries();
+    if (settled) markSynced("groceries");
+  },
+  onPending: (error) => {
+    console.warn(error);
+    renderGroceries();
+    setSyncStatus("groceries", "groceriesSavedLocallyPending", { state: "pending", canRetry: true });
+  },
+});
 
 function persistInventoryLocally(items = inventory, version = inventoryVersion) {
   persistVersionedCollection(householdStorage, inventoryStorageKeys, items, version);
@@ -1733,10 +1769,9 @@ function closeFinishShoppingPanel() {
   document.body.classList.remove("finish-shopping-open");
 }
 
-function showHomeAfterTrip() {
-  inventoryMode = "home";
+function stayInShoppingAfterTransfer() {
+  inventoryMode = "shopping";
   closeFinishShoppingPanel();
-  $("#inventoryStatus").textContent = t("movedPurchasedHome");
   renderInventoryMode();
 }
 
@@ -1825,7 +1860,7 @@ const receiptUi = createReceiptUi({
   },
   getPurchasedCount: (excludedIds = new Set()) => purchasedGroceries().filter((item) => !excludedIds.has(item.id)).length,
   finishPurchasedItems: movePurchasedItemsHome,
-  onTripFinished: showHomeAfterTrip,
+  onTripFinished: stayInShoppingAfterTransfer,
 });
 
 const renderReceiptSuggestions = () => receiptUi.renderReceiptSuggestions();
@@ -2818,89 +2853,37 @@ async function loadGroceries() {
     if (generation !== groceryLoadGeneration) return;
     const remoteItems = Array.isArray(data.items) ? data.items : [];
     const remoteVersion = Number(data.version) || 0;
-    const result = applyLoadedVersionedCollection({
+    const result = reconcileLoadedVersionedCollection({
       remoteItems,
       remoteVersion,
       localItems: groceries,
       localVersion: groceryVersion,
       baseItems: groceryBaseItems,
-      saveInFlight: Boolean(grocerySaveInFlight),
+      pendingIntent: groceryPendingIntent,
+      saveInFlight: grocerySaveCoordinator.isBusy(),
     });
     if (!result.apply) return;
     groceries = result.items;
     groceryVersion = result.version;
-    groceryBaseItems = cloneVersionedItems(result.shouldSave ? remoteItems : result.items);
+    groceryBaseItems = cloneVersionedItems(result.baseItems || (result.shouldSave ? remoteItems : result.items));
+    if (result.clearPending) setGroceryPendingIntent(null);
+    else if (result.pendingIntent) setGroceryPendingIntent(result.pendingIntent);
     persistGroceriesLocally(groceries, groceryVersion);
     render();
-    markSynced("groceries");
     if (result.shouldSave) await saveGroceries();
+    else markSynced("groceries");
   } catch (error) {
     console.warn(error);
-    setSyncStatus("groceries", "usingSavedCopy", { state: "pending", canRetry: true });
+    setSyncStatus("groceries", "groceriesUsingSavedCopy", { state: "pending", canRetry: true });
   }
 }
 
-async function saveGroceries({ retrying = false } = {}) {
-  setSharedRetryAction(() => saveGroceries({ retrying: false }));
-  if (grocerySaveInFlight && !retrying) {
-    grocerySaveQueued = true;
-    await grocerySaveInFlight;
-    return true;
-  }
+async function saveGroceries() {
+  setSharedRetryAction(() => saveGroceries());
   const savedDirtySnapshot = dirtySnapshotForSurface("shopping");
-  setSyncStatus("groceries", "savedLocallySyncing", { state: "pending" });
-  grocerySaveInFlight = (async () => {
-    const send = async (isRetry) => {
-      try {
-        const saved = await saveVersionedCollection({
-          putJson,
-          url: "/.netlify/functions/groceries",
-          fallbackMessage: "Could not save groceries.",
-          items: groceries,
-          version: groceryVersion,
-          setItems: (items) => {
-            if (!grocerySaveQueued) groceries = items;
-          },
-          setVersion: (version) => {
-            groceryVersion = version;
-          },
-          persist: (items, version) => persistGroceriesLocally(items, version),
-        });
-        groceryBaseItems = cloneVersionedItems(saved.items || groceries);
-        if (grocerySaveQueued) persistGroceriesLocally(groceries, groceryVersion);
-    markSynced("groceries");
-        clearDirtySnapshot(savedDirtySnapshot);
-        return true;
-      } catch (error) {
-        console.warn(error);
-        const localGroceries = cloneVersionedItems(groceries);
-        if (error.status === 409 && Array.isArray(error.data?.items)) {
-          groceryVersion = Number(error.data.version) || groceryVersion;
-          groceries = mergeVersionedItems(localGroceries, groceryBaseItems, error.data.items);
-          groceryBaseItems = cloneVersionedItems(error.data.items);
-          persistGroceriesLocally(groceries, groceryVersion);
-          if (!isRetry) return send(true);
-          renderGroceries();
-          bindGroceryControls();
-          setSyncStatus("groceries", "savedLocallyPending", { state: "pending", canRetry: true });
-          return false;
-        }
-        persistGroceriesLocally(localGroceries, groceryVersion);
-        setSyncStatus("groceries", "savedLocallyPending", { state: "pending", canRetry: true });
-        return false;
-      }
-    };
-    return send(false);
-  })();
-  try {
-    return await grocerySaveInFlight;
-  } finally {
-    grocerySaveInFlight = null;
-    if (grocerySaveQueued) {
-      grocerySaveQueued = false;
-      await saveGroceries();
-    }
-  }
+  const saved = await grocerySaveCoordinator.save();
+  if (saved) clearDirtySnapshot(savedDirtySnapshot);
+  return saved;
 }
 
 function persistShoppingListsLocally(items = shoppingLists, version = shoppingListsVersion) {
@@ -3468,30 +3451,31 @@ $("#quickReceiptUpload").addEventListener("click", () => {
   openFinishShopping({ showReceipt: true });
 });
 
-$("#restockPurchased").addEventListener("click", () => {
-  openFinishShopping();
-});
-
 $("#closeFinishShopping").addEventListener("click", () => {
   closeFinishShoppingPanel();
   renderGroceries();
   bindGroceryControls();
 });
 
-$("#finishWithoutReceipt").addEventListener("click", async () => {
+async function moveBoughtItemsWithoutReceipt() {
   if (!purchasedGroceries().length) {
     setSyncStatus("groceries", "checkPurchasedFirst", { state: "error" });
-    return;
+    return false;
   }
 
   movePurchasedItemsHome();
-  showHomeAfterTrip();
+  stayInShoppingAfterTransfer();
   renderGroceries();
   renderInventory();
   bindGroceryControls();
   bindInventoryControls();
-  await Promise.all([saveInventory(), saveGroceries()]);
-});
+  const [inventorySaved, groceriesSaved] = await Promise.all([saveInventory(), saveGroceries()]);
+  if (inventorySaved && groceriesSaved) setSyncStatus("groceries", "movedPurchasedHome", { state: "success" });
+  return inventorySaved && groceriesSaved;
+}
+
+$("#restockPurchased").addEventListener("click", moveBoughtItemsWithoutReceipt);
+$("#finishWithoutReceipt").addEventListener("click", moveBoughtItemsWithoutReceipt);
 
 $("#manualReceiptForm").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -3516,7 +3500,7 @@ $("#manualReceiptForm").addEventListener("submit", async (event) => {
   }
   movePurchasedItemsHome();
   $("#manualReceiptForm").reset();
-  showHomeAfterTrip();
+  stayInShoppingAfterTransfer();
   renderGroceries();
   renderInventory();
   bindGroceryControls();

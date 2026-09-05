@@ -176,7 +176,7 @@ Geometry is square and calm. Controls use the compact control radius; temporary 
 - While Plan has unsaved meal changes, a navy Save bar stays fixed above the bottom nav so a long week scroll cannot hide Save / Guardar cambios.
 - Today’s Plan & shop band uses a navy Shopping list action and a filled soft-blue Find a recipe action.
 - Plan empty meal slots use filled soft-blue Add controls; today’s day card uses a sage highlight.
-- Shop uses a full-width Shopping | At home switch, short aisle names, and a navy Finish shopping prompt with light text.
+- Shop uses a full-width Shopping | At home switch and short aisle names. The list stays visually primary; only checked purchases reveal a compact direct action to move them to At Home. Receipt capture remains a secondary list tool.
 - Library search is the first control on that screen, ahead of Family picks and Browse all. Add to a meal stays a soft-blue secondary action.
 
 ### School Lunches

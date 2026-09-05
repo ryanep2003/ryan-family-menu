@@ -1,5 +1,13 @@
 # Durable Decisions
 
+## 2026-09-05 — Keep Shopping list-first and preserve pending grocery intent
+
+**Decision:** Do not show an always-on Finish shopping workflow. Show a compact direct transfer only when one or more items are actually checked, keep the shopper on the Shopping list after moving them to At Home, and leave receipt capture as an optional secondary tool. Persist a bounded household-scoped local grocery intent until its versioned write succeeds.
+
+**Reason:** The former completion banner appeared before anything was bought and encouraged people to dismiss it. More seriously, an offline clear could reload against a newer server version and restore items the phone had deliberately deleted because its pre-edit baseline was not durable.
+
+**Consequences:** Grocery clears and other edits survive reload, delayed reads, temporary errors, and one conflict retry while retaining unrelated remote additions. The server schema and household Blob keys do not change. Older clients ignore the additive journal and cannot replay its deletion baseline if a user rolls back before pending changes sync.
+
 ## 2026-09-04 — Keep family-key rotation hidden until recovery is production-ready
 
 **Decision:** Do not present key rotation in the household menu while the product still uses capability-key access without roles, recovery, or revocation guarantees. The existing server-side gated path remains available for future completion, but the current UI does not imply that rotation is supported.
@@ -178,7 +186,7 @@ This is a lightweight record of architectural and product decisions that future 
 
 **Consequences:** New grocery rows store additive suggestion and decision fields. Legacy auto-hidden matches safely return for review. The full recipe quantity remains visible until a person confirms coverage, and no production-data rewrite is required.
 
-## 2026-08-16 — Shopping trips end with one explicit finish step
+## 2026-08-16 — Shopping trips end with one explicit finish step (superseded 2026-09-05)
 
 **Decision:** Organize grocery use as prepare the list, check purchases at the store, then finish the trip. Receipt photo capture and manual receipt totals live in that final step; a receipt is helpful but optional.
 
@@ -187,6 +195,8 @@ This is a lightweight record of architectural and product decisions that future 
 **Alternatives considered:** Keeping receipt upload in a tools menu, requiring a receipt for every trip, and automatically moving every unchecked list item into inventory.
 
 **Consequences:** Receipt upload remains directly available from the Shopping header even when nothing has been checked. Checked rows are the authoritative purchased set when no detailed receipt is available. Receipt recognition may match additional items. Finishing removes purchased rows, updates home inventory, and records a receipt total when supplied without introducing a new persisted schema.
+
+**Superseded:** Real use showed that an always-visible finish step added ceremony and was used mainly to dismiss the banner. The 2026-09-05 decision keeps the same receipt and inventory capabilities but makes transfer conditional, compact, and direct.
 
 ## 2026-08-17 — Keep a bounded recovery trail for shared menus
 

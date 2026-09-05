@@ -797,9 +797,9 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
 .grocery-banner h2 { font-size: 1rem; }
 .shopping-context { margin-top: var(--space-2); color: var(--muted); }
 .shopping-show-all { justify-content: flex-start; margin: var(--space-1) 0 0 -14px; }
-.finish-shopping-prompt { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-3) 0; padding: var(--space-4); border: 0; border-radius: var(--radius-sheet); background: var(--navy); color: var(--paper); }
-.finish-shopping-prompt span { display: block; color: color-mix(in srgb, var(--paper) 80%, var(--soft-blue)); font-size: .84rem; }
-.finish-shopping-prompt .primary-action { background: var(--paper); color: var(--navy); border-color: var(--paper); }
+.finish-shopping-prompt { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-2) 0 var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); color: var(--ink); }
+.finish-shopping-prompt span { display: block; color: var(--muted); font-size: .84rem; }
+.finish-shopping-prompt .primary-action { flex: 0 0 auto; }
 .grocery-meal-filter { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
 .grocery-meal-filter strong { font-size: .9rem; font-weight: 600; }
 .grocery-meal-filter span { display: none; }
@@ -1116,6 +1116,7 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
   .detail-actions { display: grid; }
   .detail-actions > * { width: 100%; }
   .grocery-meal-filter, .finish-shopping-prompt { display: grid; }
+  .finish-shopping-prompt .primary-action { width: 100%; }
   .grocery-meal-filter select { max-width: none; }
   .budget-metrics { display: grid; grid-template-columns: repeat(2, 1fr); }
   .recipe-card { grid-template-columns: 72px minmax(0, 1fr) auto; min-height: 96px; gap: var(--space-3); }

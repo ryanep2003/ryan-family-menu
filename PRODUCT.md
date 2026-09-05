@@ -46,7 +46,7 @@ The product does not currently provide individual user accounts, verified identi
 2. **Plan food:** choose meals for a week or specific month date, compose each meal, adjust eaters, and estimate leftovers.
 3. **Pack school lunch:** from Plan, open School Lunches to approve or swap tomorrow's lunch, fill a simple school week, mark no-packing days, and check items off in packing mode.
 4. **Prepare and hand off:** use Today to see what is planned, what should be used soon, and who is helping.
-5. **Shop:** open the persistent shopping list from Today or the Shop tab, review possible inventory matches, check items while shopping, or upload a receipt directly so purchases move home and spending stays current. The Shop tab always opens the list, not home inventory.
+5. **Shop:** open the persistent shopping list from Today or the Shop tab, review possible inventory matches, and check items while shopping. Only after items are checked does a compact action offer to move those purchases to At Home. Receipt photo/manual entry remains optional in list tools so spending can stay current without turning every list visit into a checkout ceremony. The Shop tab stays on the list after a transfer.
 6. **Manage food at home:** optionally track location, amount, stock, and expiration; scan photos for suggested items. Inventory is not required to plan meals or shop.
 7. **Manage recipes:** search from Today or the library, then add a recipe to a day, favorite, import, scan, edit, draft, or publish household recipes.
 8. **Learn from dinner:** record a two-second outcome, optional individual reactions, and leftovers so later suggestions can improve.

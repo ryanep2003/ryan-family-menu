@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=173" />
+    <link rel="stylesheet" href="styles.css?v=174" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -509,24 +509,21 @@
             </div>
           </div>
           <section class="finish-shopping-prompt" id="finishShoppingPrompt" hidden>
-            <div>
-              <strong data-i18n="doneShoppingPrompt">Done shopping?</strong>
-              <span data-i18n="doneShoppingHelper">Save your receipt and update what is now at home.</span>
-            </div>
-            <button class="primary-action" id="restockPurchased" type="button" data-i18n="finishShopping">Finish shopping</button>
+            <span data-i18n="boughtItemsReady">Bought items are ready to put away.</span>
+            <button class="primary-action" id="restockPurchased" type="button" data-i18n="movePurchasedCountMany">Move {count} bought items to At Home</button>
           </section>
           <section class="finish-shopping-panel" id="finishShoppingPanel" aria-labelledby="finishShoppingHeading" hidden>
             <div class="finish-shopping-heading">
               <div>
-                <p class="section-label" data-i18n="finishShoppingLabel">Finish this trip</p>
-                <h3 id="finishShoppingHeading" data-i18n="finishShoppingHeading">Save the receipt and put groceries away</h3>
+                <p class="section-label" data-i18n="finishShoppingLabel">Receipt and At Home</p>
+                <h3 id="finishShoppingHeading" data-i18n="finishShoppingHeading">Move bought items</h3>
               </div>
               <button class="text-button" id="closeFinishShopping" type="button" data-i18n="close">Close</button>
             </div>
-            <p data-i18n="finishShoppingHelper">A receipt updates your budget and helps move purchased items into home inventory. You can also finish without one.</p>
+            <p data-i18n="finishShoppingHelper">Move checked items to At Home. Add a receipt first if you also want to update spending.</p>
             <div class="finish-shopping-actions">
               <button class="primary-action" id="scanReceiptToggle" type="button" aria-expanded="false" aria-controls="receiptScanPanel" data-i18n="addReceiptPhoto">Add receipt photo</button>
-              <button class="ghost-button" id="finishWithoutReceipt" type="button" data-i18n="finishWithoutReceipt">Finish without receipt</button>
+              <button class="ghost-button" id="finishWithoutReceipt" type="button" data-i18n="moveWithoutReceipt">Move items without receipt</button>
             </div>
             <div class="inventory-scan-panel receipt-scan-panel" id="receiptScanPanel" hidden>
               <p data-i18n="receiptScanNote">Upload a receipt photo. Review matches before moving items home.</p>
@@ -549,7 +546,7 @@
                 <label><span data-i18n="receiptStore">Store</span><input id="manualReceiptStore" type="text" maxlength="100" autocomplete="organization" /></label>
                 <label><span data-i18n="receiptDate">Date</span><input id="manualReceiptDate" type="date" /></label>
                 <label><span data-i18n="receiptTotal">Total</span><input id="manualReceiptTotal" type="number" min="0.01" max="100000" step="0.01" inputmode="decimal" required /></label>
-                <button class="primary-action" type="submit" data-i18n="saveReceiptAndFinish">Save receipt and finish</button>
+                <button class="primary-action" type="submit" data-i18n="saveReceiptAndMove">Save receipt and move items</button>
               </form>
             </details>
           </section>
@@ -1100,6 +1097,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=173"></script>
+    <script type="module" src="app.js?v=174"></script>
   </body>
 </html>
