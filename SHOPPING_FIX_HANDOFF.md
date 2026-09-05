@@ -15,7 +15,8 @@
 - Receipt photo and manual entry remain optional under list tools.
 - A bounded household-scoped local journal preserves unsynced grocery edits and deletion baselines across reload, delayed reads, temporary failures, and conflict retries.
 - Serialized saves return the result of each submitted change instead of reporting a queued failure as success.
-- Grocery load/sync messages no longer claim the device is offline when the actual failure is unknown.
+- Grocery load/sync messages no longer claim the device is offline when the actual failure is unknown. A failed read retries a read, a failed pending write retries a write, and duplicate Retry/reconnect requests are coalesced.
+- Grocery reads and writes have bounded request time, validate successful envelopes, and ignore stale read failures after a newer successful save.
 
 ## Intentionally unchanged
 
@@ -27,3 +28,4 @@
 
 - The pending journal is understood only by this client version. An older cached client can read the ordinary local list but cannot replay the deletion baseline if used before the pending write settles.
 - Receipt recognition still depends on the existing configured server function and AI availability; manual receipt entry remains the fallback.
+- The exact failing response from the original phone was not available, so this fixes the reproduced client retry/race failures without claiming a confirmed Netlify or server root cause.

@@ -65,7 +65,7 @@ test("browser API requests include the household key for reads and writes", asyn
   const source = await readFile(new URL("../api.js", import.meta.url), "utf8");
   assert.match(source, /family-menu-household-key/);
   assert.match(source, /"x-household-key"/);
-  assert.match(source, /getJson[\s\S]*?headers: jsonHeaders\(\)/);
+  assert.match(source, /requestJson[\s\S]*?headers: jsonHeaders\(\)/);
 });
 
 test("legacy migration requires a separate owner-only secret", async () => {

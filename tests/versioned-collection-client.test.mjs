@@ -5,6 +5,7 @@ import {
   applyLoadedVersionedCollection,
   applyVersionConflict,
   cloneVersionedItems,
+  createVersionedCollectionRetryCoordinator,
   createVersionedCollectionSaveCoordinator,
   createVersionedIntent,
   loadVersionedCollection,
@@ -14,6 +15,7 @@ import {
   reconcileLoadedVersionedCollection,
   readVersionedCollectionStorage,
   saveVersionedCollection,
+  versionedCollectionResponse,
 } from "../versioned-collection-client.js";
 
 test("mergeVersionedItems keeps non-conflicting phone edits and deletions", () => {
@@ -284,6 +286,154 @@ test("undo after a reconciled clear restores removed items without dropping remo
   state.items = [...removed, ...state.items];
   assert.equal(await coordinator.save(), true);
   assert.deepEqual(new Set(state.items.map((item) => item.id)), new Set(["milk", "eggs", "bread"]));
+});
+
+test("versioned collection responses fail closed when a 200 response is incomplete", () => {
+  assert.throws(() => versionedCollectionResponse({}), (error) => error.code === "malformed-response");
+  assert.throws(() => versionedCollectionResponse({ items: [], version: "bad" }), (error) => error.code === "malformed-response");
+  assert.deepEqual(versionedCollectionResponse({ items: [{ id: "milk" }], version: 2 }), {
+    items: [{ id: "milk" }],
+    version: 2,
+  });
+});
+
+test("a failed initial load retries with GET behavior and never manufactures a save", async () => {
+  const calls = [];
+  let retry;
+  const load = async () => {
+    calls.push("load");
+    if (calls.length === 1) {
+      retry.setFailure("load");
+      return false;
+    }
+    retry.clear();
+    return true;
+  };
+  retry = createVersionedCollectionRetryCoordinator({
+    load,
+    save: async () => { calls.push("save"); return true; },
+  });
+
+  await load();
+  assert.equal(await retry.retry(), true);
+  assert.deepEqual(calls, ["load", "load"]);
+});
+
+test("a failed load with pending intent reloads and merges before saving", async () => {
+  const base = [{ id: "milk" }];
+  const pending = createVersionedIntent({ items: [], version: 4, baseItems: base });
+  const calls = [];
+  let retry;
+  retry = createVersionedCollectionRetryCoordinator({
+    hasPending: () => true,
+    load: async () => {
+      calls.push("load");
+      const result = reconcileLoadedVersionedCollection({
+        pendingIntent: pending,
+        remoteItems: [...base, { id: "bread" }],
+        remoteVersion: 5,
+      });
+      if (result.shouldSave) calls.push(`save:${result.items.map((item) => item.id).join(",")}`);
+      retry.clear();
+      return true;
+    },
+    save: async () => { calls.push("direct-save"); return true; },
+  });
+  retry.setFailure("load");
+
+  assert.equal(await retry.retry(), true);
+  assert.deepEqual(calls, ["load", "save:bread"]);
+});
+
+test("a failed pending PUT retries a save without an unnecessary load", async () => {
+  const calls = [];
+  const retry = createVersionedCollectionRetryCoordinator({
+    hasPending: () => true,
+    load: async () => { calls.push("load"); return true; },
+    save: async () => { calls.push("save"); return true; },
+  });
+  retry.setFailure("save");
+
+  assert.equal(await retry.retry(), true);
+  assert.deepEqual(calls, ["save"]);
+});
+
+test("retry taps and reconnect share one in-flight recovery request", async () => {
+  let release;
+  const blocked = new Promise((resolve) => { release = resolve; });
+  let loads = 0;
+  const busy = [];
+  const retry = createVersionedCollectionRetryCoordinator({
+    load: async () => { loads += 1; await blocked; return true; },
+    save: async () => true,
+    onBusyChange: (value) => busy.push(value),
+  });
+  retry.setFailure("load");
+  const tap = retry.retry();
+  const reconnect = retry.retry();
+  assert.equal(tap, reconnect);
+  release();
+  assert.equal(await tap, true);
+  assert.equal(loads, 1);
+  assert.deepEqual(busy, [true, false]);
+});
+
+test("local persistence failures return false and expose retry instead of rejecting", async () => {
+  let pendingFailures = 0;
+  let failure;
+  const coordinator = createVersionedCollectionSaveCoordinator({
+    getItems: () => [{ id: "milk" }],
+    setItems: () => {},
+    getVersion: () => 1,
+    setVersion: () => {},
+    getBaseItems: () => [],
+    setBaseItems: () => {},
+    getPendingIntent: () => null,
+    setPendingIntent: () => {},
+    persist: () => { throw Object.assign(new Error("storage unavailable"), { name: "QuotaExceededError" }); },
+    put: async () => { throw new Error("must not write"); },
+    onPending: (error) => { pendingFailures += 1; failure = error; },
+  });
+
+  assert.equal(await coordinator.save(), false);
+  assert.equal(pendingFailures, 1);
+  assert.equal(failure.name, "QuotaExceededError");
+});
+
+test("post-PUT storage failure keeps pending intent and resolves false", async () => {
+  let pendingIntent = null;
+  let persistCalls = 0;
+  let clearCalls = 0;
+  let putCalls = 0;
+  let failure;
+  const coordinator = createVersionedCollectionSaveCoordinator({
+    getItems: () => [{ id: "milk", checked: true }],
+    setItems: () => {},
+    getVersion: () => 1,
+    setVersion: () => {},
+    getBaseItems: () => [{ id: "milk", checked: false }],
+    setBaseItems: () => {},
+    getPendingIntent: () => pendingIntent,
+    setPendingIntent: (intent) => {
+      if (!intent) clearCalls += 1;
+      pendingIntent = intent;
+    },
+    persist: () => {
+      persistCalls += 1;
+      if (persistCalls > 1) throw Object.assign(new Error("storage full"), { name: "QuotaExceededError" });
+    },
+    put: async (items) => {
+      putCalls += 1;
+      return { items, version: 2 };
+    },
+    onPending: (error) => { failure = error; },
+  });
+
+  assert.equal(await coordinator.save(), false);
+  assert.equal(putCalls, 1);
+  assert.equal(failure.name, "QuotaExceededError");
+  assert.ok(pendingIntent);
+  assert.equal(clearCalls, 0);
 });
 
 function storage(values = {}) {

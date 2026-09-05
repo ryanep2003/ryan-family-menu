@@ -25,7 +25,7 @@ import { createFamilyUi } from "./family-ui.js";
 import { activityEntry, normalizeActivity } from "./activity-logic.js";
 import { addAvailableFood, normalizeAvailableFood } from "./available-food.js";
 import { inventoryExpirationState, inventoryItem, mergeInventory } from "./inventory-logic.js";
-import { getJson, postJson, putJson } from "./api.js";
+import { classifyRequestFailure, getJson, postJson, putJson } from "./api.js";
 import { createGroceryUi } from "./grocery-ui.js";
 import { canonicalHouseholdMember, DEFAULT_HOUSEHOLD_MEMBER, displayHouseholdMember } from "./household-attribution.js";
 import { createHouseholdStorage, leaveHousehold, requireHouseholdSession } from "./household-access.js";
@@ -64,6 +64,7 @@ import {
 } from "./memory-logic.js";
 import {
   createVersionedCollectionSaveCoordinator,
+  createVersionedCollectionRetryCoordinator,
   applyVersionConflict,
   normalizeVersionedIntent,
   reconcileLoadedVersionedCollection,
@@ -74,6 +75,7 @@ import {
   persistVersionedCollection,
   readVersionedCollectionStorage,
   saveVersionedCollection,
+  versionedCollectionResponse,
 } from "./versioned-collection-client.js";
 import {
   categoryFor,
@@ -215,6 +217,7 @@ let groceries = cloneVersionedItems(groceryPendingIntent?.items || storedGroceri
 let groceryVersion = groceryPendingIntent?.baseVersion ?? storedGroceries.version;
 let groceryBaseItems = cloneVersionedItems(groceryPendingIntent?.baseItems || storedGroceries.items);
 let groceryLoadGeneration = 0;
+let groceryLoadInFlight = null;
 let shoppingLists = normalizeShoppingLists(storedShoppingLists.items);
 let shoppingListsVersion = storedShoppingLists.version;
 let shoppingListsBase = cloneVersionedItems(shoppingLists);
@@ -533,21 +536,60 @@ const grocerySaveCoordinator = createVersionedCollectionSaveCoordinator({
   getPendingIntent: () => groceryPendingIntent,
   setPendingIntent: setGroceryPendingIntent,
   persist: persistGroceriesLocally,
-  put: (items, version) => putJson(
+  put: async (items, version) => versionedCollectionResponse(await putJson(
     "/.netlify/functions/groceries",
     { items, version },
     "Could not save groceries.",
-  ),
+    { timeoutMs: 15000 },
+  )),
   invalidateLoads: () => { groceryLoadGeneration += 1; },
   onSaving: () => setSyncStatus("groceries", "savedLocallySyncing", { state: "pending" }),
   onSaved: ({ settled }) => {
     renderGroceries();
-    if (settled) markSynced("groceries");
+    if (settled) {
+      groceryRetryCoordinator.clear();
+      markSynced("groceries");
+    }
   },
   onPending: (error) => {
-    console.warn(error);
     renderGroceries();
-    setSyncStatus("groceries", "groceriesSavedLocallyPending", { state: "pending", canRetry: true });
+    showGroceryFailure("save", error);
+  },
+});
+
+function groceryFailureKey(operation, error) {
+  const reason = classifyRequestFailure(error);
+  return {
+    storage: "groceriesStorageError",
+    offline: "groceriesOffline",
+    timeout: "groceriesTimeout",
+    access: "groceriesAccessError",
+    "rate-limit": "groceriesRateLimited",
+    service: "groceriesServiceUnavailable",
+    malformed: "groceriesResponseInvalid",
+    unknown: operation === "save" ? "groceriesSaveUnknown" : "groceriesLoadUnknown",
+  }[reason];
+}
+
+function showGroceryFailure(operation, error) {
+  console.warn(`Grocery ${operation} failed.`, error?.status || error?.code || "unknown");
+  groceryRetryCoordinator.setFailure(operation);
+  setSyncStatus("groceries", groceryFailureKey(operation, error), { state: "pending", canRetry: true });
+}
+
+const groceryRetryCoordinator = createVersionedCollectionRetryCoordinator({
+  load: () => loadGroceries(),
+  save: () => groceryPendingIntent ? saveGroceries() : loadGroceries(),
+  hasPending: () => Boolean(groceryPendingIntent),
+  onBusyChange: (busy, operation) => {
+    const retryButton = $("#retryGroceries");
+    if (retryButton) retryButton.disabled = busy;
+    if (busy) {
+      setSyncStatus("groceries", operation === "save" ? "groceriesRetryingSave" : "groceriesRetryingLoad", {
+        state: "pending",
+        canRetry: true,
+      });
+    }
   },
 });
 
@@ -2846,40 +2888,69 @@ async function saveSharedRecipe(recipe) {
   return saved;
 }
 
-async function loadGroceries() {
+function loadGroceries() {
+  if (groceryLoadInFlight) return groceryLoadInFlight;
   const generation = ++groceryLoadGeneration;
-  try {
-    const data = await getJson("/.netlify/functions/groceries", "Could not load groceries.");
-    if (generation !== groceryLoadGeneration) return;
-    const remoteItems = Array.isArray(data.items) ? data.items : [];
-    const remoteVersion = Number(data.version) || 0;
-    const result = reconcileLoadedVersionedCollection({
-      remoteItems,
-      remoteVersion,
-      localItems: groceries,
-      localVersion: groceryVersion,
-      baseItems: groceryBaseItems,
-      pendingIntent: groceryPendingIntent,
-      saveInFlight: grocerySaveCoordinator.isBusy(),
-    });
-    if (!result.apply) return;
-    groceries = result.items;
-    groceryVersion = result.version;
-    groceryBaseItems = cloneVersionedItems(result.baseItems || (result.shouldSave ? remoteItems : result.items));
-    if (result.clearPending) setGroceryPendingIntent(null);
-    else if (result.pendingIntent) setGroceryPendingIntent(result.pendingIntent);
-    persistGroceriesLocally(groceries, groceryVersion);
-    render();
-    if (result.shouldSave) await saveGroceries();
-    else markSynced("groceries");
-  } catch (error) {
-    console.warn(error);
-    setSyncStatus("groceries", "groceriesUsingSavedCopy", { state: "pending", canRetry: true });
-  }
+  setSyncStatus("groceries", "groceriesLoading", { state: "pending" });
+  const request = (async () => {
+    let data;
+    try {
+      data = versionedCollectionResponse(await getJson(
+        "/.netlify/functions/groceries",
+        "Could not load groceries.",
+      ));
+    } catch (error) {
+      if (generation !== groceryLoadGeneration) return false;
+      showGroceryFailure("load", error);
+      return false;
+    }
+
+    if (generation !== groceryLoadGeneration) return false;
+    try {
+      const remoteItems = data.items;
+      const remoteVersion = data.version;
+      const result = reconcileLoadedVersionedCollection({
+        remoteItems,
+        remoteVersion,
+        localItems: groceries,
+        localVersion: groceryVersion,
+        baseItems: groceryBaseItems,
+        pendingIntent: groceryPendingIntent,
+        saveInFlight: grocerySaveCoordinator.isBusy(),
+      });
+      if (!result.apply) {
+        if (result.reason === "stale-remote") {
+          const error = new Error("Stale grocery response.");
+          error.code = "stale-response";
+          showGroceryFailure("load", error);
+        }
+        return false;
+      }
+      groceries = result.items;
+      groceryVersion = result.version;
+      groceryBaseItems = cloneVersionedItems(result.baseItems || (result.shouldSave ? remoteItems : result.items));
+      if (result.clearPending) setGroceryPendingIntent(null);
+      else if (result.pendingIntent) setGroceryPendingIntent(result.pendingIntent);
+      persistGroceriesLocally(groceries, groceryVersion);
+      render();
+      if (result.shouldSave) return saveGroceries();
+      groceryRetryCoordinator.clear();
+      markSynced("groceries");
+      return true;
+    } catch (error) {
+      if (generation !== groceryLoadGeneration) return false;
+      showGroceryFailure("load", error);
+      return false;
+    }
+  })();
+  const trackedRequest = request.finally(() => {
+    if (groceryLoadInFlight === trackedRequest) groceryLoadInFlight = null;
+  });
+  groceryLoadInFlight = trackedRequest;
+  return groceryLoadInFlight;
 }
 
 async function saveGroceries() {
-  setSharedRetryAction(() => saveGroceries());
   const savedDirtySnapshot = dirtySnapshotForSurface("shopping");
   const saved = await grocerySaveCoordinator.save();
   if (saved) clearDirtySnapshot(savedDirtySnapshot);
@@ -3590,14 +3661,14 @@ document.addEventListener("click", (event) => {
   if (event.target.closest("[data-retry-recipe-catalog]")) loadSharedRecipes({ restart: true });
 });
 
-$("#retryGroceries").addEventListener("click", saveGroceries);
+$("#retryGroceries").addEventListener("click", () => groceryRetryCoordinator.retry());
 $("#retryInventory").addEventListener("click", saveInventory);
 
 window.addEventListener("online", () => {
   const retries = [];
   if (!$("#retrySharedState").hidden && sharedRetryAction) retries.push(sharedRetryAction());
   if (!$("#retryRecipes").hidden) retries.push(loadSharedRecipes({ restart: true }));
-  if (!$("#retryGroceries").hidden) retries.push(saveGroceries());
+  if (!$("#retryGroceries").hidden) retries.push(groceryRetryCoordinator.retry());
   if (shoppingListsPending) retries.push(saveShoppingLists());
   if (!$("#retryInventory").hidden) retries.push(saveInventory());
   if (dinnerHistoryPending) retries.push(saveDinnerHistory());

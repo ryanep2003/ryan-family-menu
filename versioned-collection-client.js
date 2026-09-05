@@ -19,6 +19,55 @@ function boundedVersion(value) {
   return Number.isSafeInteger(version) && version > 0 ? version : 0;
 }
 
+export function versionedCollectionResponse(data) {
+  const version = Number(data?.version);
+  if (!data || !Array.isArray(data.items) || !Number.isSafeInteger(version) || version < 0) {
+    const error = new Error("Invalid versioned collection response.");
+    error.code = "malformed-response";
+    throw error;
+  }
+  return { ...data, items: cloneVersionedItems(data.items), version };
+}
+
+export function createVersionedCollectionRetryCoordinator({
+  load,
+  save,
+  hasPending = () => false,
+  onBusyChange = () => {},
+} = {}) {
+  let retryMode = "load";
+  let inFlight = null;
+
+  function setFailure(operation) {
+    retryMode = operation === "save" ? "save" : "load";
+  }
+
+  function clear() {
+    retryMode = "";
+  }
+
+  function retry() {
+    if (inFlight) return inFlight;
+    const operation = retryMode || (hasPending() ? "save" : "load");
+    onBusyChange(true, operation);
+    inFlight = Promise.resolve()
+      .then(() => operation === "save" ? save() : load())
+      .finally(() => {
+        inFlight = null;
+        onBusyChange(false, operation);
+      });
+    return inFlight;
+  }
+
+  return {
+    retry,
+    setFailure,
+    clear,
+    mode: () => retryMode,
+    isBusy: () => Boolean(inFlight),
+  };
+}
+
 export function normalizeVersionedIntent(value, { maxItems = 500 } = {}) {
   if (!value || value.schemaVersion !== 1 || !Array.isArray(value.baseItems) || !Array.isArray(value.items)) return null;
   return {
@@ -141,6 +190,18 @@ export function createVersionedCollectionSaveCoordinator({
   let tail = Promise.resolve();
   let pendingCount = 0;
   let sequence = 0;
+  let volatilePendingIntent = normalizeVersionedIntent(getPendingIntent());
+
+  function currentPendingIntent() {
+    return normalizeVersionedIntent(getPendingIntent()) || volatilePendingIntent;
+  }
+
+  function updatePendingIntent(intent) {
+    const normalized = normalizeVersionedIntent(intent);
+    if (normalized) volatilePendingIntent = normalized;
+    setPendingIntent(normalized);
+    if (!normalized) volatilePendingIntent = null;
+  }
 
   function storePending(baseItems, baseVersion, items) {
     const pending = {
@@ -149,7 +210,7 @@ export function createVersionedCollectionSaveCoordinator({
       baseVersion: boundedVersion(baseVersion),
       items: cloneVersionedItems(items).slice(0, 500),
     };
-    setPendingIntent(pending);
+    updatePendingIntent(pending);
     return pending;
   }
 
@@ -163,9 +224,9 @@ export function createVersionedCollectionSaveCoordinator({
       items: request.intent,
       version: getVersion(),
       baseItems: request.captureBase,
-      pendingIntent: getPendingIntent(),
+      pendingIntent: currentPendingIntent(),
     });
-    setPendingIntent(pending);
+    updatePendingIntent(pending);
     persist(request.intent, getVersion());
     invalidateLoads();
     return request;
@@ -188,7 +249,7 @@ export function createVersionedCollectionSaveCoordinator({
         setBaseItems(savedItems);
         persist(currentItems, savedVersion);
         const settled = request.sequence === sequence && sameValue(currentItems, savedItems);
-        if (settled) setPendingIntent(null);
+        if (settled) updatePendingIntent(null);
         else storePending(savedItems, savedVersion, currentItems);
         onSaved({ settled });
         return true;
@@ -211,10 +272,20 @@ export function createVersionedCollectionSaveCoordinator({
           }
         }
         const currentItems = cloneVersionedItems(getItems());
-        persist(currentItems, getVersion());
-        const pending = normalizeVersionedIntent(getPendingIntent());
-        if (!pending) storePending(getBaseItems(), getVersion(), currentItems);
-        onPending(error);
+        let recoveryError = error;
+        try {
+          persist(currentItems, getVersion());
+        } catch (storageError) {
+          recoveryError = storageError;
+        }
+        if (!currentPendingIntent()) {
+          try {
+            storePending(getBaseItems(), getVersion(), currentItems);
+          } catch (storageError) {
+            recoveryError = storageError;
+          }
+        }
+        onPending(recoveryError);
         return false;
       }
     }
@@ -222,7 +293,13 @@ export function createVersionedCollectionSaveCoordinator({
   }
 
   function save() {
-    const request = capture();
+    let request;
+    try {
+      request = capture();
+    } catch (error) {
+      onPending(error);
+      return Promise.resolve(false);
+    }
     pendingCount += 1;
     const result = tail.then(() => execute(request), () => execute(request));
     tail = result.then(

@@ -12,14 +12,21 @@ async function parseJson(response) {
   });
 }
 
-export async function getJson(url, fallbackMessage, { timeoutMs = 15000, signal } = {}) {
-  const controller = signal ? null : (typeof AbortController === "function" ? new AbortController() : null);
+function timeoutFailure(fallbackMessage) {
+  const error = new Error(fallbackMessage);
+  error.code = "request-timeout";
+  return error;
+}
+
+async function requestJson(url, requestOptions, fallbackMessage, { timeoutMs = 0, signal } = {}) {
+  const controller = !signal && timeoutMs > 0 && typeof AbortController === "function" ? new AbortController() : null;
   const requestSignal = signal || controller?.signal;
   const setTimer = globalThis.setTimeout || (() => 0);
   const clearTimer = globalThis.clearTimeout || (() => {});
-  const timeout = requestSignal ? setTimer(() => controller?.abort(), timeoutMs) : 0;
+  const timeout = controller && timeoutMs > 0 ? setTimer(() => controller.abort(), timeoutMs) : 0;
   try {
     const response = await fetch(url, {
+      ...requestOptions,
       headers: jsonHeaders(),
       ...(requestSignal ? { signal: requestSignal } : {}),
     });
@@ -34,45 +41,40 @@ export async function getJson(url, fallbackMessage, { timeoutMs = 15000, signal 
 
     return data;
   } catch (error) {
-    if (error?.name === "AbortError") throw new Error(fallbackMessage);
+    if (error?.name === "AbortError" && controller?.signal.aborted) throw timeoutFailure(fallbackMessage);
     throw error;
   } finally {
     if (timeout) clearTimer(timeout);
   }
 }
 
-export async function postJson(url, body, fallbackMessage) {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: jsonHeaders(),
-    body: JSON.stringify(body),
-  });
-  const data = await parseJson(response);
-
-  if (!response.ok) {
-    const error = new Error(data.error || fallbackMessage);
-    error.status = response.status;
-    error.data = data;
-    throw error;
+export function classifyRequestFailure(error, { online = globalThis.navigator?.onLine } = {}) {
+  if (["QuotaExceededError", "SecurityError"].includes(error?.name) || error?.code === "storage-unavailable") {
+    return "storage";
   }
-
-  return data;
+  if (online === false) return "offline";
+  if (error?.code === "request-timeout") return "timeout";
+  if (error?.code === "malformed-response") return "malformed";
+  if ([401, 403].includes(Number(error?.status))) return "access";
+  if (Number(error?.status) === 429) return "rate-limit";
+  if (Number(error?.status) >= 500) return "service";
+  return "unknown";
 }
 
-export async function putJson(url, body, fallbackMessage) {
-  const response = await fetch(url, {
-    method: "PUT",
-    headers: jsonHeaders(),
+export async function getJson(url, fallbackMessage, options = {}) {
+  return requestJson(url, {}, fallbackMessage, { ...options, timeoutMs: options.timeoutMs ?? 15000 });
+}
+
+export async function postJson(url, body, fallbackMessage, options = {}) {
+  return requestJson(url, {
+    method: "POST",
     body: JSON.stringify(body),
-  });
-  const data = await parseJson(response);
+  }, fallbackMessage, options);
+}
 
-  if (!response.ok) {
-    const error = new Error(data.error || fallbackMessage);
-    error.status = response.status;
-    error.data = data;
-    throw error;
-  }
-
-  return data;
+export async function putJson(url, body, fallbackMessage, options = {}) {
+  return requestJson(url, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  }, fallbackMessage, options);
 }
