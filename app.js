@@ -164,7 +164,11 @@ function applyStaticTranslations() {
 document.querySelectorAll("[data-lang]").forEach((button) => {
   button.addEventListener("click", () => {
     lang = supportedLang(button.dataset.lang);
-    localStorage.setItem("dinner-lang", lang);
+    try {
+      localStorage.setItem("dinner-lang", lang);
+    } catch (error) {
+      console.warn("Language preference could not be saved on this device.", error?.name || "unknown");
+    }
     applyStaticTranslations();
     if (appReady) render();
   });
@@ -544,12 +548,9 @@ const grocerySaveCoordinator = createVersionedCollectionSaveCoordinator({
   )),
   invalidateLoads: () => { groceryLoadGeneration += 1; },
   onSaving: () => setSyncStatus("groceries", "savedLocallySyncing", { state: "pending" }),
-  onSaved: ({ settled }) => {
+  onSaved: ({ settled, storageError, cleanupPending }) => {
     renderGroceries();
-    if (settled) {
-      groceryRetryCoordinator.clear();
-      markSynced("groceries");
-    }
+    if (settled) finishGroceryCloudSync({ storageError, cleanupPending });
   },
   onPending: (error) => {
     renderGroceries();
@@ -577,15 +578,47 @@ function showGroceryFailure(operation, error) {
   setSyncStatus("groceries", groceryFailureKey(operation, error), { state: "pending", canRetry: true });
 }
 
+function showGroceryBackupUnavailable(error) {
+  console.warn("Grocery offline backup unavailable.", error?.name || error?.code || "unknown");
+  setSyncStatus("groceries", "groceriesSyncedNoOfflineBackup");
+}
+
+function showGroceryCleanupFailure(error) {
+  console.warn("Grocery recovery cleanup unavailable.", error?.name || error?.code || "unknown");
+  groceryRetryCoordinator.setFailure("cleanup");
+  setSyncStatus("groceries", "groceriesCleanupPending", { state: "pending", canRetry: true });
+}
+
+function finishGroceryCloudSync({ storageError = null, cleanupPending = false } = {}) {
+  if (cleanupPending) {
+    showGroceryCleanupFailure(storageError);
+    return;
+  }
+  groceryRetryCoordinator.clear();
+  if (storageError) showGroceryBackupUnavailable(storageError);
+  else markSynced("groceries");
+}
+
 const groceryRetryCoordinator = createVersionedCollectionRetryCoordinator({
   load: () => loadGroceries(),
   save: () => groceryPendingIntent ? saveGroceries() : loadGroceries(),
+  cleanup: () => {
+    const result = grocerySaveCoordinator.retryLocalCleanup();
+    finishGroceryCloudSync({
+      storageError: result.storageError,
+      cleanupPending: !result.cleaned,
+    });
+    return result.cleaned;
+  },
   hasPending: () => Boolean(groceryPendingIntent),
   onBusyChange: (busy, operation) => {
     const retryButton = $("#retryGroceries");
     if (retryButton) retryButton.disabled = busy;
     if (busy) {
-      setSyncStatus("groceries", operation === "save" ? "groceriesRetryingSave" : "groceriesRetryingLoad", {
+      const retryKey = operation === "cleanup"
+        ? "groceriesRetryingCleanup"
+        : operation === "save" ? "groceriesRetryingSave" : "groceriesRetryingLoad";
+      setSyncStatus("groceries", retryKey, {
         state: "pending",
         canRetry: true,
       });
@@ -2929,13 +2962,31 @@ function loadGroceries() {
       groceries = result.items;
       groceryVersion = result.version;
       groceryBaseItems = cloneVersionedItems(result.baseItems || (result.shouldSave ? remoteItems : result.items));
-      if (result.clearPending) setGroceryPendingIntent(null);
-      else if (result.pendingIntent) setGroceryPendingIntent(result.pendingIntent);
-      persistGroceriesLocally(groceries, groceryVersion);
+      let storageError = null;
+      let cleanupPending = false;
+      try {
+        if (result.pendingIntent) setGroceryPendingIntent(result.pendingIntent);
+      } catch (error) {
+        storageError = error;
+      }
       render();
+      if (result.clearPending) {
+        const persistence = grocerySaveCoordinator.acknowledgeLocalSnapshot({
+          items: groceries,
+          version: groceryVersion,
+          baseItems: groceries,
+        });
+        storageError ||= persistence.storageError;
+        cleanupPending = persistence.cleanupPending;
+      } else {
+        try {
+          persistGroceriesLocally(groceries, groceryVersion);
+        } catch (error) {
+          storageError ||= error;
+        }
+      }
       if (result.shouldSave) return saveGroceries();
-      groceryRetryCoordinator.clear();
-      markSynced("groceries");
+      finishGroceryCloudSync({ storageError, cleanupPending });
       return true;
     } catch (error) {
       if (generation !== groceryLoadGeneration) return false;

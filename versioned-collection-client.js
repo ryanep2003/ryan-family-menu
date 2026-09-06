@@ -32,6 +32,7 @@ export function versionedCollectionResponse(data) {
 export function createVersionedCollectionRetryCoordinator({
   load,
   save,
+  cleanup = load,
   hasPending = () => false,
   onBusyChange = () => {},
 } = {}) {
@@ -39,7 +40,7 @@ export function createVersionedCollectionRetryCoordinator({
   let inFlight = null;
 
   function setFailure(operation) {
-    retryMode = operation === "save" ? "save" : "load";
+    retryMode = ["save", "cleanup"].includes(operation) ? operation : "load";
   }
 
   function clear() {
@@ -51,7 +52,7 @@ export function createVersionedCollectionRetryCoordinator({
     const operation = retryMode || (hasPending() ? "save" : "load");
     onBusyChange(true, operation);
     inFlight = Promise.resolve()
-      .then(() => operation === "save" ? save() : load())
+      .then(() => operation === "save" ? save() : operation === "cleanup" ? cleanup() : load())
       .finally(() => {
         inFlight = null;
         onBusyChange(false, operation);
@@ -191,6 +192,7 @@ export function createVersionedCollectionSaveCoordinator({
   let pendingCount = 0;
   let sequence = 0;
   let volatilePendingIntent = normalizeVersionedIntent(getPendingIntent());
+  let localCleanupSnapshot = null;
 
   function currentPendingIntent() {
     return normalizeVersionedIntent(getPendingIntent()) || volatilePendingIntent;
@@ -198,20 +200,59 @@ export function createVersionedCollectionSaveCoordinator({
 
   function updatePendingIntent(intent) {
     const normalized = normalizeVersionedIntent(intent);
-    if (normalized) volatilePendingIntent = normalized;
-    setPendingIntent(normalized);
-    if (!normalized) volatilePendingIntent = null;
+    volatilePendingIntent = normalized;
+    try {
+      setPendingIntent(normalized);
+      return null;
+    } catch (error) {
+      return error;
+    }
   }
 
-  function storePending(baseItems, baseVersion, items) {
-    const pending = {
-      schemaVersion: 1,
-      baseItems: cloneVersionedItems(baseItems),
-      baseVersion: boundedVersion(baseVersion),
-      items: cloneVersionedItems(items).slice(0, 500),
+  function persistLocalSnapshot({ pendingIntent, items, version }) {
+    const pendingError = updatePendingIntent(pendingIntent);
+    let cacheError = null;
+    try {
+      persist(items, version);
+    } catch (error) {
+      cacheError = error;
+    }
+    return pendingError || cacheError;
+  }
+
+  function persistAcknowledgedSnapshot({ items, version, baseItems, settled }) {
+    let pendingError;
+    let cleanupPending = false;
+    if (settled) {
+      // Rebase the durable journal before removing it. If removal is blocked,
+      // reopening sees a no-op intent instead of replaying an older edit.
+      const acknowledgeError = updatePendingIntent(createVersionedIntent({ items, version, baseItems }));
+      const clearError = updatePendingIntent(null);
+      cleanupPending = Boolean(acknowledgeError && clearError);
+      pendingError = acknowledgeError && clearError ? clearError : null;
+    } else {
+      pendingError = updatePendingIntent(createVersionedIntent({ items, version, baseItems }));
+    }
+    let cacheError = null;
+    try {
+      persist(items, version);
+    } catch (error) {
+      cacheError = error;
+    }
+    return {
+      storageError: pendingError || cacheError,
+      cleanupPending,
     };
-    updatePendingIntent(pending);
-    return pending;
+  }
+
+  function acknowledgeLocalSnapshot({ items, version, baseItems = items, settled = true }) {
+    const persistence = persistAcknowledgedSnapshot({ items, version, baseItems, settled });
+    localCleanupSnapshot = persistence.cleanupPending ? {
+      items: cloneVersionedItems(items),
+      version,
+      baseItems: cloneVersionedItems(baseItems),
+    } : null;
+    return persistence;
   }
 
   function capture() {
@@ -226,8 +267,11 @@ export function createVersionedCollectionSaveCoordinator({
       baseItems: request.captureBase,
       pendingIntent: currentPendingIntent(),
     });
-    updatePendingIntent(pending);
-    persist(request.intent, getVersion());
+    persistLocalSnapshot({
+      pendingIntent: pending,
+      items: request.intent,
+      version: getVersion(),
+    });
     invalidateLoads();
     return request;
   }
@@ -247,11 +291,14 @@ export function createVersionedCollectionSaveCoordinator({
         setItems(currentItems);
         setVersion(savedVersion);
         setBaseItems(savedItems);
-        persist(currentItems, savedVersion);
         const settled = request.sequence === sequence && sameValue(currentItems, savedItems);
-        if (settled) updatePendingIntent(null);
-        else storePending(savedItems, savedVersion, currentItems);
-        onSaved({ settled });
+        const persistence = acknowledgeLocalSnapshot({
+          items: currentItems,
+          version: savedVersion,
+          baseItems: savedItems,
+          settled,
+        });
+        onSaved({ settled, ...persistence });
         return true;
       } catch (error) {
         if (error?.status === 409 && Array.isArray(error.data?.items)) {
@@ -262,8 +309,15 @@ export function createVersionedCollectionSaveCoordinator({
           setItems(currentItems);
           setVersion(remoteVersion);
           setBaseItems(remoteItems);
-          persist(currentItems, remoteVersion);
-          storePending(remoteItems, remoteVersion, currentItems);
+          persistLocalSnapshot({
+            pendingIntent: createVersionedIntent({
+              items: currentItems,
+              version: remoteVersion,
+              baseItems: remoteItems,
+            }),
+            items: currentItems,
+            version: remoteVersion,
+          });
           if (attempt === 0) {
             outgoing = retryIntent;
             sendBase = remoteItems;
@@ -272,20 +326,17 @@ export function createVersionedCollectionSaveCoordinator({
           }
         }
         const currentItems = cloneVersionedItems(getItems());
-        let recoveryError = error;
-        try {
-          persist(currentItems, getVersion());
-        } catch (storageError) {
-          recoveryError = storageError;
-        }
-        if (!currentPendingIntent()) {
-          try {
-            storePending(getBaseItems(), getVersion(), currentItems);
-          } catch (storageError) {
-            recoveryError = storageError;
-          }
-        }
-        onPending(recoveryError);
+        const pendingIntent = currentPendingIntent() || createVersionedIntent({
+          items: currentItems,
+          version: getVersion(),
+          baseItems: getBaseItems(),
+        });
+        const storageError = persistLocalSnapshot({
+          pendingIntent,
+          items: currentItems,
+          version: getVersion(),
+        });
+        onPending(storageError || error);
         return false;
       }
     }
@@ -309,16 +360,38 @@ export function createVersionedCollectionSaveCoordinator({
     return result;
   }
 
+  function retryLocalCleanup() {
+    if (!localCleanupSnapshot) return { cleaned: true, storageError: null };
+    const persistence = persistAcknowledgedSnapshot({
+      ...localCleanupSnapshot,
+      settled: true,
+    });
+    if (!persistence.cleanupPending) localCleanupSnapshot = null;
+    return {
+      cleaned: !persistence.cleanupPending,
+      storageError: persistence.storageError,
+    };
+  }
+
   return {
     save,
+    acknowledgeLocalSnapshot,
+    retryLocalCleanup,
+    hasLocalCleanup: () => Boolean(localCleanupSnapshot),
     isBusy: () => pendingCount > 0,
   };
 }
 
 export function readVersionedCollectionStorage(storage, { itemsKey, versionKey }) {
+  let version = 0;
+  try {
+    version = readNumberStorage(storage, versionKey, 0);
+  } catch {
+    // A shared load can still recover when the browser's local cache is blocked.
+  }
   return {
     items: readJsonStorage(storage, itemsKey, []),
-    version: readNumberStorage(storage, versionKey, 0),
+    version,
   };
 }
 

@@ -378,9 +378,22 @@ test("retry taps and reconnect share one in-flight recovery request", async () =
   assert.deepEqual(busy, [true, false]);
 });
 
-test("local persistence failures return false and expose retry instead of rejecting", async () => {
-  let pendingFailures = 0;
-  let failure;
+test("cleanup retry performs only local recovery work", async () => {
+  const calls = [];
+  const retry = createVersionedCollectionRetryCoordinator({
+    load: async () => { calls.push("load"); return true; },
+    save: async () => { calls.push("save"); return true; },
+    cleanup: async () => { calls.push("cleanup"); return true; },
+  });
+  retry.setFailure("cleanup");
+
+  assert.equal(await retry.retry(), true);
+  assert.deepEqual(calls, ["cleanup"]);
+});
+
+test("local persistence failures do not block a successful cloud save", async () => {
+  let putCalls = 0;
+  let savedResult;
   const coordinator = createVersionedCollectionSaveCoordinator({
     getItems: () => [{ id: "milk" }],
     setItems: () => {},
@@ -389,23 +402,25 @@ test("local persistence failures return false and expose retry instead of reject
     getBaseItems: () => [],
     setBaseItems: () => {},
     getPendingIntent: () => null,
-    setPendingIntent: () => {},
+    setPendingIntent: () => { throw Object.assign(new Error("storage unavailable"), { name: "QuotaExceededError" }); },
     persist: () => { throw Object.assign(new Error("storage unavailable"), { name: "QuotaExceededError" }); },
-    put: async () => { throw new Error("must not write"); },
-    onPending: (error) => { pendingFailures += 1; failure = error; },
+    put: async (items) => { putCalls += 1; return { items, version: 2 }; },
+    onSaved: (result) => { savedResult = result; },
   });
 
-  assert.equal(await coordinator.save(), false);
-  assert.equal(pendingFailures, 1);
-  assert.equal(failure.name, "QuotaExceededError");
+  assert.equal(await coordinator.save(), true);
+  assert.equal(putCalls, 1);
+  assert.equal(savedResult.settled, true);
+  assert.equal(savedResult.storageError.name, "QuotaExceededError");
 });
 
-test("post-PUT storage failure keeps pending intent and resolves false", async () => {
+test("post-PUT storage failure reports cloud success and clears in-memory intent", async () => {
   let pendingIntent = null;
   let persistCalls = 0;
   let clearCalls = 0;
   let putCalls = 0;
-  let failure;
+  let savedResult;
+  let pendingFailure = false;
   const coordinator = createVersionedCollectionSaveCoordinator({
     getItems: () => [{ id: "milk", checked: true }],
     setItems: () => {},
@@ -426,14 +441,201 @@ test("post-PUT storage failure keeps pending intent and resolves false", async (
       putCalls += 1;
       return { items, version: 2 };
     },
-    onPending: (error) => { failure = error; },
+    onSaved: (result) => { savedResult = result; },
+    onPending: () => { pendingFailure = true; },
+  });
+
+  assert.equal(await coordinator.save(), true);
+  assert.equal(putCalls, 1);
+  assert.equal(savedResult.storageError.name, "QuotaExceededError");
+  assert.equal(pendingIntent, null);
+  assert.equal(clearCalls, 1);
+  assert.equal(pendingFailure, false);
+});
+
+test("failed journal removal leaves a rebased no-op journal for reopening", async () => {
+  let items = [{ id: "milk", checked: true }];
+  let version = 4;
+  let baseItems = [{ id: "milk", checked: false }];
+  let memoryIntent = null;
+  let durableIntent = null;
+  const coordinator = createVersionedCollectionSaveCoordinator({
+    getItems: () => items,
+    setItems: (next) => { items = next; },
+    getVersion: () => version,
+    setVersion: (next) => { version = next; },
+    getBaseItems: () => baseItems,
+    setBaseItems: (next) => { baseItems = next; },
+    getPendingIntent: () => memoryIntent,
+    setPendingIntent: (next) => {
+      memoryIntent = normalizeVersionedIntent(next);
+      if (!next) throw Object.assign(new Error("removal blocked"), { name: "SecurityError" });
+      durableIntent = cloneVersionedItems([next])[0];
+    },
+    persist: () => {},
+    put: async (outgoing) => ({ items: outgoing, version: 5 }),
+  });
+
+  assert.equal(await coordinator.save(), true);
+  assert.equal(memoryIntent, null);
+  assert.deepEqual(durableIntent.baseItems, [{ id: "milk", checked: true }]);
+  assert.deepEqual(durableIntent.items, durableIntent.baseItems);
+  assert.equal(durableIntent.baseVersion, 5);
+
+  const reopened = reconcileLoadedVersionedCollection({
+    pendingIntent: durableIntent,
+    localItems: durableIntent.items,
+    localVersion: durableIntent.baseVersion,
+    baseItems: durableIntent.baseItems,
+    remoteItems: [{ id: "milk", checked: false }, { id: "bread" }],
+    remoteVersion: 6,
+  });
+  assert.deepEqual(reopened.items, [{ id: "milk", checked: false }, { id: "bread" }]);
+  assert.equal(reopened.shouldSave, false);
+  assert.equal(reopened.clearPending, true);
+});
+
+test("failed acknowledgement and removal expose finite local cleanup without another PUT", async () => {
+  const oldIntent = createVersionedIntent({
+    items: [{ id: "milk", checked: true }],
+    version: 3,
+    baseItems: [{ id: "milk", checked: false }],
+  });
+  let blocked = true;
+  let memoryIntent = oldIntent;
+  let durableIntent = cloneVersionedItems([oldIntent])[0];
+  let putCalls = 0;
+  let savedResult;
+  const storageError = Object.assign(new Error("storage blocked"), { name: "SecurityError" });
+  const coordinator = createVersionedCollectionSaveCoordinator({
+    getItems: () => [],
+    setItems: () => {},
+    getVersion: () => 3,
+    setVersion: () => {},
+    getBaseItems: () => oldIntent.baseItems,
+    setBaseItems: () => {},
+    getPendingIntent: () => memoryIntent,
+    setPendingIntent: (next) => {
+      memoryIntent = normalizeVersionedIntent(next);
+      if (blocked) throw storageError;
+      durableIntent = next ? cloneVersionedItems([next])[0] : null;
+    },
+    persist: () => { if (blocked) throw storageError; },
+    put: async (outgoing) => { putCalls += 1; return { items: outgoing, version: 4 }; },
+    onSaved: (result) => { savedResult = result; },
+  });
+
+  assert.equal(await coordinator.save(), true);
+  assert.equal(putCalls, 1);
+  assert.equal(savedResult.cleanupPending, true);
+  assert.equal(coordinator.hasLocalCleanup(), true);
+  assert.deepEqual(durableIntent, oldIntent);
+
+  blocked = false;
+  assert.deepEqual(coordinator.retryLocalCleanup(), { cleaned: true, storageError: null });
+  assert.equal(putCalls, 1);
+  assert.equal(durableIntent, null);
+  assert.equal(coordinator.hasLocalCleanup(), false);
+});
+
+test("blocked storage still permits conflict merge and preserves remote additions", async () => {
+  const writes = [];
+  let items = [{ id: "milk", checked: true }];
+  let version = 4;
+  let baseItems = [{ id: "milk", checked: false }, { id: "eggs", checked: false }];
+  let pendingIntent = null;
+  const quotaError = Object.assign(new Error("storage full"), { name: "QuotaExceededError" });
+  const coordinator = createVersionedCollectionSaveCoordinator({
+    getItems: () => items,
+    setItems: (next) => { items = next; },
+    getVersion: () => version,
+    setVersion: (next) => { version = next; },
+    getBaseItems: () => baseItems,
+    setBaseItems: (next) => { baseItems = next; },
+    getPendingIntent: () => pendingIntent,
+    setPendingIntent: (next) => { pendingIntent = normalizeVersionedIntent(next); throw quotaError; },
+    persist: () => { throw quotaError; },
+    put: async (outgoing, requestVersion) => {
+      writes.push({ items: cloneVersionedItems(outgoing), version: requestVersion });
+      if (writes.length === 1) {
+        throw Object.assign(new Error("conflict"), {
+          status: 409,
+          data: {
+            items: [
+              { id: "milk", checked: false },
+              { id: "eggs", checked: true },
+              { id: "bread", checked: false },
+            ],
+            version: 5,
+          },
+        });
+      }
+      return { items: outgoing, version: 6 };
+    },
+  });
+
+  assert.equal(await coordinator.save(), true);
+  assert.equal(writes.length, 2);
+  assert.deepEqual(writes[1], {
+    items: [{ id: "milk", checked: true }, { id: "bread", checked: false }],
+    version: 5,
+  });
+});
+
+test("offline plus blocked storage remains pending in memory and retries safely", async () => {
+  let blocked = true;
+  let pendingIntent = null;
+  let putCalls = 0;
+  let pendingError;
+  const quotaError = Object.assign(new Error("storage full"), { name: "QuotaExceededError" });
+  const coordinator = createVersionedCollectionSaveCoordinator({
+    getItems: () => [{ id: "milk", checked: true }],
+    setItems: () => {},
+    getVersion: () => 1,
+    setVersion: () => {},
+    getBaseItems: () => [{ id: "milk", checked: false }],
+    setBaseItems: () => {},
+    getPendingIntent: () => pendingIntent,
+    setPendingIntent: (next) => {
+      pendingIntent = normalizeVersionedIntent(next);
+      if (blocked) throw quotaError;
+    },
+    persist: () => { if (blocked) throw quotaError; },
+    put: async (outgoing) => {
+      putCalls += 1;
+      if (blocked) throw Object.assign(new Error("offline"), { code: "offline" });
+      return { items: outgoing, version: 2 };
+    },
+    onPending: (error) => { pendingError = error; },
   });
 
   assert.equal(await coordinator.save(), false);
-  assert.equal(putCalls, 1);
-  assert.equal(failure.name, "QuotaExceededError");
+  assert.equal(pendingError.name, "QuotaExceededError");
   assert.ok(pendingIntent);
-  assert.equal(clearCalls, 0);
+  blocked = false;
+  assert.equal(await coordinator.save(), true);
+  assert.equal(putCalls, 2);
+  assert.equal(pendingIntent, null);
+});
+
+test("an acknowledged stale journal does not replay after cloud success", () => {
+  const pendingIntent = createVersionedIntent({
+    items: [],
+    version: 4,
+    baseItems: [{ id: "milk" }],
+  });
+  const result = reconcileLoadedVersionedCollection({
+    pendingIntent,
+    localItems: [],
+    localVersion: 4,
+    baseItems: [{ id: "milk" }],
+    remoteItems: [{ id: "bread" }],
+    remoteVersion: 6,
+  });
+
+  assert.deepEqual(result.items, [{ id: "bread" }]);
+  assert.equal(result.shouldSave, false);
+  assert.equal(result.clearPending, true);
 });
 
 function storage(values = {}) {
@@ -458,6 +660,18 @@ test("readVersionedCollectionStorage returns cached items and version", () => {
   });
 
   assert.deepEqual(cached, { items: [{ text: "milk" }], version: 4 });
+});
+
+test("blocked collection cache reads fall back without preventing cloud recovery", () => {
+  const blocked = {
+    getItem() {
+      throw Object.assign(new Error("storage blocked"), { name: "SecurityError" });
+    },
+  };
+  assert.deepEqual(readVersionedCollectionStorage(blocked, {
+    itemsKey: "groceries",
+    versionKey: "groceries-version",
+  }), { items: [], version: 0 });
 });
 
 test("persistVersionedCollection writes items and version", () => {

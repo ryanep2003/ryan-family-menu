@@ -12,6 +12,14 @@ test("app normalizes unsupported stored language values", async () => {
   assert.match(source, /lang = supportedLang\(button\.dataset\.lang\)/);
 });
 
+test("language switching still renders when preference storage is full", async () => {
+  const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
+  const handler = source.match(/button\.addEventListener\("click", \(\) => \{[\s\S]*?applyStaticTranslations\(\);/)?.[0] || "";
+
+  assert.match(handler, /try \{\s+localStorage\.setItem\("dinner-lang", lang\);\s+\} catch \(error\)/);
+  assert.ok(handler.indexOf("applyStaticTranslations();") > handler.indexOf("catch (error)"));
+});
+
 test("translation helper falls back when current language is missing", async () => {
   const source = await readFile(new URL("../app.js", import.meta.url), "utf8");
 
