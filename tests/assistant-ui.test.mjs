@@ -60,7 +60,7 @@ function mealWithDinner(recipeId) {
   });
 }
 
-function harness({ occupied = true, saveSchedule, saveGroceries } = {}) {
+function harness({ occupied = true, saveSchedule, saveGroceries, initialGroceries, generatedForDates, inventoryCoverage, language = "en" } = {}) {
   const calls = {
     saveSchedule: 0,
     saveGroceries: 0,
@@ -77,7 +77,9 @@ function harness({ occupied = true, saveSchedule, saveGroceries } = {}) {
     }
     : {};
   let calendarMeals = { ...meals };
-  let groceries = [{ id: "manual-1", text: { en: "Milk" }, source: "manual" }];
+  let groceries = initialGroceries || [{ id: "manual-1", text: { en: "Milk" }, source: "manual" }];
+  const documentListeners = new Map();
+  let focusedShoppingDate = "";
   const elements = {
     assistantSheet: element({ hidden: true }),
     assistantChips: element(),
@@ -100,16 +102,18 @@ function harness({ occupied = true, saveSchedule, saveGroceries } = {}) {
   const ui = createAssistantUi({
     $: (selector) => elements[selector.slice(1)],
     $$: () => [],
-    t: (key) => translations.en[key] || key,
+    t: (key) => translations[language][key] || key,
     escapeHtml: (value) => `${value || ""}`,
-    localize: (value) => value?.en || value || "",
+    localize: (value) => value?.[language] || value?.en || value || "",
+    getLang: () => language,
     formatDateKey,
     getMealForDate: (dateKey) => calendarMeals[dateKey] || emptyMeal,
     getRecipes: () => recipes,
     getFavorites: () => ["tacos"],
     getDinnerEvents: () => [],
     getGroceries: () => groceries,
-    generateGroceriesForDates: () => [{
+    applyInventoryCoverage: inventoryCoverage || ((items) => items),
+    generateGroceriesForDates: (dateKeys) => generatedForDates ? generatedForDates(dateKeys) : [{
       id: "g1",
       text: { en: "Tortillas" },
       source: "meal-plan",
@@ -141,10 +145,22 @@ function harness({ occupied = true, saveSchedule, saveGroceries } = {}) {
     startCook: (recipe) => calls.cooked.push(recipe.id),
     documentObject: {
       body: { classList: { add() {}, remove() {} } },
-      addEventListener() {},
+      addEventListener(type, listener) { documentListeners.set(type, listener); },
+      querySelector(selector) {
+        const dateKey = selector.match(/data-assistant-shopping-date="([^"]+)"/)?.[1];
+        return dateKey ? { focus() { focusedShoppingDate = dateKey; } } : null;
+      },
     },
   });
-  return { ui, calls, elements, getCalendar: () => calendarMeals };
+  return {
+    ui,
+    calls,
+    elements,
+    getCalendar: () => calendarMeals,
+    setExternalGroceries: (items) => { groceries = items; },
+    getFocusedShoppingDate: () => focusedShoppingDate,
+    dispatchDocument: async (type, event) => documentListeners.get(type)?.({ preventDefault() {}, ...event }),
+  };
 }
 
 test("previewing a dinner fill does not write until Apply", async () => {
@@ -242,11 +258,11 @@ test("Today and Plan expose Help entry points and the action sheet", async () =>
   assert.match(schedule, /saveMealChanges/);
 });
 
-test("Ask routes a typed request to the same preview as the matching chip", async () => {
+test("Ask routes an explicit typed request to the same preview as the matching chip", async () => {
   const { ui, elements, calls } = harness();
   ui.bindAssistantControls();
   ui.openSheet("today");
-  elements.assistantAskInput.value = "What's for lunch and dinner next week?";
+  elements.assistantAskInput.value = "Plan dinners next week";
   await elements.assistantAskForm.dispatch("submit");
   const preview = ui.getPreview();
   assert.equal(preview.kind, "fill-dinners");
@@ -257,6 +273,117 @@ test("Ask routes a typed request to the same preview as the matching chip", asyn
   assert.equal(calls.saveSchedule, 0);
   assert.equal(elements.assistantApply.hidden, false);
   assert.equal(elements.assistantApply.disabled, false);
+});
+
+test("shopping customization question with the screenshot typo stays a clarification with no Apply", async () => {
+  const { ui, elements, calls } = harness();
+  ui.bindAssistantControls();
+  ui.openSheet("plan");
+  elements.assistantAskInput.value = "can you cusomize a shopping list?";
+  await elements.assistantAskForm.dispatch("submit");
+  assert.equal(ui.getPreview().kind, "shopping-clarification");
+  assert.match(elements.assistantPreview.innerHTML, /What would you like to change/);
+  assert.match(elements.assistantPreview.innerHTML, /Add or edit items/);
+  assert.match(elements.assistantPreview.innerHTML, /Choose planned dates/);
+  assert.equal(elements.assistantApply.hidden, true);
+  assert.equal(calls.saveGroceries, 0);
+});
+
+test("Spanish shopping capability question keeps the same clarification choices", async () => {
+  const { ui, elements } = harness({ language: "es" });
+  ui.bindAssistantControls();
+  ui.openSheet("plan");
+  elements.assistantAskInput.value = "¿puedo personalizar la lista de compras?";
+  await elements.assistantAskForm.dispatch("submit");
+  assert.equal(ui.getPreview().kind, "shopping-clarification");
+  assert.match(elements.assistantPreview.innerHTML, /Personalizar la lista de compras/);
+  assert.match(elements.assistantPreview.innerHTML, /Agregar o editar artículos/);
+  assert.equal(elements.assistantApply.hidden, true);
+});
+
+test("shopping date draft supports multiple selections, unchecking, previewing, and returning to edit", async () => {
+  const { ui, elements, dispatchDocument, getFocusedShoppingDate } = harness({
+    generatedForDates: (dateKeys) => dateKeys.flatMap((dateKey) => ({
+      "2026-09-03": [{ id: "g1", text: { en: "Tortillas" }, source: "meal-plan", ingredientKey: "tortilla", mealUses: [{ dateKey, mealSlot: "dinner", recipeId: "tacos" }] }],
+      "2026-09-04": [{ id: "g2", text: { en: "Beans" }, source: "meal-plan", ingredientKey: "beans", mealUses: [{ dateKey, mealSlot: "dinner", recipeId: "chili" }] }],
+    }[dateKey] || [])),
+  });
+  ui.bindAssistantControls();
+  ui.openSheet("today");
+  await dispatchDocument("click", { target: { closest: (selector) => selector === "[data-assistant-shopping-choice]" ? { dataset: { assistantShoppingChoice: "dates" } } : null } });
+  assert.equal(ui.getPreview().kind, "shopping-dates");
+  const dateChange = (dateKey, checked) => dispatchDocument("change", { target: {
+    closest: (selector) => selector === "[data-assistant-shopping-date]" ? { checked, dataset: { assistantShoppingDate: dateKey } } : null,
+  } });
+  await dateChange("2026-09-03", true);
+  assert.equal(getFocusedShoppingDate(), "2026-09-03");
+  await dateChange("2026-09-04", true);
+  assert.equal(ui.getPreview().kind, "shopping-dates");
+  assert.match(elements.assistantPreview.innerHTML, /checked/);
+  assert.doesNotMatch(elements.assistantPreview.innerHTML, /disabled/);
+  await dispatchDocument("click", { target: { closest: (selector) => selector === "[data-assistant-shopping-preview]" ? { disabled: false } : null } });
+  assert.equal(ui.getPreview().kind, "shopping");
+  assert.deepEqual(ui.getPreview().dateKeys, ["2026-09-03", "2026-09-04"]);
+  assert.match(elements.assistantPreview.innerHTML, /Tortillas/);
+  assert.match(elements.assistantPreview.innerHTML, /Beans/);
+  assert.match(elements.assistantPreview.innerHTML, /Add/);
+  await dispatchDocument("click", { target: { closest: (selector) => selector === "[data-assistant-shopping-edit-dates]" ? {} : null } });
+  await dateChange("2026-09-03", false);
+  await dateChange("2026-09-04", false);
+  assert.equal(ui.getPreview().kind, "shopping-dates");
+  assert.match(elements.assistantPreview.innerHTML, /disabled/);
+});
+
+test("editing a typed request immediately invalidates a visible shopping confirmation", async () => {
+  const { ui, elements } = harness();
+  ui.bindAssistantControls();
+  ui.openSheet("today");
+  ui.previewAction("refresh-shopping");
+  assert.equal(elements.assistantApply.hidden, false);
+  elements.assistantAskInput.value = "can you cusomize a shopping list?";
+  await elements.assistantAskInput.dispatch("input");
+  assert.equal(ui.getPreview(), null);
+  assert.equal(elements.assistantApply.hidden, true);
+  await elements.assistantAskForm.dispatch("submit");
+  assert.equal(ui.getPreview().kind, "shopping-clarification");
+  assert.match(elements.assistantPreview.innerHTML, /can you cusomize a shopping list/);
+});
+
+test("shopping preview describes actual quantity and checked changes", () => {
+  const oldPlanned = {
+    id: "old-tortilla", source: "meal-plan", ingredientKey: "tortilla", text: { en: "1 tortilla" }, checked: true,
+    plannedQuantities: { en: 1 }, remainingQuantities: { en: 1 }, plannedUnits: { en: "each" },
+    mealUses: [{ dateKey: "2026-09-03", mealSlot: "dinner", recipeId: "tacos" }],
+  };
+  const { ui, elements } = harness({
+    initialGroceries: [oldPlanned],
+    inventoryCoverage: (items) => items.map((item) => ({ ...item, checked: true, inInventory: true, inventoryDecision: "have" })),
+    generatedForDates: () => [{
+      id: "new-tortilla", source: "meal-plan", ingredientKey: "tortilla", text: { en: "2 tortillas" }, checked: false,
+      plannedQuantities: { en: 2 }, remainingQuantities: { en: 2 }, plannedUnits: { en: "each" },
+      mealUses: [{ dateKey: "2026-09-03", mealSlot: "dinner", recipeId: "tacos" }],
+    }],
+  });
+  ui.previewAction("refresh-shopping");
+  assert.match(elements.assistantPreview.innerHTML, /Quantity: 1 each → 2 each/);
+  assert.match(elements.assistantPreview.innerHTML, /Covered at home/);
+});
+
+test("Spanish quantity detail uses Spanish values and retains zero", () => {
+  const oldPlanned = {
+    id: "old-beans", source: "meal-plan", ingredientKey: "beans", text: { en: "beans", es: "frijoles" },
+    plannedQuantities: { es: 0 }, remainingQuantities: { es: 0 }, plannedUnits: { es: "latas" }, mealUses: [],
+  };
+  const { ui, elements } = harness({
+    language: "es",
+    initialGroceries: [oldPlanned],
+    generatedForDates: () => [{
+      id: "new-beans", source: "meal-plan", ingredientKey: "beans", text: { en: "beans", es: "frijoles" },
+      plannedQuantities: { es: 2 }, remainingQuantities: { es: 2 }, plannedUnits: { es: "latas" }, mealUses: [],
+    }],
+  });
+  ui.previewAction("refresh-shopping");
+  assert.match(elements.assistantPreview.innerHTML, /Cantidad: 0 latas → 2 latas/);
 });
 
 test("unmatched Ask stays on chips and does not write", async () => {
@@ -311,4 +438,75 @@ test("Apply error keeps the message and hides the spinner", async () => {
   assert.equal(elements.assistantStatus.textContent, translations.en.assistantApplyError);
   assert.equal(elements.assistantStatus.classList.contains("error"), true);
   assert.equal(elements.assistantAskSubmit.disabled, false);
+});
+
+test("stale shopping preview requires renewed confirmation and never saves unseen changes", async () => {
+  let ingredient = "Tortillas";
+  const { ui, calls, elements } = harness({
+    generatedForDates: () => [{
+      id: "g1", text: { en: ingredient }, source: "meal-plan", ingredientKey: ingredient.toLowerCase(),
+      mealUses: [{ dateKey: "2026-09-07", mealSlot: "dinner", recipeId: "tacos" }],
+    }],
+  });
+  ui.previewAction("refresh-shopping");
+  ingredient = "Beans";
+  assert.equal(await ui.applyPreview(), false);
+  assert.equal(calls.saveGroceries, 0);
+  assert.equal(calls.groceryWrites.length, 0);
+  assert.match(elements.assistantStatus.textContent, /changed since this preview/);
+  assert.equal(ui.getPreview().proposedItems[1].text.en, "Beans");
+});
+
+test("stale shopping input list invalidates confirmation even when the proposed output is unchanged", async () => {
+  const manual = { id: "manual", text: { en: "Milk" }, source: "manual", checked: true };
+  const addedElsewhere = {
+    id: "planned-b", text: { en: "Beans" }, source: "meal-plan", ingredientKey: "beans",
+    mealUses: [{ dateKey: "2026-10-01", mealSlot: "dinner", recipeId: "chili" }],
+  };
+  const { ui, calls, setExternalGroceries } = harness({ initialGroceries: [manual] });
+  ui.previewAction("refresh-shopping");
+  setExternalGroceries([manual, addedElsewhere]);
+  assert.equal(await ui.applyPreview(), false);
+  assert.equal(calls.saveGroceries, 0);
+  assert.equal(ui.getPreview().inputFingerprint.includes("planned:beans"), true);
+});
+
+test("shopping confirmation prevents duplicate saves and reports a save failure", async () => {
+  let finish;
+  const pending = new Promise((resolve) => { finish = resolve; });
+  const { ui, calls, elements } = harness({ saveGroceries: () => pending });
+  ui.previewAction("refresh-shopping");
+  const first = ui.applyPreview();
+  const second = ui.applyPreview();
+  assert.equal(await second, false);
+  assert.equal(calls.saveGroceries, 1);
+  finish(false);
+  assert.equal(await first, false);
+  assert.equal(elements.assistantStatus.textContent, translations.en.assistantApplyError);
+});
+
+test("new date controls stay disabled and cannot change the proposal while a save is pending", async () => {
+  let finish;
+  const pending = new Promise((resolve) => { finish = resolve; });
+  const { ui, elements, dispatchDocument } = harness({ saveGroceries: () => pending });
+  ui.openSheet("today");
+  ui.previewAction("refresh-shopping");
+  const save = ui.applyPreview();
+  assert.match(elements.assistantPreview.innerHTML, /data-assistant-shopping-edit-dates disabled/);
+  await dispatchDocument("click", { target: { closest: (selector) => selector === "[data-assistant-shopping-edit-dates]" ? { disabled: true } : null } });
+  assert.equal(ui.getPreview().kind, "shopping");
+  finish(false);
+  assert.equal(await save, false);
+});
+
+test("a failed shopping save keeps the same confirmation available for one finite retry", async () => {
+  let shouldSave = false;
+  const { ui, calls, elements } = harness({ saveGroceries: async () => shouldSave });
+  ui.previewAction("refresh-shopping");
+  assert.equal(await ui.applyPreview(), false);
+  assert.equal(elements.assistantApply.hidden, false);
+  assert.equal(elements.assistantApply.disabled, false);
+  shouldSave = true;
+  assert.equal(await ui.applyPreview(), true);
+  assert.equal(calls.saveGroceries, 2);
 });

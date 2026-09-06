@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   applyDinnerAssignments,
   assistantPreviewNeedsConfirm,
+  classifyAskIntent,
   dateKeysForAction,
   dinnerIsOccupied,
   horizonDateKeys,
@@ -175,9 +176,10 @@ function dinnerItemsRecipe(meal) {
 }
 
 test("proposing a shopping refresh does not mutate the existing list", () => {
-  const existing = [groceryItem("Milk", { source: "manual" })];
+  const existing = [{ ...groceryItem("Milk", { source: "manual" }), checked: true }];
   const generated = [groceryItem("Tortillas", {
     source: "meal-plan",
+    ingredientKey: "tortilla",
     mealUses: [{ dateKey: "2026-09-07", mealSlot: "dinner", recipeId: "tacos", recipeName: { en: "Tacos" } }],
   })];
   const snapshot = JSON.stringify(existing);
@@ -185,6 +187,8 @@ test("proposing a shopping refresh does not mutate the existing list", () => {
   assert.equal(proposal.kind, "shopping");
   assert.equal(proposal.generatedCount, 1);
   assert.equal(proposal.listCount, 2);
+  assert.equal(proposal.proposedItems.find((item) => item.source === "manual")?.checked, true);
+  assert.equal(proposal.changes.added[0]?.ingredientKey, "tortilla");
   assert.equal(JSON.stringify(existing), snapshot);
   assert.equal(assistantPreviewNeedsConfirm(proposal), true);
 });
@@ -211,25 +215,17 @@ test("dinner lookup answers without writing and keeps today vs tomorrow labels",
   assert.equal(assistantPreviewNeedsConfirm(today), false);
 });
 
-test("Ask text maps to existing chip actions in English and Spanish without a model", () => {
+test("Ask text maps only explicit supported commands to existing chip actions", () => {
   const cases = [
-    ["What's for lunch and dinner next week?", "plan-next-week"],
-    ["whats for lunch and dinner next week", "plan-next-week"],
     ["Plan next week", "plan-next-week"],
     ["plan dinners", "plan-next-week"],
-    ["¿Qué hay de almuerzo y cena la próxima semana?", "plan-next-week"],
     ["planear la próxima semana", "plan-next-week"],
-    ["PRÓXIMA SEMANA", "plan-next-week"],
     ["Fill gaps this week", "fill-gaps"],
     ["fill empty dinners this week", "fill-gaps"],
     ["completar huecos de esta semana", "fill-gaps"],
-    ["esta semana", "fill-gaps"],
     ["Build shopping list", "refresh-shopping"],
     ["refresh the shopping list", "refresh-shopping"],
-    ["grocery list", "refresh-shopping"],
-    ["shopping list for next week", "refresh-shopping"],
     ["crear lista de compras", "refresh-shopping"],
-    ["lista de compras", "refresh-shopping"],
     ["What's for dinner today?", "dinner-today"],
     ["what's for dinner", "dinner-today"],
     ["cena hoy", "dinner-today"],
@@ -238,7 +234,6 @@ test("Ask text maps to existing chip actions in English and Spanish without a mo
     ["cena mañana", "dinner-tomorrow"],
     ["¿Qué hay de cena mañana?", "dinner-tomorrow"],
     ["what's for lunch and dinner tomorrow", "dinner-tomorrow"],
-    ["what's for dinner next week", "plan-next-week"],
   ];
   for (const [phrase, action] of cases) {
     assert.equal(matchAskAction(phrase), action, phrase);
@@ -247,6 +242,51 @@ test("Ask text maps to existing chip actions in English and Spanish without a mo
   assert.equal(matchAskAction("   "), null);
   assert.equal(matchAskAction("tell me a joke"), null);
   assert.equal(matchAskAction("invent a new meal plan with AI"), null);
+});
+
+test("shopping capability questions, typos, negation, and unsupported constraints never become a refresh", () => {
+  const clarify = [
+    "can you cusomize a shopping list?",
+    "can you customize a shopping list?",
+    "how do I edit groceries?",
+    "shopping list for next week",
+    "how do I refresh the shopping list?",
+    "can you explain how to build a shopping list?",
+    "build shopping list for next week",
+  ];
+  for (const phrase of clarify) {
+    assert.equal(classifyAskIntent(phrase).kind, "shopping-clarification", phrase);
+    assert.equal(matchAskAction(phrase), null, phrase);
+  }
+  assert.equal(classifyAskIntent("don't refresh the shopping list").kind, "shopping-negated");
+  assert.equal(classifyAskIntent("refresh the shopping list under $100").kind, "shopping-unsupported");
+  assert.equal(classifyAskIntent("grocery list with vegan substitutions").kind, "shopping-unsupported");
+  assert.equal(classifyAskIntent("build shopping list without dairy").kind, "shopping-unsupported");
+  assert.deepEqual(classifyAskIntent("build shopping list for tomorrow only"), {
+    kind: "action", action: "refresh-shopping", dateWindow: "tomorrow",
+  });
+  assert.equal(matchAskAction("don't refresh the shopping list"), null);
+  assert.equal(matchAskAction("refresh the shopping list under $100"), null);
+  assert.equal(matchAskAction("don't plan next week"), null);
+  assert.equal(matchAskAction("don't fill gaps this week"), null);
+});
+
+test("shopping refresh distinguishes a real change from a no-op and keeps manual checked items", () => {
+  const planned = groceryItem("Tortillas", {
+    source: "meal-plan",
+    ingredientKey: "tortilla",
+    mealUses: [{ dateKey: "2026-09-07", mealSlot: "dinner", recipeId: "tacos" }],
+  });
+  const manual = { ...groceryItem("Milk", { source: "manual" }), checked: true };
+  const noOp = proposeShoppingRefresh({ generatedItems: [planned], existingItems: [manual, planned] });
+  assert.equal(noOp.hasChanges, false);
+  assert.equal(assistantPreviewNeedsConfirm(noOp), false);
+  assert.equal(noOp.proposedItems.find((item) => item.source === "manual")?.checked, true);
+
+  const changed = proposeShoppingRefresh({ generatedItems: [], existingItems: [manual, planned] });
+  assert.equal(changed.hasChanges, true);
+  assert.equal(changed.changes.removed[0]?.ingredientKey, "tortilla");
+  assert.equal(changed.proposedItems.find((item) => item.source === "manual")?.checked, true);
 });
 
 test("assistant translation keys stay in English/Spanish parity", async () => {

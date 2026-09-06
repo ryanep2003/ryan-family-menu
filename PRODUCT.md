@@ -34,7 +34,7 @@ The shipped product currently supports:
 - Receipt capture and monthly grocery-budget tracking.
 - Family profiles, food preferences, household rules, quick dinner feedback, dinner history, and deterministic recommendation ranking.
 - Cook Along mode for hands-free step-by-step preparation, simple timers, and saving actual servings, leftovers, notes, and outcomes.
-- Help on Today and Plan: an action sheet that can preview filling empty dinners for the next 7 days, refresh the shopping list from planned meals, or say what is for dinner. Typed requests map onto those same actions with English/Spanish keywords; they do not call a model. Apply shows a spinner while saving. Changes are applied only after confirm and never overwrite a dinner that is already planned.
+- Help on Today and Plan: an action sheet that can preview filling empty dinners for the next 7 days, refresh the shopping list from selected planned dates, or say what is for dinner. Typed requests use English/Spanish intent rules; capability questions about shopping first offer adding/editing items or choosing planned dates, while unsupported budget, diet, and substitution requests are stated plainly. It does not call a model. Shopping previews show the exact added, removed, and changed items from the same proposal that can be confirmed, and require a fresh confirmation if the shared plan or list changes. Changes are applied only after confirm and never overwrite a dinner that is already planned.
 - English and Spanish interface/content support.
 - Installable mobile PWA behavior and household-scoped offline fallbacks.
 

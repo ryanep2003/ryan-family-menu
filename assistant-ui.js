@@ -2,12 +2,13 @@ import {
   ASSISTANT_ACTIONS,
   applyDinnerAssignments,
   assistantPreviewNeedsConfirm,
+  classifyAskIntent,
   dateKeysForAction,
   lookupDinner,
-  matchAskAction,
   proposeDinnerFill,
   proposeShoppingRefresh,
   relativeDinnerDateKey,
+  shoppingRefreshFingerprint,
   shoppingListAfterRefresh,
 } from "./assistant-logic.js";
 
@@ -63,6 +64,8 @@ export function createAssistantUi({
   let activeAction = "";
   let lastOpener = null;
   let applying = false;
+  let shoppingDateDraft = null;
+  let askedQuestion = "";
 
   function sheet() {
     return $("#assistantSheet");
@@ -120,15 +123,109 @@ export function createAssistantUi({
     applying = isApplying;
     setBusyControls(isApplying);
     renderChips();
-    updateApplyState();
+    renderPreview();
   }
 
   function updateApplyState() {
     const apply = $("#assistantApply");
     if (!apply) return;
     const canApply = assistantPreviewNeedsConfirm(preview) && !applying;
-    apply.hidden = !preview || preview.kind === "dinner-lookup" || preview.kind === "ask-unmatched";
+    apply.hidden = !canApply;
     apply.disabled = !canApply;
+    apply.textContent = preview?.kind === "shopping" ? t("assistantConfirmShopping") : t("assistantApply");
+  }
+
+  function groceryName(item) {
+    return localize(item?.text) || item?.ingredientKey || "";
+  }
+
+  function groceryUses(item) {
+    const uses = Array.isArray(item?.mealUses) ? item.mealUses : [];
+    const labels = [...new Map(uses.map((use) => [
+      `${use.dateKey}:${use.mealSlot}:${use.recipeId || ""}`,
+      `${formatDayLabel(use.dateKey)} · ${use.mealSlot ? t(`${use.mealSlot}Slot`) : ""}`.trim(),
+    ])).values()];
+    return labels.join(", ");
+  }
+
+  function makeShoppingPreview(dateKeys) {
+    const generatedItems = generateGroceriesForDates(dateKeys);
+    const existingItems = getGroceries();
+    const proposedItems = applyInventoryCoverage(
+      shoppingListAfterRefresh({ generatedItems, existingItems }),
+      getInventory(),
+    );
+    return {
+      ...proposeShoppingRefresh({ generatedItems, existingItems, proposedItems }),
+      dateKeys: [...dateKeys],
+    };
+  }
+
+  function dateKeysForShoppingWindow(dateWindow, current = now()) {
+    if (dateWindow === "today" || dateWindow === "tomorrow") {
+      return [relativeDinnerDateKey(dateWindow, current)];
+    }
+    return dateKeysForAction("refresh-shopping", current);
+  }
+
+  function shoppingDateOptions(dateKeys) {
+    return dateKeys.map((dateKey) => {
+      const items = generateGroceriesForDates([dateKey]);
+      return {
+        dateKey,
+        itemCount: items.length,
+        uses: [...new Set(items.flatMap((item) => groceryUses(item).split(", ").filter(Boolean)))],
+      };
+    }).filter((option) => option.itemCount > 0);
+  }
+
+  function startShoppingDateChoice({ dateKeys = dateKeysForShoppingWindow(), selectedDateKeys = [] } = {}) {
+    const dateOptions = shoppingDateOptions(dateKeys);
+    const availableKeys = new Set(dateOptions.map((option) => option.dateKey));
+    shoppingDateDraft = {
+      dateOptions,
+      selectedDateKeys: [...new Set(selectedDateKeys)].filter((dateKey) => availableKeys.has(dateKey)),
+    };
+    preview = { kind: "shopping-dates" };
+    activeAction = "";
+    setStatus("");
+    renderChips();
+    renderPreview();
+  }
+
+  function renderRequestContext() {
+    if (!askedQuestion) return "";
+    return `<p class="assistant-request-context">${escapeHtml(t("assistantRequestContext").replace("{question}", askedQuestion))}</p>`;
+  }
+
+  function previewQuantity(item) {
+    const quantities = item?.remainingQuantities && Object.keys(item.remainingQuantities).length
+      ? item.remainingQuantities
+      : item?.plannedQuantities;
+    const lang = getLang();
+    const rawQuantity = quantities?.[lang] ?? quantities?.en ?? quantities?.es;
+    const quantity = Number(rawQuantity);
+    if (!Number.isFinite(quantity)) return "";
+    const unit = item?.plannedUnits?.[lang] ?? item?.plannedUnits?.en ?? item?.plannedUnits?.es ?? "";
+    return unit ? `${quantity} ${unit}` : `${quantity}`;
+  }
+
+  function shoppingChangeDetails({ before, after }) {
+    const details = [];
+    const beforeQuantity = previewQuantity(before);
+    const afterQuantity = previewQuantity(after);
+    if (beforeQuantity !== afterQuantity && (beforeQuantity || afterQuantity)) {
+      details.push(t("assistantShoppingQuantityChanged").replace("{before}", beforeQuantity || "—").replace("{after}", afterQuantity || "—"));
+    }
+    if (Boolean(before?.checked) !== Boolean(after?.checked)) {
+      details.push(t(after?.checked ? "assistantShoppingMarkedBought" : "assistantShoppingMarkedUnbought"));
+    }
+    if (Boolean(before?.inInventory) !== Boolean(after?.inInventory)
+      || (before?.inventoryDecision || "") !== (after?.inventoryDecision || "")) {
+      details.push(t(after?.inInventory ? "assistantShoppingCoveredAtHome" : "assistantShoppingNeedsReview"));
+    }
+    if (groceryName(before) !== groceryName(after) && !details.length) details.push(t("assistantShoppingItemChanged"));
+    return details.join(" · ");
   }
 
   function renderChips() {
@@ -165,6 +262,52 @@ export function createAssistantUi({
       return;
     }
 
+    if (preview.kind === "shopping-clarification") {
+      panel.innerHTML = `
+        <h3>${escapeHtml(t("assistantShoppingClarifyHeading"))}</h3>
+        ${renderRequestContext()}
+        <p>${escapeHtml(t("assistantShoppingClarify"))}</p>
+        <div class="assistant-lookup-actions">
+          <button type="button" class="assistant-secondary" data-assistant-shopping-choice="edit"${applying ? " disabled" : ""}>${escapeHtml(t("assistantShoppingEditItems"))}</button>
+          <button type="button" class="assistant-secondary" data-assistant-shopping-choice="dates"${applying ? " disabled" : ""}>${escapeHtml(t("assistantShoppingChooseDates"))}</button>
+        </div>
+      `;
+      updateApplyState();
+      return;
+    }
+
+    if (preview.kind === "shopping-negated" || preview.kind === "shopping-unsupported") {
+      const key = preview.kind === "shopping-negated" ? "assistantShoppingNegated" : "assistantShoppingUnsupported";
+      panel.innerHTML = `
+        <h3>${escapeHtml(t("assistantShoppingClarifyHeading"))}</h3>
+        ${renderRequestContext()}
+        <p>${escapeHtml(t(key))}</p>
+        <div class="assistant-lookup-actions">
+          <button type="button" class="assistant-secondary" data-assistant-shopping-choice="edit"${applying ? " disabled" : ""}>${escapeHtml(t("assistantShoppingEditItems"))}</button>
+        </div>
+      `;
+      updateApplyState();
+      return;
+    }
+
+    if (preview.kind === "shopping-dates") {
+      const options = shoppingDateDraft?.dateOptions || [];
+      const selectedDateKeys = shoppingDateDraft?.selectedDateKeys || [];
+      panel.innerHTML = `
+        <h3>${escapeHtml(t("assistantShoppingDatesHeading"))}</h3>
+        ${renderRequestContext()}
+        <p>${escapeHtml(options.length ? t("assistantShoppingDatesPrompt") : t("assistantShoppingDatesEmpty"))}</p>
+        ${options.length ? `<div class="assistant-date-options">${options.map((option) => `
+          <label><input type="checkbox" data-assistant-shopping-date="${escapeHtml(option.dateKey)}"${selectedDateKeys.includes(option.dateKey) ? " checked" : ""}${applying ? " disabled" : ""}>
+            <span><strong>${escapeHtml(formatDayLabel(option.dateKey))}</strong>${option.uses.length ? `<small>${escapeHtml(option.uses.join(", "))}</small>` : ""}</span>
+          </label>
+        `).join("")}</div>
+        <div class="assistant-lookup-actions"><button type="button" class="assistant-apply" data-assistant-shopping-preview${selectedDateKeys.length && !applying ? "" : " disabled"}>${escapeHtml(t("assistantShoppingPreviewChanges"))}</button></div>` : ""}
+      `;
+      updateApplyState();
+      return;
+    }
+
     if (preview.kind === "dinner-lookup") {
       const heading = preview.when === "today" ? t("assistantDinnerTodayHeading") : t("assistantDinnerTomorrowHeading");
       if (preview.empty) {
@@ -185,12 +328,23 @@ export function createAssistantUi({
     }
 
     if (preview.kind === "shopping") {
+      const renderChange = (item, label, detail = "") => `<li><strong>${escapeHtml(label)}</strong><span>${escapeHtml(groceryName(item))}</span>${detail ? `<small>${escapeHtml(detail)}</small>` : ""}${groceryUses(item) ? `<small>${escapeHtml(groceryUses(item))}</small>` : ""}</li>`;
+      const changes = preview.changes;
+      const changeRows = [
+        ...changes.added.map((item) => renderChange(item, t("assistantShoppingAdded"))),
+        ...changes.removed.map((item) => renderChange(item, t("assistantShoppingRemoved"))),
+        ...changes.changed.map((change) => renderChange(change.after, t("assistantShoppingChanged"), shoppingChangeDetails(change))),
+      ].join("");
       panel.innerHTML = `
         <h3>${escapeHtml(t("assistantShoppingPreviewHeading"))}</h3>
+        ${renderRequestContext()}
         <p>${escapeHtml(t("assistantShoppingPreview")
           .replace("{count}", `${preview.generatedCount}`)
           .replace("{listCount}", `${preview.listCount}`))}</p>
-        ${preview.generatedCount ? "" : `<p>${escapeHtml(t("assistantShoppingEmpty"))}</p>`}
+        <p>${escapeHtml(t("assistantShoppingDatesIncluded").replace("{dates}", preview.dateKeys.map(formatDayLabel).join(", ")))}</p>
+        ${changeRows ? `<ul class="assistant-preview-list">${changeRows}</ul>` : `<p>${escapeHtml(t("assistantShoppingNoChange"))}</p>`}
+        ${preview.retainedManualCount ? `<p>${escapeHtml(t("assistantShoppingManualPreserved").replace("{count}", `${preview.retainedManualCount}`))}</p>` : ""}
+        <div class="assistant-lookup-actions"><button type="button" class="assistant-secondary" data-assistant-shopping-edit-dates${applying ? " disabled" : ""}>${escapeHtml(t("assistantShoppingEditDates"))}</button></div>
       `;
       updateApplyState();
       return;
@@ -230,7 +384,9 @@ export function createAssistantUi({
     };
   }
 
-  function previewAction(action) {
+  function previewAction(action, { dateWindow = "", keepQuestion = false } = {}) {
+    if (!keepQuestion) askedQuestion = "";
+    shoppingDateDraft = null;
     activeAction = action;
     setStatus("");
     const current = now();
@@ -244,12 +400,12 @@ export function createAssistantUi({
         when: which,
       });
     } else if (action === "refresh-shopping") {
-      const dateKeys = dateKeysForAction("refresh-shopping", current);
-      const generatedItems = generateGroceriesForDates(dateKeys);
-      preview = proposeShoppingRefresh({
-        generatedItems,
-        existingItems: getGroceries(),
-      });
+      const dateKeys = dateKeysForShoppingWindow(dateWindow, current);
+      shoppingDateDraft = {
+        dateOptions: shoppingDateOptions(dateKeys),
+        selectedDateKeys: [...dateKeys],
+      };
+      preview = makeShoppingPreview(dateKeys);
     } else {
       preview = proposeDinnerFill({
         action,
@@ -273,6 +429,8 @@ export function createAssistantUi({
     documentObject?.body?.classList?.remove("assistant-open");
     preview = null;
     activeAction = "";
+    shoppingDateDraft = null;
+    askedQuestion = "";
     setApplying(false);
     setStatus("");
     const ask = $("#assistantAskInput");
@@ -291,6 +449,8 @@ export function createAssistantUi({
     documentObject?.body?.classList?.add("assistant-open");
     preview = null;
     activeAction = "";
+    shoppingDateDraft = null;
+    askedQuestion = "";
     setApplying(false);
     setStatus("");
     renderChips();
@@ -332,19 +492,22 @@ export function createAssistantUi({
       }
 
       if (preview.kind === "shopping") {
-        const dateKeys = dateKeysForAction("refresh-shopping", now());
-        const generatedItems = generateGroceriesForDates(dateKeys);
-        const nextItems = applyInventoryCoverage(
-          shoppingListAfterRefresh({
-            generatedItems,
-            existingItems: getGroceries(),
-          }),
-          getInventory(),
-        );
-        setGroceries(nextItems);
+        const refreshed = makeShoppingPreview(preview.dateKeys);
+        if (refreshed.inputFingerprint !== preview.inputFingerprint || refreshed.fingerprint !== preview.fingerprint) {
+          preview = refreshed;
+          setStatus(t("assistantPreviewStale"), true);
+          setApplying(false);
+          renderPreview();
+          return false;
+        }
+        setGroceries(preview.proposedItems);
         render();
         const saved = await saveGroceries();
         if (saved === false) {
+          const currentFingerprint = shoppingRefreshFingerprint(getGroceries());
+          if (currentFingerprint === preview.fingerprint) {
+            preview = { ...preview, inputFingerprint: currentFingerprint };
+          }
           setStatus(t("assistantApplyError"), true);
           setApplying(false);
           return false;
@@ -368,16 +531,18 @@ export function createAssistantUi({
     event.preventDefault();
     if (applying) return;
     const asked = $("#assistantAskInput")?.value || "";
-    const action = matchAskAction(asked);
-    if (!action) {
+    askedQuestion = asked.trim();
+    shoppingDateDraft = null;
+    const intent = classifyAskIntent(asked);
+    if (intent.kind !== "action") {
       activeAction = "";
-      preview = { kind: "ask-unmatched" };
+      preview = { kind: intent.kind === "unmatched" ? "ask-unmatched" : intent.kind };
       renderChips();
       renderPreview();
-      setStatus(t("assistantAskUnmatched"));
+      setStatus(intent.kind === "unmatched" ? t("assistantAskUnmatched") : "");
       return;
     }
-    previewAction(action);
+    previewAction(intent.action, { dateWindow: intent.dateWindow, keepQuestion: true });
   }
 
   function bindAssistantControls() {
@@ -412,6 +577,39 @@ export function createAssistantUi({
         if (recipe) startCook(recipe);
         return;
       }
+      const shoppingChoice = event.target.closest?.("[data-assistant-shopping-choice]");
+      if (shoppingChoice && isOpen()) {
+        event.preventDefault();
+        if (applying || shoppingChoice.disabled) return;
+        if (shoppingChoice.dataset.assistantShoppingChoice === "edit") {
+          closeSheet();
+          setView("grocery");
+          return;
+        }
+        startShoppingDateChoice();
+        return;
+      }
+      const previewShopping = event.target.closest?.("[data-assistant-shopping-preview]");
+      if (previewShopping && isOpen() && !previewShopping.disabled && shoppingDateDraft?.selectedDateKeys.length) {
+        event.preventDefault();
+        if (applying) return;
+        preview = makeShoppingPreview([...shoppingDateDraft.selectedDateKeys].sort());
+        activeAction = "";
+        setStatus("");
+        renderChips();
+        renderPreview();
+        return;
+      }
+      const editShoppingDates = event.target.closest?.("[data-assistant-shopping-edit-dates]");
+      if (editShoppingDates && isOpen()) {
+        event.preventDefault();
+        if (applying || editShoppingDates.disabled) return;
+        startShoppingDateChoice({
+          dateKeys: shoppingDateDraft?.dateOptions?.map((option) => option.dateKey) || preview?.dateKeys || [],
+          selectedDateKeys: shoppingDateDraft?.selectedDateKeys || preview?.dateKeys || [],
+        });
+        return;
+      }
       if (event.target.closest?.("[data-assistant-close]")) {
         event.preventDefault();
         closeSheet();
@@ -424,6 +622,29 @@ export function createAssistantUi({
     });
 
     $("#assistantAskForm")?.addEventListener("submit", handleAsk);
+
+    $("#assistantAskInput")?.addEventListener("input", () => {
+      if (applying) return;
+      askedQuestion = $("#assistantAskInput")?.value.trim() || "";
+      if (!preview && !shoppingDateDraft) return;
+      preview = null;
+      shoppingDateDraft = null;
+      activeAction = "";
+      setStatus("");
+      renderChips();
+      renderPreview();
+    });
+
+    documentObject?.addEventListener("change", (event) => {
+      const input = event.target.closest?.("[data-assistant-shopping-date]");
+      if (!input || applying || input.disabled || !isOpen() || preview?.kind !== "shopping-dates" || !shoppingDateDraft) return;
+      const selected = new Set(shoppingDateDraft.selectedDateKeys);
+      if (input.checked) selected.add(input.dataset.assistantShoppingDate);
+      else selected.delete(input.dataset.assistantShoppingDate);
+      shoppingDateDraft = { ...shoppingDateDraft, selectedDateKeys: [...selected].sort() };
+      renderPreview();
+      documentObject?.querySelector?.(`[data-assistant-shopping-date="${input.dataset.assistantShoppingDate}"]`)?.focus?.();
+    });
 
     documentObject?.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && isOpen()) {
