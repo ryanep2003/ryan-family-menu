@@ -240,16 +240,6 @@ export function normalizeHandoff(value) {
   };
 }
 
-const defaultSchedule = {
-  mon: { ...emptyMeal, items: legacyMealItems({ main: "meatballs", side: "zaatar-parmesan-potatoes" }) },
-  tue: { ...emptyMeal, items: legacyMealItems({ main: "chicken-milanese", salad: "strawberry-crunch-salad" }) },
-  wed: { ...emptyMeal, items: legacyMealItems({ main: "lemon-chicken", side: "zaatar-parmesan-potatoes" }) },
-  thu: { ...emptyMeal, items: legacyMealItems({ main: "halibut-summer-vegetables" }) },
-  fri: { ...emptyMeal, items: legacyMealItems({ main: "pasta-with-meat-sauce", salad: "roasted-brussels-sprouts-salad" }) },
-  sat: { ...emptyMeal },
-  sun: { ...emptyMeal },
-};
-
 export function normalizeMealPlan(value) {
   if (!value) return {
     ...emptyMeal,
@@ -283,7 +273,8 @@ export function normalizeMealPlan(value) {
 }
 
 export function normalizeSchedule(raw) {
-  const source = raw || defaultSchedule;
+  // A missing schedule is an empty household plan, never a demo menu.
+  const source = raw && typeof raw === "object" ? raw : {};
   return days.reduce((result, day) => {
     result[day.key] = normalizeMealPlan(source[day.key]);
     return result;

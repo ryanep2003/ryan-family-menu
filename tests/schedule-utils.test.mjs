@@ -4,6 +4,7 @@ import {
   activeWeekDateKeys,
   copyCurrentWeekToNextWeek,
   currentWeekStartKey,
+  days,
   emptyMeal,
   formatDateKey,
   mealHasContent,
@@ -125,6 +126,12 @@ test("schedule and calendar normalization keep expected shape", () => {
   assert.deepEqual(calendar["2026-06-24"].items.map(({ period, role, recipeId }) => ({ period, role, recipeId })), [
     { period: "dinner", role: "salad", recipeId: "greens" },
   ]);
+});
+
+test("missing schedules normalize to an empty week instead of demo meals", () => {
+  const schedule = normalizeSchedule(undefined);
+  assert.equal(Object.values(schedule).some(mealHasContent), false);
+  assert.deepEqual(schedule, Object.fromEntries(days.map(({ key }) => [key, { ...emptyMeal }])));
 });
 
 test("mealHasContent checks any planned slot or notes", () => {
