@@ -43,7 +43,7 @@ The initial remote collections use independent settled requests so one unavailab
 |---|---|---|
 | Today and handoffs | `available-food.js`, `activity-logic.js`, `family-state.js` | `dashboard-ui.js`, `handoff-ui.js`, `activity-ui.js` |
 | Meal planning and leftovers | `schedule-utils.js`, `recipe-utils.js` | `schedule-ui.js` |
-| Action assistant | `assistant-logic.js` | `assistant-ui.js` |
+| Family Help conversation | `assistant-logic.js`, `assistant-conversation.js`, `assistant-proposals.js` | `assistant-ui.js`, `netlify/functions/assistant.js` |
 | Cook Along and dinner memory | `memory-logic.js`, recipe steps | `cook-along-ui.js`, `app.js` |
 | Household memory | `memory-logic.js`, `family-state.js` | `family-ui.js`, Today feedback in `app.js` |
 | School lunches | `lunch-logic.js`, shared family state, grocery provenance | `lunch-ui.js` |
@@ -76,6 +76,7 @@ The serverless endpoints are in `netlify/functions/`:
 | `recognize-inventory` | POST | Extract inventory candidates from images with OpenAI |
 | `import-recipe-url` | POST | Import structured recipe data; use OpenAI only as fallback |
 | `translate-recipe` | POST | Translate recipe content with OpenAI |
+| `assistant` | POST | Validate a bounded household context, request one structured Family Help response, and return validated citations plus one typed proposal intent without reading or writing household records |
 
 Shared server helpers:
 
@@ -125,7 +126,7 @@ There are no individual accounts, roles, password recovery, key rotation, or rev
 
 ## AI and External Requests
 
-The AI functions call `https://api.openai.com/v1/responses`. URL import also fetches public recipe pages and optionally their lead image. It blocks obvious local/private hosts, limits redirects, times out requests, and caps downloaded content.
+The AI functions call `https://api.openai.com/v1/responses`. The Family Help function receives a browser-prepared, relevance-filtered context pack after household validation, uses `store: false`, and returns only a bounded typed answer with citations/action intent. It does not persist conversation state or make household writes. URL import also fetches public recipe pages and optionally their lead image. It blocks obvious local/private hosts, limits redirects, times out requests, and caps downloaded content.
 
 See `AI.md` for models, prompts, sanitization, and cost-sensitive paths.
 

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "basil-ambiguity",
+    "question": "Did we add basil Thursday?",
+    "context": {
+      "scope": { "today": "2026-09-10", "viewedDateKeys": ["2026-09-10"], "resolvedDateKeys": ["2026-09-10"], "coverage": "Synthetic preview fixture." },
+      "dates": ["2026-09-10"],
+      "sources": [
+        { "id": "recipe:pesto", "type": "recipe", "title": "Pesto pasta", "detail": "Ingredients: fresh basil, pasta." },
+        { "id": "grocery:basil", "type": "grocery", "title": "Basil", "detail": "Planned for Thursday dinner; not checked as bought." }
+      ]
+    },
+    "expect": { "sources": ["recipe:pesto", "grocery:basil"], "actions": ["none"], "forbidden": ["already bought", "already cooked"] }
+  },
+  {
+    "id": "basil-follow-up",
+    "history": [{ "role": "user", "text": "Was basil on Thursday's menu?" }, { "role": "assistant", "text": "The Pesto pasta recipe lists fresh basil." }],
+    "question": "What does the grocery row tell us?",
+    "context": {
+      "scope": { "today": "2026-09-10", "viewedDateKeys": ["2026-09-10"], "resolvedDateKeys": ["2026-09-10"], "coverage": "Synthetic preview fixture." },
+      "dates": ["2026-09-10"],
+      "sources": [{ "id": "grocery:basil", "type": "grocery", "title": "Basil", "detail": "Planned for Thursday dinner; not checked as bought." }]
+    },
+    "expect": { "sources": ["grocery:basil"], "actions": ["none"], "forbidden": ["was cooked", "was served"] }
+  },
+  {
+    "id": "reviewed-grocery-action",
+    "question": "Please add basil to the shopping list for review.",
+    "context": { "scope": { "today": "2026-09-10", "viewedDateKeys": [], "resolvedDateKeys": [], "coverage": "Synthetic preview fixture." }, "dates": [], "sources": [] },
+    "expect": { "sources": [], "action": { "type": "add_grocery", "args": { "text": "basil", "store": "" } }, "forbidden": ["already added", "completed"] }
+  }
+]

@@ -1,56 +1,33 @@
-# Family Menu Action Assistant
+# Family Help conversation
 
-The Action Assistant is a confirm-to-write helper for common household food tasks. It is an action sheet, not a chat thread and not a new bottom tab.
+Family Help is a household-aware conversation inside the existing Help sheet on Today and Plan. It is not a bottom-navigation tab and does not replace the direct planning, shopping, recipe, inventory, lunch, or budget workflows.
 
-Families open it from **Today** (“Help”, near Plan and shop) or **Plan** (“Help plan”, near week tools and the meal Save control). Shop is intentionally out of scope until a later phase.
+## What it can answer
 
-Every write follows the same loop: choose a chip → review a structured preview → tap **Apply** / **Aplicar** → persist through the existing meal-plan or grocery save path. Occupied dinners are never overwritten. Inventory and school lunches are never deleted by these actions.
+Family Help can search and explain the currently available household food information across planned breakfast/lunch/dinner meals and servings, canonical recipe ingredients/steps, shopping and saved lists, At Home inventory, available food, school lunches, preferences/rules, dinner history/handoff, and complete current-month budget/receipt summaries. It keeps a short in-memory conversation through navigation and reopening, and places source cards below every grounded answer.
 
-## Phase A — shipped in this release
+Answers distinguish evidence carefully. A recipe ingredient means the recipe calls for it. A grocery row shows planned-list or checked-shopping state. Neither proves an ingredient was bought, added, served, or cooked unless the relevant history records it. Missing, stale, conflicting, or ambiguous records are described as such rather than filled in.
 
-Deterministic browser logic. No OpenAI call.
+## Boundaries and privacy
 
-- **Plan next week:** propose dinners for empty dinner slots in the calendar week after this week’s Monday (the week Plan shows after Next week). Dates are local, not UTC. Occupied dinners in that week are left as they are.
-- **Fill gaps this week:** the same empty-slot fill for remaining days of the current local week from today through Sunday.
-- **Build / refresh shopping list:** preview how many planned items will be on the list from the next 7 local days, then rebuild planned groceries through the ordinary grocery save.
-- **What’s for dinner today / tomorrow:** answer from the local calendar date (today stays today; tomorrow is the next local date) and offer Open meal or Cook. This path does not write.
+The browser sends a bounded, relevance-filtered context pack to the authenticated assistant function. It does not send the household key, receipt payment details, raw storage records, or another household’s data. The function uses the configured Responses model with `store: false`; neither the browser nor Netlify persists a conversation transcript.
 
-Recipe ranking reuses existing family memory (`rankedRecipes`). OpenAI is not used for Phase A ranking.
+Record text is treated as untrusted data. The model can return only cited source IDs and one allowlisted action. Browser code verifies the response against the exact context it sent, creates source/action cards itself, and ignores malformed or forged responses.
 
-## Phase B lite — keyword routing (this release)
+## Actions
 
-Typed “ask in your own words” text is matched in the browser to the same Phase A chips (`plan-next-week`, `fill-gaps`, `refresh-shopping`, `dinner-today`, `dinner-tomorrow`). Matching uses English and Spanish keywords and phrases (accents and case are ignored). There is still no LLM and no network model call.
+Source cards can open the corresponding existing meal, recipe, Shop/At Home, School Lunches, or budget screen. Family Help can also begin these familiar, typed flows:
 
-A match opens the same preview as tapping that chip. Apply / Aplicar is still required before any write. While Apply is saving the schedule or grocery list, the sheet shows a spinner in the status area and disables Apply, chips, and Ask submit.
+- **Preview dinner ideas:** reuses the existing empty-dinner proposal and never overwrites an occupied dinner.
+- **Preview shopping refresh:** reuses the existing date selection, exact changes, manual-row preservation, freshness check, and grocery save path.
+- **One-item proposals:** add or edit a grocery row (including its checked state), add or replace a cited recipe for a resolved meal date/period, add or update a cited At Home item, or record actual leftovers. Every argument is validated against the exact source IDs and dates supplied for that answer, then previewed and explicitly applied through the existing save coordinators. Exact-item meal moves—including duplicate recipes and leftover-linked entries—stay in the normal meal editor because chat cannot safely infer the item ID.
 
-If the text does not match, a short message points back at the chips. Unmatched text never writes and never calls a model.
+Meal serving-count proposals are deliberately offered only when the existing meal has no child or guest split. In mixed serving plans, Family Help opens the meal editor instead of silently flattening that household-specific breakdown.
 
-## Phase B — natural language
+Those actions still require an exact preview followed by **Apply** / **Aplicar**. The model never saves a plan, shopping list, inventory item, leftover, preference, recipe, lunch, receipt, or budget change directly. Other domains currently receive a genuine deep link to their existing editor; they are not presented as completed chat actions.
 
-A later typed-request phase may use a model only to rank or interpret a request after household validation. Free text must still produce a structured preview and require Apply. It must not silently write, invent meals, or bypass household restrictions.
+## Reliability and limits
 
-## Phase C — more household actions
+Each submit makes at most one foreground provider request with a browser 15-second timeout, server 14-second timeout, bounded input/history/output, and abort/generation protection against a stale response. There is no polling, automatic retry, or background prompt. The current per-household/per-route daily usage guard is 30 calls; its in-memory serialization reduces races inside one function instance but is not a distributed hard spending cap. If Family Help is offline, unavailable, out of quota, or returns invalid structured output, it explains the failure and leaves the normal app controls available.
 
-Later chips may cover leftovers, inventory advice, or Shop-list help. New surfaces still use the sheet, still preview, and still write only through existing domain saves. Do not add a chat transcript or a sixth bottom tab.
-
-## Phase D — learn from usage (documentation only)
-
-Usage may later rank which chips, recipes, or days to propose first—for example, preferring actions a household actually applies, or dinners that were kept after a fill.
-
-Learning may only change **suggestions**. It must:
-
-- still show a preview;
-- still require Apply / Aplicar;
-- never silent-write a meal plan, grocery list, inventory, or lunch;
-- never auto-redesign the week or replace occupied dinners;
-- remain inspectable and correctable.
-
-Phase D is not implemented in this release. Do not persist a usage-learning record until an explicit, reviewed data change lands.
-
-## Safety
-
-- Household key and household-scoped records are unchanged.
-- Empty dinner means no dinner items. Breakfast, lunch, notes, and leftovers on the same day do not count as an occupied dinner, and filling dinner does not remove them.
-- The 7-day horizon is a hard cap for Phase A fills.
-- Grocery refresh uses `replacePlannedGroceries` so manual rows remain.
-- English and Spanish interface keys stay in parity, including **Apply** / **Aplicar**.
+`npm run eval:assistant-model` is an opt-in, synthetic-data contract check. It makes no calls without `OPENAI_API_KEY`, never reads a household, and permits one to three calls only (`FAMILY_ASSISTANT_EVAL_MAX_CALLS`, default 2). It checks that the configured model returns the strict Family Help response function; it is not a substitute for a production household test.

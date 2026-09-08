@@ -1,0 +1,32 @@
+[
+  {
+    "name": "ingredient evidence",
+    "question": "Does pesto pasta call for basil?",
+    "context": {
+      "scope": { "today": "2026-09-03", "viewedDateKeys": ["2026-09-03"], "resolvedDateKeys": ["2026-09-03"], "coverage": "synthetic fixture" },
+      "dates": ["2026-09-03"],
+      "sources": [
+        { "id": "recipe:pesto", "type": "recipe", "title": "Pesto pasta", "detail": "Ingredients: fresh basil, pasta." }
+      ]
+    },
+    "expect": { "sources": ["recipe:pesto"], "action": "none", "forbidden": ["already cooked", "already bought"] }
+  },
+  {
+    "name": "shopping state is not cooking proof",
+    "question": "Did we cook the basil?",
+    "context": {
+      "scope": { "today": "2026-09-03", "viewedDateKeys": ["2026-09-03"], "resolvedDateKeys": ["2026-09-03"], "coverage": "synthetic fixture" },
+      "dates": ["2026-09-03"],
+      "sources": [
+        { "id": "grocery:basil", "type": "grocery", "title": "Basil", "detail": "Planned for Sep 3 dinner; not checked as bought." }
+      ]
+    },
+    "expect": { "sources": ["grocery:basil"], "action": "none", "forbidden": ["was cooked", "was served"] }
+  },
+  {
+    "name": "bounded grocery proposal",
+    "question": "Add basil to shopping.",
+    "context": { "scope": { "today": "2026-09-03", "viewedDateKeys": [], "resolvedDateKeys": [], "coverage": "synthetic fixture" }, "dates": [], "sources": [] },
+    "expect": { "sources": [], "action": "add_grocery", "forbidden": ["already added", "completed"] }
+  }
+]
