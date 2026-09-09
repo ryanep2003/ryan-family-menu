@@ -24,9 +24,15 @@ The School Lunches “Make me a lunch” and “Fill My Week” actions do not c
 
 This intentionally keeps the interaction immediate, offline-capable, explainable, and cost-free. The UI is a lunch builder, not a chatbot, and every generated component remains swappable. A future model-assisted ranking layer must remain optional, preserve deterministic fallback behavior, pass through the same restriction checks, and receive separate privacy and cost review.
 
-## Action Assistant
+## Family Help conversation
 
-Phase A of the Family Menu Action Assistant is also deterministic and browser-first. Filling empty dinners and refreshing the shopping list reuse existing ranking and grocery helpers; they do not call OpenAI. Typed requests currently map onto those same chips with keyword matching in the browser (Phase B lite); they do not call a model. A later typed-request phase may use the model only after household validation and the existing AI usage caps, and only to rank or interpret a request. The assistant must still preview and require Apply; it must never silent-write a plan.
+Family Help is an opt-in, foreground conversation opened from Today or Plan. It uses the Responses API only after household access validation. The browser prepares a small, relevance-filtered context pack from already loaded household data; it contains bounded plain text for cited meals, recipes, groceries, inventory, available food, school lunches, preferences/rules, dinner history, and budget/receipt summaries. It never includes household keys, payment details, raw Blob records, or other households’ data.
+
+The assistant function uses `store: false`, a bounded request body/history/context, a single non-parallel structured function call, a 14-second timeout, and a bounded output. The configured `OPENAI_MODEL` remains authoritative (default `gpt-5.4-mini`). The model returns an answer, source IDs from that request’s context only, and at most one allowlisted action with a strict argument object. Browser code validates IDs, action type, source ownership, resolved dates, and every argument before rendering anything interactive. Recipe text, notes, groceries, and receipts are all data—not instructions for the model.
+
+Read answers do not mutate. Source cards open the existing meal, recipe, shopping, inventory, school-lunch, or budget screen. Typed proposals cover an exact-date shopping refresh, one grocery add/edit/check, one inventory add/update, one resolved meal add/replace, and actual leftover recording. Exact-item meal moves remain in the meal editor because duplicate/leftover-linked item IDs cannot safely be inferred from chat. Proposals calculate a current preview and require explicit Apply through existing conflict-aware save paths. Preferences, recipes, lunches, receipts, budgets, account controls, and destructive operations remain ordinary-screen workflows.
+
+Conversation messages are bounded, live only in memory, survive ordinary navigation/reopening, and are cleared by New conversation, household exit/lock, or reload. Request abort/generation checks prevent an answer begun for an older sheet state from being appended later. Normal controls remain usable if the assistant is offline, unavailable, timed out, out of quota, or returns malformed output. There is no background call, polling, or automatic retry.
 
 See `docs/ACTION_ASSISTANT.md`.
 
@@ -94,7 +100,7 @@ Changing translation behavior must preserve:
 
 ## Logging and Privacy
 
-Current logging is limited mainly to function/browser console errors. There is no durable prompt log, AI usage ledger, token dashboard, or model-quality evaluation suite in the repository.
+Current logging is limited mainly to function/browser console errors. There is no durable prompt log, AI usage ledger, or token dashboard. The opt-in `npm run eval:assistant-model` script is a small synthetic Family Help response-contract check, capped at one to three calls and inert without `OPENAI_API_KEY`; it is not a household-quality evaluation suite.
 
 Do not add raw household recipes, photos, receipts, preferences, household keys, or API credentials to logs. If usage monitoring is added, record safe operational metadata such as function name, model, success/failure, latency, input count, and provider usage totals—not private content.
 
@@ -103,6 +109,8 @@ Do not add raw household recipes, photos, receipts, preferences, household keys,
 Daily usage reservations are serialized per household and route within each running function instance before the Blob read/write. This narrows concurrent races without changing the existing household scope or limit. It is not a distributed compare-and-set guarantee across multiple serverless instances; a future storage primitive would be needed for that stronger guarantee.
 
 Existing controls include household access, request/image limits, deterministic URL parsing, finite retries, no background polling, and a site-level Netlify traffic cap.
+
+Family Help uses the same daily usage helper with its own `assistant` route. As with the other routes, its 30/day reservation is serialized only inside a running function instance; it is an operational brake, not a distributed hard spending guarantee.
 
 Before increasing image counts, image detail, translation breadth, automatic triggers, or retry behavior, estimate the multiplication effect across households. A single user action should create a predictable, bounded number of provider calls.
 

@@ -457,6 +457,7 @@ export function lookupDinner({ dateKey, meal, todayKey, when } = {}) {
 
 export function assistantPreviewNeedsConfirm(preview) {
   if (!preview) return false;
+  if (preview.kind === "proposal") return Boolean(preview.action?.type && preview.action.type !== "none");
   if (preview.kind === "fill-dinners") return preview.assignments.length > 0;
   if (preview.kind === "shopping") return preview.hasChanges;
   return false;

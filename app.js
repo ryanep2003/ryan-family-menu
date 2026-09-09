@@ -115,6 +115,7 @@ function supportedLang(value) {
 
 let lang = supportedLang(readStringStorage(localStorage, "dinner-lang", "en"));
 let appReady = false;
+let assistantUi = null;
 
 function t(key) {
   const messages = translations[lang] || translations.en;
@@ -171,6 +172,7 @@ document.querySelectorAll("[data-lang]").forEach((button) => {
     }
     applyStaticTranslations();
     if (appReady) render();
+    assistantUi?.refresh?.();
   });
 });
 applyStaticTranslations();
@@ -2460,7 +2462,7 @@ function generatedGroceriesForHorizon(dateKeys) {
   return [...generatedGroceriesForDates(dateKeys), ...generatedSchoolLunchGroceries(dateKeys)];
 }
 
-const assistantUi = createAssistantUi({
+assistantUi = createAssistantUi({
   $,
   $$,
   t,
@@ -2480,7 +2482,15 @@ const assistantUi = createAssistantUi({
   generateGroceriesForDates: generatedGroceriesForHorizon,
   applyInventoryCoverage,
   getInventory: () => inventory,
+  getAvailableFood: () => availableFood,
+  getSchoolLunches: () => schoolLunches,
+  getReceipts: () => receipts,
+  getBudget: () => budgetSettings,
+  getSavedLists: () => shoppingLists,
+  getDisplayedDateKeys: () => dateKeysForWeek(weekStartKey),
   recipeById,
+  createGroceryItem: (text, options = {}) => groceryItem(text, { ...options, lang, updatedBy: householdMember }),
+  createInventoryItem: inventoryItem,
   saveSchedule,
   saveGroceries: async () => {
     renderGroceries();
@@ -2488,11 +2498,15 @@ const assistantUi = createAssistantUi({
     const [grocerySaved] = await Promise.all([saveGroceries(), saveSharedState()]);
     return grocerySaved !== false;
   },
+  saveInventory,
   setCalendarMeals: (nextCalendarMeals) => {
     calendarMeals = normalizeCalendar(nextCalendarMeals);
   },
   setGroceries: (nextGroceries) => {
     groceries = nextGroceries;
+  },
+  setInventory: (nextInventory) => {
+    inventory = nextInventory;
   },
   getCalendarMeals: () => calendarMeals,
   render,
@@ -2501,6 +2515,38 @@ const assistantUi = createAssistantUi({
     setView("schedule");
     scheduleUi.openFocusedDinner(dateKey);
   },
+  openRecipe: (recipeId) => {
+    if (!recipeById(recipeId)) return;
+    selectedRecipeId = recipeId;
+    setView("recipes");
+    renderDetail();
+    $("#recipesView").classList.add("detail-open");
+    $("#recipeDetail").hidden = false;
+    $("#recipeDetail")?.scrollIntoView({ behavior: "auto", block: "start" });
+    $("#detailName")?.focus({ preventScroll: true });
+  },
+  openInventory: () => {
+    inventoryMode = "home";
+    setView("grocery");
+    renderInventoryMode();
+  },
+  openLunches: () => setView("lunches"),
+  openBudget: () => {
+    setView("grocery");
+    const budget = document.querySelector(".monthly-budget");
+    if (budget) budget.open = true;
+    budget?.scrollIntoView({ behavior: "auto", block: "start" });
+  },
+  openFamily: (section = "") => {
+    setView("family");
+    const target = section === "history" ? $("#pastDinnersSection") : $("#familyRulesSection");
+    target?.scrollIntoView({ behavior: "auto", block: "start" });
+  },
+  askAssistant: (payload, options = {}) => postJson("/.netlify/functions/assistant", payload, t("assistantConversationError"), {
+    timeoutMs: 15000,
+    ...options,
+  }),
+  getHouseholdScope: () => household.id,
   startCook: (recipe) => {
     selectedRecipeId = recipe.id;
     setView("recipes");

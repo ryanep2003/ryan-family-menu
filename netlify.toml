@@ -2,6 +2,13 @@
   publish = "."
   functions = "netlify/functions"
 
+# This temporary evaluation PR publishes neither the app nor its functions.
+# That prevents public preview traffic from reaching the site's shared Blobs.
+[context.deploy-preview]
+  command = "node scripts/assistant-preview-build-eval.mjs"
+  publish = "netlify/preview-static"
+  functions = "netlify/preview-functions"
+
 # Normal family use makes only a handful of calls per minute. This generous
 # per-IP ceiling stops runaway clients and obvious bot floods before they can
 # consume an unusual amount of function, AI, or bandwidth credits.

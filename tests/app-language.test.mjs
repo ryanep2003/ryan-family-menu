@@ -102,8 +102,8 @@ test("missing recipe language copy names the recipe text, not the whole app", ()
 
 test("Help Ask placeholder is an example question, not coming soon", async () => {
   const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
-  assert.equal(translations.en.assistantAskPlaceholder, "What’s for dinner tomorrow?");
-  assert.equal(translations.es.assistantAskPlaceholder, "¿Qué hay de cena mañana?");
+  assert.equal(translations.en.assistantAskPlaceholder, "Did we add basil for Thursday night?");
+  assert.equal(translations.es.assistantAskPlaceholder, "¿Agregamos albahaca para la cena del jueves?");
   assert.match(html, /data-i18n-placeholder="assistantAskPlaceholder"/);
   assert.doesNotMatch(html, /placeholder="Coming soon"/);
   assert.doesNotMatch(translations.en.assistantAskPlaceholder, /coming soon/i);
