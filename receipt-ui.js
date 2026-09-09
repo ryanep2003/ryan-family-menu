@@ -35,13 +35,100 @@ export function createReceiptUi({
   onTripFinished = () => {},
 }) {
   let queuedReceiptFiles = [];
+  let receiptScanInFlight = null;
+  let receiptPreviewUrl = "";
+
+  function selectedPhotoLabel(count) {
+    const key = count === 1 ? "oneFileSelected" : "filesSelected";
+    return t(key).replace("{count}", count);
+  }
 
   function showQueuedPhotoCount() {
     const status = $("#receiptScanPhotoInputFileStatus");
     if (!status) return;
     status.textContent = queuedReceiptFiles.length
-      ? t("filesSelected").replace("{count}", queuedReceiptFiles.length)
+      ? `✓ ${selectedPhotoLabel(queuedReceiptFiles.length)}`
       : t("noFilesSelected");
+  }
+
+  function clearReceiptPreviewUrl() {
+    if (!receiptPreviewUrl) return;
+    try {
+      URL.revokeObjectURL(receiptPreviewUrl);
+    } catch {
+      // Object URL cleanup is best-effort and should never block receipt entry.
+    }
+    receiptPreviewUrl = "";
+  }
+
+  function ensureReceiptPreview() {
+    let preview = $("#receiptScanPreview");
+    if (preview || typeof document === "undefined") return preview;
+    const form = $("#receiptScanForm");
+    const location = $("#receiptScanLocationInput");
+    if (!form?.insertBefore) return null;
+
+    preview = document.createElement("div");
+    preview.id = "receiptScanPreview";
+    preview.hidden = true;
+    preview.setAttribute("role", "status");
+    preview.setAttribute("aria-live", "polite");
+    preview.style.cssText = "display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid rgba(22,57,91,.18);border-radius:14px;background:#fff;margin:2px 0 8px;";
+    preview.innerHTML = `
+      <img id="receiptScanPreviewImage" alt="" style="width:58px;height:72px;object-fit:cover;border-radius:10px;background:#f1eee8;" />
+      <div style="min-width:0;">
+        <strong id="receiptScanPreviewTitle" style="display:block;color:#173a5e;"></strong>
+        <span id="receiptScanPreviewText" style="display:block;color:#6d747b;font-size:.92rem;margin-top:2px;"></span>
+      </div>
+    `;
+    form.insertBefore(preview, location || form.firstChild || null);
+    return preview;
+  }
+
+  function showReceiptPreview(files = queuedReceiptFiles) {
+    const preview = ensureReceiptPreview();
+    const firstFile = files?.[0];
+    if (!preview || !firstFile) return;
+
+    preview.hidden = false;
+    const title = $("#receiptScanPreviewTitle");
+    const text = $("#receiptScanPreviewText");
+    const image = $("#receiptScanPreviewImage");
+    if (title) title.textContent = `✓ ${selectedPhotoLabel(files.length)}`;
+    if (text) text.textContent = t("scanReceiptPhotos");
+
+    clearReceiptPreviewUrl();
+    if (image && typeof URL !== "undefined" && typeof URL.createObjectURL === "function") {
+      try {
+        receiptPreviewUrl = URL.createObjectURL(firstFile);
+        image.src = receiptPreviewUrl;
+      } catch {
+        image.removeAttribute?.("src");
+      }
+    }
+  }
+
+  function receiptSpinnerMarkup() {
+    return `<span style="display:inline-flex;align-items:center;gap:9px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" style="flex:none;">
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="42 18">
+          <animateTransform attributeName="transform" attributeType="XML" type="rotate" from="0 12 12" to="360 12 12" dur="0.8s" repeatCount="indefinite" />
+        </circle>
+      </svg>
+      <span>${t("receiptScanWorking")}</span>
+    </span>`;
+  }
+
+  function setReceiptProcessingState(isProcessing) {
+    const submitButton = $("#receiptScanForm .primary-action");
+    if (!submitButton) return;
+    submitButton.disabled = isProcessing;
+    submitButton.setAttribute?.("aria-busy", `${isProcessing}`);
+    if (isProcessing) {
+      submitButton.innerHTML = receiptSpinnerMarkup();
+    } else {
+      submitButton.textContent = t("scanReceiptPhotos");
+    }
   }
 
   function renderReceiptSuggestions() {
@@ -91,10 +178,6 @@ export function createReceiptUi({
       const receiptTotal = Number(manualTotal || pendingReceipt?.total || 0);
       if (!selected.length && !(receiptTotal > 0)) return;
 
-      // A scanned receipt is also the source of truth for the household
-      // budget. Never silently finish a trip with a zero-dollar receipt when
-      // the scanner could not read the total; keep the review open so the
-      // shopper can enter it from the paper receipt.
       if (pendingReceipt && !(receiptTotal > 0)) {
         setGroceryStatus("receiptTotalRequired", { state: "error" });
         const totalInput = $("#receiptTotalInput");
@@ -143,28 +226,20 @@ export function createReceiptUi({
     });
   }
 
-  function bindReceiptControls() {
-    $("#scanReceiptToggle").addEventListener("click", () => {
-      $("#receiptScanPanel").hidden = !$("#receiptScanPanel").hidden;
-      $("#scanReceiptToggle").setAttribute?.("aria-expanded", `${!$("#receiptScanPanel").hidden}`);
-      if (!$("#receiptScanPanel").hidden) {
-        $("#receiptScanPanel").scrollIntoView?.({ behavior: "smooth", block: "start" });
-      }
-    });
+  async function readQueuedReceipt() {
+    if (receiptScanInFlight) return receiptScanInFlight;
 
-    $("#receiptScanForm").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const photoInput = $("#receiptScanPhotoInput");
-      const cameraInput = $("#receiptScanCameraInput");
-      const files = queuedReceiptFiles.length
-        ? queuedReceiptFiles
-        : [...(photoInput?.files || []), ...(cameraInput?.files || [])];
-      if (!files.length) return;
+    const photoInput = $("#receiptScanPhotoInput");
+    const cameraInput = $("#receiptScanCameraInput");
+    const files = queuedReceiptFiles.length
+      ? [...queuedReceiptFiles]
+      : [...(photoInput?.files || []), ...(cameraInput?.files || [])];
+    if (!files.length) return null;
 
-      const submitButton = $("#receiptScanForm .primary-action");
-      submitButton.disabled = true;
-      setGroceryStatus("receiptScanWorking");
+    setReceiptProcessingState(true);
+    setGroceryStatus("receiptScanWorking");
 
+    receiptScanInFlight = (async () => {
       try {
         const images = await readFilesAsDataUrls(files, 4, {
           maxSide: 1100,
@@ -192,28 +267,56 @@ export function createReceiptUi({
         if (cameraInput) cameraInput.value = "";
         queuedReceiptFiles = [];
         updateFileInputStatus(photoInput);
-        showQueuedPhotoCount();
         renderReceiptSuggestions();
         if (getReceiptSuggestions().length) clearGroceryStatus();
         else setGroceryStatus("receiptScanEmpty");
+        return result;
       } catch (error) {
         console.warn(error);
         setReceiptSuggestions([]);
         renderReceiptSuggestions();
         setGroceryStatus("receiptScanError", { state: "error" });
+        return null;
       } finally {
-        submitButton.disabled = false;
+        setReceiptProcessingState(false);
+        receiptScanInFlight = null;
+      }
+    })();
+
+    return receiptScanInFlight;
+  }
+
+  function bindReceiptControls() {
+    $("#scanReceiptToggle").addEventListener("click", () => {
+      $("#receiptScanPanel").hidden = !$("#receiptScanPanel").hidden;
+      $("#scanReceiptToggle").setAttribute?.("aria-expanded", `${!$("#receiptScanPanel").hidden}`);
+      if (!$("#receiptScanPanel").hidden) {
+        $("#receiptScanPanel").scrollIntoView?.({ behavior: "smooth", block: "start" });
       }
     });
 
-    [$("#receiptScanPhotoInput"), $("#receiptScanCameraInput")].filter(Boolean).forEach((input) => {
-      input.addEventListener("change", () => {
-        queuedReceiptFiles = [...queuedReceiptFiles, ...(input.files || [])];
-        // Camera capture returns one file and replaces the previous selection.
-        // Keep the files in our queue so families can take both sides of a
-        // long receipt before pressing Read receipt photos.
+    $("#receiptScanForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await readQueuedReceipt();
+    });
+
+    const photoInput = $("#receiptScanPhotoInput");
+    const cameraInput = $("#receiptScanCameraInput");
+
+    [photoInput, cameraInput].filter(Boolean).forEach((input) => {
+      input.addEventListener("change", async () => {
+        const addedFiles = [...(input.files || [])];
+        if (!addedFiles.length) return;
+        queuedReceiptFiles = [...queuedReceiptFiles, ...addedFiles];
         input.value = "";
         showQueuedPhotoCount();
+        showReceiptPreview(queuedReceiptFiles);
+
+        // A camera capture is a clear signal that the shopper is done taking
+        // this receipt photo. Start reading immediately so the next screen is
+        // review, not another unexplained button press. Multi-select library
+        // uploads keep the manual Read action so long receipts can be queued.
+        if (input === cameraInput) await readQueuedReceipt();
       });
     });
   }
