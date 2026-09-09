@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=177" />
+    <link rel="stylesheet" href="styles.css?v=180" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -1070,14 +1070,18 @@
             <p class="section-label" data-i18n="assistantSheetKicker">Family help</p>
             <h2 id="assistantSheetTitle" data-i18n="assistantHelp">Help</h2>
           </div>
-          <button class="ghost-button" id="assistantClose" type="button" data-assistant-close data-i18n="assistantClose">Close</button>
+          <div class="assistant-sheet-actions">
+            <button class="ghost-button" id="assistantNewConversation" type="button" data-assistant-new data-i18n="assistantNewConversation">New conversation</button>
+            <button class="ghost-button" id="assistantClose" type="button" data-assistant-close data-i18n="assistantClose">Close</button>
+          </div>
         </header>
-        <p class="assistant-sheet-intro" data-i18n="assistantSheetIntro">Choose an action, preview what will change, then apply it.</p>
+        <p class="assistant-sheet-intro" data-i18n="assistantSheetIntro">Ask about meals, recipes, shopping, food at home, and the family’s food history. Changes are always previewed before saving.</p>
+        <p class="assistant-disclosure" data-i18n="assistantDisclosure">Family Help uses relevant household food information with AI to answer. This conversation is not saved.</p>
         <div class="assistant-chips" id="assistantChips" role="group" aria-label="Help actions" data-i18n-aria-label="assistantActionsLabel"></div>
         <form class="assistant-ask" id="assistantAskForm">
           <label for="assistantAskInput">
             <span data-i18n="assistantAskLabel">Ask in your own words</span>
-            <input id="assistantAskInput" type="text" maxlength="200" data-i18n-placeholder="assistantAskPlaceholder" placeholder="What’s for dinner tomorrow?" autocomplete="off" />
+            <input id="assistantAskInput" type="text" maxlength="600" data-i18n-placeholder="assistantAskPlaceholder" placeholder="Did we add basil for Thursday night?" autocomplete="off" />
           </label>
           <button class="assistant-secondary" id="assistantAskSubmit" type="submit" data-i18n="assistantAskSubmit">Ask</button>
         </form>
@@ -1097,6 +1101,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=177"></script>
+    <script type="module" src="app.js?v=180"></script>
   </body>
 </html>

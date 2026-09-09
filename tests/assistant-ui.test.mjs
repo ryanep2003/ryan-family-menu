@@ -60,7 +60,7 @@ function mealWithDinner(recipeId) {
   });
 }
 
-function harness({ occupied = true, saveSchedule, saveGroceries, initialGroceries, generatedForDates, inventoryCoverage, language = "en" } = {}) {
+function harness({ occupied = true, saveSchedule, saveGroceries, initialGroceries, generatedForDates, inventoryCoverage, assistantReply, language = "en" } = {}) {
   const calls = {
     saveSchedule: 0,
     saveGroceries: 0,
@@ -112,6 +112,12 @@ function harness({ occupied = true, saveSchedule, saveGroceries, initialGrocerie
     getFavorites: () => ["tacos"],
     getDinnerEvents: () => [],
     getGroceries: () => groceries,
+    getAvailableFood: () => [],
+    getSchoolLunches: () => ({}),
+    getReceipts: () => [],
+    getBudget: () => ({}),
+    getSavedLists: () => [],
+    getDisplayedDateKeys: () => ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04", "2026-09-05", "2026-09-06", "2026-09-07"],
     applyInventoryCoverage: inventoryCoverage || ((items) => items),
     generateGroceriesForDates: (dateKeys) => generatedForDates ? generatedForDates(dateKeys) : [{
       id: "g1",
@@ -121,6 +127,7 @@ function harness({ occupied = true, saveSchedule, saveGroceries, initialGrocerie
       mealUses: [{ dateKey: "2026-09-07", mealSlot: "dinner", recipeId: "tacos", recipeName: { en: "Tacos" } }],
     }],
     recipeById: (id) => recipes.find((recipe) => recipe.id === id) || null,
+    createGroceryItem: (text, options = {}) => ({ id: "assistant-frozen-grocery", text: { [language]: text }, store: options.store || "any", checked: false, source: "manual" }),
     now: () => localDate(2026, 9, 3, 20, 15),
     saveSchedule: async () => {
       calls.saveSchedule += 1;
@@ -143,6 +150,7 @@ function harness({ occupied = true, saveSchedule, saveGroceries, initialGrocerie
     getCalendarMeals: () => calendarMeals,
     setView: (view) => calls.views.push(view),
     startCook: (recipe) => calls.cooked.push(recipe.id),
+    askAssistant: assistantReply || (async () => ({ answer: "I found the household records I can use.", sources: [], action: { type: "none", sourceId: "" } })),
     documentObject: {
       body: { classList: { add() {}, remove() {} } },
       addEventListener(type, listener) { documentListeners.set(type, listener); },
@@ -258,46 +266,110 @@ test("Today and Plan expose Help entry points and the action sheet", async () =>
   assert.match(schedule, /saveMealChanges/);
 });
 
-test("Ask routes an explicit typed request to the same preview as the matching chip", async () => {
-  const { ui, elements, calls } = harness();
+test("Ask creates a source-backed conversation and can offer a guarded existing preview", async () => {
+  const { ui, elements, calls } = harness({
+    assistantReply: async () => ({ answer: "I can show dinner ideas for the open nights.", sources: [], action: { type: "fill_gaps", sourceId: "" } }),
+  });
   ui.bindAssistantControls();
   ui.openSheet("today");
   elements.assistantAskInput.value = "Plan dinners next week";
   await elements.assistantAskForm.dispatch("submit");
   const preview = ui.getPreview();
-  assert.equal(preview.kind, "fill-dinners");
-  assert.equal(preview.action, "plan-next-week");
-  assert.deepEqual(preview.dateKeys[0], "2026-09-07");
-  assert.match(elements.assistantPreview.innerHTML, /Fill empty dinners/);
-  assert.doesNotMatch(elements.assistantPreview.innerHTML, /coming soon/i);
+  assert.equal(preview.kind, "conversation");
+  assert.match(elements.assistantPreview.innerHTML, /I can show dinner ideas/);
+  assert.match(elements.assistantPreview.innerHTML, /Preview dinner ideas/);
   assert.equal(calls.saveSchedule, 0);
-  assert.equal(elements.assistantApply.hidden, false);
-  assert.equal(elements.assistantApply.disabled, false);
+  assert.equal(elements.assistantApply.hidden, true);
 });
 
-test("shopping customization question with the screenshot typo stays a clarification with no Apply", async () => {
-  const { ui, elements, calls } = harness();
+test("closing and reopening preserves follow-up context, while a stale response cannot repopulate it", async () => {
+  let resolveReply;
+  const pendingReply = new Promise((resolve) => { resolveReply = resolve; });
+  const { ui, elements } = harness({ assistantReply: async () => pendingReply });
+  ui.bindAssistantControls();
+  ui.openSheet("today");
+  elements.assistantAskInput.value = "What about Thursday?";
+  const asking = elements.assistantAskForm.dispatch("submit");
+  await Promise.resolve();
+  ui.closeSheet();
+  resolveReply({ answer: "Old answer", sources: [], action: { type: "none", sourceId: "", args: {} } });
+  await asking;
+  assert.deepEqual(ui.getConversation().map((message) => message.text), ["What about Thursday?"]);
+  ui.openSheet("today");
+  assert.equal(ui.getConversation().length, 1);
+  ui.newConversation();
+  assert.equal(ui.getConversation().length, 0);
+});
+
+test("a failed additive proposal retries the same frozen record without duplicates, then consumes the action", async () => {
+  let saves = 0;
+  const { ui, elements, calls, dispatchDocument } = harness({
+    saveGroceries: async () => { saves += 1; return saves > 1; },
+    assistantReply: async () => ({ answer: "I can add basil.", sources: [], action: { type: "add_grocery", sourceId: "", args: { text: "Basil", store: "any" } } }),
+  });
+  ui.bindAssistantControls();
+  ui.openSheet("today");
+  elements.assistantAskInput.value = "Add basil";
+  await elements.assistantAskForm.dispatch("submit");
+  await dispatchDocument("click", { target: { closest: (selector) => selector === "[data-assistant-conversation-action]" ? { dataset: {} } : null } });
+  assert.equal(ui.getPreview().kind, "proposal");
+  assert.equal(await ui.applyPreview(), false);
+  assert.equal(calls.groceryWrites[0].filter((item) => item.id === "assistant-frozen-grocery").length, 1);
+  assert.equal(await ui.applyPreview(), true);
+  assert.equal(saves, 2);
+  assert.equal(calls.groceryWrites.at(-1).filter((item) => item.id === "assistant-frozen-grocery").length, 1);
+});
+
+test("a pending proposal survives close and reopen, while an identical new conversation gets a new operation", async () => {
+  let saves = 0;
+  const { ui, elements, calls, dispatchDocument } = harness({
+    saveGroceries: async () => { saves += 1; return saves > 1; },
+    assistantReply: async () => ({ answer: "I can add basil.", sources: [], action: { type: "add_grocery", sourceId: "", args: { text: "Basil", store: "any" } } }),
+  });
+  const actionClick = () => dispatchDocument("click", { target: { closest: (selector) => selector === "[data-assistant-conversation-action]" ? { dataset: {} } : null } });
+  ui.bindAssistantControls();
+  ui.openSheet("today");
+  elements.assistantAskInput.value = "Add basil";
+  await elements.assistantAskForm.dispatch("submit");
+  await actionClick();
+  await ui.applyPreview();
+  ui.closeSheet();
+  ui.openSheet("today");
+  await actionClick();
+  assert.equal(ui.getPreview().frozenRecord.id, "assistant-frozen-grocery");
+  await ui.applyPreview();
+  assert.equal(calls.groceryWrites.at(-1).filter((item) => item.id === "assistant-frozen-grocery").length, 1);
+  ui.openSheet("today");
+  ui.newConversation();
+  elements.assistantAskInput.value = "Add basil again";
+  await elements.assistantAskForm.dispatch("submit");
+  await actionClick();
+  assert.equal(ui.getPreview().kind, "proposal");
+});
+
+test("shopping customization question with the screenshot typo receives a useful conversation response with no Apply", async () => {
+  const { ui, elements, calls } = harness({
+    assistantReply: async () => ({ answer: "I can open Shopping so you can edit individual items, or preview planned dates.", sources: [], action: { type: "open_shop", sourceId: "" } }),
+  });
   ui.bindAssistantControls();
   ui.openSheet("plan");
   elements.assistantAskInput.value = "can you cusomize a shopping list?";
   await elements.assistantAskForm.dispatch("submit");
-  assert.equal(ui.getPreview().kind, "shopping-clarification");
-  assert.match(elements.assistantPreview.innerHTML, /What would you like to change/);
-  assert.match(elements.assistantPreview.innerHTML, /Add or edit items/);
-  assert.match(elements.assistantPreview.innerHTML, /Choose planned dates/);
+  assert.equal(ui.getPreview().kind, "conversation");
+  assert.match(elements.assistantPreview.innerHTML, /edit individual items/);
+  assert.match(elements.assistantPreview.innerHTML, /Open shopping/);
   assert.equal(elements.assistantApply.hidden, true);
   assert.equal(calls.saveGroceries, 0);
 });
 
-test("Spanish shopping capability question keeps the same clarification choices", async () => {
-  const { ui, elements } = harness({ language: "es" });
+test("Spanish shopping capability question keeps a Spanish conversation response", async () => {
+  const { ui, elements } = harness({ language: "es", assistantReply: async () => ({ answer: "Puedo abrir Compras para editar artículos.", sources: [], action: { type: "open_shop", sourceId: "" } }) });
   ui.bindAssistantControls();
   ui.openSheet("plan");
   elements.assistantAskInput.value = "¿puedo personalizar la lista de compras?";
   await elements.assistantAskForm.dispatch("submit");
-  assert.equal(ui.getPreview().kind, "shopping-clarification");
-  assert.match(elements.assistantPreview.innerHTML, /Personalizar la lista de compras/);
-  assert.match(elements.assistantPreview.innerHTML, /Agregar o editar artículos/);
+  assert.equal(ui.getPreview().kind, "conversation");
+  assert.match(elements.assistantPreview.innerHTML, /Puedo abrir Compras/);
   assert.equal(elements.assistantApply.hidden, true);
 });
 
@@ -334,8 +406,8 @@ test("shopping date draft supports multiple selections, unchecking, previewing, 
   assert.match(elements.assistantPreview.innerHTML, /disabled/);
 });
 
-test("editing a typed request immediately invalidates a visible shopping confirmation", async () => {
-  const { ui, elements } = harness();
+test("editing a typed request invalidates a visible shopping confirmation before the conversation request", async () => {
+  const { ui, elements } = harness({ assistantReply: async () => ({ answer: "I can help with that shopping list.", sources: [], action: { type: "open_shop", sourceId: "" } }) });
   ui.bindAssistantControls();
   ui.openSheet("today");
   ui.previewAction("refresh-shopping");
@@ -345,7 +417,7 @@ test("editing a typed request immediately invalidates a visible shopping confirm
   assert.equal(ui.getPreview(), null);
   assert.equal(elements.assistantApply.hidden, true);
   await elements.assistantAskForm.dispatch("submit");
-  assert.equal(ui.getPreview().kind, "shopping-clarification");
+  assert.equal(ui.getPreview().kind, "conversation");
   assert.match(elements.assistantPreview.innerHTML, /can you cusomize a shopping list/);
 });
 
@@ -386,15 +458,15 @@ test("Spanish quantity detail uses Spanish values and retains zero", () => {
   assert.match(elements.assistantPreview.innerHTML, /Cantidad: 0 latas → 2 latas/);
 });
 
-test("unmatched Ask stays on chips and does not write", async () => {
-  const { ui, elements, calls } = harness();
+test("a broad Ask receives a bounded answer and does not write", async () => {
+  const { ui, elements, calls } = harness({ assistantReply: async () => ({ answer: "I can help with the household food information, but not jokes.", sources: [], action: { type: "none", sourceId: "" } }) });
   ui.bindAssistantControls();
   ui.openSheet("today");
   elements.assistantAskInput.value = "tell me a joke";
   await elements.assistantAskForm.dispatch("submit");
-  assert.equal(ui.getPreview().kind, "ask-unmatched");
-  assert.match(elements.assistantPreview.innerHTML, /Try the buttons above/);
-  assert.equal(elements.assistantStatus.textContent, translations.en.assistantAskUnmatched);
+  assert.equal(ui.getPreview().kind, "conversation");
+  assert.match(elements.assistantPreview.innerHTML, /not jokes/);
+  assert.equal(elements.assistantStatus.textContent, "");
   assert.equal(elements.assistantApply.hidden, true);
   assert.equal(calls.saveSchedule, 0);
   assert.equal(calls.saveGroceries, 0);

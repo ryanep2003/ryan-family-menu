@@ -49,6 +49,23 @@ test("external cancellation is not mislabeled as a timeout", async () => {
   }
 });
 
+test("a request with both an external signal and deadline still times out", async () => {
+  const previousFetch = globalThis.fetch;
+  const previousStorage = globalThis.localStorage;
+  globalThis.localStorage = { getItem: () => "" };
+  globalThis.fetch = async (_url, options) => stalledResponse(options);
+  const controller = new AbortController();
+  try {
+    await assert.rejects(
+      postJson("/assistant", {}, "Family Help timed out.", { signal: controller.signal, timeoutMs: 10 }),
+      (error) => error.code === "request-timeout",
+    );
+  } finally {
+    globalThis.fetch = previousFetch;
+    globalThis.localStorage = previousStorage;
+  }
+});
+
 test("unrelated POST requests keep their existing unbounded behavior by default", async () => {
   const previousFetch = globalThis.fetch;
   const previousStorage = globalThis.localStorage;

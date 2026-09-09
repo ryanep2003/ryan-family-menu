@@ -19,11 +19,15 @@ function timeoutFailure(fallbackMessage) {
 }
 
 async function requestJson(url, requestOptions, fallbackMessage, { timeoutMs = 0, signal } = {}) {
-  const controller = !signal && timeoutMs > 0 && typeof AbortController === "function" ? new AbortController() : null;
-  const requestSignal = signal || controller?.signal;
+  const controller = (timeoutMs > 0 || signal) && typeof AbortController === "function" ? new AbortController() : null;
+  let timedOut = false;
+  const abortForExternalSignal = () => controller?.abort();
+  if (signal?.aborted) abortForExternalSignal();
+  else signal?.addEventListener?.("abort", abortForExternalSignal, { once: true });
+  const requestSignal = controller?.signal || signal;
   const setTimer = globalThis.setTimeout || (() => 0);
   const clearTimer = globalThis.clearTimeout || (() => {});
-  const timeout = controller && timeoutMs > 0 ? setTimer(() => controller.abort(), timeoutMs) : 0;
+  const timeout = controller && timeoutMs > 0 ? setTimer(() => { timedOut = true; controller.abort(); }, timeoutMs) : 0;
   try {
     const response = await fetch(url, {
       ...requestOptions,
@@ -41,10 +45,11 @@ async function requestJson(url, requestOptions, fallbackMessage, { timeoutMs = 0
 
     return data;
   } catch (error) {
-    if (error?.name === "AbortError" && controller?.signal.aborted) throw timeoutFailure(fallbackMessage);
+    if (error?.name === "AbortError" && timedOut) throw timeoutFailure(fallbackMessage);
     throw error;
   } finally {
     if (timeout) clearTimer(timeout);
+    signal?.removeEventListener?.("abort", abortForExternalSignal);
   }
 }
 
