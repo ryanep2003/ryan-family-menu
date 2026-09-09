@@ -90,6 +90,17 @@ test("typed proposals retain only allowed source ownership and exact resolved sh
   assert.equal(normalizeAssistantReply({ answer: "I can move it.", sources: [], action: { type: "change_meal", sourceId: "", args: { dateKey: "2026-09-03", fromDateKey: "2026-09-10", recipeSourceId: "recipe:pesto", period: "dinner", mode: "move" } } }, context).action.type, "none");
 });
 
+test("an explicitly requested grocery can be proposed with no existing grocery source", () => {
+  const reply = normalizeAssistantReply({
+    answer: "I can prepare basil for your review.",
+    sources: [],
+    action: { type: "add_grocery", sourceId: "", args: { text: "basil", store: "" } },
+  }, { dates: [], sources: [] });
+  assert.deepEqual(reply.action, { type: "add_grocery", sourceId: "", args: { text: "basil", store: "" } });
+  const input = cleanAssistantRequest({ question: "Please add basil to the shopping list for review.", language: "en", context: { dates: [], sources: [] } });
+  assert.match(assistantProviderRequest(input).instructions, /add_grocery proposal is allowed when the user explicitly names an item even with zero sources/);
+});
+
 test("assistant endpoint cleans bounded input and enforces a strict typed response contract", () => {
   const input = cleanAssistantRequest({
     question: "  Did we add basil? ",
