@@ -7,11 +7,17 @@ import { fileURLToPath } from "node:url";
 import { assistantProviderRequest, cleanAssistantRequest, cleanAssistantResponse } from "../netlify/functions/assistant.js";
 
 const previewBranch = "codex/family-help-ai-eval";
+const previewId = "23";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const maxCalls = 3;
 
 function isActivePreview(environment) {
-  return environment.CONTEXT === "deploy-preview" && environment.BRANCH === previewBranch;
+  // Netlify documents HEAD as the Git provider's source branch. Pin the one
+  // approved evaluation to its source branch and its verified review ID.
+  return environment.CONTEXT === "deploy-preview"
+    && environment.HEAD === previewBranch
+    && environment.PULL_REQUEST === "true"
+    && environment.REVIEW_ID === previewId;
 }
 
 function inputFor(caseItem) {
