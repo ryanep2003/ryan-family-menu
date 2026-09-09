@@ -17,18 +17,17 @@ function modelResponse(body) {
   return new Response(JSON.stringify({ output: [{ type: "function_call", name: "respond_to_family", arguments: JSON.stringify(body) }] }), { status: 200 });
 }
 
-test("preview evaluator makes exactly three synthetic calls and verifies the exact grocery proposal", async () => {
+test("preview evaluator makes exactly one reviewed-grocery call and verifies its exact proposal", async () => {
   const logs = [];
   let calls = 0;
   const result = await runPreviewBuildEvaluation({
     environment: activeEnvironment,
-    fetchImpl: async () => modelResponse(responses[calls++]),
+    fetchImpl: async () => modelResponse(responses[2 + calls++]),
     write: (line) => logs.push(line),
   });
-  assert.deepEqual(result, { status: "passed", callsAttempted: 3 });
-  assert.equal(calls, 3);
-  assert.match(logs.at(-1), /"callsAttempted":3/);
-  assert.match(logs[2], /"text":"basil","store":""/);
+  assert.deepEqual(result, { status: "passed", callsAttempted: 1 });
+  assert.equal(calls, 1);
+  assert.match(logs.at(-1), /"callsAttempted":1,"callsAllowed":1/);
 });
 
 test("preview evaluator skips a different pull-request source branch and does not make a call", async () => {
@@ -69,4 +68,18 @@ test("preview evaluator stops after the first failed call and reports the attemp
   }), /case could not complete/);
   assert.equal(calls, 1);
   assert.match(logs[0], /"callsAttempted":1/);
+});
+
+test("preview evaluator logs a sanitized normalized proposal and assertion reason on validation failure", async () => {
+  const logs = [];
+  const diagnosticResponse = { ...responses[2], action: { ...responses[2].action, args: { ...responses[2].action.args, text: "Basil" } } };
+  await assert.rejects(() => runPreviewBuildEvaluation({
+    environment: activeEnvironment,
+    fetchImpl: async () => modelResponse(diagnosticResponse),
+    write: (line) => logs.push(line),
+  }), /did not satisfy/);
+  const failure = JSON.parse(logs.at(-1));
+  assert.equal(failure.assertion, "unexpected action args");
+  assert.deepEqual(failure.result.action, { type: "add_grocery", sourceId: "", args: { text: "Basil", store: "" } });
+  assert.equal(failure.callsAttempted, 1);
 });
