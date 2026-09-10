@@ -2,6 +2,7 @@ import { budgetForMonth } from "./budget-logic.js";
 
 export function createBudgetUi({ $, $$, t, escapeHtml, getBudgetSettings, setBudgetSettings, getReceipts, setReceipts, saveSharedState, markDirtySurface = () => {}, clearDirtySurface = () => {} }) {
   const money = (value) => new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(Number(value) || 0);
+  let receiptSavedListenerBound = false;
 
   function renderBudget() {
     const summary = budgetForMonth(getReceipts(), new Date(), getBudgetSettings());
@@ -21,6 +22,15 @@ export function createBudgetUi({ $, $$, t, escapeHtml, getBudgetSettings, setBud
       : `<p class="empty-state">${t("receiptHistoryEmpty")}</p>`;
   }
 
+  function bindReceiptSavedRefresh() {
+    if (receiptSavedListenerBound || typeof globalThis.addEventListener !== "function") return;
+    globalThis.addEventListener("family-menu:receipt-saved", () => {
+      renderBudget();
+      bindReceiptRemoval();
+    });
+    receiptSavedListenerBound = true;
+  }
+
   function bindBudgetControls() {
     $("#budgetForm").addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -32,6 +42,7 @@ export function createBudgetUi({ $, $$, t, escapeHtml, getBudgetSettings, setBud
       void saved;
     });
     bindReceiptRemoval();
+    bindReceiptSavedRefresh();
   }
 
   function bindReceiptRemoval() {

@@ -1,5 +1,5 @@
 const CACHE_NAME = "ryan-family-menu-v180";
-// Shop experience UX refresh: reinstall this worker so the v180 static cache picks up the latest shopping modules.
+// Shop polish refresh: reinstall this worker so the v180 static cache picks up receipt, budget, and shopping updates.
 const ASSETS = [
   "./",
   "./index.html",

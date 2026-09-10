@@ -1,5 +1,4 @@
 import { localizedText } from "./localized-data.js";
-import { organizeShopExperience } from "./shop-ui.js";
 
 export function createReceiptUi({
   $,
@@ -158,6 +157,21 @@ export function createReceiptUi({
     return parts.join(" · ");
   }
 
+  function notifyReceiptSaved(receipt) {
+    const itemCount = Math.max(0, Math.round(Number(receipt?.itemCount) || 0));
+    const total = Number(receipt?.total) || 0;
+    const formattedTotal = new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(total);
+    const status = $("#groceryStatus");
+    if (status) {
+      status.textContent = getLang() === "es"
+        ? `Guardado ${formattedTotal} · ${itemCount} artículos añadidos a En casa.`
+        : `Saved ${formattedTotal} · ${itemCount} items added to At Home.`;
+    }
+    if (typeof globalThis.dispatchEvent === "function" && typeof globalThis.CustomEvent === "function") {
+      globalThis.dispatchEvent(new globalThis.CustomEvent("family-menu:receipt-saved", { detail: { receipt } }));
+    }
+  }
+
   function renderReceiptSuggestions() {
     const panel = $("#receiptSuggestions");
     const scanForm = $("#receiptScanForm");
@@ -216,15 +230,17 @@ export function createReceiptUi({
 
       const matchedIds = new Set(selected.map((item) => item.matchId).filter(Boolean));
       const additionalPurchased = pendingReceipt ? getPurchasedCount(matchedIds) : 0;
+      let savedReceipt = null;
       if (pendingReceipt) {
-        const saved = await addReceipt({
+        savedReceipt = {
           ...pendingReceipt,
           store: $("#receiptStoreInput")?.value || pendingReceipt.store,
           date: $("#receiptDateInput")?.value || pendingReceipt.date,
           total: receiptTotal,
           totalEstimated: !manualTotal && pendingReceipt.totalEstimated === true,
           itemCount: selected.length + additionalPurchased,
-        });
+        };
+        const saved = await addReceipt(savedReceipt);
         if (saved === false) {
           setGroceryStatus("receiptSaveError", { state: "error" });
           return;
@@ -243,7 +259,6 @@ export function createReceiptUi({
       finishPurchasedItems();
       setReceiptSuggestions([]);
       setPendingReceipt(null);
-      setGroceryStatus("receiptItemsMoved");
       renderReceiptSuggestions();
       renderGroceries();
       renderInventory();
@@ -252,6 +267,8 @@ export function createReceiptUi({
       await Promise.all([saveInventory(), saveGroceries()]);
       clearReceiptPreview();
       onTripFinished();
+      if (savedReceipt) notifyReceiptSaved(savedReceipt);
+      else setGroceryStatus("receiptItemsMoved");
     });
   }
 
@@ -316,8 +333,6 @@ export function createReceiptUi({
   }
 
   function bindReceiptControls() {
-    organizeShopExperience({ getLang });
-
     $("#scanReceiptToggle").addEventListener("click", () => {
       $("#receiptScanPanel").hidden = !$("#receiptScanPanel").hidden;
       $("#scanReceiptToggle").setAttribute?.("aria-expanded", `${!$("#receiptScanPanel").hidden}`);
