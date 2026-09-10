@@ -4,22 +4,26 @@ export function shopExperienceCopy(lang = "en") {
       shoppingNow: "Comprando ahora",
       shoppingNowHelper: "Tu lista activa, organizada para comprar rápido.",
       checkout: "Terminar compra",
-      checkoutHelper: "Cuando marques lo que compraste, guarda el recibo y pásalo a En casa.",
-      planAndLists: "Planificar y guardar listas",
-      planAndListsHelper: "Agrega artículos, crea desde el plan de comidas o reutiliza una lista.",
+      checkoutHelper: "Marca lo que compraste, guarda el recibo y pásalo a En casa.",
+      planAndLists: "Planificar y listas guardadas",
+      planAndListsHelper: "Agrega artículos, crea desde el plan de comidas o reutiliza una lista guardada.",
       spendingHistory: "Gastos e historial",
       moreActions: "Más acciones",
+      useSavedList: "Agregar a la lista de compras",
+      deleteSavedList: "Borrar lista guardada",
     };
   }
   return {
     shoppingNow: "Shopping now",
     shoppingNowHelper: "Your active list, organized for a quick trip through the store.",
     checkout: "Checkout",
-    checkoutHelper: "When you mark what you bought, save the receipt and move it to At Home.",
+    checkoutHelper: "Check off what you bought, save the receipt, and move it to At Home.",
     planAndLists: "Plan & saved lists",
     planAndListsHelper: "Add items, build from the meal plan, or reuse a saved list.",
     spendingHistory: "Spending & history",
     moreActions: "More actions",
+    useSavedList: "Add to shopping list",
+    deleteSavedList: "Delete saved list",
   };
 }
 
@@ -39,6 +43,24 @@ function stageHeader(documentRef, title, helper = "") {
 
 function moveIfPresent(parent, node) {
   if (parent && node) parent.appendChild(node);
+}
+
+export function polishSavedListActions(root, copy) {
+  if (!root?.querySelectorAll) return 0;
+  let changed = 0;
+  root.querySelectorAll("[data-run-shopping-list]").forEach((button) => {
+    if (button.textContent !== copy.useSavedList) {
+      button.textContent = copy.useSavedList;
+      changed += 1;
+    }
+  });
+  root.querySelectorAll("[data-delete-shopping-list]").forEach((button) => {
+    if (button.textContent !== copy.deleteSavedList) {
+      button.textContent = copy.deleteSavedList;
+      changed += 1;
+    }
+  });
+  return changed;
 }
 
 export function organizeShopExperience({ documentRef = globalThis.document, getLang = () => "en" } = {}) {
@@ -109,7 +131,7 @@ export function organizeShopExperience({ documentRef = globalThis.document, getL
 
   if (tools) {
     const toolsDetails = documentRef.createElement("details");
-    toolsDetails.className = "shop-secondary-section";
+    toolsDetails.className = "shop-secondary-section shop-secondary-danger";
     const toolsSummary = documentRef.createElement("summary");
     toolsSummary.textContent = copy.moreActions;
     toolsDetails.appendChild(toolsSummary);
@@ -124,6 +146,15 @@ export function organizeShopExperience({ documentRef = globalThis.document, getL
   panel.insertBefore(shoppingStage, anchor);
   panel.insertBefore(checkoutStage, shoppingStage.nextSibling);
   panel.insertBefore(secondaryStack, checkoutStage.nextSibling);
+
+  if (savedLists) {
+    polishSavedListActions(savedLists, copy);
+    const MutationObserverRef = documentRef.defaultView?.MutationObserver || globalThis.MutationObserver;
+    if (MutationObserverRef) {
+      const observer = new MutationObserverRef(() => polishSavedListActions(savedLists, shopExperienceCopy(getLang())));
+      observer.observe(savedLists, { childList: true, subtree: true });
+    }
+  }
 
   if (!documentRef.querySelector("#shopExperienceStyles")) {
     const style = documentRef.createElement("style");
@@ -145,9 +176,13 @@ export function organizeShopExperience({ documentRef = globalThis.document, getL
       .shop-secondary-body > .shopping-list-setup,
       .shop-secondary-body > .monthly-budget,
       .shop-secondary-body > .grocery-tools-menu { margin-top: 0; }
+      .shop-secondary-danger .danger-action { font-weight: 600; }
+      .saved-shopping-list-actions [data-delete-shopping-list] { opacity: .72; }
       @media (max-width: 640px) {
         .shop-stage-header h2 { font-size: 1.05rem; }
         .shop-secondary-stack { margin-top: 16px; }
+        .saved-shopping-list-actions { align-items: stretch; }
+        .saved-shopping-list-actions [data-run-shopping-list] { width: 100%; }
       }
     `;
     documentRef.head?.appendChild(style);
