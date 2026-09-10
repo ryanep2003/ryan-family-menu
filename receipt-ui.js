@@ -1,4 +1,5 @@
 import { localizedText } from "./localized-data.js";
+import { organizeShopExperience } from "./shop-ui.js";
 
 export function createReceiptUi({
   $,
@@ -315,6 +316,8 @@ export function createReceiptUi({
   }
 
   function bindReceiptControls() {
+    organizeShopExperience({ getLang });
+
     $("#scanReceiptToggle").addEventListener("click", () => {
       $("#receiptScanPanel").hidden = !$("#receiptScanPanel").hidden;
       $("#scanReceiptToggle").setAttribute?.("aria-expanded", `${!$("#receiptScanPanel").hidden}`);
