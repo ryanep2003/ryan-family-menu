@@ -27,10 +27,46 @@ export function normalizeReceipt(value) {
   };
 }
 
+export function receiptFingerprint(receipt) {
+  const normalized = normalizeReceipt(receipt);
+  return [
+    normalized.date,
+    normalized.store.toLowerCase(),
+    normalized.total.toFixed(2),
+    normalized.subtotal.toFixed(2),
+    normalized.tax.toFixed(2),
+    normalized.itemCount,
+  ].join("|");
+}
+
+function createdAtMs(receipt) {
+  const time = new Date(receipt.createdAt || "").getTime();
+  return Number.isFinite(time) ? time : null;
+}
+
 export function normalizeReceipts(value) {
-  return Array.isArray(value)
-    ? value.map(normalizeReceipt).filter((receipt) => receipt.total > 0 || receipt.itemCount > 0 || receipt.store !== "Store").slice(0, 500)
-    : [];
+  if (!Array.isArray(value)) return [];
+
+  const normalized = value
+    .map(normalizeReceipt)
+    .filter((receipt) => receipt.total > 0 || receipt.itemCount > 0 || receipt.store !== "Store");
+  const kept = [];
+  const recentByFingerprint = new Map();
+  const duplicateWindowMs = 10 * 60 * 1000;
+
+  normalized.forEach((receipt) => {
+    const fingerprint = receiptFingerprint(receipt);
+    const created = createdAtMs(receipt);
+    const previousCreated = recentByFingerprint.get(fingerprint);
+    const isRapidDuplicate = created !== null
+      && previousCreated !== undefined
+      && Math.abs(previousCreated - created) <= duplicateWindowMs;
+    if (isRapidDuplicate) return;
+    kept.push(receipt);
+    if (created !== null) recentByFingerprint.set(fingerprint, created);
+  });
+
+  return kept.slice(0, 500);
 }
 
 export function budgetForMonth(receipts, monthDate = new Date(), settings = {}) {
