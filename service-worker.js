@@ -1,4 +1,5 @@
 const CACHE_NAME = "ryan-family-menu-v180";
+// Receipt scan UX refresh: reinstall this worker so the v180 static cache picks up the updated receipt module.
 const ASSETS = [
   "./",
   "./index.html",
