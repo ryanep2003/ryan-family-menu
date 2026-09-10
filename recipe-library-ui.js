@@ -39,6 +39,138 @@ export function createRecipeLibraryUi({
   clearDirtyForm = () => {},
 }) {
   let lastLibraryButton = null;
+  let wheelIndex = 0;
+  let lastWheelFilterKey = "";
+  let wheelPointer = null;
+
+  function ensureRecipeWheelStyles() {
+    if (globalThis.document?.getElementById("recipeWheelStyles")) return;
+    const style = globalThis.document?.createElement("style");
+    if (!style) return;
+    style.id = "recipeWheelStyles";
+    style.textContent = `
+      #recipeList.recipe-wheel-list {
+        position: relative;
+        height: clamp(330px, 78vw, 430px);
+        min-height: 330px;
+        margin-top: 8px;
+        overflow: hidden;
+        perspective: 1050px;
+        perspective-origin: 50% 44%;
+        touch-action: pan-y;
+        isolation: isolate;
+      }
+      #recipeList.recipe-wheel-list::after {
+        content: "";
+        position: absolute;
+        right: 12%;
+        bottom: 4px;
+        left: 12%;
+        height: 34px;
+        border-radius: 50%;
+        background: rgba(26,58,92,.08);
+        filter: blur(12px);
+        pointer-events: none;
+      }
+      #recipeList.recipe-wheel-list > .recipe-browse-card {
+        --wheel-x: 0px;
+        --wheel-z: 0px;
+        --wheel-rotate: 0deg;
+        --wheel-scale: 1;
+        --wheel-opacity: 1;
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        z-index: var(--wheel-z-index, 1);
+        width: min(82vw, 360px);
+        min-height: 300px;
+        margin: 0;
+        padding: 12px;
+        opacity: var(--wheel-opacity);
+        transform: translate3d(calc(-50% + var(--wheel-x)), 0, var(--wheel-z)) rotateY(var(--wheel-rotate)) scale(var(--wheel-scale));
+        transform-origin: center center;
+        transition: transform 280ms cubic-bezier(.2,.75,.2,1), opacity 220ms ease, filter 220ms ease;
+        backface-visibility: hidden;
+        will-change: transform, opacity;
+        filter: saturate(.78) brightness(.98);
+      }
+      #recipeList.recipe-wheel-list > .recipe-browse-card.is-wheel-active {
+        filter: none;
+      }
+      #recipeList.recipe-wheel-list > .recipe-browse-card .recipe-card {
+        grid-template-columns: 1fr;
+        align-content: start;
+        min-height: 238px;
+        gap: 8px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+      }
+      #recipeList.recipe-wheel-list > .recipe-browse-card .recipe-card > .recipe-photo-shell {
+        grid-row: auto;
+        grid-column: 1;
+        width: 100%;
+        height: 172px;
+        border-radius: 16px;
+        overflow: hidden;
+        background: var(--surface-muted);
+      }
+      #recipeList.recipe-wheel-list > .recipe-browse-card .recipe-photo-shell img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      #recipeList.recipe-wheel-list > .recipe-browse-card .recipe-card h3,
+      #recipeList.recipe-wheel-list > .recipe-browse-card .recipe-card p,
+      #recipeList.recipe-wheel-list > .recipe-browse-card .recipe-card .category-pill {
+        grid-column: 1;
+      }
+      #recipeList.recipe-wheel-list > .recipe-browse-card .recipe-card h3 {
+        font-size: 1.18rem;
+      }
+      #recipeList.recipe-wheel-list > .recipe-browse-card:not(.is-wheel-active) .recipe-add-meal {
+        opacity: .35;
+      }
+      #recipeList.recipe-wheel-list:focus-visible {
+        outline: 3px solid color-mix(in srgb, var(--blue) 55%, white);
+        outline-offset: 3px;
+        border-radius: var(--radius-sheet);
+      }
+      @media (min-width: 760px) {
+        #recipeList.recipe-wheel-list { height: 440px; }
+        #recipeList.recipe-wheel-list > .recipe-browse-card { width: 380px; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #recipeList.recipe-wheel-list {
+          display: flex;
+          position: static;
+          height: auto;
+          min-height: 0;
+          gap: 12px;
+          overflow-x: auto;
+          perspective: none;
+          scroll-snap-type: x mandatory;
+          touch-action: pan-x pan-y;
+          padding-bottom: 12px;
+        }
+        #recipeList.recipe-wheel-list::after { display: none; }
+        #recipeList.recipe-wheel-list > .recipe-browse-card {
+          position: relative;
+          top: auto;
+          left: auto;
+          flex: 0 0 min(82vw, 360px);
+          opacity: 1 !important;
+          visibility: visible !important;
+          transform: none !important;
+          transition: none !important;
+          filter: none !important;
+          scroll-snap-align: center;
+        }
+      }
+    `;
+    globalThis.document.head.append(style);
+  }
 
   function requiredText(value) {
     return exactText(value) || fallbackText(value) || t("translationPendingShort");
@@ -134,7 +266,7 @@ export function createRecipeLibraryUi({
     `;
     }
     return `
-      <article class="recipe-browse-card${hasPhoto || canHydratePhoto ? " has-media" : " no-media"}" style="--card-order: ${Math.min(index, 8)}">
+      <article class="recipe-browse-card${hasPhoto || canHydratePhoto ? " has-media" : " no-media"}" style="--card-order: ${Math.min(index, 8)}" data-wheel-index="${index}">
         <button class="recipe-card" type="button" data-open="${escapeHtml(recipe.id)}">
           ${copy}
         </button>
@@ -143,9 +275,78 @@ export function createRecipeLibraryUi({
     `;
   }
 
+  function applyWheelLayout() {
+    const list = $("#recipeList");
+    if (!list) return;
+    const cards = [...list.querySelectorAll(":scope > .recipe-browse-card")];
+    if (cards.length < 2) {
+      list.classList.remove("recipe-wheel-list");
+      list.removeAttribute("tabindex");
+      cards.forEach((card) => {
+        card.classList.remove("is-wheel-active");
+        card.style.removeProperty("--wheel-x");
+        card.style.removeProperty("--wheel-z");
+        card.style.removeProperty("--wheel-rotate");
+        card.style.removeProperty("--wheel-scale");
+        card.style.removeProperty("--wheel-opacity");
+        card.style.removeProperty("--wheel-z-index");
+        card.style.removeProperty("visibility");
+      });
+      return;
+    }
+
+    ensureRecipeWheelStyles();
+    wheelIndex = Math.max(0, Math.min(wheelIndex, cards.length - 1));
+    list.classList.add("recipe-wheel-list");
+    list.tabIndex = 0;
+    const spacing = Math.min(310, Math.max(195, (list.clientWidth || 360) * 0.62));
+
+    cards.forEach((card, index) => {
+      const distance = index - wheelIndex;
+      const magnitude = Math.abs(distance);
+      const visibleDistance = Math.min(magnitude, 3);
+      const direction = Math.sign(distance);
+      const x = direction * visibleDistance * spacing;
+      const z = -visibleDistance * 120;
+      const rotation = -direction * visibleDistance * 18;
+      const scale = Math.max(.72, 1 - visibleDistance * .1);
+      const opacity = magnitude > 3 ? 0 : Math.max(.22, 1 - visibleDistance * .22);
+      const active = distance === 0;
+      card.style.setProperty("--wheel-x", `${x}px`);
+      card.style.setProperty("--wheel-z", `${z}px`);
+      card.style.setProperty("--wheel-rotate", `${rotation}deg`);
+      card.style.setProperty("--wheel-scale", `${scale}`);
+      card.style.setProperty("--wheel-opacity", `${opacity}`);
+      card.style.setProperty("--wheel-z-index", `${10 - visibleDistance}`);
+      card.style.visibility = magnitude > 3 ? "hidden" : "visible";
+      card.classList.toggle("is-wheel-active", active);
+      card.setAttribute("aria-hidden", `${magnitude > 3}`);
+      card.querySelectorAll("button").forEach((button) => {
+        button.tabIndex = active ? 0 : -1;
+      });
+      const primary = card.querySelector(".recipe-card");
+      if (primary) {
+        if (active) primary.setAttribute("aria-current", "true");
+        else primary.removeAttribute("aria-current");
+      }
+    });
+  }
+
+  function moveWheel(nextIndex) {
+    const cards = [...$("#recipeList")?.querySelectorAll(":scope > .recipe-browse-card") || []];
+    if (!cards.length) return;
+    wheelIndex = Math.max(0, Math.min(nextIndex, cards.length - 1));
+    applyWheelLayout();
+  }
+
   function renderRecipes() {
     const search = getRecipeSearch().trim().toLowerCase();
     const categoryFilter = getCategoryFilter();
+    const filterKey = `${search}\u0000${categoryFilter}`;
+    if (filterKey !== lastWheelFilterKey) {
+      wheelIndex = 0;
+      lastWheelFilterKey = filterKey;
+    }
     const catalogStatus = getRecipeCatalogStatus();
     const recipes = catalogStatus === "ready" ? allRecipes() : [];
     const filtered = recipes.filter((recipe) => {
@@ -194,6 +395,7 @@ export function createRecipeLibraryUi({
         ? `<div class="empty-state recipe-catalog-empty"><strong>${t("recipeCatalogEmpty")}</strong><span>${t("recipeCatalogEmptyNote")}</span></div>`
         : `<p class="empty-state">${t("noMatchingRecipes")}</p>`;
     }
+    applyWheelLayout();
     onRecipeMediaRendered();
   }
 
@@ -340,7 +542,14 @@ export function createRecipeLibraryUi({
 
   function bindOpenButtons() {
     $$("[data-open]").forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", (event) => {
+        const wheelCard = button.closest?.("#recipeList .recipe-browse-card");
+        if (wheelCard && !wheelCard.classList.contains("is-wheel-active") && $("#recipeList")?.classList.contains("recipe-wheel-list")) {
+          event.preventDefault();
+          moveWheel(Number(wheelCard.dataset.wheelIndex || 0));
+          $("#recipeList")?.focus({ preventScroll: true });
+          return;
+        }
         lastLibraryButton = button.closest?.("#recipeList") ? button : null;
         setView("recipes");
         setSelectedRecipeId(button.dataset.open);
@@ -355,6 +564,47 @@ export function createRecipeLibraryUi({
   }
 
   function bindLibraryControls() {
+    ensureRecipeWheelStyles();
+    const wheel = $("#recipeList");
+    wheel?.addEventListener("keydown", (event) => {
+      const count = wheel.querySelectorAll(":scope > .recipe-browse-card").length;
+      if (count < 2) return;
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        moveWheel(wheelIndex - 1);
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        moveWheel(wheelIndex + 1);
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        moveWheel(0);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        moveWheel(count - 1);
+      }
+    });
+    wheel?.addEventListener("pointerdown", (event) => {
+      if (!wheel.classList.contains("recipe-wheel-list")) return;
+      wheelPointer = {
+        id: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+      };
+      wheel.setPointerCapture?.(event.pointerId);
+    });
+    wheel?.addEventListener("pointerup", (event) => {
+      if (!wheelPointer || wheelPointer.id !== event.pointerId) return;
+      const dx = event.clientX - wheelPointer.x;
+      const dy = event.clientY - wheelPointer.y;
+      wheelPointer = null;
+      if (Math.abs(dx) < 42 || Math.abs(dx) < Math.abs(dy) * 1.25) return;
+      moveWheel(wheelIndex + (dx < 0 ? 1 : -1));
+    });
+    wheel?.addEventListener("pointercancel", () => {
+      wheelPointer = null;
+    });
+    globalThis.addEventListener?.("resize", applyWheelLayout, { passive: true });
+
     $("#closeRecipeDetail").addEventListener("click", () => {
       $("#recipeDetail").hidden = true;
       $("#recipesView").classList.remove("detail-open");
