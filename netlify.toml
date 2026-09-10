@@ -24,6 +24,18 @@
     X-Frame-Options = "DENY"
     Permissions-Policy = "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
 
+# PR #28 is a UI prototype. Do not let a reused browser/app-shell cache hide the
+# current branch JavaScript while this deploy preview is under review.
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0"
+
 [[headers]]
   for = "/assets/*"
   [headers.values]
