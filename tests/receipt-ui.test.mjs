@@ -10,6 +10,7 @@ function element() {
     dataset: {},
     hidden: false,
     innerHTML: "",
+    textContent: "",
     value: "",
     addEventListener(type, listener) {
       listeners.set(type, listener);
@@ -19,6 +20,9 @@ function element() {
     },
     focus() {
       this.focused = true;
+    },
+    setAttribute(name, value) {
+      this[name] = value;
     },
   };
 }
@@ -109,7 +113,7 @@ test("receipt photo and camera selections queue together before parsing", async 
   const ui = createReceiptUi({
     $: (selector) => elements[selector],
     $$: () => [],
-    t: (key) => key === "filesSelected" ? "{count} photos selected" : key,
+    t: (key) => key === "filesSelected" ? "{count} photos selected" : key === "oneFileSelected" ? "1 photo selected" : key,
     escapeHtml: (value) => `${value || ""}`,
     readFilesAsDataUrls: async (files) => { parsed = files; return files; },
     recognizeReceipt: async () => ({ items: [] }),
@@ -125,9 +129,72 @@ test("receipt photo and camera selections queue together before parsing", async 
   photoInput.files = [{ name: "front.jpg" }];
   cameraInput.files = [{ name: "back.jpg" }];
   await photoInput.dispatch("change");
+  assert.equal(elements["#receiptScanPhotoInputFileStatus"].textContent, "✓ 1 photo selected");
   await cameraInput.dispatch("change");
   await form.dispatch("submit");
   assert.deepEqual(parsed.map((file) => file.name), ["front.jpg", "back.jpg"]);
+});
+
+test("camera capture starts receipt reading and exposes a busy spinner state", async () => {
+  const form = element();
+  const photoInput = Object.assign(element(), { files: [], value: "" });
+  const cameraInput = Object.assign(element(), { files: [], value: "" });
+  const submitButton = Object.assign(element(), { disabled: false });
+  const elements = {
+    "#scanReceiptToggle": element(),
+    "#receiptScanPanel": element(),
+    "#receiptScanForm": form,
+    "#receiptScanPhotoInput": photoInput,
+    "#receiptScanCameraInput": cameraInput,
+    "#receiptScanLocationInput": Object.assign(element(), { value: "pantry" }),
+    "#receiptScanForm .primary-action": submitButton,
+    "#receiptSuggestions": element(),
+    "#receiptScanPhotoInputFileStatus": element(),
+  };
+  let releaseRecognition;
+  const recognitionGate = new Promise((resolve) => { releaseRecognition = resolve; });
+  let recognizeCalls = 0;
+  const ui = createReceiptUi({
+    $: (selector) => elements[selector],
+    $$: () => [],
+    t: (key) => ({
+      oneFileSelected: "1 photo selected",
+      filesSelected: "{count} photos selected",
+      receiptScanWorking: "Reading receipt...",
+      scanReceiptPhotos: "Read and review receipt",
+    }[key] || key),
+    escapeHtml: (value) => `${value || ""}`,
+    readFilesAsDataUrls: async (files) => files,
+    recognizeReceipt: async () => {
+      recognizeCalls += 1;
+      await recognitionGate;
+      return { items: [] };
+    },
+    shoppingMatchForReceiptItem: () => null,
+    setGroceryStatus: () => {},
+    clearGroceryStatus: () => {},
+    getReceiptSuggestions: () => [],
+    setReceiptSuggestions: () => {},
+    setPendingReceipt: () => {},
+    getLang: () => "en",
+  });
+  ui.bindReceiptControls();
+  cameraInput.files = [{ name: "receipt.jpg" }];
+  const capturePromise = cameraInput.dispatch("change");
+  await Promise.resolve();
+
+  assert.equal(recognizeCalls, 1);
+  assert.equal(submitButton.disabled, true);
+  assert.equal(submitButton["aria-busy"], "true");
+  assert.match(submitButton.innerHTML, /Reading receipt/);
+  assert.match(submitButton.innerHTML, /animateTransform/);
+  assert.equal(elements["#receiptScanPhotoInputFileStatus"].textContent, "✓ 1 photo selected");
+
+  releaseRecognition();
+  await capturePromise;
+  assert.equal(submitButton.disabled, false);
+  assert.equal(submitButton["aria-busy"], "false");
+  assert.equal(submitButton.textContent, "Read and review receipt");
 });
 
 test("receipt review requires a total before it can update the budget", async () => {
