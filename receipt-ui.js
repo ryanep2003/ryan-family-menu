@@ -148,17 +148,29 @@ export function createReceiptUi({
     if (locationInput) locationInput.disabled = isProcessing;
   }
 
+  function itemReviewMeta(item) {
+    const parts = [];
+    const quantity = localizedText(item.quantity, getLang());
+    if (quantity) parts.push(quantity);
+    if (item.matchText) parts.push(`${t("receiptMatch")}: ${localizedText(item.matchText, getLang())}`);
+    if (Number(item.confidence) < 0.8) parts.push("⚠");
+    return parts.join(" · ");
+  }
+
   function renderReceiptSuggestions() {
     const panel = $("#receiptSuggestions");
+    const scanForm = $("#receiptScanForm");
     if (!panel) return;
     const receiptSuggestions = getReceiptSuggestions();
 
     if (!receiptSuggestions.length) {
       panel.hidden = true;
       panel.innerHTML = "";
+      if (scanForm) scanForm.hidden = false;
       return;
     }
 
+    if (scanForm) scanForm.hidden = true;
     panel.hidden = false;
     panel.innerHTML = `
       <h3>${t("receiptSuggestionsHeading")}</h3>
@@ -169,20 +181,18 @@ export function createReceiptUi({
       </div>` : ""}
       <div class="suggestion-list">
         ${receiptSuggestions.map((item, index) => `
-          <label class="suggestion-item">
+          <label class="suggestion-item${Number(item.confidence) < 0.8 ? " needs-review" : ""}">
             <input type="checkbox" data-receipt-suggestion="${index}" checked />
             <span>
               <strong>${escapeHtml(localizedText(item.text, getLang()))}</strong>
-              <em>${escapeHtml([
-                localizedText(item.quantity, getLang()),
-                item.matchText ? `${t("receiptMatch")}: ${localizedText(item.matchText, getLang())}` : t("receiptNewItem"),
-              ].filter(Boolean).join(" · "))}</em>
+              ${itemReviewMeta(item) ? `<em>${escapeHtml(itemReviewMeta(item))}</em>` : ""}
             </span>
           </label>
         `).join("")}
       </div>
-      <button class="primary-action" type="button" id="addReceiptSuggestions">${t("addSelectedReceipt")}</button>
+      <button class="primary-action" type="button" id="addReceiptSuggestions">${t("saveReceiptAndMove")}</button>
     `;
+    panel.scrollIntoView?.({ behavior: "smooth", block: "start" });
 
     $("#addReceiptSuggestions").addEventListener("click", async () => {
       const selected = $$("[data-receipt-suggestion]")
@@ -330,10 +340,6 @@ export function createReceiptUi({
         showQueuedPhotoCount();
         showReceiptPreview(queuedReceiptFiles);
 
-        // A camera capture is a clear signal that the shopper is done taking
-        // this receipt photo. Start reading immediately so the next screen is
-        // review, not another unexplained button press. Multi-select library
-        // uploads keep the manual Read action so long receipts can be queued.
         if (input === cameraInput) await readQueuedReceipt();
       });
     });
