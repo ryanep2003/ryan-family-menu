@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v180";
-// Shop experience UX refresh: reinstall this worker so the v180 static cache picks up the latest shopping modules.
+const CACHE_NAME = "ryan-family-menu-v181";
+// v181: force the recipe gravity-field preview to refresh and keep deploy previews network-first.
 const ASSETS = [
   "./",
   "./index.html",
@@ -62,8 +62,11 @@ const ASSETS = [
   "./assets/app-icon-512.png",
 ];
 
+const IS_DEPLOY_PREVIEW = self.location.hostname.startsWith("deploy-preview-") && self.location.hostname.endsWith(".netlify.app");
+
 self.addEventListener("install", (event) => {
   self.skipWaiting();
+  if (IS_DEPLOY_PREVIEW) return;
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
 });
 
@@ -80,6 +83,13 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/.netlify/functions/")) return;
   if (url.origin !== self.location.origin) return;
+
+  // Deploy previews must always reflect the branch that Netlify just built.
+  // Never let a stale app-shell cache make a successful preview look unchanged.
+  if (IS_DEPLOY_PREVIEW) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
   event.respondWith((async () => {
     const cached = await caches.match(event.request);
