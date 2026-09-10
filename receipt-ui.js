@@ -61,6 +61,16 @@ export function createReceiptUi({
     receiptPreviewUrl = "";
   }
 
+  function clearReceiptPreview() {
+    clearReceiptPreviewUrl();
+    const preview = $("#receiptScanPreview");
+    if (preview) preview.hidden = true;
+    const image = $("#receiptScanPreviewImage");
+    image?.removeAttribute?.("src");
+    queuedReceiptFiles = [];
+    showQueuedPhotoCount();
+  }
+
   function ensureReceiptPreview() {
     let preview = $("#receiptScanPreview");
     if (preview || typeof document === "undefined") return preview;
@@ -121,14 +131,21 @@ export function createReceiptUi({
 
   function setReceiptProcessingState(isProcessing) {
     const submitButton = $("#receiptScanForm .primary-action");
-    if (!submitButton) return;
-    submitButton.disabled = isProcessing;
-    submitButton.setAttribute?.("aria-busy", `${isProcessing}`);
-    if (isProcessing) {
-      submitButton.innerHTML = receiptSpinnerMarkup();
-    } else {
-      submitButton.textContent = t("scanReceiptPhotos");
+    const photoInput = $("#receiptScanPhotoInput");
+    const cameraInput = $("#receiptScanCameraInput");
+    const locationInput = $("#receiptScanLocationInput");
+    if (submitButton) {
+      submitButton.disabled = isProcessing;
+      submitButton.setAttribute?.("aria-busy", `${isProcessing}`);
+      if (isProcessing) {
+        submitButton.innerHTML = receiptSpinnerMarkup();
+      } else {
+        submitButton.textContent = t("scanReceiptPhotos");
+      }
     }
+    if (photoInput) photoInput.disabled = isProcessing;
+    if (cameraInput) cameraInput.disabled = isProcessing;
+    if (locationInput) locationInput.disabled = isProcessing;
   }
 
   function renderReceiptSuggestions() {
@@ -222,6 +239,7 @@ export function createReceiptUi({
       bindGroceryControls();
       bindInventoryControls();
       await Promise.all([saveInventory(), saveGroceries()]);
+      clearReceiptPreview();
       onTripFinished();
     });
   }
