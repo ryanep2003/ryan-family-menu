@@ -120,7 +120,7 @@ export function registerServiceWorker({ $, onUpdateAvailable }) {
 }
 
 // Native mobile recipe reel prototype.
-// Deliberately uses the browser's own touch scrolling and momentum instead of custom swipe physics.
+// Browser-native scrolling owns touch physics; JS only provides visual focus.
 function installRecipeGravityFieldPrototype() {
   if (typeof document === "undefined" || document.documentElement.dataset.recipeGravityInstalled) return;
   document.documentElement.dataset.recipeGravityInstalled = "true";
@@ -138,17 +138,17 @@ function installRecipeGravityFieldPrototype() {
     #recipeList.recipe-native-reel,
     .focused-recipe-results.recipe-native-reel,
     .meal-recipe-results.recipe-native-reel {
-      --card-w: min(72vw, 292px);
-      --card-h: min(84vw, 342px);
+      --card-w: min(76vw, 304px);
+      --card-h: min(88vw, 356px);
       display: flex !important;
       align-items: flex-end !important;
-      gap: 16px !important;
+      gap: 28px !important;
       width: 100% !important;
       min-width: 0 !important;
-      height: clamp(420px, 108vw, 525px) !important;
-      min-height: 420px !important;
+      height: clamp(410px, 103vw, 505px) !important;
+      min-height: 410px !important;
       margin-top: 12px !important;
-      padding: 28px max(14vw, calc((100% - var(--card-w)) / 2)) 38px !important;
+      padding: 22px max(12vw, calc((100% - var(--card-w)) / 2)) 32px !important;
       overflow-x: auto !important;
       overflow-y: hidden !important;
       box-sizing: border-box !important;
@@ -156,11 +156,11 @@ function installRecipeGravityFieldPrototype() {
       -webkit-overflow-scrolling: touch;
       touch-action: pan-x pan-y;
       scroll-snap-type: x proximity;
-      scroll-padding-inline: max(14vw, calc((100% - var(--card-w)) / 2));
+      scroll-padding-inline: max(12vw, calc((100% - var(--card-w)) / 2));
       scrollbar-width: none;
       border-radius: 24px;
-      background: linear-gradient(180deg, #fbfaf7 0%, #f5f7f8 54%, #edf1f3 100%) !important;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.88), inset 0 -1px 0 rgba(26,58,92,.04);
+      background: linear-gradient(180deg, #f7f7f6 0%, #f1f3f4 100%) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.92), inset 0 -1px 0 rgba(26,58,92,.035);
       position: relative !important;
     }
 
@@ -171,8 +171,8 @@ function installRecipeGravityFieldPrototype() {
     #recipeList.recipe-native-reel > *,
     .focused-recipe-results.recipe-native-reel > *,
     .meal-recipe-results.recipe-native-reel > * {
-      --reel-scale: .88;
-      --reel-opacity: .68;
+      --reel-scale: .74;
+      --reel-opacity: .34;
       position: relative !important;
       inset: auto !important;
       flex: 0 0 var(--card-w) !important;
@@ -184,11 +184,12 @@ function installRecipeGravityFieldPrototype() {
       margin: 0 !important;
       box-sizing: border-box !important;
       scroll-snap-align: center;
+      scroll-snap-stop: normal;
       transform: scale(var(--reel-scale)) !important;
       transform-origin: 50% 100% !important;
       opacity: var(--reel-opacity) !important;
-      transition: transform 120ms linear, opacity 120ms linear, filter 120ms linear !important;
-      filter: saturate(.88) brightness(.99);
+      transition: transform 90ms linear, opacity 90ms linear, filter 90ms linear !important;
+      filter: saturate(.78) brightness(1.02);
       overflow: hidden !important;
     }
 
@@ -199,7 +200,7 @@ function installRecipeGravityFieldPrototype() {
       --reel-opacity: 1;
       filter: none;
       z-index: 3;
-      box-shadow: 0 22px 52px rgba(26,58,92,.17), 0 3px 12px rgba(26,58,92,.08) !important;
+      box-shadow: 0 18px 42px rgba(26,58,92,.15), 0 2px 8px rgba(26,58,92,.07) !important;
     }
 
     #recipeList.recipe-native-reel > .recipe-browse-card,
@@ -209,18 +210,18 @@ function installRecipeGravityFieldPrototype() {
       grid-template-rows: 1fr auto !important;
       gap: 8px !important;
       padding: 12px !important;
-      border: 1px solid rgba(26,58,92,.10) !important;
+      border: 1px solid rgba(26,58,92,.08) !important;
       border-radius: 22px !important;
-      background: rgba(255,255,255,.97) !important;
+      background: rgba(255,255,255,.99) !important;
       color: var(--ink) !important;
       text-align: left !important;
-      backdrop-filter: blur(8px);
+      backdrop-filter: none !important;
     }
 
     #recipeList.recipe-native-reel > .recipe-browse-card .recipe-card {
       display: grid !important;
       grid-template-columns: 1fr !important;
-      grid-template-rows: 164px auto !important;
+      grid-template-rows: 168px auto !important;
       gap: 8px !important;
       min-height: 0 !important;
       height: 100% !important;
@@ -235,8 +236,8 @@ function installRecipeGravityFieldPrototype() {
     .focused-recipe-results.recipe-native-reel .recipe-photo-shell,
     .meal-recipe-results.recipe-native-reel .recipe-photo-shell {
       width: 100% !important;
-      height: 164px !important;
-      min-height: 164px !important;
+      height: 168px !important;
+      min-height: 168px !important;
       border-radius: 15px !important;
       overflow: hidden !important;
     }
@@ -257,11 +258,11 @@ function installRecipeGravityFieldPrototype() {
       #recipeList.recipe-native-reel,
       .focused-recipe-results.recipe-native-reel,
       .meal-recipe-results.recipe-native-reel {
-        --card-w: 316px;
-        --card-h: 368px;
-        gap: 20px !important;
-        height: 555px !important;
-        padding-bottom: 44px !important;
+        --card-w: 320px;
+        --card-h: 372px;
+        gap: 34px !important;
+        height: 540px !important;
+        padding-bottom: 40px !important;
       }
     }
 
@@ -290,7 +291,7 @@ function installRecipeGravityFieldPrototype() {
 
     const surfaceRect = surface.getBoundingClientRect();
     const center = surfaceRect.left + surfaceRect.width / 2;
-    const halfWidth = Math.max(1, surfaceRect.width * .58);
+    const focusRadius = Math.max(1, surfaceRect.width * .44);
     let closest = null;
     let closestDistance = Infinity;
 
@@ -298,9 +299,10 @@ function installRecipeGravityFieldPrototype() {
       const rect = item.getBoundingClientRect();
       const itemCenter = rect.left + rect.width / 2;
       const pxDistance = Math.abs(itemCenter - center);
-      const normalized = Math.min(1.5, pxDistance / halfWidth);
-      const scale = Math.max(.84, 1 - normalized * .11);
-      const opacity = Math.max(.56, 1 - normalized * .28);
+      const normalized = Math.min(1, pxDistance / focusRadius);
+      const focus = 1 - normalized;
+      const scale = .74 + .26 * (focus ** 1.8);
+      const opacity = .34 + .66 * (focus ** 2.15);
       item.style.setProperty("--reel-scale", `${scale}`);
       item.style.setProperty("--reel-opacity", `${opacity}`);
       if (pxDistance < closestDistance) {
@@ -328,6 +330,7 @@ function installRecipeGravityFieldPrototype() {
       surface.classList.remove("recipe-gravity-field", "recipe-wheel-list");
       surface.classList.add("recipe-native-reel");
       surface.addEventListener("scroll", () => scheduleFocus(surface), { passive: true });
+      surface.addEventListener("scrollend", () => scheduleFocus(surface), { passive: true });
     }
     scheduleFocus(surface);
   }
@@ -352,5 +355,3 @@ function installRecipeGravityFieldPrototype() {
 }
 
 installRecipeGravityFieldPrototype();
-
-// No-op marker to force a fresh Netlify deploy-preview alias registration after preview routing failures.
