@@ -1,3 +1,5 @@
+import "./recipe-reel.js?v=1";
+
 export function installInstructions(userAgent, t) {
   const isAndroid = /Android/i.test(userAgent || "");
   const isIos = /iPhone|iPad|iPod/i.test(userAgent || "");
