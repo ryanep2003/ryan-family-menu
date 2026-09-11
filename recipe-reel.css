@@ -1,4 +1,24 @@
 /* Swiper-backed recipe reel prototype for PR #28. */
+
+/* In this prototype, search results are the primary Library surface. */
+#recipesView:not(.detail-open) #recipePicksSection {
+  display: none !important;
+}
+
+#recipesView:not(.detail-open) #recipeBrowse {
+  display: block !important;
+  margin-top: 10px !important;
+  border-top: 0 !important;
+}
+
+#recipesView:not(.detail-open) #recipeBrowse > summary {
+  display: none !important;
+}
+
+#recipesView:not(.detail-open) #recipeBrowse .recipe-browse-content {
+  display: block !important;
+}
+
 #recipeList,
 .focused-recipe-results,
 .meal-recipe-results {
