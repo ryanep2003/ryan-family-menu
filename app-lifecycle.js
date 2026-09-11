@@ -315,12 +315,8 @@ function installRecipeGravityFieldPrototype() {
     return [...surface.querySelectorAll(":scope > .meal-recipe-result")];
   }
 
-  function mod(value, length) { return ((value % length) + length) % length; }
-  function wrappedDelta(index, position, length) {
-    let delta = index - position;
-    while (delta > length / 2) delta -= length;
-    while (delta < -length / 2) delta += length;
-    return delta;
+  function clampPosition(value, length) {
+    return Math.max(0, Math.min(Math.max(0, length - 1), value));
   }
 
   function getState(surface) {
@@ -370,13 +366,14 @@ function installRecipeGravityFieldPrototype() {
       state.signature = signature;
     }
 
+    state.position = clampPosition(state.position, nodes.length);
     nodes.forEach((node) => node.classList.add("gravity-node"));
     const { width, step } = geometryFor(surface, nodes);
-    const activeIndex = mod(Math.round(state.position), nodes.length);
+    const activeIndex = clampPosition(Math.round(state.position), nodes.length);
     surface.style.setProperty("--track-x", `${-(width / 2) - state.position * step}px`);
 
     nodes.forEach((node, index) => {
-      const delta = wrappedDelta(index, state.position, nodes.length);
+      const delta = index - state.position;
       const distance = Math.abs(delta);
       const active = index === activeIndex && distance < .55;
       const scale = distance < .48 ? 1 : Math.max(.78, .93 - Math.min(2.15, distance) * .07);
@@ -395,12 +392,14 @@ function installRecipeGravityFieldPrototype() {
   }
 
   function animateTo(surface, target, duration = 650) {
+    const nodes = nodesFor(surface);
     const state = getState(surface);
     cancelAnimation(state);
-    const start = state.position;
-    const distance = target - start;
+    const boundedTarget = clampPosition(target, nodes.length);
+    const start = clampPosition(state.position, nodes.length);
+    const distance = boundedTarget - start;
     if (Math.abs(distance) < .001) {
-      state.position = target;
+      state.position = boundedTarget;
       layoutSurface(surface);
       return;
     }
@@ -412,7 +411,7 @@ function installRecipeGravityFieldPrototype() {
       layoutSurface(surface);
       if (t < 1) state.animationFrame = requestAnimationFrame(tick);
       else {
-        state.position = target;
+        state.position = boundedTarget;
         state.animationFrame = null;
         layoutSurface(surface);
       }
@@ -475,8 +474,9 @@ function installRecipeGravityFieldPrototype() {
     pointer.lastX = event.clientX;
     pointer.lastTime = now;
 
-    const { step } = geometryFor(surface, nodesFor(surface));
-    state.position = pointer.startPosition - (dx / Math.max(1, step));
+    const nodes = nodesFor(surface);
+    const { step } = geometryFor(surface, nodes);
+    state.position = clampPosition(pointer.startPosition - (dx / Math.max(1, step)), nodes.length);
     layoutSurface(surface);
   }, { capture: true, passive: false });
 
@@ -488,11 +488,13 @@ function installRecipeGravityFieldPrototype() {
     state.pointer = null;
     if (!pointer.horizontal || !pointer.moved) return;
 
-    const { step } = geometryFor(surface, nodesFor(surface));
+    const nodes = nodesFor(surface);
+    const { step } = geometryFor(surface, nodes);
     const projectedCards = -(pointer.velocityX * 1900) / Math.max(1, step);
     const cappedProjection = Math.max(-20, Math.min(20, projectedCards));
     let target = Math.round(state.position + cappedProjection);
     if (Math.abs(pointer.velocityX) < .12) target = Math.round(state.position);
+    target = clampPosition(target, nodes.length);
 
     const travel = Math.abs(target - state.position);
     const duration = Math.max(320, Math.min(1050, 360 + travel * 42));
@@ -524,13 +526,12 @@ function installRecipeGravityFieldPrototype() {
     const node = event.target.closest?.(".gravity-node");
     const index = node ? nodes.indexOf(node) : -1;
     if (index < 0) return;
-    const active = mod(Math.round(state.position), nodes.length);
-    if (index === active && Math.abs(wrappedDelta(index, state.position, nodes.length)) < .55) return;
+    const active = clampPosition(Math.round(state.position), nodes.length);
+    if (index === active && Math.abs(index - state.position) < .55) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
-    const delta = wrappedDelta(index, state.position, nodes.length);
-    animateTo(surface, state.position + delta, Math.max(260, Math.min(600, 280 + Math.abs(delta) * 50)));
+    animateTo(surface, index, Math.max(260, Math.min(600, 280 + Math.abs(index - state.position) * 50)));
   }, true);
 
   document.addEventListener("keydown", (event) => {
@@ -540,13 +541,11 @@ function installRecipeGravityFieldPrototype() {
     const nodes = nodesFor(surface);
     if (!nodes.length) return;
     event.preventDefault();
-    if (event.key === "Home") animateTo(surface, Math.round(state.position) - mod(Math.round(state.position), nodes.length), 420);
-    else if (event.key === "End") {
-      const current = mod(Math.round(state.position), nodes.length);
-      animateTo(surface, Math.round(state.position) + ((nodes.length - 1) - current), 520);
-    } else {
+    if (event.key === "Home") animateTo(surface, 0, 420);
+    else if (event.key === "End") animateTo(surface, nodes.length - 1, 520);
+    else {
       const direction = event.key === "ArrowLeft" ? -1 : 1;
-      animateTo(surface, Math.round(state.position) + direction, 260);
+      animateTo(surface, clampPosition(Math.round(state.position) + direction, nodes.length), 260);
     }
   }, true);
 
