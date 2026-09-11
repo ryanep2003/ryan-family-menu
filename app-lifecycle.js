@@ -352,3 +352,5 @@ function installRecipeGravityFieldPrototype() {
 }
 
 installRecipeGravityFieldPrototype();
+
+// No-op marker to force a fresh Netlify deploy-preview alias registration after preview routing failures.
