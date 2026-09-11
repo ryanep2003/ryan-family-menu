@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v182";
-// v182: treat every non-production Netlify hostname as a review environment.
+const CACHE_NAME = "ryan-family-menu-v183";
+// v183: native recipe reel snap, tap-vs-drag, and iOS image budget.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",
@@ -44,6 +44,9 @@ const ASSETS = [
   "./lunch-logic.js",
   "./recipe-form-ui.js",
   "./recipe-library-ui.js",
+  "./recipe-reel-logic.js",
+  "./recipe-reel.js",
+  "./recipe-reel.css",
   "./receipt-ui.js",
   "./schedule-ui.js",
   "./shared-state-loader.js",

@@ -1,5 +1,13 @@
 # Durable Decisions
 
+## 2026-09-11 — Keep Library recipe discovery on native overflow and CSS snap
+
+**Decision:** Browse recipes with the browser’s own horizontal overflow, CSS `scroll-snap-type: x mandatory`, and a matching scroll-padding gutter so one card stays centered. Separate drag from tap in the reel module. Do not reintroduce Swiper, Embla, Coverflow, or other transform/3D carousel engines.
+
+**Reason:** The previous carousel engine crashed iPhone Safari for some household members. Measuring every card on every scroll tick, keeping every recipe image decoded, and observing the whole document for any mutation were enough to recreate that pressure even after Swiper was removed.
+
+**Consequences:** The reel stays a native scroller. Active/near state comes from IntersectionObserver. Images more than two cards from the active recipe park their `src`. A body observer only rescans when a reel surface is added. Search re-renders restore the remembered recipe id when it is still in the filtered set. English and Spanish copy is unchanged.
+
 ## 2026-09-05 — Keep Shopping list-first and preserve pending grocery intent
 
 **Decision:** Do not show an always-on Finish shopping workflow. Show a compact direct transfer only when one or more items are actually checked, keep the shopper on the Shopping list after moving them to At Home, and leave receipt capture as an optional secondary tool. Persist a bounded household-scoped local grocery intent until its versioned write succeeds.

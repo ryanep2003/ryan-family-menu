@@ -27,6 +27,7 @@ GitHub main
 - `index.html`: household gate and all main views.
 - `app.js`: application bootstrap, in-memory state, persistence orchestration, navigation, shared rendering, and domain-module composition.
 - `styles.css`: design tokens, component styling, responsive layout, PWA-safe four-tab bottom navigation, the Plan dirty-save bar, the Action Assistant sheet, and motion preferences.
+- `recipe-reel.js` / `recipe-reel.css`: native overflow recipe discovery with CSS scroll-snap. Active/near cards use IntersectionObserver; off-screen images are parked. Do not add a transform carousel engine.
 - `plan-from-what-we-have.js`: deterministic, advisory dinner ranking from inventory, leftovers, recipes, family rules, prep time, and budget.
 
 Recipe catalog reads use `/.netlify/functions/recipes?view=catalog`, a text-only household-scoped response that omits embedded source photos. The browser stores a versioned, household-scoped stale-while-revalidate cache and keeps cached recipes visible when a refresh fails. The unqualified recipes endpoint remains available for older clients and full recipe writes.
@@ -51,7 +52,7 @@ The initial remote collections use independent settled requests so one unavailab
 | Saved shopping lists | `shopping-list-logic.js`, versioned collection helpers | saved-list controls in `app.js` |
 | Inventory | `inventory-logic.js`, versioned collection helpers | `inventory-ui.js` |
 | Budget and receipts | `budget-logic.js`, shared family state | `budget-ui.js`, `receipt-ui.js` |
-| Recipes | `recipe-utils.js`, platform/household catalog, local drafts | `recipe-library-ui.js`, `recipe-form-ui.js` |
+| Recipes | `recipe-utils.js`, platform/household catalog, local drafts | `recipe-library-ui.js`, `recipe-form-ui.js`, `recipe-reel.js` |
 | Household access | `household-access.js`, `api.js` | household gate in `index.html` |
 | PWA lifecycle | `app-lifecycle.js`, `storage-utils.js`, `sync-status.js` | install/update/status controls |
 
