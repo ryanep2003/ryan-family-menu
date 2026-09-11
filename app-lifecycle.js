@@ -135,32 +135,47 @@ function installRecipeGravityFieldPrototype() {
     #recipesView:not(.detail-open) #recipeBrowse > summary { display: none; }
     #recipesView:not(.detail-open) #recipeBrowse .recipe-browse-content { display: block; }
 
+    #recipeList,
+    .focused-recipe-results,
+    .meal-recipe-results {
+      background: #f4f5f5 !important;
+      background-image: none !important;
+    }
+    #recipeList::before,
+    #recipeList::after,
+    .focused-recipe-results::before,
+    .focused-recipe-results::after,
+    .meal-recipe-results::before,
+    .meal-recipe-results::after {
+      display: none !important;
+      content: none !important;
+    }
+
     #recipeList.recipe-native-reel,
     .focused-recipe-results.recipe-native-reel,
     .meal-recipe-results.recipe-native-reel {
-      --card-w: min(76vw, 304px);
-      --card-h: min(88vw, 356px);
+      --card-w: min(82vw, 320px);
+      --card-h: min(90vw, 364px);
       display: flex !important;
       align-items: flex-end !important;
-      gap: 28px !important;
+      gap: 42px !important;
       width: 100% !important;
       min-width: 0 !important;
-      height: clamp(410px, 103vw, 505px) !important;
-      min-height: 410px !important;
+      height: clamp(408px, 101vw, 500px) !important;
+      min-height: 408px !important;
       margin-top: 12px !important;
-      padding: 22px max(12vw, calc((100% - var(--card-w)) / 2)) 32px !important;
+      padding: 20px max(9vw, calc((100% - var(--card-w)) / 2)) 30px !important;
       overflow-x: auto !important;
       overflow-y: hidden !important;
       box-sizing: border-box !important;
       overscroll-behavior-x: contain;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-x pan-y;
-      scroll-snap-type: x proximity;
-      scroll-padding-inline: max(12vw, calc((100% - var(--card-w)) / 2));
+      scroll-snap-type: none !important;
       scrollbar-width: none;
       border-radius: 24px;
-      background: linear-gradient(180deg, #f7f7f6 0%, #f1f3f4 100%) !important;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.92), inset 0 -1px 0 rgba(26,58,92,.035);
+      background: #f4f5f5 !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.94), inset 0 -1px 0 rgba(26,58,92,.025);
       position: relative !important;
     }
 
@@ -171,8 +186,8 @@ function installRecipeGravityFieldPrototype() {
     #recipeList.recipe-native-reel > *,
     .focused-recipe-results.recipe-native-reel > *,
     .meal-recipe-results.recipe-native-reel > * {
-      --reel-scale: .74;
-      --reel-opacity: .34;
+      --reel-scale: .68;
+      --reel-opacity: .14;
       position: relative !important;
       inset: auto !important;
       flex: 0 0 var(--card-w) !important;
@@ -183,13 +198,12 @@ function installRecipeGravityFieldPrototype() {
       min-height: var(--card-h) !important;
       margin: 0 !important;
       box-sizing: border-box !important;
-      scroll-snap-align: center;
-      scroll-snap-stop: normal;
+      scroll-snap-align: none !important;
       transform: scale(var(--reel-scale)) !important;
       transform-origin: 50% 100% !important;
       opacity: var(--reel-opacity) !important;
-      transition: transform 90ms linear, opacity 90ms linear, filter 90ms linear !important;
-      filter: saturate(.78) brightness(1.02);
+      transition: transform 70ms linear, opacity 70ms linear, filter 70ms linear !important;
+      filter: saturate(.72) brightness(1.03);
       overflow: hidden !important;
     }
 
@@ -200,7 +214,7 @@ function installRecipeGravityFieldPrototype() {
       --reel-opacity: 1;
       filter: none;
       z-index: 3;
-      box-shadow: 0 18px 42px rgba(26,58,92,.15), 0 2px 8px rgba(26,58,92,.07) !important;
+      box-shadow: 0 18px 42px rgba(26,58,92,.14), 0 2px 8px rgba(26,58,92,.06) !important;
     }
 
     #recipeList.recipe-native-reel > .recipe-browse-card,
@@ -210,9 +224,9 @@ function installRecipeGravityFieldPrototype() {
       grid-template-rows: 1fr auto !important;
       gap: 8px !important;
       padding: 12px !important;
-      border: 1px solid rgba(26,58,92,.08) !important;
+      border: 1px solid rgba(26,58,92,.07) !important;
       border-radius: 22px !important;
-      background: rgba(255,255,255,.99) !important;
+      background: rgba(255,255,255,.995) !important;
       color: var(--ink) !important;
       text-align: left !important;
       backdrop-filter: none !important;
@@ -258,9 +272,9 @@ function installRecipeGravityFieldPrototype() {
       #recipeList.recipe-native-reel,
       .focused-recipe-results.recipe-native-reel,
       .meal-recipe-results.recipe-native-reel {
-        --card-w: 320px;
-        --card-h: 372px;
-        gap: 34px !important;
+        --card-w: 330px;
+        --card-h: 380px;
+        gap: 48px !important;
         height: 540px !important;
         padding-bottom: 40px !important;
       }
@@ -291,7 +305,7 @@ function installRecipeGravityFieldPrototype() {
 
     const surfaceRect = surface.getBoundingClientRect();
     const center = surfaceRect.left + surfaceRect.width / 2;
-    const focusRadius = Math.max(1, surfaceRect.width * .44);
+    const focusRadius = Math.max(1, surfaceRect.width * .34);
     let closest = null;
     let closestDistance = Infinity;
 
@@ -301,8 +315,8 @@ function installRecipeGravityFieldPrototype() {
       const pxDistance = Math.abs(itemCenter - center);
       const normalized = Math.min(1, pxDistance / focusRadius);
       const focus = 1 - normalized;
-      const scale = .74 + .26 * (focus ** 1.8);
-      const opacity = .34 + .66 * (focus ** 2.15);
+      const scale = .68 + .32 * (focus ** 2.1);
+      const opacity = .14 + .86 * (focus ** 2.4);
       item.style.setProperty("--reel-scale", `${scale}`);
       item.style.setProperty("--reel-opacity", `${opacity}`);
       if (pxDistance < closestDistance) {
@@ -351,6 +365,7 @@ function installRecipeGravityFieldPrototype() {
 
   observer.observe(document.documentElement, { subtree: true, childList: true });
   window.addEventListener("resize", enhanceAll, { passive: true });
+  enhanceAll();
   requestAnimationFrame(enhanceAll);
 }
 
