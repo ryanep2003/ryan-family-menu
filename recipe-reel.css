@@ -25,6 +25,10 @@
   background: transparent;
 }
 
+.recipe-reel-image-dormant {
+  visibility: hidden;
+}
+
 #recipeList.recipe-swiper,
 .focused-recipe-results.recipe-swiper,
 .meal-recipe-results.recipe-swiper {
