@@ -1,4 +1,6 @@
 const SWIPER_URL = "https://cdn.jsdelivr.net/npm/swiper@14.2.0/swiper-bundle.min.mjs";
+const SWIPER_CSS_URL = "https://cdn.jsdelivr.net/npm/swiper@14.2.0/swiper-bundle.min.css";
+const REEL_CSS_URL = "./recipe-reel.css?v=1";
 const SURFACE_SELECTOR = "#recipeList, .focused-recipe-results, .meal-recipe-results";
 const REEL_CLASS = "recipe-swiper";
 const WRAPPER_CLASS = "swiper-wrapper";
@@ -7,6 +9,24 @@ const SLIDE_CLASS = "swiper-slide";
 let swiperConstructorPromise = null;
 const stateBySurface = new WeakMap();
 const scheduled = new WeakSet();
+
+function ensureStyles() {
+  if (!document.querySelector('link[data-recipe-reel="swiper"]')) {
+    const swiperCss = document.createElement("link");
+    swiperCss.rel = "stylesheet";
+    swiperCss.href = SWIPER_CSS_URL;
+    swiperCss.dataset.recipeReel = "swiper";
+    document.head.append(swiperCss);
+  }
+
+  if (!document.querySelector('link[data-recipe-reel="local"]')) {
+    const localCss = document.createElement("link");
+    localCss.rel = "stylesheet";
+    localCss.href = REEL_CSS_URL;
+    localCss.dataset.recipeReel = "local";
+    document.head.append(localCss);
+  }
+}
 
 function loadSwiper() {
   if (!swiperConstructorPromise) {
@@ -31,6 +51,7 @@ function currentSlides(surface) {
 
 function restoreSurface(surface) {
   const state = stateBySurface.get(surface);
+  if (state?.clickHandler) surface.removeEventListener("click", state.clickHandler, true);
   if (state?.swiper && !state.swiper.destroyed) {
     try {
       state.swiper.destroy(true, false);
@@ -52,6 +73,7 @@ function restoreSurface(surface) {
 
   surface.classList.remove(REEL_CLASS, "swiper", "swiper-initialized", "swiper-horizontal", "swiper-backface-hidden", "swiper-3d", "swiper-free-mode", "swiper-watch-progress");
   surface.removeAttribute("style");
+  delete surface.dataset.recipeReelReady;
   stateBySurface.delete(surface);
 }
 
@@ -96,7 +118,6 @@ async function mountSurface(surface) {
   const existingSlides = currentSlides(surface);
   const existing = stateBySurface.get(surface);
 
-  // Already mounted and still structurally intact. Swiper can refresh in place.
   if (existing?.swiper && !existing.swiper.destroyed && existingSlides.length) {
     existing.swiper.update();
     return;
@@ -104,7 +125,6 @@ async function mountSurface(surface) {
 
   if (existing) restoreSurface(surface);
 
-  // A renderer may have just replaced the surface contents.
   const items = directItems.length ? directItems : directRecipeItems(surface);
   if (items.length < 2) return;
 
@@ -188,6 +208,7 @@ function scheduleAll() {
 export function installRecipeReels() {
   if (document.documentElement.dataset.recipeReelsInstalled === "true") return;
   document.documentElement.dataset.recipeReelsInstalled = "true";
+  ensureStyles();
 
   const observer = new MutationObserver((mutations) => {
     const touched = new Set();
