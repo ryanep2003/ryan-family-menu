@@ -1,3 +1,5 @@
+// Swiper-backed recipe reel prototype for PR #28.
+// Product rule: a hard flick must be able to traverse many recipes; side-card taps center first.
 const SWIPER_URL = "https://cdn.jsdelivr.net/npm/swiper@14.2.0/swiper-bundle.min.mjs";
 const SWIPER_CSS_URL = "https://cdn.jsdelivr.net/npm/swiper@14.2.0/swiper-bundle.min.css";
 const REEL_CSS_URL = "./recipe-reel.css?v=1";
