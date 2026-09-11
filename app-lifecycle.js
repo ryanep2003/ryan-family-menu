@@ -1,4 +1,4 @@
-import "./recipe-reel.js?v=5";
+import "./recipe-reel.js?v=6";
 
 export function installInstructions(userAgent, t) {
   const isAndroid = /Android/i.test(userAgent || "");
