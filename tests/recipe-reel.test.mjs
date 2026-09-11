@@ -89,7 +89,7 @@ test("native reel CSS snaps to a centered card and disables text selection", asy
   assert.match(css, /scroll-snap-align:\s*center/);
   assert.match(css, /scroll-padding-inline:\s*var\(--recipe-reel-gutter\)/);
   assert.match(css, /user-select:\s*none/);
-  assert.doesNotMatch(css, /swiper/i);
+  assert.doesNotMatch(css, /\.swiper|swiper-wrapper|coverflow/i);
   assert.doesNotMatch(css, /translate3d|perspective\(|rotateY\(/);
 });
 

@@ -1,4 +1,4 @@
-/* Native recipe reel: Safari owns scrolling physics; no Swiper/3D transforms. */
+/* Native recipe reel: Safari owns scrolling physics; no carousel library or 3D transforms. */
 
 #recipesView:not(.detail-open) #recipePicksSection {
   display: none !important;
