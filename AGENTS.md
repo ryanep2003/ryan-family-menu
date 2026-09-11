@@ -76,10 +76,13 @@ For meaningful features, persisted-data changes, or architectural work:
 
 For a small, obvious fix, inspect the affected path and proceed without unnecessary planning ceremony.
 
+For exploratory visual or interaction work where the goal is to learn before hardening, use `$prototype-ui` and keep the experiment bounded to the product question. Prototype success requires rendered verification; a commit or successful deploy alone is not sufficient.
+
 Use the repository skills when they match the task:
 
 - `$build-feature`
 - `$debug-bug`
+- `$prototype-ui`
 - `$ui-review`
 - `$safe-database-change`
 - `$pre-deploy-check`
