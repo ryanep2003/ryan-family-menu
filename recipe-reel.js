@@ -9,13 +9,14 @@ import {
   nearestIndexByCenters,
   needsSnapCorrection,
   recipeIdFromRecord,
+  reelClickAction,
   rememberedIndex,
   scrollLeftToCenter,
   shouldParkMedia,
   usesCustomPointerDrag,
 } from "./recipe-reel-logic.js";
 
-const REEL_CSS_URL = "./recipe-reel.css?v=7";
+const REEL_CSS_URL = "./recipe-reel.css?v=8";
 const SURFACE_SELECTOR = "#recipeList, .focused-recipe-results, .meal-recipe-results";
 const ITEM_SELECTOR = ".recipe-browse-card, .focused-recipe-result, .meal-recipe-result";
 const REEL_CLASS = "recipe-native-reel";
@@ -93,6 +94,20 @@ function nearestIndexFromSurface(surface, items) {
   const center = surface.scrollLeft + surface.clientWidth / 2;
   const centers = items.map((item) => item.offsetLeft + item.offsetWidth / 2);
   return nearestIndexByCenters(centers, center);
+}
+
+function elementFromEventTarget(target) {
+  if (target instanceof Element) return target;
+  return target?.parentElement || null;
+}
+
+function reelItemFromEvent(event, surface) {
+  const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+  for (const node of path) {
+    if (isRecipeItem(node) && node.parentElement === surface) return node;
+  }
+  const item = elementFromEventTarget(event.target)?.closest?.(ITEM_SELECTOR);
+  return item?.parentElement === surface ? item : null;
 }
 
 function parkImage(image) {
@@ -199,9 +214,9 @@ function bindPointer(surface, state) {
       y: event.clientY,
       scrollLeft: surface.scrollLeft,
       moved: false,
+      captured: false,
       customDrag: usesCustomPointerDrag(event.pointerType),
     };
-    if (state.pointer.customDrag) surface.setPointerCapture?.(event.pointerId);
   };
 
   state.pointerMoveHandler = (event) => {
@@ -210,6 +225,11 @@ function bindPointer(surface, state) {
     if (!pointer.moved && isDragGesture(pointer.x, pointer.y, event.clientX, event.clientY, DRAG_THRESHOLD_PX)) {
       pointer.moved = true;
       surface.classList.add(DRAGGING_CLASS);
+      // Capture only after a real drag so a clean tap still lands on nested buttons.
+      if (pointer.customDrag && !pointer.captured) {
+        surface.setPointerCapture?.(event.pointerId);
+        pointer.captured = true;
+      }
     }
     if (pointer.customDrag && pointer.moved) {
       event.preventDefault();
@@ -221,7 +241,9 @@ function bindPointer(surface, state) {
     const pointer = state.pointer;
     if (!pointer || event.pointerId !== pointer.id) return;
     if (pointer.moved) state.suppressClick = true;
+    else state.suppressClick = false;
     surface.classList.remove(DRAGGING_CLASS);
+    if (pointer.captured) surface.releasePointerCapture?.(event.pointerId);
     state.pointer = null;
     if (pointer.moved) settleSnap(surface, state);
   };
@@ -231,19 +253,20 @@ function bindPointer(surface, state) {
   };
 
   state.clickHandler = (event) => {
-    if (state.suppressClick) {
-      event.preventDefault();
-      event.stopPropagation();
-      state.suppressClick = false;
-      return;
-    }
-    if (event.detail === 0) return;
-    const item = event.target.closest?.(ITEM_SELECTOR);
-    if (!item || item.parentElement !== surface) return;
-    if (item.classList.contains(ACTIVE_CLASS)) return;
+    const item = reelItemFromEvent(event, surface);
+    const items = itemsFor(surface);
+    const nearest = items[nearestIndexFromSurface(surface, items)];
+    const action = reelClickAction({
+      movementExceededThreshold: state.suppressClick,
+      hasReelItem: Boolean(item),
+      itemIsActive: Boolean(item && (item.classList.contains(ACTIVE_CLASS) || item === nearest)),
+    });
+    state.suppressClick = false;
+
+    if (action === "allow" || action === "ignore") return;
     event.preventDefault();
     event.stopPropagation();
-    centerItem(surface, item, snapBehavior());
+    if (action === "center") centerItem(surface, item, snapBehavior());
   };
 
   surface.addEventListener("pointerdown", state.pointerDownHandler);

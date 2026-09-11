@@ -80,3 +80,17 @@ export function needsSnapCorrection(scrollLeft, targetLeft, slop = SNAP_ALIGN_SL
 export function usesCustomPointerDrag(pointerType) {
   return pointerType === "mouse";
 }
+
+// Decide what a pointer-generated click should do. Nested controls inside an
+// active card (title button, Add to a meal) share the card's item and must
+// stay "allow" so they can open or add.
+export function reelClickAction({
+  movementExceededThreshold = false,
+  hasReelItem = false,
+  itemIsActive = false,
+} = {}) {
+  if (movementExceededThreshold) return "suppress";
+  if (!hasReelItem) return "ignore";
+  if (itemIsActive) return "allow";
+  return "center";
+}

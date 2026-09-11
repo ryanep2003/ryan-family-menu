@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v183";
-// v183: native recipe reel snap, tap-vs-drag, and iOS image budget.
+const CACHE_NAME = "ryan-family-menu-v184";
+// v184: allow centered-card and Add-to-meal taps; keep drag-click suppression.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",

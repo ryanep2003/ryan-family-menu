@@ -12,6 +12,7 @@ import {
   nearestIndexByCenters,
   needsSnapCorrection,
   recipeIdFromRecord,
+  reelClickAction,
   rememberedIndex,
   scrollLeftToCenter,
   shouldParkMedia,
@@ -83,6 +84,44 @@ test("only mouse pointers use custom drag; touch keeps native overflow", () => {
   assert.equal(usesCustomPointerDrag("pen"), false);
 });
 
+test("a tap on the active card or add-meal control is not suppressed below the drag threshold", () => {
+  const tapOnActiveCard = reelClickAction({
+    movementExceededThreshold: isDragGesture(40, 80, 43, 81),
+    hasReelItem: true,
+    itemIsActive: true,
+  });
+  const tapOnAddMeal = reelClickAction({
+    movementExceededThreshold: isDragGesture(200, 300, 200, 302),
+    hasReelItem: true,
+    itemIsActive: true,
+  });
+  assert.equal(tapOnActiveCard, "allow");
+  assert.equal(tapOnAddMeal, "allow");
+});
+
+test("a drag above the threshold still suppresses open on the active card", () => {
+  const draggedOpen = reelClickAction({
+    movementExceededThreshold: isDragGesture(40, 80, 40 + DRAG_THRESHOLD_PX, 80),
+    hasReelItem: true,
+    itemIsActive: true,
+  });
+  const draggedAddMeal = reelClickAction({
+    movementExceededThreshold: isDragGesture(200, 300, 188, 300),
+    hasReelItem: true,
+    itemIsActive: true,
+  });
+  assert.equal(draggedOpen, "suppress");
+  assert.equal(draggedAddMeal, "suppress");
+});
+
+test("a tap on an inactive neighbor recenters instead of opening", () => {
+  assert.equal(reelClickAction({
+    movementExceededThreshold: false,
+    hasReelItem: true,
+    itemIsActive: false,
+  }), "center");
+});
+
 test("native reel CSS snaps to a centered card and disables text selection", async () => {
   const css = await readFile(new URL("../recipe-reel.css", import.meta.url), "utf8");
   assert.match(css, /scroll-snap-type:\s*x mandatory/);
@@ -98,6 +137,10 @@ test("native reel module does not measure every card on every scroll tick", asyn
   assert.match(source, /IntersectionObserver/);
   assert.match(source, /dataset\.reelSrc/);
   assert.match(source, /suppressClick/);
+  assert.match(source, /reelClickAction/);
+  assert.match(source, /setPointerCapture/);
+  assert.match(source, /customDrag && !pointer\.captured/);
+  assert.doesNotMatch(source, /customDrag\) surface\.setPointerCapture/);
   assert.doesNotMatch(source, /swiper/i);
   assert.doesNotMatch(source, /addEventListener\("scroll", state\.scrollHandler.*updateActive/);
   assert.match(source, /childList: true, subtree: true/);
