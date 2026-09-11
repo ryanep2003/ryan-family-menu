@@ -2,15 +2,17 @@
 // Product rule: a hard flick must be able to traverse many recipes; side-card taps center first.
 const SWIPER_URL = "https://cdn.jsdelivr.net/npm/swiper@14.2.0/swiper-bundle.min.mjs";
 const SWIPER_CSS_URL = "https://cdn.jsdelivr.net/npm/swiper@14.2.0/swiper-bundle.min.css";
-const REEL_CSS_URL = "./recipe-reel.css?v=3";
+const REEL_CSS_URL = "./recipe-reel.css?v=4";
 const SURFACE_SELECTOR = "#recipeList, .focused-recipe-results, .meal-recipe-results";
 const REEL_CLASS = "recipe-swiper";
 const WRAPPER_CLASS = "swiper-wrapper";
 const SLIDE_CLASS = "swiper-slide";
+const IMAGE_WINDOW_RADIUS = 3;
 
 let swiperConstructorPromise = null;
 const stateBySurface = new WeakMap();
 const scheduled = new WeakSet();
+const imageSyncScheduled = new WeakSet();
 let reconcileQueued = false;
 
 function ensureStyles() {
@@ -63,7 +65,89 @@ function isLayoutVisible(surface) {
   return rect.width > 0 && rect.height > 0;
 }
 
-function restoreSurface(surface) {
+function rememberImageSource(image) {
+  if (!(image instanceof HTMLImageElement)) return false;
+
+  const src = image.getAttribute("src");
+  if (!image.dataset.recipeReelSrc && src) image.dataset.recipeReelSrc = src;
+
+  const srcset = image.getAttribute("srcset");
+  if (!image.dataset.recipeReelSrcset && srcset) image.dataset.recipeReelSrcset = srcset;
+
+  const sizes = image.getAttribute("sizes");
+  if (!image.dataset.recipeReelSizes && sizes) image.dataset.recipeReelSizes = sizes;
+
+  image.loading = "lazy";
+  image.decoding = "async";
+  return Boolean(image.dataset.recipeReelSrc);
+}
+
+function hydrateImage(image) {
+  if (!rememberImageSource(image)) return;
+
+  if (!image.getAttribute("src")) image.setAttribute("src", image.dataset.recipeReelSrc);
+  if (image.dataset.recipeReelSrcset && !image.getAttribute("srcset")) {
+    image.setAttribute("srcset", image.dataset.recipeReelSrcset);
+  }
+  if (image.dataset.recipeReelSizes && !image.getAttribute("sizes")) {
+    image.setAttribute("sizes", image.dataset.recipeReelSizes);
+  }
+  image.classList.remove("recipe-reel-image-dormant");
+}
+
+function dehydrateImage(image) {
+  if (!rememberImageSource(image)) return;
+
+  image.removeAttribute("src");
+  image.removeAttribute("srcset");
+  image.removeAttribute("sizes");
+  image.classList.add("recipe-reel-image-dormant");
+}
+
+function hydrateAllImages(surface) {
+  surface.querySelectorAll("img").forEach(hydrateImage);
+}
+
+function dehydrateAllImages(surface) {
+  surface.querySelectorAll("img").forEach(dehydrateImage);
+}
+
+function syncImageWindow(swiper) {
+  if (!swiper || swiper.destroyed) return;
+  const slides = [...(swiper.slides || [])];
+  if (!slides.length) return;
+
+  const activeIndex = Number.isInteger(swiper.activeIndex) ? swiper.activeIndex : 0;
+  slides.forEach((slide, index) => {
+    const shouldHydrate = Math.abs(index - activeIndex) <= IMAGE_WINDOW_RADIUS;
+    slide.querySelectorAll("img").forEach((image) => {
+      if (shouldHydrate) hydrateImage(image);
+      else dehydrateImage(image);
+    });
+  });
+}
+
+function scheduleImageWindow(swiper) {
+  if (!swiper || swiper.destroyed || imageSyncScheduled.has(swiper)) return;
+  imageSyncScheduled.add(swiper);
+  requestAnimationFrame(() => {
+    imageSyncScheduled.delete(swiper);
+    syncImageWindow(swiper);
+  });
+}
+
+function primeImageWindow(surface, centerIndex = 0) {
+  const slides = currentSlides(surface);
+  slides.forEach((slide, index) => {
+    const shouldHydrate = Math.abs(index - centerIndex) <= IMAGE_WINDOW_RADIUS;
+    slide.querySelectorAll("img").forEach((image) => {
+      if (shouldHydrate) hydrateImage(image);
+      else dehydrateImage(image);
+    });
+  });
+}
+
+function restoreSurface(surface, { hydrateImages = true } = {}) {
   const state = stateBySurface.get(surface);
   if (state?.clickHandler) surface.removeEventListener("click", state.clickHandler, true);
   if (state?.swiper && !state.swiper.destroyed) {
@@ -89,6 +173,9 @@ function restoreSurface(surface) {
   surface.removeAttribute("style");
   delete surface.dataset.recipeReelReady;
   stateBySurface.delete(surface);
+
+  if (hydrateImages) hydrateAllImages(surface);
+  else dehydrateAllImages(surface);
 }
 
 function prepareMarkup(surface, items) {
@@ -100,6 +187,7 @@ function prepareMarkup(surface, items) {
   });
   surface.replaceChildren(wrapper);
   surface.classList.add(REEL_CLASS, "swiper");
+  primeImageWindow(surface);
 }
 
 function bindSideCardCentering(surface, state) {
@@ -129,7 +217,8 @@ function bindSideCardCentering(surface, state) {
 
 async function mountSurface(surface) {
   if (!isLayoutVisible(surface)) {
-    if (stateBySurface.has(surface)) restoreSurface(surface);
+    if (stateBySurface.has(surface)) restoreSurface(surface, { hydrateImages: false });
+    else dehydrateAllImages(surface);
     return;
   }
 
@@ -140,13 +229,17 @@ async function mountSurface(surface) {
   if (existing?.swiper && !existing.swiper.destroyed && existingSlides.length) {
     existing.swiper.updateSize();
     existing.swiper.updateSlides();
+    scheduleImageWindow(existing.swiper);
     return;
   }
 
   if (existing) restoreSurface(surface);
 
   const items = directItems.length ? directItems : directRecipeItems(surface);
-  if (items.length < 2) return;
+  if (items.length < 2) {
+    hydrateAllImages(surface);
+    return;
+  }
 
   prepareMarkup(surface, items);
 
@@ -160,7 +253,7 @@ async function mountSurface(surface) {
   }
 
   if (!isLayoutVisible(surface)) {
-    restoreSurface(surface);
+    restoreSurface(surface, { hydrateImages: false });
     return;
   }
 
@@ -201,8 +294,18 @@ async function mountSurface(surface) {
       slideShadows: false,
     },
     on: {
-      init() {
+      init(swiper) {
         surface.dataset.recipeReelReady = "true";
+        syncImageWindow(swiper);
+      },
+      activeIndexChange(swiper) {
+        scheduleImageWindow(swiper);
+      },
+      transitionEnd(swiper) {
+        scheduleImageWindow(swiper);
+      },
+      touchEnd(swiper) {
+        scheduleImageWindow(swiper);
       },
       destroy() {
         delete surface.dataset.recipeReelReady;
@@ -226,8 +329,9 @@ function reconcileAll() {
   document.querySelectorAll(SURFACE_SELECTOR).forEach((surface) => {
     if (isLayoutVisible(surface)) {
       scheduleSurface(surface);
-    } else if (stateBySurface.has(surface)) {
-      restoreSurface(surface);
+    } else {
+      if (stateBySurface.has(surface)) restoreSurface(surface, { hydrateImages: false });
+      else dehydrateAllImages(surface);
     }
   });
 }
