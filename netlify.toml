@@ -18,9 +18,9 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    # PR #28 review branch only: the gravity-field prototype injects its CSS at runtime.
-    # Keep this branch-local and revert before merge so production retains strict style-src 'self'.
-    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; manifest-src 'self'; worker-src 'self'"
+    # PR #28 only: Swiper 14.2.0 is pinned from jsDelivr while we validate the recipe-reel interaction.
+    # Swiper writes transform styles inline, so unsafe-inline remains branch-local for this prototype.
+    Content-Security-Policy = "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; manifest-src 'self'; worker-src 'self'"
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
