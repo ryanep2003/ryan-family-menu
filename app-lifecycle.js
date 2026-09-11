@@ -93,7 +93,7 @@ export function registerServiceWorker({ $, onUpdateAvailable }) {
     });
   }
 
-  navigatorObject?.serviceWorker?.addEventListener?.("controllerchange", () => {
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
     if (hadController) onUpdateAvailable();
     hadController = true;
   });
