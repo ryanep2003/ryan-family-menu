@@ -1,5 +1,6 @@
-const CACHE_NAME = "ryan-family-menu-v180";
-// Shop experience UX refresh: reinstall this worker so the v180 static cache picks up the latest shopping modules.
+const CACHE_NAME = "ryan-family-menu-v182";
+// v182: treat every non-production Netlify hostname as a review environment.
+// Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",
   "./index.html",
@@ -62,15 +63,23 @@ const ASSETS = [
   "./assets/app-icon-512.png",
 ];
 
+const hostname = self.location.hostname;
+const IS_NETLIFY_HOST = hostname.endsWith(".netlify.app");
+const IS_PRODUCTION_HOST = hostname === "ryanfamilymenu.netlify.app" || hostname === "main--ryanfamilymenu.netlify.app";
+const IS_REVIEW_HOST = IS_NETLIFY_HOST && !IS_PRODUCTION_HOST;
+
 self.addEventListener("install", (event) => {
   self.skipWaiting();
+  if (IS_REVIEW_HOST) return;
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(
+        keys.filter((key) => IS_REVIEW_HOST || key !== CACHE_NAME).map((key) => caches.delete(key))
+      ))
       .then(() => self.clients.claim())
   );
 });
@@ -80,6 +89,13 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/.netlify/functions/")) return;
   if (url.origin !== self.location.origin) return;
+
+  // Any non-production Netlify hostname is a review environment. Always use the network
+  // so a previous branch/deploy preview cannot pin an older document, CSP, or app shell.
+  if (IS_REVIEW_HOST) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
 
   event.respondWith((async () => {
     const cached = await caches.match(event.request);

@@ -1,0 +1,169 @@
+/* Swiper-backed recipe reel prototype for PR #28. */
+
+/* In this prototype, search results are the primary Library surface. */
+#recipesView:not(.detail-open) #recipePicksSection {
+  display: none !important;
+}
+
+#recipesView:not(.detail-open) #recipeBrowse {
+  display: block !important;
+  margin-top: 10px !important;
+  border-top: 0 !important;
+}
+
+#recipesView:not(.detail-open) #recipeBrowse > summary {
+  display: none !important;
+}
+
+#recipesView:not(.detail-open) #recipeBrowse .recipe-browse-content {
+  display: block !important;
+}
+
+#recipeList,
+.focused-recipe-results,
+.meal-recipe-results {
+  background: transparent;
+}
+
+.recipe-reel-image-dormant {
+  visibility: hidden;
+}
+
+#recipeList.recipe-swiper,
+.focused-recipe-results.recipe-swiper,
+.meal-recipe-results.recipe-swiper {
+  --recipe-slide-width: min(79vw, 310px);
+  width: 100%;
+  min-width: 0;
+  min-height: 414px;
+  margin-top: 12px;
+  padding: 22px 0 28px;
+  overflow: hidden;
+  box-sizing: border-box;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #fafaf8 0%, #f4f5f3 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .94);
+  touch-action: pan-y;
+}
+
+#recipeList.recipe-swiper .swiper-wrapper,
+.focused-recipe-results.recipe-swiper .swiper-wrapper,
+.meal-recipe-results.recipe-swiper .swiper-wrapper {
+  align-items: flex-end;
+}
+
+#recipeList.recipe-swiper .swiper-slide,
+.focused-recipe-results.recipe-swiper .swiper-slide,
+.meal-recipe-results.recipe-swiper .swiper-slide {
+  width: var(--recipe-slide-width);
+  max-width: var(--recipe-slide-width);
+  height: 352px;
+  min-height: 352px;
+  box-sizing: border-box;
+  opacity: .28;
+  transition: opacity 140ms linear, box-shadow 140ms linear;
+}
+
+#recipeList.recipe-swiper .swiper-slide-active,
+.focused-recipe-results.recipe-swiper .swiper-slide-active,
+.meal-recipe-results.recipe-swiper .swiper-slide-active {
+  opacity: 1;
+  z-index: 3;
+}
+
+#recipeList.recipe-swiper .swiper-slide-prev,
+#recipeList.recipe-swiper .swiper-slide-next,
+.focused-recipe-results.recipe-swiper .swiper-slide-prev,
+.focused-recipe-results.recipe-swiper .swiper-slide-next,
+.meal-recipe-results.recipe-swiper .swiper-slide-prev,
+.meal-recipe-results.recipe-swiper .swiper-slide-next {
+  opacity: .48;
+}
+
+#recipeList.recipe-swiper .recipe-browse-card,
+.focused-recipe-results.recipe-swiper .focused-recipe-result,
+.meal-recipe-results.recipe-swiper .meal-recipe-result {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(26, 58, 92, .07);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, .995);
+  color: var(--ink);
+  text-align: left;
+  overflow: hidden;
+  box-shadow: 0 5px 14px rgba(26, 58, 92, .05);
+}
+
+#recipeList.recipe-swiper .swiper-slide-active.recipe-browse-card,
+.focused-recipe-results.recipe-swiper .swiper-slide-active.focused-recipe-result,
+.meal-recipe-results.recipe-swiper .swiper-slide-active.meal-recipe-result {
+  box-shadow: 0 16px 34px rgba(26, 58, 92, .12), 0 2px 8px rgba(26, 58, 92, .05);
+}
+
+#recipeList.recipe-swiper .recipe-browse-card .recipe-card,
+.focused-recipe-results.recipe-swiper .focused-recipe-result .recipe-card,
+.meal-recipe-results.recipe-swiper .meal-recipe-result .recipe-card {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 168px auto;
+  align-content: start;
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+#recipeList.recipe-swiper .recipe-photo-shell,
+.focused-recipe-results.recipe-swiper .recipe-photo-shell,
+.meal-recipe-results.recipe-swiper .recipe-photo-shell {
+  width: 100%;
+  height: 168px;
+  min-height: 168px;
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+#recipeList.recipe-swiper .recipe-photo-shell img,
+.focused-recipe-results.recipe-swiper .recipe-photo-shell img,
+.meal-recipe-results.recipe-swiper .recipe-photo-shell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+#recipeList.recipe-swiper .recipe-card h3,
+#recipeList.recipe-swiper .recipe-card p,
+#recipeList.recipe-swiper .category-pill {
+  grid-column: 1;
+}
+
+@media (min-width: 760px) {
+  #recipeList.recipe-swiper,
+  .focused-recipe-results.recipe-swiper,
+  .meal-recipe-results.recipe-swiper {
+    --recipe-slide-width: 320px;
+    min-height: 452px;
+    padding-block: 26px 36px;
+  }
+
+  #recipeList.recipe-swiper .swiper-slide,
+  .focused-recipe-results.recipe-swiper .swiper-slide,
+  .meal-recipe-results.recipe-swiper .swiper-slide {
+    height: 370px;
+    min-height: 370px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #recipeList.recipe-swiper .swiper-slide,
+  .focused-recipe-results.recipe-swiper .swiper-slide,
+  .meal-recipe-results.recipe-swiper .swiper-slide {
+    transition: none;
+  }
+}
