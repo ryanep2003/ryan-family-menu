@@ -119,10 +119,13 @@ export function registerServiceWorker({ $, onUpdateAvailable }) {
   });
 }
 
-// Experimental inertial recipe reel. The same track model is used anywhere recipes are searched.
+// Native mobile recipe reel prototype.
+// Deliberately uses the browser's own touch scrolling and momentum instead of custom swipe physics.
 function installRecipeGravityFieldPrototype() {
   if (typeof document === "undefined" || document.documentElement.dataset.recipeGravityInstalled) return;
   document.documentElement.dataset.recipeGravityInstalled = "true";
+
+  const surfaceSelector = "#recipeList, .focused-recipe-results, .meal-recipe-results";
 
   const style = document.createElement("style");
   style.id = "recipeGravityFieldStyles";
@@ -132,99 +135,76 @@ function installRecipeGravityFieldPrototype() {
     #recipesView:not(.detail-open) #recipeBrowse > summary { display: none; }
     #recipesView:not(.detail-open) #recipeBrowse .recipe-browse-content { display: block; }
 
-    .recipe-reel-viewport {
-      --gravity-height: clamp(420px, 108vw, 525px);
+    #recipeList.recipe-native-reel,
+    .focused-recipe-results.recipe-native-reel,
+    .meal-recipe-results.recipe-native-reel {
       --card-w: min(72vw, 292px);
       --card-h: min(84vw, 342px);
-      --rail-bottom: clamp(34px, 9vw, 46px);
-      position: relative;
-      width: 100%;
-      height: var(--gravity-height);
-      min-height: 420px;
-      margin-top: 12px;
-      overflow: hidden;
-      touch-action: pan-y;
-      isolation: isolate;
-      border-radius: 24px;
-      background: linear-gradient(180deg, rgba(251,250,247,.99) 0%, rgba(246,247,248,.99) 54%, rgba(239,242,244,.99) 100%);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.82), inset 0 -1px 0 rgba(26,58,92,.04);
-    }
-    .recipe-reel-viewport::before {
-      content: "";
-      position: absolute;
-      left: 7%;
-      right: 7%;
-      bottom: calc(var(--rail-bottom) + 52px);
-      height: 220px;
-      border-radius: 36px;
-      background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.66) 20%, rgba(255,255,255,.92) 50%, rgba(255,255,255,.66) 80%, rgba(255,255,255,0));
-      filter: blur(14px);
-      pointer-events: none;
-      opacity: .94;
-    }
-    .recipe-reel-viewport::after {
-      content: "";
-      position: absolute;
-      left: 17%;
-      right: 17%;
-      bottom: calc(var(--rail-bottom) - 8px);
-      height: 14px;
-      border-radius: 999px;
-      background: rgba(26,58,92,.09);
-      filter: blur(11px);
-      pointer-events: none;
-    }
-
-    .recipe-gravity-field {
-      position: absolute !important;
-      left: 50% !important;
-      bottom: var(--rail-bottom) !important;
-      top: auto !important;
-      width: max-content !important;
-      height: var(--card-h) !important;
-      min-height: 0 !important;
       display: flex !important;
       align-items: flex-end !important;
-      gap: 18px !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      overflow: visible !important;
-      background: transparent !important;
-      transform: translate3d(var(--track-x, 0px), 0, 0);
-      will-change: transform;
+      gap: 16px !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      height: clamp(420px, 108vw, 525px) !important;
+      min-height: 420px !important;
+      margin-top: 12px !important;
+      padding: 28px max(14vw, calc((100% - var(--card-w)) / 2)) 38px !important;
+      overflow-x: auto !important;
+      overflow-y: hidden !important;
+      box-sizing: border-box !important;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x pan-y;
+      scroll-snap-type: x proximity;
+      scroll-padding-inline: max(14vw, calc((100% - var(--card-w)) / 2));
+      scrollbar-width: none;
+      border-radius: 24px;
+      background: linear-gradient(180deg, #fbfaf7 0%, #f5f7f8 54%, #edf1f3 100%) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.88), inset 0 -1px 0 rgba(26,58,92,.04);
+      position: relative !important;
     }
-    .recipe-gravity-field > .gravity-node {
-      --gs: 1;
-      --go: 1;
+
+    #recipeList.recipe-native-reel::-webkit-scrollbar,
+    .focused-recipe-results.recipe-native-reel::-webkit-scrollbar,
+    .meal-recipe-results.recipe-native-reel::-webkit-scrollbar { display: none; }
+
+    #recipeList.recipe-native-reel > *,
+    .focused-recipe-results.recipe-native-reel > *,
+    .meal-recipe-results.recipe-native-reel > * {
+      --reel-scale: .88;
+      --reel-opacity: .68;
       position: relative !important;
       inset: auto !important;
       flex: 0 0 var(--card-w) !important;
       width: var(--card-w) !important;
+      min-width: var(--card-w) !important;
+      max-width: var(--card-w) !important;
       height: var(--card-h) !important;
       min-height: var(--card-h) !important;
-      max-width: var(--card-w) !important;
       margin: 0 !important;
-      overflow: hidden !important;
-      opacity: var(--go) !important;
-      transform: scale(var(--gs)) !important;
-      transform-origin: 50% 100% !important;
-      transition: opacity 90ms linear, filter 90ms linear !important;
-      backface-visibility: hidden;
-      will-change: transform, opacity;
-      filter: saturate(.84) brightness(.99);
       box-sizing: border-box !important;
-      z-index: var(--gzi, 1) !important;
+      scroll-snap-align: center;
+      transform: scale(var(--reel-scale)) !important;
+      transform-origin: 50% 100% !important;
+      opacity: var(--reel-opacity) !important;
+      transition: transform 120ms linear, opacity 120ms linear, filter 120ms linear !important;
+      filter: saturate(.88) brightness(.99);
+      overflow: hidden !important;
     }
-    .recipe-gravity-field > .gravity-node.gravity-active {
-      filter: none;
-      box-shadow: 0 22px 52px rgba(26,58,92,.18), 0 3px 12px rgba(26,58,92,.08);
-    }
-    .recipe-gravity-field > .gravity-node:not(.gravity-active) { cursor: pointer; }
-    .recipe-gravity-field > .gravity-node[aria-hidden="true"] { pointer-events: none; }
 
-    #recipeList.recipe-gravity-field > .recipe-browse-card,
-    .focused-recipe-results.recipe-gravity-field > .focused-recipe-result,
-    .meal-recipe-results.recipe-gravity-field > .meal-recipe-result {
+    #recipeList.recipe-native-reel > .reel-active,
+    .focused-recipe-results.recipe-native-reel > .reel-active,
+    .meal-recipe-results.recipe-native-reel > .reel-active {
+      --reel-scale: 1;
+      --reel-opacity: 1;
+      filter: none;
+      z-index: 3;
+      box-shadow: 0 22px 52px rgba(26,58,92,.17), 0 3px 12px rgba(26,58,92,.08) !important;
+    }
+
+    #recipeList.recipe-native-reel > .recipe-browse-card,
+    .focused-recipe-results.recipe-native-reel > .focused-recipe-result,
+    .meal-recipe-results.recipe-native-reel > .meal-recipe-result {
       display: grid !important;
       grid-template-rows: 1fr auto !important;
       gap: 8px !important;
@@ -234,10 +214,10 @@ function installRecipeGravityFieldPrototype() {
       background: rgba(255,255,255,.97) !important;
       color: var(--ink) !important;
       text-align: left !important;
-      box-sizing: border-box !important;
       backdrop-filter: blur(8px);
     }
-    #recipeList.recipe-gravity-field > .recipe-browse-card .recipe-card {
+
+    #recipeList.recipe-native-reel > .recipe-browse-card .recipe-card {
       display: grid !important;
       grid-template-columns: 1fr !important;
       grid-template-rows: 164px auto !important;
@@ -250,314 +230,122 @@ function installRecipeGravityFieldPrototype() {
       box-shadow: none !important;
       overflow: hidden;
     }
-    #recipeList.recipe-gravity-field .recipe-photo-shell,
-    .focused-recipe-results.recipe-gravity-field .recipe-photo-shell,
-    .meal-recipe-results.recipe-gravity-field .recipe-photo-shell {
+
+    #recipeList.recipe-native-reel .recipe-photo-shell,
+    .focused-recipe-results.recipe-native-reel .recipe-photo-shell,
+    .meal-recipe-results.recipe-native-reel .recipe-photo-shell {
       width: 100% !important;
       height: 164px !important;
       min-height: 164px !important;
       border-radius: 15px !important;
       overflow: hidden !important;
     }
-    #recipeList.recipe-gravity-field .recipe-photo-shell img,
-    .focused-recipe-results.recipe-gravity-field .recipe-photo-shell img,
-    .meal-recipe-results.recipe-gravity-field .recipe-photo-shell img {
+
+    #recipeList.recipe-native-reel .recipe-photo-shell img,
+    .focused-recipe-results.recipe-native-reel .recipe-photo-shell img,
+    .meal-recipe-results.recipe-native-reel .recipe-photo-shell img {
       width: 100% !important;
       height: 100% !important;
       object-fit: cover !important;
     }
-    #recipeList.recipe-gravity-field .recipe-card h3,
-    #recipeList.recipe-gravity-field .recipe-card p,
-    #recipeList.recipe-gravity-field .category-pill { grid-column: 1 !important; }
-    #recipeList.recipe-gravity-field > .recipe-browse-card:not(.gravity-active) .recipe-add-meal { opacity: .16; pointer-events: none; }
+
+    #recipeList.recipe-native-reel .recipe-card h3,
+    #recipeList.recipe-native-reel .recipe-card p,
+    #recipeList.recipe-native-reel .category-pill { grid-column: 1 !important; }
 
     @media (min-width: 760px) {
-      .recipe-reel-viewport { --gravity-height: 555px; --card-w: 316px; --card-h: 368px; --rail-bottom: 50px; }
-      .recipe-gravity-field { gap: 22px !important; }
+      #recipeList.recipe-native-reel,
+      .focused-recipe-results.recipe-native-reel,
+      .meal-recipe-results.recipe-native-reel {
+        --card-w: 316px;
+        --card-h: 368px;
+        gap: 20px !important;
+        height: 555px !important;
+        padding-bottom: 44px !important;
+      }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .recipe-reel-viewport {
-        height: auto;
-        min-height: 0;
-        overflow-x: auto;
-        padding: 8px 0 16px;
-        scroll-snap-type: x mandatory;
-        touch-action: pan-x pan-y;
-      }
-      .recipe-reel-viewport::before,
-      .recipe-reel-viewport::after { display: none; }
-      .recipe-gravity-field {
-        position: relative !important;
-        left: auto !important;
-        bottom: auto !important;
-        height: auto !important;
+      #recipeList.recipe-native-reel > *,
+      .focused-recipe-results.recipe-native-reel > *,
+      .meal-recipe-results.recipe-native-reel > * {
         transform: none !important;
-        padding-inline: calc((100vw - var(--card-w)) / 2) !important;
-      }
-      .recipe-gravity-field > .gravity-node {
         opacity: 1 !important;
-        transform: none !important;
-        filter: none !important;
         transition: none !important;
-        scroll-snap-align: center;
+        filter: none !important;
       }
     }
   `;
   document.head.append(style);
 
-  const fieldState = new WeakMap();
-  const surfaceSelector = "#recipeList, .focused-recipe-results, .meal-recipe-results";
+  const scheduledSurfaces = new WeakSet();
 
-  function nodesFor(surface) {
-    if (surface.id === "recipeList") return [...surface.querySelectorAll(":scope > .recipe-browse-card")];
-    if (surface.classList.contains("focused-recipe-results")) return [...surface.querySelectorAll(":scope > .focused-recipe-result")];
-    return [...surface.querySelectorAll(":scope > .meal-recipe-result")];
+  function itemsFor(surface) {
+    return [...surface.children].filter((node) => node.nodeType === 1);
   }
 
-  function clampPosition(value, length) {
-    return Math.max(0, Math.min(Math.max(0, length - 1), value));
+  function updateFocus(surface) {
+    const items = itemsFor(surface);
+    if (!items.length) return;
+
+    const surfaceRect = surface.getBoundingClientRect();
+    const center = surfaceRect.left + surfaceRect.width / 2;
+    const halfWidth = Math.max(1, surfaceRect.width * .58);
+    let closest = null;
+    let closestDistance = Infinity;
+
+    items.forEach((item) => {
+      const rect = item.getBoundingClientRect();
+      const itemCenter = rect.left + rect.width / 2;
+      const pxDistance = Math.abs(itemCenter - center);
+      const normalized = Math.min(1.5, pxDistance / halfWidth);
+      const scale = Math.max(.84, 1 - normalized * .11);
+      const opacity = Math.max(.56, 1 - normalized * .28);
+      item.style.setProperty("--reel-scale", `${scale}`);
+      item.style.setProperty("--reel-opacity", `${opacity}`);
+      if (pxDistance < closestDistance) {
+        closestDistance = pxDistance;
+        closest = item;
+      }
+    });
+
+    items.forEach((item) => item.classList.toggle("reel-active", item === closest));
   }
 
-  function getState(surface) {
-    let state = fieldState.get(surface);
-    if (!state) {
-      state = { position: 0, pointer: null, suppressClick: false, signature: "", animationFrame: null };
-      fieldState.set(surface, state);
-    }
-    return state;
-  }
-
-  function ensureViewport(surface) {
-    if (surface.parentElement?.classList.contains("recipe-reel-viewport")) return surface.parentElement;
-    const viewport = document.createElement("div");
-    viewport.className = "recipe-reel-viewport";
-    surface.before(viewport);
-    viewport.append(surface);
-    return viewport;
-  }
-
-  function cancelAnimation(state) {
-    if (state.animationFrame != null) cancelAnimationFrame(state.animationFrame);
-    state.animationFrame = null;
-  }
-
-  function geometryFor(surface, nodes) {
-    const viewport = ensureViewport(surface);
-    const width = nodes[0]?.offsetWidth || Math.min(viewport.clientWidth * .72, 292);
-    const computed = getComputedStyle(surface);
-    const gap = parseFloat(computed.columnGap || computed.gap) || 18;
-    return { viewport, width, step: width + gap };
-  }
-
-  function layoutSurface(surface) {
-    const nodes = nodesFor(surface);
-    if (!nodes.length) return;
-    ensureViewport(surface);
-    surface.classList.add("recipe-gravity-field");
-    surface.classList.remove("recipe-wheel-list");
-
-    const state = getState(surface);
-    const signature = nodes.map((node) => node.dataset.recipeId || node.dataset.focusedRecipe || node.querySelector("[data-open]")?.dataset.open || node.textContent?.slice(0, 40)).join("|");
-    if (state.signature !== signature) {
-      cancelAnimation(state);
-      state.position = 0;
-      state.pointer = null;
-      state.signature = signature;
-    }
-
-    state.position = clampPosition(state.position, nodes.length);
-    nodes.forEach((node) => node.classList.add("gravity-node"));
-    const { width, step } = geometryFor(surface, nodes);
-    const activeIndex = clampPosition(Math.round(state.position), nodes.length);
-    surface.style.setProperty("--track-x", `${-(width / 2) - state.position * step}px`);
-
-    nodes.forEach((node, index) => {
-      const delta = index - state.position;
-      const distance = Math.abs(delta);
-      const active = index === activeIndex && distance < .55;
-      const scale = distance < .48 ? 1 : Math.max(.78, .93 - Math.min(2.15, distance) * .07);
-      const opacity = distance < .48 ? 1 : Math.max(.18, .84 - Math.min(2.15, distance) * .25);
-      const hidden = distance > 2.35;
-      node.style.setProperty("--gs", `${scale}`);
-      node.style.setProperty("--go", hidden ? "0" : `${opacity}`);
-      node.style.setProperty("--gzi", `${active ? 30 : Math.max(1, 20 - Math.round(distance * 5))}`);
-      node.classList.toggle("gravity-active", active);
-      node.setAttribute("aria-hidden", `${hidden}`);
-      if (active) node.setAttribute("data-gravity-active", "true");
-      else node.removeAttribute("data-gravity-active");
-      node.querySelectorAll("button").forEach((button) => { button.tabIndex = active ? 0 : -1; });
-      if (node.matches("button")) node.tabIndex = active ? 0 : -1;
+  function scheduleFocus(surface) {
+    if (scheduledSurfaces.has(surface)) return;
+    scheduledSurfaces.add(surface);
+    requestAnimationFrame(() => {
+      scheduledSurfaces.delete(surface);
+      updateFocus(surface);
     });
   }
 
-  function animateTo(surface, target, duration = 650) {
-    const nodes = nodesFor(surface);
-    const state = getState(surface);
-    cancelAnimation(state);
-    const boundedTarget = clampPosition(target, nodes.length);
-    const start = clampPosition(state.position, nodes.length);
-    const distance = boundedTarget - start;
-    if (Math.abs(distance) < .001) {
-      state.position = boundedTarget;
-      layoutSurface(surface);
-      return;
+  function enhanceSurface(surface) {
+    const items = itemsFor(surface);
+    if (!items.length) return;
+    if (!surface.classList.contains("recipe-native-reel")) {
+      surface.classList.remove("recipe-gravity-field", "recipe-wheel-list");
+      surface.classList.add("recipe-native-reel");
+      surface.addEventListener("scroll", () => scheduleFocus(surface), { passive: true });
     }
-    const startedAt = performance.now();
-    const tick = (now) => {
-      const t = Math.min(1, (now - startedAt) / duration);
-      const eased = 1 - ((1 - t) ** 4);
-      state.position = start + distance * eased;
-      layoutSurface(surface);
-      if (t < 1) state.animationFrame = requestAnimationFrame(tick);
-      else {
-        state.position = boundedTarget;
-        state.animationFrame = null;
-        layoutSurface(surface);
-      }
-    };
-    state.animationFrame = requestAnimationFrame(tick);
+    scheduleFocus(surface);
   }
 
-  function enhanceAll() { document.querySelectorAll(surfaceSelector).forEach(layoutSurface); }
-  function surfaceFromEvent(event) {
-    const direct = event.target?.closest?.(surfaceSelector);
-    if (direct) return direct;
-    const viewport = event.target?.closest?.(".recipe-reel-viewport");
-    return viewport ? viewport.querySelector(surfaceSelector) : null;
+  function enhanceAll() {
+    document.querySelectorAll(surfaceSelector).forEach(enhanceSurface);
   }
 
-  document.addEventListener("pointerdown", (event) => {
-    const surface = surfaceFromEvent(event);
-    if (!surface?.classList.contains("recipe-gravity-field")) return;
-    const state = getState(surface);
-    cancelAnimation(state);
-    state.pointer = {
-      id: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      startPosition: state.position,
-      lastX: event.clientX,
-      lastTime: performance.now(),
-      velocityX: 0,
-      horizontal: false,
-      rejected: false,
-      moved: false,
-    };
-  }, true);
-
-  document.addEventListener("pointermove", (event) => {
-    const surface = surfaceFromEvent(event);
-    const state = surface ? fieldState.get(surface) : null;
-    const pointer = state?.pointer;
-    if (!pointer || pointer.id !== event.pointerId || pointer.rejected) return;
-
-    const dx = event.clientX - pointer.startX;
-    const dy = event.clientY - pointer.startY;
-    if (!pointer.horizontal) {
-      if (Math.hypot(dx, dy) < 8) return;
-      if (Math.abs(dy) > Math.abs(dx) * 1.05) {
-        pointer.rejected = true;
-        return;
-      }
-      if (Math.abs(dx) < Math.abs(dy) * 1.12) return;
-      pointer.horizontal = true;
-      ensureViewport(surface).setPointerCapture?.(event.pointerId);
-    }
-
-    event.preventDefault();
-    pointer.moved = true;
-    const now = performance.now();
-    const dt = Math.max(8, now - pointer.lastTime);
-    const instantaneous = (event.clientX - pointer.lastX) / dt;
-    pointer.velocityX = pointer.velocityX * .68 + instantaneous * .32;
-    pointer.lastX = event.clientX;
-    pointer.lastTime = now;
-
-    const nodes = nodesFor(surface);
-    const { step } = geometryFor(surface, nodes);
-    state.position = clampPosition(pointer.startPosition - (dx / Math.max(1, step)), nodes.length);
-    layoutSurface(surface);
-  }, { capture: true, passive: false });
-
-  function finishPointer(event) {
-    const surface = surfaceFromEvent(event);
-    const state = surface ? fieldState.get(surface) : null;
-    const pointer = state?.pointer;
-    if (!pointer || pointer.id !== event.pointerId) return;
-    state.pointer = null;
-    if (!pointer.horizontal || !pointer.moved) return;
-
-    const nodes = nodesFor(surface);
-    const { step } = geometryFor(surface, nodes);
-    const projectedCards = -(pointer.velocityX * 1900) / Math.max(1, step);
-    const cappedProjection = Math.max(-20, Math.min(20, projectedCards));
-    let target = Math.round(state.position + cappedProjection);
-    if (Math.abs(pointer.velocityX) < .12) target = Math.round(state.position);
-    target = clampPosition(target, nodes.length);
-
-    const travel = Math.abs(target - state.position);
-    const duration = Math.max(320, Math.min(1050, 360 + travel * 42));
-    state.suppressClick = true;
-    globalThis.setTimeout?.(() => { state.suppressClick = false; }, Math.min(1100, duration + 100));
-    animateTo(surface, target, duration);
-  }
-
-  document.addEventListener("pointerup", finishPointer, true);
-  document.addEventListener("pointercancel", (event) => {
-    const surface = surfaceFromEvent(event);
-    const state = surface ? fieldState.get(surface) : null;
-    if (!state?.pointer || state.pointer.id !== event.pointerId) return;
-    if (state.pointer.horizontal) finishPointer(event);
-    else state.pointer = null;
-  }, true);
-
-  document.addEventListener("click", (event) => {
-    const surface = surfaceFromEvent(event);
-    const state = surface ? fieldState.get(surface) : null;
-    if (!state) return;
-    if (state.suppressClick) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      return;
-    }
-
-    const nodes = nodesFor(surface);
-    const node = event.target.closest?.(".gravity-node");
-    const index = node ? nodes.indexOf(node) : -1;
-    if (index < 0) return;
-    const active = clampPosition(Math.round(state.position), nodes.length);
-    if (index === active && Math.abs(index - state.position) < .55) return;
-
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    animateTo(surface, index, Math.max(260, Math.min(600, 280 + Math.abs(index - state.position) * 50)));
-  }, true);
-
-  document.addEventListener("keydown", (event) => {
-    const surface = surfaceFromEvent(event);
-    const state = surface ? fieldState.get(surface) : null;
-    if (!state || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-    const nodes = nodesFor(surface);
-    if (!nodes.length) return;
-    event.preventDefault();
-    if (event.key === "Home") animateTo(surface, 0, 420);
-    else if (event.key === "End") animateTo(surface, nodes.length - 1, 520);
-    else {
-      const direction = event.key === "ArrowLeft" ? -1 : 1;
-      animateTo(surface, clampPosition(Math.round(state.position) + direction, nodes.length), 260);
-    }
-  }, true);
-
-  let scheduled = false;
+  let mutationScheduled = false;
   const observer = new MutationObserver(() => {
-    if (scheduled) return;
-    scheduled = true;
+    if (mutationScheduled) return;
+    mutationScheduled = true;
     requestAnimationFrame(() => {
-      scheduled = false;
+      mutationScheduled = false;
       enhanceAll();
     });
   });
+
   observer.observe(document.documentElement, { subtree: true, childList: true });
   window.addEventListener("resize", enhanceAll, { passive: true });
   requestAnimationFrame(enhanceAll);
