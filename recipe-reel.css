@@ -1,6 +1,5 @@
-/* Swiper-backed recipe reel prototype for PR #28. */
+/* Lightweight Swiper-backed recipe reel. */
 
-/* In this prototype, search results are the primary Library surface. */
 #recipesView:not(.detail-open) #recipePicksSection {
   display: none !important;
 }
@@ -23,10 +22,6 @@
 .focused-recipe-results,
 .meal-recipe-results {
   background: transparent;
-}
-
-.recipe-reel-image-dormant {
-  visibility: hidden;
 }
 
 #recipeList.recipe-swiper,
@@ -60,8 +55,8 @@
   height: 352px;
   min-height: 352px;
   box-sizing: border-box;
-  opacity: .28;
-  transition: opacity 140ms linear, box-shadow 140ms linear;
+  opacity: .34;
+  transition: opacity 120ms linear, box-shadow 120ms linear;
 }
 
 #recipeList.recipe-swiper .swiper-slide-active,
@@ -77,7 +72,7 @@
 .focused-recipe-results.recipe-swiper .swiper-slide-next,
 .meal-recipe-results.recipe-swiper .swiper-slide-prev,
 .meal-recipe-results.recipe-swiper .swiper-slide-next {
-  opacity: .48;
+  opacity: .58;
 }
 
 #recipeList.recipe-swiper .recipe-browse-card,
@@ -93,13 +88,13 @@
   color: var(--ink);
   text-align: left;
   overflow: hidden;
-  box-shadow: 0 5px 14px rgba(26, 58, 92, .05);
+  box-shadow: 0 4px 10px rgba(26, 58, 92, .04);
 }
 
 #recipeList.recipe-swiper .swiper-slide-active.recipe-browse-card,
 .focused-recipe-results.recipe-swiper .swiper-slide-active.focused-recipe-result,
 .meal-recipe-results.recipe-swiper .swiper-slide-active.meal-recipe-result {
-  box-shadow: 0 16px 34px rgba(26, 58, 92, .12), 0 2px 8px rgba(26, 58, 92, .05);
+  box-shadow: 0 10px 22px rgba(26, 58, 92, .10), 0 2px 6px rgba(26, 58, 92, .04);
 }
 
 #recipeList.recipe-swiper .recipe-browse-card .recipe-card,
