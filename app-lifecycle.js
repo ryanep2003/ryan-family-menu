@@ -120,7 +120,7 @@ export function registerServiceWorker({ $, onUpdateAvailable }) {
   });
 }
 
-// Experimental recipe plane field. UI-only: search, recipe data, and persistence stay authoritative.
+// Experimental inertial recipe reel. UI-only: search, recipe data, and persistence stay authoritative.
 function installRecipeGravityFieldPrototype() {
   if (typeof document === "undefined" || document.documentElement.dataset.recipeGravityInstalled) return;
   document.documentElement.dataset.recipeGravityInstalled = "true";
@@ -146,7 +146,7 @@ function installRecipeGravityFieldPrototype() {
       overflow: hidden !important;
       perspective: 1150px;
       perspective-origin: 50% 50%;
-      touch-action: none;
+      touch-action: pan-y;
       isolation: isolate;
       border-radius: 24px;
       background: radial-gradient(circle at 50% 50%, rgba(175,203,255,.16), rgba(207,232,213,.06) 34%, transparent 70%);
@@ -154,7 +154,6 @@ function installRecipeGravityFieldPrototype() {
 
     .recipe-gravity-field > .gravity-node {
       --gx: 0px;
-      --gy: 0px;
       --gz: 0px;
       --gs: 1;
       --go: 1;
@@ -172,15 +171,14 @@ function installRecipeGravityFieldPrototype() {
       overflow: hidden !important;
       opacity: var(--go) !important;
       visibility: visible !important;
-      transform: translate3d(calc(-50% + var(--gx)), calc(-50% + var(--gy)), var(--gz)) scale(var(--gs)) !important;
+      transform: translate3d(calc(-50% + var(--gx)), -50%, var(--gz)) scale(var(--gs)) !important;
       transform-origin: center;
-      transition: transform 230ms cubic-bezier(.2,.78,.18,1), opacity 180ms ease, filter 180ms ease !important;
+      transition: opacity 120ms linear, filter 120ms linear !important;
       backface-visibility: hidden;
       will-change: transform, opacity;
       filter: saturate(.76) brightness(.98);
       box-sizing: border-box !important;
     }
-    .recipe-gravity-field.is-dragging > .gravity-node { transition: none !important; }
     .recipe-gravity-field > .gravity-node.gravity-active {
       filter: none;
       box-shadow: 0 18px 44px rgba(26,58,92,.18);
@@ -285,21 +283,6 @@ function installRecipeGravityFieldPrototype() {
 
   const fieldState = new WeakMap();
   const surfaceSelector = "#recipeList, .focused-recipe-results, .meal-recipe-results";
-  const planeSlots = [
-    { x: 0, y: 0 },
-    { x: 1, y: 0 },
-    { x: -1, y: 0 },
-    { x: 0, y: 1 },
-    { x: 0, y: -1 },
-    { x: 2, y: 0 },
-    { x: -2, y: 0 },
-    { x: 0, y: 2 },
-    { x: 0, y: -2 },
-    { x: 1, y: 1 },
-    { x: -1, y: 1 },
-    { x: 1, y: -1 },
-    { x: -1, y: -1 },
-  ];
 
   function nodesFor(surface) {
     if (surface.id === "recipeList") return [...surface.querySelectorAll(":scope > .recipe-browse-card")];
@@ -307,79 +290,111 @@ function installRecipeGravityFieldPrototype() {
     return [...surface.querySelectorAll(":scope > .meal-recipe-result")];
   }
 
-  function signedOffset(index, active, length) {
-    let offset = index - active;
-    if (length > 2) {
-      const wrapped = offset > 0 ? offset - length : offset + length;
-      if (Math.abs(wrapped) < Math.abs(offset)) offset = wrapped;
-    }
-    return offset;
+  function mod(value, length) {
+    return ((value % length) + length) % length;
   }
 
-  function slotForOffset(offset) {
-    if (offset === 0) return planeSlots[0];
-    const distance = Math.abs(offset);
-    const base = 1 + ((distance - 1) % (planeSlots.length - 1));
-    const slot = planeSlots[base];
-    return offset < 0 ? { x: -slot.x, y: -slot.y } : slot;
+  function wrappedDelta(index, position, length) {
+    let delta = index - position;
+    while (delta > length / 2) delta -= length;
+    while (delta < -length / 2) delta += length;
+    return delta;
+  }
+
+  function stepFor(surface) {
+    return Math.min(184, Math.max(320, surface.clientWidth || 360) * .50);
+  }
+
+  function getState(surface) {
+    let state = fieldState.get(surface);
+    if (!state) {
+      state = {
+        position: 0,
+        pointer: null,
+        suppressClick: false,
+        signature: "",
+        animationFrame: null,
+      };
+      fieldState.set(surface, state);
+    }
+    return state;
+  }
+
+  function cancelAnimation(state) {
+    if (state.animationFrame != null) cancelAnimationFrame(state.animationFrame);
+    state.animationFrame = null;
   }
 
   function layoutSurface(surface) {
     const nodes = nodesFor(surface);
     if (!nodes.length) {
-      surface.classList.remove("recipe-gravity-field", "is-dragging");
+      surface.classList.remove("recipe-gravity-field");
       return;
     }
     surface.classList.add("recipe-gravity-field");
     surface.classList.remove("recipe-wheel-list");
 
-    let state = fieldState.get(surface);
-    if (!state) {
-      state = { active: 0, axis: null, progress: 0, pointer: null, suppressClick: false, signature: "" };
-      fieldState.set(surface, state);
-    }
-
+    const state = getState(surface);
     const signature = nodes.map((node) => node.dataset.recipeId || node.dataset.focusedRecipe || node.querySelector("[data-open]")?.dataset.open || node.textContent?.slice(0, 40)).join("|");
     if (state.signature !== signature) {
-      state.active = 0;
-      state.axis = null;
-      state.progress = 0;
+      cancelAnimation(state);
+      state.position = 0;
+      state.pointer = null;
       state.signature = signature;
     }
-    state.active = Math.max(0, Math.min(state.active, nodes.length - 1));
 
-    const width = Math.max(320, surface.clientWidth || 360);
-    const height = Math.max(430, surface.clientHeight || 500);
-    const stepX = Math.min(205, width * .56);
-    const stepY = Math.min(215, height * .42);
-    const dragX = state.axis === "x" ? state.progress * stepX : 0;
-    const dragY = state.axis === "y" ? state.progress * stepY : 0;
+    const step = stepFor(surface);
+    const activeIndex = mod(Math.round(state.position), nodes.length);
 
     nodes.forEach((node, index) => {
       node.classList.add("gravity-node");
-      const offset = signedOffset(index, state.active, nodes.length);
-      const slot = slotForOffset(offset);
-      const x = slot.x * stepX + dragX;
-      const y = slot.y * stepY + dragY;
-      const planeDistance = Math.abs(slot.x) + Math.abs(slot.y);
-      const depth = offset === 0 ? 0 : -Math.min(360, 110 + planeDistance * 70);
-      const scale = offset === 0 ? 1 : Math.max(.62, .84 - planeDistance * .06);
-      const opacity = offset === 0 ? 1 : Math.max(.22, .78 - planeDistance * .13);
-      const hidden = planeDistance > 3 || Math.abs(offset) > 12;
+      const delta = wrappedDelta(index, state.position, nodes.length);
+      const distance = Math.abs(delta);
+      const x = delta * step;
+      const depth = distance < .5 ? 0 : -Math.min(420, 80 + distance * 54);
+      const scale = Math.max(.54, 1 - distance * .105);
+      const opacity = Math.max(.10, 1 - distance * .18);
+      const hidden = distance > 5.6;
+      const active = index === activeIndex && Math.abs(delta) < .55;
 
       node.style.setProperty("--gx", `${x}px`);
-      node.style.setProperty("--gy", `${y}px`);
       node.style.setProperty("--gz", `${depth}px`);
       node.style.setProperty("--gs", `${scale}`);
       node.style.setProperty("--go", hidden ? "0" : `${opacity}`);
-      node.style.setProperty("--gzi", `${offset === 0 ? 30 : Math.max(1, 18 - planeDistance * 3)}`);
-      node.classList.toggle("gravity-active", offset === 0);
+      node.style.setProperty("--gzi", `${active ? 30 : Math.max(1, 22 - Math.round(distance * 3))}`);
+      node.classList.toggle("gravity-active", active);
       node.setAttribute("aria-hidden", `${hidden}`);
-      if (offset === 0) node.setAttribute("data-gravity-active", "true");
+      if (active) node.setAttribute("data-gravity-active", "true");
       else node.removeAttribute("data-gravity-active");
-      node.querySelectorAll("button").forEach((button) => { button.tabIndex = offset === 0 ? 0 : -1; });
-      if (node.matches("button")) node.tabIndex = offset === 0 ? 0 : -1;
+      node.querySelectorAll("button").forEach((button) => { button.tabIndex = active ? 0 : -1; });
+      if (node.matches("button")) node.tabIndex = active ? 0 : -1;
     });
+  }
+
+  function animateTo(surface, target, duration = 650) {
+    const state = getState(surface);
+    cancelAnimation(state);
+    const start = state.position;
+    const distance = target - start;
+    if (Math.abs(distance) < .001) {
+      state.position = target;
+      layoutSurface(surface);
+      return;
+    }
+    const startedAt = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - startedAt) / duration);
+      const eased = 1 - ((1 - t) ** 4);
+      state.position = start + distance * eased;
+      layoutSurface(surface);
+      if (t < 1) state.animationFrame = requestAnimationFrame(tick);
+      else {
+        state.position = target;
+        state.animationFrame = null;
+        layoutSurface(surface);
+      }
+    };
+    state.animationFrame = requestAnimationFrame(tick);
   }
 
   function enhanceAll() {
@@ -393,60 +408,88 @@ function installRecipeGravityFieldPrototype() {
   document.addEventListener("pointerdown", (event) => {
     const surface = surfaceFromEvent(event);
     if (!surface?.classList.contains("recipe-gravity-field")) return;
-    const state = fieldState.get(surface);
-    if (!state) return;
-    state.pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, axis: null, moved: false };
-    state.axis = null;
-    state.progress = 0;
-    surface.classList.add("is-dragging");
-    surface.setPointerCapture?.(event.pointerId);
+    const state = getState(surface);
+    cancelAnimation(state);
+    const now = performance.now();
+    state.pointer = {
+      id: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startPosition: state.position,
+      lastX: event.clientX,
+      lastTime: now,
+      velocityX: 0,
+      horizontal: false,
+      rejected: false,
+      moved: false,
+    };
   }, true);
 
   document.addEventListener("pointermove", (event) => {
     const surface = surfaceFromEvent(event);
     const state = surface ? fieldState.get(surface) : null;
-    if (!state?.pointer || state.pointer.id !== event.pointerId) return;
-    const dx = event.clientX - state.pointer.x;
-    const dy = event.clientY - state.pointer.y;
-    if (!state.pointer.axis) {
-      if (Math.hypot(dx, dy) < 10) return;
-      state.pointer.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
-      state.axis = state.pointer.axis;
+    const pointer = state?.pointer;
+    if (!pointer || pointer.id !== event.pointerId || pointer.rejected) return;
+
+    const dx = event.clientX - pointer.startX;
+    const dy = event.clientY - pointer.startY;
+    if (!pointer.horizontal) {
+      if (Math.hypot(dx, dy) < 8) return;
+      if (Math.abs(dy) > Math.abs(dx) * 1.05) {
+        pointer.rejected = true;
+        return;
+      }
+      if (Math.abs(dx) < Math.abs(dy) * 1.12) return;
+      pointer.horizontal = true;
+      surface.setPointerCapture?.(event.pointerId);
     }
-    state.pointer.moved = true;
+
     event.preventDefault();
-    const primary = state.pointer.axis === "x" ? dx : dy;
-    const denominator = state.pointer.axis === "x"
-      ? Math.min(205, Math.max(320, surface.clientWidth || 360) * .56)
-      : Math.min(215, Math.max(430, surface.clientHeight || 500) * .42);
-    state.progress = Math.max(-1.15, Math.min(1.15, primary / Math.max(1, denominator)));
+    pointer.moved = true;
+    const now = performance.now();
+    const dt = Math.max(8, now - pointer.lastTime);
+    const instantaneous = (event.clientX - pointer.lastX) / dt;
+    pointer.velocityX = pointer.velocityX * .68 + instantaneous * .32;
+    pointer.lastX = event.clientX;
+    pointer.lastTime = now;
+
+    state.position = pointer.startPosition - (dx / stepFor(surface));
     layoutSurface(surface);
   }, { capture: true, passive: false });
 
   function finishPointer(event) {
     const surface = surfaceFromEvent(event);
     const state = surface ? fieldState.get(surface) : null;
-    if (!state?.pointer || state.pointer.id !== event.pointerId) return;
-    const moved = state.pointer.moved;
-    const axis = state.pointer.axis;
-    const progress = state.progress;
-    const nodes = nodesFor(surface);
+    const pointer = state?.pointer;
+    if (!pointer || pointer.id !== event.pointerId) return;
     state.pointer = null;
-    surface.classList.remove("is-dragging");
 
-    if (moved && axis && Math.abs(progress) > .22 && nodes.length > 1) {
-      const direction = progress < 0 ? 1 : -1;
-      state.active = (state.active + direction + nodes.length) % nodes.length;
-      state.suppressClick = true;
-      globalThis.setTimeout?.(() => { state.suppressClick = false; }, 180);
-    }
-    state.axis = null;
-    state.progress = 0;
-    layoutSurface(surface);
+    if (!pointer.horizontal || !pointer.moved) return;
+
+    const nodes = nodesFor(surface);
+    const step = stepFor(surface);
+    const projectedCards = -(pointer.velocityX * 1900) / Math.max(1, step);
+    const cappedProjection = Math.max(-20, Math.min(20, projectedCards));
+    let target = Math.round(state.position + cappedProjection);
+
+    // A deliberate slow drag should still settle on the nearest card.
+    if (Math.abs(pointer.velocityX) < .12) target = Math.round(state.position);
+
+    const travel = Math.abs(target - state.position);
+    const duration = Math.max(320, Math.min(1050, 360 + travel * 42));
+    state.suppressClick = true;
+    globalThis.setTimeout?.(() => { state.suppressClick = false; }, Math.min(1100, duration + 100));
+    animateTo(surface, target, duration);
   }
 
   document.addEventListener("pointerup", finishPointer, true);
-  document.addEventListener("pointercancel", finishPointer, true);
+  document.addEventListener("pointercancel", (event) => {
+    const surface = surfaceFromEvent(event);
+    const state = surface ? fieldState.get(surface) : null;
+    if (!state?.pointer || state.pointer.id !== event.pointerId) return;
+    if (state.pointer.horizontal) finishPointer(event);
+    else state.pointer = null;
+  }, true);
 
   document.addEventListener("click", (event) => {
     const surface = surfaceFromEvent(event);
@@ -460,32 +503,31 @@ function installRecipeGravityFieldPrototype() {
     const nodes = nodesFor(surface);
     const node = event.target.closest?.(".gravity-node");
     const index = node ? nodes.indexOf(node) : -1;
-    if (index < 0 || index === state.active) return;
+    if (index < 0) return;
+    const active = mod(Math.round(state.position), nodes.length);
+    if (index === active && Math.abs(wrappedDelta(index, state.position, nodes.length)) < .55) return;
+
     event.preventDefault();
     event.stopImmediatePropagation();
-    state.active = index;
-    state.axis = null;
-    state.progress = 0;
-    layoutSurface(surface);
+    const delta = wrappedDelta(index, state.position, nodes.length);
+    animateTo(surface, state.position + delta, Math.max(260, Math.min(600, 280 + Math.abs(delta) * 50)));
   }, true);
 
   document.addEventListener("keydown", (event) => {
     const surface = surfaceFromEvent(event);
     const state = surface ? fieldState.get(surface) : null;
-    if (!state || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+    if (!state || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
     const nodes = nodesFor(surface);
     if (!nodes.length) return;
     event.preventDefault();
-    if (event.key === "Home") state.active = 0;
-    else if (event.key === "End") state.active = nodes.length - 1;
-    else {
-      const direction = event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1;
-      state.active = (state.active + direction + nodes.length) % nodes.length;
+    if (event.key === "Home") animateTo(surface, Math.round(state.position) - mod(Math.round(state.position), nodes.length), 420);
+    else if (event.key === "End") {
+      const current = mod(Math.round(state.position), nodes.length);
+      animateTo(surface, Math.round(state.position) + ((nodes.length - 1) - current), 520);
+    } else {
+      const direction = event.key === "ArrowLeft" ? -1 : 1;
+      animateTo(surface, Math.round(state.position) + direction, 260);
     }
-    state.axis = null;
-    state.progress = 0;
-    layoutSurface(surface);
-    nodesFor(surface)[state.active]?.focus?.({ preventScroll: true });
   }, true);
 
   let scheduled = false;
