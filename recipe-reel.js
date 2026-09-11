@@ -2,7 +2,7 @@
 // Product rule: a hard flick must be able to traverse many recipes; side-card taps center first.
 const SWIPER_URL = "https://cdn.jsdelivr.net/npm/swiper@14.2.0/swiper-bundle.min.mjs";
 const SWIPER_CSS_URL = "https://cdn.jsdelivr.net/npm/swiper@14.2.0/swiper-bundle.min.css";
-const REEL_CSS_URL = "./recipe-reel.css?v=1";
+const REEL_CSS_URL = "./recipe-reel.css?v=2";
 const SURFACE_SELECTOR = "#recipeList, .focused-recipe-results, .meal-recipe-results";
 const REEL_CLASS = "recipe-swiper";
 const WRAPPER_CLASS = "swiper-wrapper";
