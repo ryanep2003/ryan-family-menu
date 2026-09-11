@@ -93,7 +93,7 @@ export function registerServiceWorker({ $, onUpdateAvailable }) {
     });
   }
 
-  navigator.serviceWorker.addEventListener("controllerchange", () => {
+  navigatorObject?.serviceWorker?.addEventListener?.("controllerchange", () => {
     if (hadController) onUpdateAvailable();
     hadController = true;
   });
@@ -103,24 +103,17 @@ export function registerServiceWorker({ $, onUpdateAvailable }) {
     checkForUpdate();
     window.addEventListener("focus", checkForUpdate);
     window.addEventListener("online", checkForUpdate);
-    if (registration.waiting && navigator.serviceWorker.controller) {
-      onUpdateAvailable();
-    }
-
+    if (registration.waiting && navigator.serviceWorker.controller) onUpdateAvailable();
     registration.addEventListener("updatefound", () => {
       const worker = registration.installing;
       if (!worker) return;
-
       worker.addEventListener("statechange", () => {
-        if (worker.state === "installed" && navigator.serviceWorker.controller) {
-          onUpdateAvailable();
-        }
+        if (worker.state === "installed" && navigator.serviceWorker.controller) onUpdateAvailable();
       });
     });
   });
 }
 
-// Experimental phone-first inertial recipe reel. UI-only: search, data, and persistence remain authoritative.
 function installRecipeGravityFieldPrototype() {
   if (typeof document === "undefined" || document.documentElement.dataset.recipeGravityInstalled) return;
   document.documentElement.dataset.recipeGravityInstalled = "true";
@@ -175,7 +168,6 @@ function installRecipeGravityFieldPrototype() {
       filter: blur(11px);
       pointer-events: none;
     }
-
     .recipe-gravity-field {
       position: absolute !important;
       left: 50% !important;
@@ -194,7 +186,6 @@ function installRecipeGravityFieldPrototype() {
       transform: translate3d(var(--track-x, 0px), 0, 0);
       will-change: transform;
     }
-
     .recipe-gravity-field > .gravity-node {
       --gs: 1;
       --go: 1;
@@ -208,7 +199,6 @@ function installRecipeGravityFieldPrototype() {
       margin: 0 !important;
       overflow: hidden !important;
       opacity: var(--go) !important;
-      visibility: visible !important;
       transform: scale(var(--gs)) !important;
       transform-origin: 50% 100% !important;
       transition: opacity 90ms linear, filter 90ms linear !important;
@@ -224,7 +214,6 @@ function installRecipeGravityFieldPrototype() {
     }
     .recipe-gravity-field > .gravity-node:not(.gravity-active) { cursor: pointer; }
     .recipe-gravity-field > .gravity-node[aria-hidden="true"] { pointer-events: none; }
-
     #recipeList.recipe-gravity-field > .recipe-browse-card,
     .focused-recipe-results.recipe-gravity-field > .focused-recipe-result,
     .meal-recipe-results.recipe-gravity-field > .meal-recipe-result {
@@ -240,7 +229,6 @@ function installRecipeGravityFieldPrototype() {
       box-sizing: border-box !important;
       backdrop-filter: blur(8px);
     }
-
     #recipeList.recipe-gravity-field > .recipe-browse-card .recipe-card {
       display: grid !important;
       grid-template-columns: 1fr !important;
@@ -274,49 +262,9 @@ function installRecipeGravityFieldPrototype() {
     #recipeList.recipe-gravity-field .recipe-card p,
     #recipeList.recipe-gravity-field .category-pill { grid-column: 1 !important; }
     #recipeList.recipe-gravity-field > .recipe-browse-card:not(.gravity-active) .recipe-add-meal { opacity: .16; pointer-events: none; }
-
-    .recipe-gravity-field .gravity-active::after {
-      content: "";
-      position: absolute;
-      inset: -1px;
-      z-index: -1;
-      border-radius: 22px;
-      box-shadow: 0 0 0 1px rgba(255,255,255,.78), 0 18px 44px rgba(26,58,92,.12);
-      pointer-events: none;
-    }
-
     @media (min-width: 760px) {
       .recipe-reel-viewport { --gravity-height: 555px; --card-w: 316px; --card-h: 368px; --rail-bottom: 50px; }
       .recipe-gravity-field { gap: 22px !important; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .recipe-reel-viewport {
-        height: auto;
-        min-height: 0;
-        overflow-x: auto;
-        padding: 8px 0 16px;
-        background: rgba(246,247,248,.98);
-        scroll-snap-type: x mandatory;
-        touch-action: pan-x pan-y;
-      }
-      .recipe-reel-viewport::before,
-      .recipe-reel-viewport::after { display: none; }
-      .recipe-gravity-field {
-        position: relative !important;
-        left: auto !important;
-        bottom: auto !important;
-        height: auto !important;
-        transform: none !important;
-        padding-inline: calc((100vw - var(--card-w)) / 2) !important;
-      }
-      .recipe-gravity-field > .gravity-node {
-        opacity: 1 !important;
-        transform: none !important;
-        filter: none !important;
-        transition: none !important;
-        scroll-snap-align: center;
-      }
     }
   `;
   document.head.append(style);
@@ -329,66 +277,46 @@ function installRecipeGravityFieldPrototype() {
     if (surface.classList.contains("focused-recipe-results")) return [...surface.querySelectorAll(":scope > .focused-recipe-result")];
     return [...surface.querySelectorAll(":scope > .meal-recipe-result")];
   }
-
-  function mod(value, length) {
-    return ((value % length) + length) % length;
-  }
-
+  function mod(value, length) { return ((value % length) + length) % length; }
   function wrappedDelta(index, position, length) {
     let delta = index - position;
     while (delta > length / 2) delta -= length;
     while (delta < -length / 2) delta += length;
     return delta;
   }
-
   function getState(surface) {
     let state = fieldState.get(surface);
     if (!state) {
-      state = {
-        position: 0,
-        pointer: null,
-        suppressClick: false,
-        signature: "",
-        animationFrame: null,
-      };
+      state = { position: 0, pointer: null, suppressClick: false, signature: "", animationFrame: null };
       fieldState.set(surface, state);
     }
     return state;
   }
-
   function ensureViewport(surface) {
-    let viewport = surface.parentElement;
-    if (viewport?.classList.contains("recipe-reel-viewport")) return viewport;
-    viewport = document.createElement("div");
+    if (surface.parentElement?.classList.contains("recipe-reel-viewport")) return surface.parentElement;
+    const viewport = document.createElement("div");
     viewport.className = "recipe-reel-viewport";
     surface.before(viewport);
     viewport.append(surface);
     return viewport;
   }
-
   function cancelAnimation(state) {
     if (state.animationFrame != null) cancelAnimationFrame(state.animationFrame);
     state.animationFrame = null;
   }
-
   function geometryFor(surface, nodes) {
     const viewport = ensureViewport(surface);
     const width = nodes[0]?.offsetWidth || Math.min(viewport.clientWidth * .72, 292);
-    const gap = parseFloat(getComputedStyle(surface).columnGap || getComputedStyle(surface).gap) || 18;
-    return { viewport, width, gap, step: width + gap };
+    const computed = getComputedStyle(surface);
+    const gap = parseFloat(computed.columnGap || computed.gap) || 18;
+    return { viewport, width, step: width + gap };
   }
-
   function layoutSurface(surface) {
     const nodes = nodesFor(surface);
-    if (!nodes.length) {
-      surface.classList.remove("recipe-gravity-field");
-      return;
-    }
-
-    const viewport = ensureViewport(surface);
+    if (!nodes.length) return;
+    ensureViewport(surface);
     surface.classList.add("recipe-gravity-field");
     surface.classList.remove("recipe-wheel-list");
-
     const state = getState(surface);
     const signature = nodes.map((node) => node.dataset.recipeId || node.dataset.focusedRecipe || node.querySelector("[data-open]")?.dataset.open || node.textContent?.slice(0, 40)).join("|");
     if (state.signature !== signature) {
@@ -397,45 +325,31 @@ function installRecipeGravityFieldPrototype() {
       state.pointer = null;
       state.signature = signature;
     }
-
     nodes.forEach((node) => node.classList.add("gravity-node"));
     const { width, step } = geometryFor(surface, nodes);
     const activeIndex = mod(Math.round(state.position), nodes.length);
-    const trackX = -(width / 2) - state.position * step;
-    surface.style.setProperty("--track-x", `${trackX}px`);
-
+    surface.style.setProperty("--track-x", `${-(width / 2) - state.position * step}px`);
     nodes.forEach((node, index) => {
       const delta = wrappedDelta(index, state.position, nodes.length);
       const distance = Math.abs(delta);
+      const active = index === activeIndex && distance < .55;
       const scale = distance < .48 ? 1 : Math.max(.78, .93 - Math.min(2.15, distance) * .07);
       const opacity = distance < .48 ? 1 : Math.max(.18, .84 - Math.min(2.15, distance) * .25);
       const hidden = distance > 2.35;
-      const active = index === activeIndex && Math.abs(delta) < .55;
-
       node.style.setProperty("--gs", `${scale}`);
       node.style.setProperty("--go", hidden ? "0" : `${opacity}`);
       node.style.setProperty("--gzi", `${active ? 30 : Math.max(1, 20 - Math.round(distance * 5))}`);
       node.classList.toggle("gravity-active", active);
       node.setAttribute("aria-hidden", `${hidden}`);
-      if (active) node.setAttribute("data-gravity-active", "true");
-      else node.removeAttribute("data-gravity-active");
       node.querySelectorAll("button").forEach((button) => { button.tabIndex = active ? 0 : -1; });
       if (node.matches("button")) node.tabIndex = active ? 0 : -1;
     });
-
-    viewport.dataset.recipeReelReady = "true";
   }
-
   function animateTo(surface, target, duration = 650) {
     const state = getState(surface);
     cancelAnimation(state);
     const start = state.position;
     const distance = target - start;
-    if (Math.abs(distance) < .001) {
-      state.position = target;
-      layoutSurface(surface);
-      return;
-    }
     const startedAt = performance.now();
     const tick = (now) => {
       const t = Math.min(1, (now - startedAt) / duration);
@@ -451,13 +365,12 @@ function installRecipeGravityFieldPrototype() {
     };
     state.animationFrame = requestAnimationFrame(tick);
   }
-
-  function enhanceAll() {
-    document.querySelectorAll(surfaceSelector).forEach(layoutSurface);
-  }
-
+  function enhanceAll() { document.querySelectorAll(surfaceSelector).forEach(layoutSurface); }
   function surfaceFromEvent(event) {
-    return event.target?.closest?.(surfaceSelector) || event.target?.closest?.(".recipe-reel-viewport")?.querySelector?.(surfaceSelector) || null;
+    const direct = event.target?.closest?.(surfaceSelector);
+    if (direct) return direct;
+    const viewport = event.target?.closest?.(".recipe-reel-viewport");
+    return viewport ? viewport.querySelector(surfaceSelector) : null;
   }
 
   document.addEventListener("pointerdown", (event) => {
@@ -465,14 +378,13 @@ function installRecipeGravityFieldPrototype() {
     if (!surface?.classList.contains("recipe-gravity-field")) return;
     const state = getState(surface);
     cancelAnimation(state);
-    const now = performance.now();
     state.pointer = {
       id: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       startPosition: state.position,
       lastX: event.clientX,
-      lastTime: now,
+      lastTime: performance.now(),
       velocityX: 0,
       horizontal: false,
       rejected: false,
@@ -485,20 +397,15 @@ function installRecipeGravityFieldPrototype() {
     const state = surface ? fieldState.get(surface) : null;
     const pointer = state?.pointer;
     if (!pointer || pointer.id !== event.pointerId || pointer.rejected) return;
-
     const dx = event.clientX - pointer.startX;
     const dy = event.clientY - pointer.startY;
     if (!pointer.horizontal) {
       if (Math.hypot(dx, dy) < 8) return;
-      if (Math.abs(dy) > Math.abs(dx) * 1.05) {
-        pointer.rejected = true;
-        return;
-      }
+      if (Math.abs(dy) > Math.abs(dx) * 1.05) { pointer.rejected = true; return; }
       if (Math.abs(dx) < Math.abs(dy) * 1.12) return;
       pointer.horizontal = true;
       ensureViewport(surface).setPointerCapture?.(event.pointerId);
     }
-
     event.preventDefault();
     pointer.moved = true;
     const now = performance.now();
@@ -507,9 +414,7 @@ function installRecipeGravityFieldPrototype() {
     pointer.velocityX = pointer.velocityX * .68 + instantaneous * .32;
     pointer.lastX = event.clientX;
     pointer.lastTime = now;
-
-    const nodes = nodesFor(surface);
-    const { step } = geometryFor(surface, nodes);
+    const { step } = geometryFor(surface, nodesFor(surface));
     state.position = pointer.startPosition - (dx / Math.max(1, step));
     layoutSurface(surface);
   }, { capture: true, passive: false });
@@ -521,21 +426,17 @@ function installRecipeGravityFieldPrototype() {
     if (!pointer || pointer.id !== event.pointerId) return;
     state.pointer = null;
     if (!pointer.horizontal || !pointer.moved) return;
-
-    const nodes = nodesFor(surface);
-    const { step } = geometryFor(surface, nodes);
+    const { step } = geometryFor(surface, nodesFor(surface));
     const projectedCards = -(pointer.velocityX * 1900) / Math.max(1, step);
     const cappedProjection = Math.max(-20, Math.min(20, projectedCards));
     let target = Math.round(state.position + cappedProjection);
     if (Math.abs(pointer.velocityX) < .12) target = Math.round(state.position);
-
     const travel = Math.abs(target - state.position);
     const duration = Math.max(320, Math.min(1050, 360 + travel * 42));
     state.suppressClick = true;
     globalThis.setTimeout?.(() => { state.suppressClick = false; }, Math.min(1100, duration + 100));
     animateTo(surface, target, duration);
   }
-
   document.addEventListener("pointerup", finishPointer, true);
   document.addEventListener("pointercancel", (event) => {
     const surface = surfaceFromEvent(event);
@@ -560,28 +461,10 @@ function installRecipeGravityFieldPrototype() {
     if (index < 0) return;
     const active = mod(Math.round(state.position), nodes.length);
     if (index === active && Math.abs(wrappedDelta(index, state.position, nodes.length)) < .55) return;
-
     event.preventDefault();
     event.stopImmediatePropagation();
     const delta = wrappedDelta(index, state.position, nodes.length);
     animateTo(surface, state.position + delta, Math.max(260, Math.min(600, 280 + Math.abs(delta) * 50)));
-  }, true);
-
-  document.addEventListener("keydown", (event) => {
-    const surface = surfaceFromEvent(event);
-    const state = surface ? fieldState.get(surface) : null;
-    if (!state || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-    const nodes = nodesFor(surface);
-    if (!nodes.length) return;
-    event.preventDefault();
-    if (event.key === "Home") animateTo(surface, Math.round(state.position) - mod(Math.round(state.position), nodes.length), 420);
-    else if (event.key === "End") {
-      const current = mod(Math.round(state.position), nodes.length);
-      animateTo(surface, Math.round(state.position) + ((nodes.length - 1) - current), 520);
-    } else {
-      const direction = event.key === "ArrowLeft" ? -1 : 1;
-      animateTo(surface, Math.round(state.position) + direction, 260);
-    }
   }, true);
 
   let scheduled = false;
