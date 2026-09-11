@@ -11,6 +11,7 @@ const IMAGE_WINDOW_RADIUS = 3;
 
 let swiperConstructorPromise = null;
 const stateBySurface = new WeakMap();
+const positionBySurface = new WeakMap();
 const scheduled = new WeakSet();
 const imageSyncScheduled = new WeakSet();
 let reconcileQueued = false;
@@ -52,6 +53,40 @@ function directRecipeItems(surface) {
 function currentSlides(surface) {
   const wrapper = surface.querySelector(`:scope > .${WRAPPER_CLASS}`);
   return wrapper ? [...wrapper.children].filter((node) => node.classList?.contains(SLIDE_CLASS)) : [];
+}
+
+function recipeIdForSlide(slide) {
+  if (!(slide instanceof HTMLElement)) return "";
+  return slide.dataset.open || slide.querySelector?.("[data-open]")?.dataset.open || "";
+}
+
+function rememberPosition(surface, swiper = stateBySurface.get(surface)?.swiper) {
+  if (!swiper || swiper.destroyed) return;
+  const slides = [...(swiper.slides || [])];
+  if (!slides.length) return;
+
+  const index = Math.max(0, Math.min(slides.length - 1, Number.isInteger(swiper.activeIndex) ? swiper.activeIndex : 0));
+  positionBySurface.set(surface, {
+    index,
+    recipeId: recipeIdForSlide(slides[index]),
+  });
+}
+
+function initialIndexForSurface(surface, items) {
+  if (!items.length) return 0;
+  const remembered = positionBySurface.get(surface);
+
+  if (remembered?.recipeId) {
+    const rememberedRecipeIndex = items.findIndex((item) => recipeIdForSlide(item) === remembered.recipeId);
+    if (rememberedRecipeIndex >= 0) return rememberedRecipeIndex;
+  }
+
+  if (Number.isInteger(remembered?.index)) {
+    return Math.max(0, Math.min(items.length - 1, remembered.index));
+  }
+
+  // A first visit should feel bidirectional rather than placing the user at a hard edge.
+  return Math.floor((items.length - 1) / 2);
 }
 
 function isLayoutVisible(surface) {
@@ -149,6 +184,7 @@ function primeImageWindow(surface, centerIndex = 0) {
 
 function restoreSurface(surface, { hydrateImages = true } = {}) {
   const state = stateBySurface.get(surface);
+  if (state?.swiper && !state.swiper.destroyed) rememberPosition(surface, state.swiper);
   if (state?.clickHandler) surface.removeEventListener("click", state.clickHandler, true);
   if (state?.swiper && !state.swiper.destroyed) {
     try {
@@ -178,7 +214,7 @@ function restoreSurface(surface, { hydrateImages = true } = {}) {
   else dehydrateAllImages(surface);
 }
 
-function prepareMarkup(surface, items) {
+function prepareMarkup(surface, items, initialIndex) {
   const wrapper = document.createElement("div");
   wrapper.className = WRAPPER_CLASS;
   items.forEach((item) => {
@@ -187,7 +223,7 @@ function prepareMarkup(surface, items) {
   });
   surface.replaceChildren(wrapper);
   surface.classList.add(REEL_CLASS, "swiper");
-  primeImageWindow(surface);
+  primeImageWindow(surface, initialIndex);
 }
 
 function bindSideCardCentering(surface, state) {
@@ -229,6 +265,7 @@ async function mountSurface(surface) {
   if (existing?.swiper && !existing.swiper.destroyed && existingSlides.length) {
     existing.swiper.updateSize();
     existing.swiper.updateSlides();
+    rememberPosition(surface, existing.swiper);
     scheduleImageWindow(existing.swiper);
     return;
   }
@@ -241,7 +278,8 @@ async function mountSurface(surface) {
     return;
   }
 
-  prepareMarkup(surface, items);
+  const initialIndex = initialIndexForSurface(surface, items);
+  prepareMarkup(surface, items, initialIndex);
 
   let Swiper;
   try {
@@ -265,6 +303,7 @@ async function mountSurface(surface) {
     slidesPerView: "auto",
     centeredSlides: true,
     centeredSlidesBounds: true,
+    initialSlide: initialIndex,
     spaceBetween: 18,
     speed: 240,
     threshold: 4,
@@ -296,15 +335,19 @@ async function mountSurface(surface) {
     on: {
       init(swiper) {
         surface.dataset.recipeReelReady = "true";
+        rememberPosition(surface, swiper);
         syncImageWindow(swiper);
       },
       activeIndexChange(swiper) {
+        rememberPosition(surface, swiper);
         scheduleImageWindow(swiper);
       },
       transitionEnd(swiper) {
+        rememberPosition(surface, swiper);
         scheduleImageWindow(swiper);
       },
       touchEnd(swiper) {
+        rememberPosition(surface, swiper);
         scheduleImageWindow(swiper);
       },
       destroy() {
