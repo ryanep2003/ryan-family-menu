@@ -163,11 +163,11 @@ async function mountSurface(surface) {
     freeMode: {
       enabled: true,
       momentum: true,
-      momentumRatio: 1.55,
-      momentumVelocityRatio: 1.25,
-      minimumVelocity: 0.015,
+      momentumRatio: 1.9,
+      momentumVelocityRatio: 1.35,
+      minimumVelocity: 0.012,
       momentumBounce: true,
-      momentumBounceRatio: 0.65,
+      momentumBounceRatio: 0.55,
       sticky: true,
     },
     coverflowEffect: {
