@@ -134,22 +134,50 @@ function installRecipeGravityFieldPrototype() {
     #recipesView:not(.detail-open) #recipeBrowse .recipe-browse-content { display: block; }
 
     .recipe-gravity-field {
-      --gravity-height: clamp(430px, 116vw, 560px);
+      --gravity-height: clamp(420px, 108vw, 525px);
       --card-w: min(72vw, 292px);
-      --card-h: min(86vw, 350px);
+      --card-h: min(84vw, 342px);
       position: relative !important;
       display: block !important;
       width: 100%;
       height: var(--gravity-height) !important;
-      min-height: 430px !important;
+      min-height: 420px !important;
       margin-top: 12px;
       overflow: hidden !important;
-      perspective: 1150px;
+      perspective: 1300px;
       perspective-origin: 50% 50%;
       touch-action: pan-y;
       isolation: isolate;
       border-radius: 24px;
-      background: radial-gradient(circle at 50% 50%, rgba(175,203,255,.16), rgba(207,232,213,.06) 34%, transparent 70%);
+      background:
+        linear-gradient(180deg, rgba(250,249,246,.98) 0%, rgba(245,246,247,.98) 52%, rgba(240,242,244,.98) 100%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.78), inset 0 -1px 0 rgba(26,58,92,.04);
+    }
+    .recipe-gravity-field::before {
+      content: "";
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 50%;
+      height: 190px;
+      transform: translateY(-50%);
+      border-radius: 40px;
+      background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.72) 22%, rgba(255,255,255,.92) 50%, rgba(255,255,255,.72) 78%, rgba(255,255,255,0));
+      filter: blur(10px);
+      pointer-events: none;
+      opacity: .9;
+    }
+    .recipe-gravity-field::after {
+      content: "";
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      bottom: 42px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(26,58,92,.08);
+      filter: blur(16px);
+      pointer-events: none;
     }
 
     .recipe-gravity-field > .gravity-node {
@@ -173,15 +201,15 @@ function installRecipeGravityFieldPrototype() {
       visibility: visible !important;
       transform: translate3d(calc(-50% + var(--gx)), -50%, var(--gz)) scale(var(--gs)) !important;
       transform-origin: center;
-      transition: opacity 120ms linear, filter 120ms linear !important;
+      transition: opacity 100ms linear, filter 100ms linear !important;
       backface-visibility: hidden;
       will-change: transform, opacity;
-      filter: saturate(.76) brightness(.98);
+      filter: saturate(.82) brightness(.985);
       box-sizing: border-box !important;
     }
     .recipe-gravity-field > .gravity-node.gravity-active {
       filter: none;
-      box-shadow: 0 18px 44px rgba(26,58,92,.18);
+      box-shadow: 0 22px 52px rgba(26,58,92,.18), 0 3px 12px rgba(26,58,92,.08);
     }
     .recipe-gravity-field > .gravity-node:not(.gravity-active) { cursor: pointer; }
     .recipe-gravity-field > .gravity-node[aria-hidden="true"] { pointer-events: none; }
@@ -193,18 +221,19 @@ function installRecipeGravityFieldPrototype() {
       grid-template-rows: 1fr auto !important;
       gap: 8px !important;
       padding: 12px !important;
-      border: 1px solid var(--rule) !important;
-      border-radius: 20px !important;
-      background: var(--paper) !important;
+      border: 1px solid rgba(26,58,92,.10) !important;
+      border-radius: 22px !important;
+      background: rgba(255,255,255,.96) !important;
       color: var(--ink) !important;
       text-align: left !important;
       box-sizing: border-box !important;
+      backdrop-filter: blur(8px);
     }
 
     #recipeList.recipe-gravity-field > .recipe-browse-card .recipe-card {
       display: grid !important;
       grid-template-columns: 1fr !important;
-      grid-template-rows: 166px auto !important;
+      grid-template-rows: 164px auto !important;
       gap: 8px !important;
       min-height: 0 !important;
       height: 100% !important;
@@ -218,9 +247,9 @@ function installRecipeGravityFieldPrototype() {
     .focused-recipe-results.recipe-gravity-field .recipe-photo-shell,
     .meal-recipe-results.recipe-gravity-field .recipe-photo-shell {
       width: 100% !important;
-      height: 166px !important;
-      min-height: 166px !important;
-      border-radius: 14px !important;
+      height: 164px !important;
+      min-height: 164px !important;
+      border-radius: 15px !important;
       overflow: hidden !important;
     }
     #recipeList.recipe-gravity-field .recipe-photo-shell img,
@@ -233,21 +262,20 @@ function installRecipeGravityFieldPrototype() {
     #recipeList.recipe-gravity-field .recipe-card h3,
     #recipeList.recipe-gravity-field .recipe-card p,
     #recipeList.recipe-gravity-field .category-pill { grid-column: 1 !important; }
-    #recipeList.recipe-gravity-field > .recipe-browse-card:not(.gravity-active) .recipe-add-meal { opacity: .2; pointer-events: none; }
+    #recipeList.recipe-gravity-field > .recipe-browse-card:not(.gravity-active) .recipe-add-meal { opacity: .18; pointer-events: none; }
 
     .recipe-gravity-field .gravity-active::after {
       content: "";
       position: absolute;
-      inset: -7px;
+      inset: -1px;
       z-index: -1;
-      border-radius: 26px;
-      border: 1px solid rgba(175,203,255,.52);
-      box-shadow: 0 0 30px rgba(175,203,255,.2);
+      border-radius: 22px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.78), 0 18px 44px rgba(26,58,92,.12);
       pointer-events: none;
     }
 
     @media (min-width: 760px) {
-      .recipe-gravity-field { --gravity-height: 570px; --card-w: 316px; --card-h: 372px; }
+      .recipe-gravity-field { --gravity-height: 555px; --card-w: 316px; --card-h: 368px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -262,8 +290,10 @@ function installRecipeGravityFieldPrototype() {
         scroll-snap-type: x mandatory;
         touch-action: pan-x pan-y;
         padding: 8px 0 16px !important;
-        background: transparent;
+        background: rgba(246,247,248,.98);
       }
+      .recipe-gravity-field::before,
+      .recipe-gravity-field::after { display: none; }
       .recipe-gravity-field > .gravity-node {
         position: relative !important;
         top: auto !important;
@@ -302,7 +332,7 @@ function installRecipeGravityFieldPrototype() {
   }
 
   function stepFor(surface) {
-    return Math.min(184, Math.max(320, surface.clientWidth || 360) * .50);
+    return Math.min(190, Math.max(320, surface.clientWidth || 360) * .515);
   }
 
   function getState(surface) {
@@ -351,17 +381,17 @@ function installRecipeGravityFieldPrototype() {
       const delta = wrappedDelta(index, state.position, nodes.length);
       const distance = Math.abs(delta);
       const x = delta * step;
-      const depth = distance < .5 ? 0 : -Math.min(420, 80 + distance * 54);
-      const scale = Math.max(.54, 1 - distance * .105);
-      const opacity = Math.max(.10, 1 - distance * .18);
-      const hidden = distance > 5.6;
+      const depth = distance < .5 ? 0 : -Math.min(180, 40 + distance * 32);
+      const scale = distance < .5 ? 1 : Math.max(.72, .91 - Math.min(2.8, distance) * .055);
+      const opacity = distance < .5 ? 1 : Math.max(.14, .78 - Math.min(4, distance) * .14);
+      const hidden = distance > 3.35;
       const active = index === activeIndex && Math.abs(delta) < .55;
 
       node.style.setProperty("--gx", `${x}px`);
       node.style.setProperty("--gz", `${depth}px`);
       node.style.setProperty("--gs", `${scale}`);
       node.style.setProperty("--go", hidden ? "0" : `${opacity}`);
-      node.style.setProperty("--gzi", `${active ? 30 : Math.max(1, 22 - Math.round(distance * 3))}`);
+      node.style.setProperty("--gzi", `${active ? 30 : Math.max(1, 20 - Math.round(distance * 4))}`);
       node.classList.toggle("gravity-active", active);
       node.setAttribute("aria-hidden", `${hidden}`);
       if (active) node.setAttribute("data-gravity-active", "true");
@@ -466,13 +496,10 @@ function installRecipeGravityFieldPrototype() {
 
     if (!pointer.horizontal || !pointer.moved) return;
 
-    const nodes = nodesFor(surface);
     const step = stepFor(surface);
     const projectedCards = -(pointer.velocityX * 1900) / Math.max(1, step);
     const cappedProjection = Math.max(-20, Math.min(20, projectedCards));
     let target = Math.round(state.position + cappedProjection);
-
-    // A deliberate slow drag should still settle on the nearest card.
     if (Math.abs(pointer.velocityX) < .12) target = Math.round(state.position);
 
     const travel = Math.abs(target - state.position);
