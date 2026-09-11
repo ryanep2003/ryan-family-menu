@@ -2,7 +2,7 @@
 // Product rule: a hard flick must be able to traverse many recipes; side-card taps center first.
 const SWIPER_URL = "https://cdn.jsdelivr.net/npm/swiper@14.2.0/swiper-bundle.min.mjs";
 const SWIPER_CSS_URL = "https://cdn.jsdelivr.net/npm/swiper@14.2.0/swiper-bundle.min.css";
-const REEL_CSS_URL = "./recipe-reel.css?v=2";
+const REEL_CSS_URL = "./recipe-reel.css?v=3";
 const SURFACE_SELECTOR = "#recipeList, .focused-recipe-results, .meal-recipe-results";
 const REEL_CLASS = "recipe-swiper";
 const WRAPPER_CLASS = "swiper-wrapper";
@@ -11,6 +11,7 @@ const SLIDE_CLASS = "swiper-slide";
 let swiperConstructorPromise = null;
 const stateBySurface = new WeakMap();
 const scheduled = new WeakSet();
+let reconcileQueued = false;
 
 function ensureStyles() {
   if (!document.querySelector('link[data-recipe-reel="swiper"]')) {
@@ -49,6 +50,17 @@ function directRecipeItems(surface) {
 function currentSlides(surface) {
   const wrapper = surface.querySelector(`:scope > .${WRAPPER_CLASS}`);
   return wrapper ? [...wrapper.children].filter((node) => node.classList?.contains(SLIDE_CLASS)) : [];
+}
+
+function isLayoutVisible(surface) {
+  if (!(surface instanceof HTMLElement) || !surface.isConnected) return false;
+  if (surface.hidden || surface.closest("[hidden]")) return false;
+
+  const style = getComputedStyle(surface);
+  if (style.display === "none" || style.visibility === "hidden") return false;
+
+  const rect = surface.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
 }
 
 function restoreSurface(surface) {
@@ -116,12 +128,18 @@ function bindSideCardCentering(surface, state) {
 }
 
 async function mountSurface(surface) {
+  if (!isLayoutVisible(surface)) {
+    if (stateBySurface.has(surface)) restoreSurface(surface);
+    return;
+  }
+
   const directItems = directRecipeItems(surface);
   const existingSlides = currentSlides(surface);
   const existing = stateBySurface.get(surface);
 
   if (existing?.swiper && !existing.swiper.destroyed && existingSlides.length) {
-    existing.swiper.update();
+    existing.swiper.updateSize();
+    existing.swiper.updateSlides();
     return;
   }
 
@@ -141,7 +159,10 @@ async function mountSurface(surface) {
     return;
   }
 
-  if (!document.contains(surface)) return;
+  if (!isLayoutVisible(surface)) {
+    restoreSurface(surface);
+    return;
+  }
 
   const state = { swiper: null, clickHandler: null };
   stateBySurface.set(surface, state);
@@ -160,7 +181,6 @@ async function mountSurface(surface) {
     touchReleaseOnEdges: true,
     preventClicks: true,
     preventClicksPropagation: true,
-    watchSlidesProgress: true,
     effect: "coverflow",
     freeMode: {
       enabled: true,
@@ -181,9 +201,8 @@ async function mountSurface(surface) {
       slideShadows: false,
     },
     on: {
-      init(swiper) {
+      init() {
         surface.dataset.recipeReelReady = "true";
-        swiper.update();
       },
       destroy() {
         delete surface.dataset.recipeReelReady;
@@ -203,8 +222,23 @@ function scheduleSurface(surface) {
   });
 }
 
-function scheduleAll() {
-  document.querySelectorAll(SURFACE_SELECTOR).forEach(scheduleSurface);
+function reconcileAll() {
+  document.querySelectorAll(SURFACE_SELECTOR).forEach((surface) => {
+    if (isLayoutVisible(surface)) {
+      scheduleSurface(surface);
+    } else if (stateBySurface.has(surface)) {
+      restoreSurface(surface);
+    }
+  });
+}
+
+function queueReconcile() {
+  if (reconcileQueued) return;
+  reconcileQueued = true;
+  requestAnimationFrame(() => {
+    reconcileQueued = false;
+    reconcileAll();
+  });
 }
 
 export function installRecipeReels() {
@@ -214,21 +248,38 @@ export function installRecipeReels() {
 
   const observer = new MutationObserver((mutations) => {
     const touched = new Set();
+    let shouldReconcile = false;
+
     mutations.forEach((mutation) => {
       const targetSurface = mutation.target.closest?.(SURFACE_SELECTOR);
       if (targetSurface) touched.add(targetSurface);
+
       mutation.addedNodes.forEach((node) => {
         if (!(node instanceof HTMLElement)) return;
         if (node.matches?.(SURFACE_SELECTOR)) touched.add(node);
         node.querySelectorAll?.(SURFACE_SELECTOR).forEach((surface) => touched.add(surface));
       });
+
+      if (!targetSurface) shouldReconcile = true;
     });
+
     touched.forEach(scheduleSurface);
+    if (shouldReconcile) queueReconcile();
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
-  window.addEventListener("resize", scheduleAll, { passive: true });
-  scheduleAll();
+
+  // View/panel changes happen through app controls rather than URL navigation.
+  // Reconcile just after those interactions so hidden reels are torn down and
+  // newly visible ones are mounted without keeping off-screen Swipers alive.
+  document.addEventListener("click", () => {
+    queueMicrotask(queueReconcile);
+    window.setTimeout(queueReconcile, 260);
+  }, true);
+
+  window.addEventListener("resize", queueReconcile, { passive: true });
+  document.addEventListener("visibilitychange", queueReconcile);
+  queueReconcile();
 }
 
 installRecipeReels();
