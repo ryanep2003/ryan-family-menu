@@ -120,8 +120,7 @@ export function registerServiceWorker({ $, onUpdateAvailable }) {
   });
 }
 
-// Experimental recipe gravity field. This is deliberately UI-only and attaches to
-// every existing recipe-search result surface without changing search or recipe data.
+// Experimental recipe plane field. UI-only: search, recipe data, and persistence stay authoritative.
 function installRecipeGravityFieldPrototype() {
   if (typeof document === "undefined" || document.documentElement.dataset.recipeGravityInstalled) return;
   document.documentElement.dataset.recipeGravityInstalled = "true";
@@ -129,14 +128,15 @@ function installRecipeGravityFieldPrototype() {
   const style = document.createElement("style");
   style.id = "recipeGravityFieldStyles";
   style.textContent = `
-    /* Library: search results are the primary experience, not a section below Family Picks. */
     #recipesView:not(.detail-open) #recipePicksSection { display: none !important; }
     #recipesView:not(.detail-open) #recipeBrowse { border-top: 0; }
     #recipesView:not(.detail-open) #recipeBrowse > summary { display: none; }
     #recipesView:not(.detail-open) #recipeBrowse .recipe-browse-content { display: block; }
 
     .recipe-gravity-field {
-      --gravity-height: clamp(430px, 112vw, 590px);
+      --gravity-height: clamp(430px, 116vw, 560px);
+      --card-w: min(72vw, 292px);
+      --card-h: min(86vw, 350px);
       position: relative !important;
       display: block !important;
       width: 100%;
@@ -144,27 +144,14 @@ function installRecipeGravityFieldPrototype() {
       min-height: 430px !important;
       margin-top: 12px;
       overflow: hidden !important;
-      perspective: 1100px;
-      perspective-origin: 50% 48%;
-      touch-action: pan-y;
+      perspective: 1150px;
+      perspective-origin: 50% 50%;
+      touch-action: none;
       isolation: isolate;
       border-radius: 24px;
-      background:
-        radial-gradient(circle at 50% 50%, rgba(175,203,255,.18), rgba(207,232,213,.08) 32%, transparent 68%);
+      background: radial-gradient(circle at 50% 50%, rgba(175,203,255,.16), rgba(207,232,213,.06) 34%, transparent 70%);
     }
-    .recipe-gravity-field::before {
-      content: "";
-      position: absolute;
-      inset: 10% 8%;
-      border-radius: 50%;
-      background:
-        radial-gradient(circle at center, rgba(26,58,92,.09) 0 2px, transparent 3px),
-        radial-gradient(ellipse at center, transparent 0 43%, rgba(26,58,92,.06) 44% 44.5%, transparent 45%),
-        radial-gradient(ellipse at center, transparent 0 67%, rgba(26,58,92,.045) 68% 68.5%, transparent 69%);
-      pointer-events: none;
-      transform: perspective(700px) rotateX(62deg) scale(1.2);
-      opacity: .7;
-    }
+
     .recipe-gravity-field > .gravity-node {
       --gx: 0px;
       --gy: 0px;
@@ -177,101 +164,94 @@ function installRecipeGravityFieldPrototype() {
       right: auto !important;
       bottom: auto !important;
       z-index: var(--gzi, 1) !important;
-      width: min(74vw, 330px) !important;
-      max-width: 330px !important;
-      min-height: 0 !important;
+      width: var(--card-w) !important;
+      height: var(--card-h) !important;
+      min-height: var(--card-h) !important;
+      max-width: none !important;
       margin: 0 !important;
+      overflow: hidden !important;
       opacity: var(--go) !important;
       visibility: visible !important;
       transform: translate3d(calc(-50% + var(--gx)), calc(-50% + var(--gy)), var(--gz)) scale(var(--gs)) !important;
       transform-origin: center;
-      transition: transform 360ms cubic-bezier(.2,.78,.18,1), opacity 240ms ease, filter 240ms ease !important;
+      transition: transform 230ms cubic-bezier(.2,.78,.18,1), opacity 180ms ease, filter 180ms ease !important;
       backface-visibility: hidden;
       will-change: transform, opacity;
-      filter: saturate(.78) brightness(.98);
+      filter: saturate(.76) brightness(.98);
+      box-sizing: border-box !important;
     }
+    .recipe-gravity-field.is-dragging > .gravity-node { transition: none !important; }
     .recipe-gravity-field > .gravity-node.gravity-active {
       filter: none;
-      box-shadow: 0 18px 48px rgba(26,58,92,.18);
+      box-shadow: 0 18px 44px rgba(26,58,92,.18);
     }
     .recipe-gravity-field > .gravity-node:not(.gravity-active) { cursor: pointer; }
     .recipe-gravity-field > .gravity-node[aria-hidden="true"] { pointer-events: none; }
 
-    /* Library browse cards become visual recipe tiles inside the field. */
-    #recipeList.recipe-gravity-field > .recipe-browse-card {
+    #recipeList.recipe-gravity-field > .recipe-browse-card,
+    .focused-recipe-results.recipe-gravity-field > .focused-recipe-result,
+    .meal-recipe-results.recipe-gravity-field > .meal-recipe-result {
+      display: grid !important;
+      grid-template-rows: 1fr auto !important;
+      gap: 8px !important;
       padding: 12px !important;
-      border-radius: 20px;
-      background: var(--paper);
+      border: 1px solid var(--rule) !important;
+      border-radius: 20px !important;
+      background: var(--paper) !important;
+      color: var(--ink) !important;
+      text-align: left !important;
+      box-sizing: border-box !important;
     }
+
     #recipeList.recipe-gravity-field > .recipe-browse-card .recipe-card {
-      display: grid;
+      display: grid !important;
       grid-template-columns: 1fr !important;
-      gap: 7px;
+      grid-template-rows: 166px auto !important;
+      gap: 8px !important;
       min-height: 0 !important;
+      height: 100% !important;
       padding: 0 !important;
       border: 0 !important;
       background: transparent !important;
       box-shadow: none !important;
-    }
-    #recipeList.recipe-gravity-field > .recipe-browse-card .recipe-photo-shell {
-      grid-column: 1 !important;
-      grid-row: auto !important;
-      width: 100% !important;
-      height: 150px !important;
-      border-radius: 14px !important;
       overflow: hidden;
     }
-    #recipeList.recipe-gravity-field > .recipe-browse-card .recipe-photo-shell img {
-      width: 100%; height: 100%; object-fit: cover;
-    }
-    #recipeList.recipe-gravity-field > .recipe-browse-card .recipe-card h3,
-    #recipeList.recipe-gravity-field > .recipe-browse-card .recipe-card p,
-    #recipeList.recipe-gravity-field > .recipe-browse-card .category-pill { grid-column: 1 !important; }
-    #recipeList.recipe-gravity-field > .recipe-browse-card:not(.gravity-active) .recipe-add-meal { opacity: .2; pointer-events: none; }
-
-    /* Planner result buttons use the same field rather than a vertical result list. */
-    .focused-recipe-results.recipe-gravity-field,
-    .meal-recipe-results.recipe-gravity-field {
-      --gravity-height: clamp(390px, 104vw, 520px);
-      padding: 0 !important;
-    }
-    .focused-recipe-results.recipe-gravity-field > .focused-recipe-result,
-    .meal-recipe-results.recipe-gravity-field > .meal-recipe-result {
-      display: grid !important;
-      grid-template-columns: 1fr !important;
-      gap: 8px !important;
-      padding: 12px !important;
-      border: 1px solid var(--rule) !important;
-      border-radius: 18px !important;
-      background: var(--paper) !important;
-      color: var(--ink) !important;
-      text-align: left !important;
-    }
+    #recipeList.recipe-gravity-field .recipe-photo-shell,
     .focused-recipe-results.recipe-gravity-field .recipe-photo-shell,
     .meal-recipe-results.recipe-gravity-field .recipe-photo-shell {
       width: 100% !important;
-      height: 138px !important;
-      border-radius: 13px !important;
-      overflow: hidden;
+      height: 166px !important;
+      min-height: 166px !important;
+      border-radius: 14px !important;
+      overflow: hidden !important;
     }
+    #recipeList.recipe-gravity-field .recipe-photo-shell img,
     .focused-recipe-results.recipe-gravity-field .recipe-photo-shell img,
-    .meal-recipe-results.recipe-gravity-field .recipe-photo-shell img { width: 100%; height: 100%; object-fit: cover; }
+    .meal-recipe-results.recipe-gravity-field .recipe-photo-shell img {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+    }
+    #recipeList.recipe-gravity-field .recipe-card h3,
+    #recipeList.recipe-gravity-field .recipe-card p,
+    #recipeList.recipe-gravity-field .category-pill { grid-column: 1 !important; }
+    #recipeList.recipe-gravity-field > .recipe-browse-card:not(.gravity-active) .recipe-add-meal { opacity: .2; pointer-events: none; }
 
     .recipe-gravity-field .gravity-active::after {
       content: "";
       position: absolute;
-      inset: -8px;
+      inset: -7px;
       z-index: -1;
       border-radius: 26px;
-      border: 1px solid rgba(175,203,255,.55);
-      box-shadow: 0 0 34px rgba(175,203,255,.22);
+      border: 1px solid rgba(175,203,255,.52);
+      box-shadow: 0 0 30px rgba(175,203,255,.2);
       pointer-events: none;
     }
 
     @media (min-width: 760px) {
-      .recipe-gravity-field { --gravity-height: 590px; }
-      .recipe-gravity-field > .gravity-node { width: 340px !important; max-width: 340px !important; }
+      .recipe-gravity-field { --gravity-height: 570px; --card-w: 316px; --card-h: 372px; }
     }
+
     @media (prefers-reduced-motion: reduce) {
       .recipe-gravity-field {
         display: flex !important;
@@ -286,12 +266,13 @@ function installRecipeGravityFieldPrototype() {
         padding: 8px 0 16px !important;
         background: transparent;
       }
-      .recipe-gravity-field::before { display: none; }
       .recipe-gravity-field > .gravity-node {
         position: relative !important;
         top: auto !important;
         left: auto !important;
-        flex: 0 0 min(80vw, 330px);
+        flex: 0 0 var(--card-w);
+        width: var(--card-w) !important;
+        height: var(--card-h) !important;
         opacity: 1 !important;
         transform: none !important;
         filter: none !important;
@@ -304,6 +285,21 @@ function installRecipeGravityFieldPrototype() {
 
   const fieldState = new WeakMap();
   const surfaceSelector = "#recipeList, .focused-recipe-results, .meal-recipe-results";
+  const planeSlots = [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: -1, y: 0 },
+    { x: 0, y: 1 },
+    { x: 0, y: -1 },
+    { x: 2, y: 0 },
+    { x: -2, y: 0 },
+    { x: 0, y: 2 },
+    { x: 0, y: -2 },
+    { x: 1, y: 1 },
+    { x: -1, y: 1 },
+    { x: 1, y: -1 },
+    { x: -1, y: -1 },
+  ];
 
   function nodesFor(surface) {
     if (surface.id === "recipeList") return [...surface.querySelectorAll(":scope > .recipe-browse-card")];
@@ -311,96 +307,78 @@ function installRecipeGravityFieldPrototype() {
     return [...surface.querySelectorAll(":scope > .meal-recipe-result")];
   }
 
-  function categoryKey(node) {
-    const explicit = node.dataset.recipeCategory || "";
-    if (explicit) return explicit;
-    const text = `${node.querySelector(".category-pill")?.textContent || ""}`.trim().toLocaleLowerCase();
-    if (/dessert|postre/.test(text)) return "dessert";
-    if (/salad|ensalada/.test(text)) return "salad";
-    if (/side|acompa/.test(text)) return "side";
-    if (/sauce|salsa/.test(text)) return "sauce";
-    if (/drink|bebida/.test(text)) return "drink";
-    if (/draft|borrador/.test(text)) return "draft";
-    if (/main|principal/.test(text)) return "main";
-    // Focused dinner results currently do not print their category. Keep their
-    // position deterministic until the renderer exposes category metadata.
-    const identity = node.dataset.recipeId || node.dataset.focusedRecipe || node.textContent || "recipe";
-    let hash = 0;
-    for (let i = 0; i < identity.length; i += 1) hash = ((hash << 5) - hash + identity.charCodeAt(i)) | 0;
-    return ["main", "side", "salad", "dessert", "sauce"][Math.abs(hash) % 5];
+  function signedOffset(index, active, length) {
+    let offset = index - active;
+    if (length > 2) {
+      const wrapped = offset > 0 ? offset - length : offset + length;
+      if (Math.abs(wrapped) < Math.abs(offset)) offset = wrapped;
+    }
+    return offset;
   }
 
-  const vertices = {
-    main: { x: 0, y: -1 },
-    side: { x: 1, y: -.25 },
-    salad: { x: .72, y: .78 },
-    dessert: { x: -.72, y: .78 },
-    sauce: { x: -1, y: -.25 },
-    drink: { x: -.55, y: -.72 },
-    draft: { x: .55, y: -.72 },
-  };
+  function slotForOffset(offset) {
+    if (offset === 0) return planeSlots[0];
+    const distance = Math.abs(offset);
+    const base = 1 + ((distance - 1) % (planeSlots.length - 1));
+    const slot = planeSlots[base];
+    return offset < 0 ? { x: -slot.x, y: -slot.y } : slot;
+  }
 
   function layoutSurface(surface) {
     const nodes = nodesFor(surface);
     if (!nodes.length) {
-      surface.classList.remove("recipe-gravity-field");
+      surface.classList.remove("recipe-gravity-field", "is-dragging");
       return;
     }
     surface.classList.add("recipe-gravity-field");
-    // Neutralize the original one-dimensional library wheel when this prototype owns it.
     surface.classList.remove("recipe-wheel-list");
+
     let state = fieldState.get(surface);
     if (!state) {
-      state = { active: 0, dragX: 0, dragY: 0, pointer: null, suppressClick: false, signature: "" };
+      state = { active: 0, axis: null, progress: 0, pointer: null, suppressClick: false, signature: "" };
       fieldState.set(surface, state);
     }
+
     const signature = nodes.map((node) => node.dataset.recipeId || node.dataset.focusedRecipe || node.querySelector("[data-open]")?.dataset.open || node.textContent?.slice(0, 40)).join("|");
     if (state.signature !== signature) {
       state.active = 0;
-      state.dragX = 0;
-      state.dragY = 0;
+      state.axis = null;
+      state.progress = 0;
       state.signature = signature;
     }
     state.active = Math.max(0, Math.min(state.active, nodes.length - 1));
 
     const width = Math.max(320, surface.clientWidth || 360);
-    const height = Math.max(390, surface.clientHeight || 460);
-    const radiusX = Math.min(width * .72, 330);
-    const radiusY = Math.min(height * .36, 180);
-    const activeCategory = categoryKey(nodes[state.active]);
-    const activeVertex = vertices[activeCategory] || { x: 0, y: 0 };
+    const height = Math.max(430, surface.clientHeight || 500);
+    const stepX = Math.min(205, width * .56);
+    const stepY = Math.min(215, height * .42);
+    const dragX = state.axis === "x" ? state.progress * stepX : 0;
+    const dragY = state.axis === "y" ? state.progress * stepY : 0;
 
     nodes.forEach((node, index) => {
       node.classList.add("gravity-node");
-      const category = categoryKey(node);
-      const vertex = vertices[category] || { x: 0, y: 0 };
-      const relative = index - state.active;
-      const ring = Math.min(3, Math.abs(relative));
-      const sameClusterOffset = category === activeCategory ? relative : 0;
-      // Coordinates are category attractor minus the active attractor, which makes
-      // the active recipe the apparent gravitational center while preserving neighborhoods.
-      let x = (vertex.x - activeVertex.x) * radiusX + Math.sign(sameClusterOffset) * Math.min(150, Math.abs(sameClusterOffset) * 72);
-      let y = (vertex.y - activeVertex.y) * radiusY + (category === activeCategory ? Math.sin(relative * 1.35) * 42 : 0);
-      if (index === state.active) { x = 0; y = 0; }
-      x += state.dragX;
-      y += state.dragY;
-      const distance = Math.hypot(x / Math.max(1, radiusX), y / Math.max(1, radiusY));
-      const depth = index === state.active ? 0 : -Math.min(420, 120 + distance * 115 + ring * 28);
-      const scale = index === state.active ? 1 : Math.max(.54, .82 - distance * .10 - ring * .025);
-      const opacity = index === state.active ? 1 : Math.max(.16, .76 - distance * .18 - ring * .06);
-      const hidden = distance > 2.75 || Math.abs(relative) > 12;
+      const offset = signedOffset(index, state.active, nodes.length);
+      const slot = slotForOffset(offset);
+      const x = slot.x * stepX + dragX;
+      const y = slot.y * stepY + dragY;
+      const planeDistance = Math.abs(slot.x) + Math.abs(slot.y);
+      const depth = offset === 0 ? 0 : -Math.min(360, 110 + planeDistance * 70);
+      const scale = offset === 0 ? 1 : Math.max(.62, .84 - planeDistance * .06);
+      const opacity = offset === 0 ? 1 : Math.max(.22, .78 - planeDistance * .13);
+      const hidden = planeDistance > 3 || Math.abs(offset) > 12;
+
       node.style.setProperty("--gx", `${x}px`);
       node.style.setProperty("--gy", `${y}px`);
       node.style.setProperty("--gz", `${depth}px`);
       node.style.setProperty("--gs", `${scale}`);
       node.style.setProperty("--go", hidden ? "0" : `${opacity}`);
-      node.style.setProperty("--gzi", `${index === state.active ? 30 : Math.max(1, 20 - Math.round(distance * 4) - ring)}`);
-      node.classList.toggle("gravity-active", index === state.active);
+      node.style.setProperty("--gzi", `${offset === 0 ? 30 : Math.max(1, 18 - planeDistance * 3)}`);
+      node.classList.toggle("gravity-active", offset === 0);
       node.setAttribute("aria-hidden", `${hidden}`);
-      if (index === state.active) node.setAttribute("data-gravity-active", "true");
+      if (offset === 0) node.setAttribute("data-gravity-active", "true");
       else node.removeAttribute("data-gravity-active");
-      node.querySelectorAll("button").forEach((button) => { button.tabIndex = index === state.active ? 0 : -1; });
-      if (node.matches("button")) node.tabIndex = index === state.active ? 0 : -1;
+      node.querySelectorAll("button").forEach((button) => { button.tabIndex = offset === 0 ? 0 : -1; });
+      if (node.matches("button")) node.tabIndex = offset === 0 ? 0 : -1;
     });
   }
 
@@ -417,9 +395,11 @@ function installRecipeGravityFieldPrototype() {
     if (!surface?.classList.contains("recipe-gravity-field")) return;
     const state = fieldState.get(surface);
     if (!state) return;
-    state.pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
-    state.dragX = 0;
-    state.dragY = 0;
+    state.pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, axis: null, moved: false };
+    state.axis = null;
+    state.progress = 0;
+    surface.classList.add("is-dragging");
+    surface.setPointerCapture?.(event.pointerId);
   }, true);
 
   document.addEventListener("pointermove", (event) => {
@@ -428,12 +408,18 @@ function installRecipeGravityFieldPrototype() {
     if (!state?.pointer || state.pointer.id !== event.pointerId) return;
     const dx = event.clientX - state.pointer.x;
     const dy = event.clientY - state.pointer.y;
-    if (Math.hypot(dx, dy) < 8 && !state.pointer.moved) return;
+    if (!state.pointer.axis) {
+      if (Math.hypot(dx, dy) < 10) return;
+      state.pointer.axis = Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+      state.axis = state.pointer.axis;
+    }
     state.pointer.moved = true;
-    // Once the gesture clearly becomes field exploration, keep it inside the field.
-    if (Math.abs(dx) > Math.abs(dy) * .75 || Math.abs(dx) > 18) event.preventDefault();
-    state.dragX = Math.max(-120, Math.min(120, dx * .42));
-    state.dragY = Math.max(-100, Math.min(100, dy * .34));
+    event.preventDefault();
+    const primary = state.pointer.axis === "x" ? dx : dy;
+    const denominator = state.pointer.axis === "x"
+      ? Math.min(205, Math.max(320, surface.clientWidth || 360) * .56)
+      : Math.min(215, Math.max(430, surface.clientHeight || 500) * .42);
+    state.progress = Math.max(-1.15, Math.min(1.15, primary / Math.max(1, denominator)));
     layoutSurface(surface);
   }, { capture: true, passive: false });
 
@@ -441,37 +427,24 @@ function installRecipeGravityFieldPrototype() {
     const surface = surfaceFromEvent(event);
     const state = surface ? fieldState.get(surface) : null;
     if (!state?.pointer || state.pointer.id !== event.pointerId) return;
-    const dx = event.clientX - state.pointer.x;
-    const dy = event.clientY - state.pointer.y;
-    const nodes = nodesFor(surface);
     const moved = state.pointer.moved;
+    const axis = state.pointer.axis;
+    const progress = state.progress;
+    const nodes = nodesFor(surface);
     state.pointer = null;
-    state.dragX = 0;
-    state.dragY = 0;
-    if (moved && Math.hypot(dx, dy) > 44 && nodes.length > 1) {
-      // Find the neighboring node whose current category vertex best matches the drag direction.
-      const angle = Math.atan2(dy, dx);
-      let bestIndex = state.active;
-      let bestScore = Infinity;
-      const activeCategory = categoryKey(nodes[state.active]);
-      const av = vertices[activeCategory] || { x: 0, y: 0 };
-      nodes.forEach((node, index) => {
-        if (index === state.active) return;
-        const v = vertices[categoryKey(node)] || { x: 0, y: 0 };
-        const vx = v.x - av.x || (index - state.active) * .25;
-        const vy = v.y - av.y || Math.sin((index - state.active) * 1.2) * .25;
-        const nodeAngle = Math.atan2(vy, vx);
-        let delta = Math.abs(nodeAngle - angle);
-        delta = Math.min(delta, Math.PI * 2 - delta);
-        const score = delta + Math.min(1.2, Math.abs(index - state.active) * .025);
-        if (score < bestScore) { bestScore = score; bestIndex = index; }
-      });
-      state.active = bestIndex;
+    surface.classList.remove("is-dragging");
+
+    if (moved && axis && Math.abs(progress) > .22 && nodes.length > 1) {
+      const direction = progress < 0 ? 1 : -1;
+      state.active = (state.active + direction + nodes.length) % nodes.length;
       state.suppressClick = true;
-      globalThis.setTimeout?.(() => { state.suppressClick = false; }, 220);
+      globalThis.setTimeout?.(() => { state.suppressClick = false; }, 180);
     }
+    state.axis = null;
+    state.progress = 0;
     layoutSurface(surface);
   }
+
   document.addEventListener("pointerup", finishPointer, true);
   document.addEventListener("pointercancel", finishPointer, true);
 
@@ -488,11 +461,11 @@ function installRecipeGravityFieldPrototype() {
     const node = event.target.closest?.(".gravity-node");
     const index = node ? nodes.indexOf(node) : -1;
     if (index < 0 || index === state.active) return;
-    // First tap bends the field around the peripheral recipe. A second tap on the
-    // centered recipe falls through to the app's existing open/choose behavior.
     event.preventDefault();
     event.stopImmediatePropagation();
     state.active = index;
+    state.axis = null;
+    state.progress = 0;
     layoutSurface(surface);
   }, true);
 
@@ -507,8 +480,10 @@ function installRecipeGravityFieldPrototype() {
     else if (event.key === "End") state.active = nodes.length - 1;
     else {
       const direction = event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1;
-      state.active = Math.max(0, Math.min(nodes.length - 1, state.active + direction));
+      state.active = (state.active + direction + nodes.length) % nodes.length;
     }
+    state.axis = null;
+    state.progress = 0;
     layoutSurface(surface);
     nodesFor(surface)[state.active]?.focus?.({ preventScroll: true });
   }, true);
