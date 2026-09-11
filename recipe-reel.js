@@ -1,24 +1,43 @@
-// Native recipe reel. No carousel library, no transform engine.
-// Safari owns momentum scrolling; this module only remembers/centers the nearest recipe.
-const REEL_CSS_URL = "./recipe-reel.css?v=6";
+// Native recipe reel. Safari owns momentum scrolling; no carousel library, no 3D engine.
+import {
+  DRAG_THRESHOLD_PX,
+  IMAGE_NEAR_RADIUS,
+  isDragGesture,
+  isNearIndex,
+  itemIdsSignature,
+  mostIntersectingIndex,
+  nearestIndexByCenters,
+  needsSnapCorrection,
+  recipeIdFromRecord,
+  reelClickAction,
+  rememberedIndex,
+  scrollLeftToCenter,
+  shouldParkMedia,
+  usesCustomPointerDrag,
+} from "./recipe-reel-logic.js";
+
+const REEL_CSS_URL = "./recipe-reel.css?v=8";
 const SURFACE_SELECTOR = "#recipeList, .focused-recipe-results, .meal-recipe-results";
 const ITEM_SELECTOR = ".recipe-browse-card, .focused-recipe-result, .meal-recipe-result";
 const REEL_CLASS = "recipe-native-reel";
 const ACTIVE_CLASS = "recipe-reel-active";
 const NEAR_CLASS = "recipe-reel-near";
+const FAR_CLASS = "recipe-reel-far";
+const DRAGGING_CLASS = "is-dragging";
 
 const stateBySurface = new WeakMap();
 const positionBySurface = new WeakMap();
+const watchedSurfaces = new WeakSet();
 const scheduled = new WeakSet();
 let scanQueued = false;
 
-function ensureStyles() {
-  if (document.querySelector('link[data-recipe-reel="local"]')) return;
-  const localCss = document.createElement("link");
+function ensureStyles(root) {
+  if (root.querySelector('link[data-recipe-reel="local"]')) return;
+  const localCss = root.createElement("link");
   localCss.rel = "stylesheet";
   localCss.href = REEL_CSS_URL;
   localCss.dataset.recipeReel = "local";
-  document.head.append(localCss);
+  root.head?.append(localCss);
 }
 
 function isRecipeItem(node) {
@@ -31,7 +50,19 @@ function itemsFor(surface) {
 
 function recipeIdForItem(item) {
   if (!(item instanceof HTMLElement)) return "";
-  return item.dataset.open || item.querySelector?.("[data-open]")?.dataset.open || "";
+  const child = item.querySelector?.("[data-open], [data-recipe-id], [data-focused-recipe]");
+  return recipeIdFromRecord({
+    open: item.dataset.open,
+    recipeId: item.dataset.recipeId,
+    focusedRecipe: item.dataset.focusedRecipe,
+    childOpen: child?.dataset?.open,
+    childRecipeId: child?.dataset?.recipeId,
+    childFocusedRecipe: child?.dataset?.focusedRecipe,
+  });
+}
+
+function itemIdsFor(surface) {
+  return itemsFor(surface).map(recipeIdForItem);
 }
 
 function isLayoutVisible(surface) {
@@ -43,112 +74,280 @@ function isLayoutVisible(surface) {
   return rect.width > 0 && rect.height > 0;
 }
 
-function initialIndexForSurface(surface, items) {
-  if (!items.length) return 0;
-  const remembered = positionBySurface.get(surface);
-  if (remembered?.recipeId) {
-    const index = items.findIndex((item) => recipeIdForItem(item) === remembered.recipeId);
-    if (index >= 0) return index;
-  }
-  if (Number.isInteger(remembered?.index)) {
-    return Math.max(0, Math.min(items.length - 1, remembered.index));
-  }
-  return Math.floor((items.length - 1) / 2);
+function prefersReducedMotion() {
+  return globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true;
+}
+
+function snapBehavior() {
+  return prefersReducedMotion() ? "auto" : "smooth";
 }
 
 function centerItem(surface, item, behavior = "auto") {
   if (!surface || !item) return;
-  const left = item.offsetLeft - ((surface.clientWidth - item.offsetWidth) / 2);
-  surface.scrollTo({ left: Math.max(0, left), behavior });
+  surface.scrollTo({
+    left: scrollLeftToCenter(item.offsetLeft, item.offsetWidth, surface.clientWidth),
+    behavior,
+  });
 }
 
-function updateActive(surface) {
-  const state = stateBySurface.get(surface);
-  if (!state || state.updating) return;
-  state.updating = true;
-  requestAnimationFrame(() => {
-    state.updating = false;
-    if (!surface.isConnected) return;
-    const items = itemsFor(surface);
-    if (!items.length) return;
+function nearestIndexFromSurface(surface, items) {
+  const center = surface.scrollLeft + surface.clientWidth / 2;
+  const centers = items.map((item) => item.offsetLeft + item.offsetWidth / 2);
+  return nearestIndexByCenters(centers, center);
+}
 
-    const center = surface.scrollLeft + surface.clientWidth / 2;
-    let activeIndex = 0;
-    let bestDistance = Infinity;
-    items.forEach((item, index) => {
-      const itemCenter = item.offsetLeft + item.offsetWidth / 2;
-      const distance = Math.abs(itemCenter - center);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        activeIndex = index;
-      }
-    });
+function elementFromEventTarget(target) {
+  if (target instanceof Element) return target;
+  return target?.parentElement || null;
+}
 
-    items.forEach((item, index) => {
-      item.classList.toggle(ACTIVE_CLASS, index === activeIndex);
-      item.classList.toggle(NEAR_CLASS, Math.abs(index - activeIndex) === 1);
-    });
+function reelItemFromEvent(event, surface) {
+  const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+  for (const node of path) {
+    if (isRecipeItem(node) && node.parentElement === surface) return node;
+  }
+  const item = elementFromEventTarget(event.target)?.closest?.(ITEM_SELECTOR);
+  return item?.parentElement === surface ? item : null;
+}
 
-    const active = items[activeIndex];
-    positionBySurface.set(surface, {
-      index: activeIndex,
-      recipeId: recipeIdForItem(active),
-    });
-  });
+function parkImage(image) {
+  const src = image.getAttribute("src");
+  if (src && !image.dataset.reelSrc) image.dataset.reelSrc = src;
+  if (src) image.removeAttribute("src");
+}
+
+function restoreImage(image) {
+  const parked = image.dataset.reelSrc;
+  if (parked && image.getAttribute("src") !== parked) image.src = parked;
 }
 
 function tuneImages(surface) {
   surface.querySelectorAll("img").forEach((image) => {
     image.loading = "lazy";
     image.decoding = "async";
+    image.draggable = false;
   });
+}
+
+function syncImageBudget(items, activeIndex) {
+  items.forEach((item, index) => {
+    const park = shouldParkMedia(index, activeIndex, IMAGE_NEAR_RADIUS);
+    item.querySelectorAll("img").forEach((image) => {
+      if (park) parkImage(image);
+      else restoreImage(image);
+    });
+  });
+}
+
+function applyActive(surface, items, activeIndex) {
+  if (!items.length) return;
+  const index = Math.max(0, Math.min(items.length - 1, activeIndex));
+  items.forEach((item, itemIndex) => {
+    item.classList.toggle(ACTIVE_CLASS, itemIndex === index);
+    item.classList.toggle(NEAR_CLASS, isNearIndex(itemIndex, index));
+    item.classList.toggle(FAR_CLASS, shouldParkMedia(itemIndex, index, IMAGE_NEAR_RADIUS));
+    if (itemIndex === index) item.setAttribute("aria-current", "true");
+    else item.removeAttribute("aria-current");
+  });
+  syncImageBudget(items, index);
+  positionBySurface.set(surface, {
+    index,
+    recipeId: recipeIdForItem(items[index]),
+  });
+}
+
+function restoreRemembered(surface, items) {
+  if (!items.length) return;
+  const remembered = positionBySurface.get(surface);
+  const index = rememberedIndex(items.map(recipeIdForItem), remembered, items.length);
+  centerItem(surface, items[index], "auto");
+  applyActive(surface, items, index);
+}
+
+function settleSnap(surface, state) {
+  if (state.pointer) return;
+  const items = itemsFor(surface);
+  if (!items.length) return;
+  const index = nearestIndexFromSurface(surface, items);
+  const item = items[index];
+  const target = scrollLeftToCenter(item.offsetLeft, item.offsetWidth, surface.clientWidth);
+  if (needsSnapCorrection(surface.scrollLeft, target)) {
+    surface.scrollTo({ left: target, behavior: snapBehavior() });
+  }
+  applyActive(surface, items, index);
+}
+
+function observeActiveItems(surface, state) {
+  state.itemObserver?.disconnect();
+  const items = itemsFor(surface);
+  if (!items.length || typeof IntersectionObserver !== "function") return;
+
+  const ratios = new Map();
+  state.itemObserver = new IntersectionObserver((entries) => {
+    if (state.ignoreActive) return;
+    for (const entry of entries) ratios.set(entry.target, entry.intersectionRatio);
+    const ordered = itemsFor(surface);
+    if (!ordered.length) return;
+    const visibleRatios = ordered.map((item) => ratios.get(item) || 0);
+    if (!visibleRatios.some((ratio) => ratio > 0)) return;
+    const nextIndex = mostIntersectingIndex(visibleRatios);
+    if (ordered[nextIndex]?.classList.contains(ACTIVE_CLASS)) return;
+    applyActive(surface, ordered, nextIndex);
+  }, {
+    root: surface,
+    threshold: [0, 0.25, 0.5, 0.75, 1],
+    rootMargin: "0px -28% 0px -28%",
+  });
+  items.forEach((item) => state.itemObserver.observe(item));
+}
+
+function bindPointer(surface, state) {
+  state.pointer = null;
+  state.suppressClick = false;
+
+  state.pointerDownHandler = (event) => {
+    if (event.button !== 0) return;
+    state.suppressClick = false;
+    state.pointer = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      scrollLeft: surface.scrollLeft,
+      moved: false,
+      captured: false,
+      customDrag: usesCustomPointerDrag(event.pointerType),
+    };
+  };
+
+  state.pointerMoveHandler = (event) => {
+    const pointer = state.pointer;
+    if (!pointer || event.pointerId !== pointer.id) return;
+    if (!pointer.moved && isDragGesture(pointer.x, pointer.y, event.clientX, event.clientY, DRAG_THRESHOLD_PX)) {
+      pointer.moved = true;
+      surface.classList.add(DRAGGING_CLASS);
+      // Capture only after a real drag so a clean tap still lands on nested buttons.
+      if (pointer.customDrag && !pointer.captured) {
+        surface.setPointerCapture?.(event.pointerId);
+        pointer.captured = true;
+      }
+    }
+    if (pointer.customDrag && pointer.moved) {
+      event.preventDefault();
+      surface.scrollLeft = pointer.scrollLeft - (event.clientX - pointer.x);
+    }
+  };
+
+  state.pointerEndHandler = (event) => {
+    const pointer = state.pointer;
+    if (!pointer || event.pointerId !== pointer.id) return;
+    if (pointer.moved) state.suppressClick = true;
+    else state.suppressClick = false;
+    surface.classList.remove(DRAGGING_CLASS);
+    if (pointer.captured) surface.releasePointerCapture?.(event.pointerId);
+    state.pointer = null;
+    if (pointer.moved) settleSnap(surface, state);
+  };
+
+  state.selectStartHandler = (event) => {
+    if (state.pointer?.moved) event.preventDefault();
+  };
+
+  state.clickHandler = (event) => {
+    const item = reelItemFromEvent(event, surface);
+    const items = itemsFor(surface);
+    const nearest = items[nearestIndexFromSurface(surface, items)];
+    const action = reelClickAction({
+      movementExceededThreshold: state.suppressClick,
+      hasReelItem: Boolean(item),
+      itemIsActive: Boolean(item && (item.classList.contains(ACTIVE_CLASS) || item === nearest)),
+    });
+    state.suppressClick = false;
+
+    if (action === "allow" || action === "ignore") return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (action === "center") centerItem(surface, item, snapBehavior());
+  };
+
+  surface.addEventListener("pointerdown", state.pointerDownHandler);
+  surface.addEventListener("pointermove", state.pointerMoveHandler);
+  surface.addEventListener("pointerup", state.pointerEndHandler);
+  surface.addEventListener("pointercancel", state.pointerEndHandler);
+  surface.addEventListener("selectstart", state.selectStartHandler);
+  surface.addEventListener("click", state.clickHandler, true);
+}
+
+function bindScrollSettle(surface, state) {
+  const settle = () => settleSnap(surface, state);
+  if ("onscrollend" in surface) {
+    state.scrollEndHandler = settle;
+    surface.addEventListener("scrollend", state.scrollEndHandler, { passive: true });
+    return;
+  }
+  let timer = 0;
+  state.scrollHandler = () => {
+    clearTimeout(timer);
+    timer = setTimeout(settle, 140);
+  };
+  surface.addEventListener("scroll", state.scrollHandler, { passive: true });
+}
+
+function refreshSurface(surface) {
+  const state = stateBySurface.get(surface);
+  if (!state) return;
+  tuneImages(surface);
+  const signature = itemIdsSignature(itemIdsFor(surface));
+  const itemsChanged = state.signature !== signature;
+  state.signature = signature;
+  if (itemsChanged) {
+    state.ignoreActive = true;
+    observeActiveItems(surface, state);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!surface.isConnected) return;
+        restoreRemembered(surface, itemsFor(surface));
+        state.ignoreActive = false;
+      });
+    });
+    return;
+  }
+  observeActiveItems(surface, state);
 }
 
 function bindSurface(surface) {
   if (!(surface instanceof HTMLElement)) return;
-  const existing = stateBySurface.get(surface);
-  if (existing) {
-    tuneImages(surface);
-    updateActive(surface);
+  if (stateBySurface.has(surface)) {
+    refreshSurface(surface);
     return;
   }
 
   surface.classList.add(REEL_CLASS);
-  tuneImages(surface);
-  const state = { updating: false, scrollHandler: null, clickHandler: null };
-
-  state.scrollHandler = () => updateActive(surface);
-  surface.addEventListener("scroll", state.scrollHandler, { passive: true });
-
-  state.clickHandler = (event) => {
-    const item = event.target.closest?.(ITEM_SELECTOR);
-    if (!item || item.parentElement !== surface) return;
-    const items = itemsFor(surface);
-    const active = items.find((candidate) => candidate.classList.contains(ACTIVE_CLASS));
-    if (item !== active) {
-      event.preventDefault();
-      event.stopPropagation();
-      centerItem(surface, item, "smooth");
-    }
+  const state = {
+    signature: "",
+    updating: false,
+    pointer: null,
+    suppressClick: false,
+    itemObserver: null,
   };
-  surface.addEventListener("click", state.clickHandler, true);
   stateBySurface.set(surface, state);
-
-  requestAnimationFrame(() => {
-    const items = itemsFor(surface);
-    if (!items.length) return;
-    const initialIndex = initialIndexForSurface(surface, items);
-    centerItem(surface, items[initialIndex], "auto");
-    updateActive(surface);
-  });
+  bindPointer(surface, state);
+  bindScrollSettle(surface, state);
+  refreshSurface(surface);
 }
 
 function unbindSurface(surface) {
   const state = stateBySurface.get(surface);
   if (!state) return;
-  updateActive(surface);
-  surface.removeEventListener("scroll", state.scrollHandler);
+  state.itemObserver?.disconnect();
+  surface.removeEventListener("pointerdown", state.pointerDownHandler);
+  surface.removeEventListener("pointermove", state.pointerMoveHandler);
+  surface.removeEventListener("pointerup", state.pointerEndHandler);
+  surface.removeEventListener("pointercancel", state.pointerEndHandler);
+  surface.removeEventListener("selectstart", state.selectStartHandler);
   surface.removeEventListener("click", state.clickHandler, true);
+  surface.removeEventListener("scrollend", state.scrollEndHandler);
+  surface.removeEventListener("scroll", state.scrollHandler);
+  surface.classList.remove(DRAGGING_CLASS);
   stateBySurface.delete(surface);
 }
 
@@ -162,46 +361,58 @@ function scheduleSurface(surface) {
   });
 }
 
-function scanSurfaces() {
-  document.querySelectorAll(SURFACE_SELECTOR).forEach(scheduleSurface);
+function watchSurface(surface) {
+  if (!(surface instanceof HTMLElement) || watchedSurfaces.has(surface)) {
+    scheduleSurface(surface);
+    return;
+  }
+  watchedSurfaces.add(surface);
+  const observer = new MutationObserver(() => scheduleSurface(surface));
+  observer.observe(surface, { childList: true });
+  scheduleSurface(surface);
 }
 
-function queueScan() {
+function scanSurfaces(root) {
+  root.querySelectorAll(SURFACE_SELECTOR).forEach(watchSurface);
+}
+
+function queueScan(root) {
   if (scanQueued) return;
   scanQueued = true;
   requestAnimationFrame(() => {
     scanQueued = false;
-    scanSurfaces();
+    scanSurfaces(root);
   });
 }
 
-export function installRecipeReels() {
-  if (document.documentElement.dataset.recipeReelsInstalled === "native") return;
-  document.documentElement.dataset.recipeReelsInstalled = "native";
-  ensureStyles();
-
-  // Existing renderers remain authoritative. This observer only notices when their
-  // result cards change; it does not wrap, clone, transform, or continuously measure them.
-  const observer = new MutationObserver((mutations) => {
-    const touched = new Set();
-    for (const mutation of mutations) {
-      const surface = mutation.target.closest?.(SURFACE_SELECTOR);
-      if (surface) touched.add(surface);
-      for (const node of mutation.addedNodes) {
-        if (!(node instanceof HTMLElement)) continue;
-        if (node.matches?.(SURFACE_SELECTOR)) touched.add(node);
-        node.querySelectorAll?.(SURFACE_SELECTOR).forEach((candidate) => touched.add(candidate));
-      }
+function mutationAddsSurface(mutations) {
+  for (const mutation of mutations) {
+    for (const node of mutation.addedNodes) {
+      if (!(node instanceof HTMLElement)) continue;
+      if (node.matches?.(SURFACE_SELECTOR) || node.querySelector?.(SURFACE_SELECTOR)) return true;
     }
-    touched.forEach(scheduleSurface);
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-
-  document.addEventListener("click", queueScan, true);
-  document.addEventListener("input", queueScan, true);
-  window.addEventListener("resize", queueScan, { passive: true });
-  document.addEventListener("visibilitychange", queueScan);
-  scanSurfaces();
+  }
+  return false;
 }
 
-installRecipeReels();
+export function installRecipeReels(root = globalThis.document) {
+  if (!root?.documentElement || root.documentElement.dataset.recipeReelsInstalled === "native") return;
+  root.documentElement.dataset.recipeReelsInstalled = "native";
+  ensureStyles(root);
+
+  const observer = new MutationObserver((mutations) => {
+    if (mutationAddsSurface(mutations)) queueScan(root);
+  });
+  observer.observe(root.body, { childList: true, subtree: true });
+
+  const viewObserver = new MutationObserver(() => queueScan(root));
+  viewObserver.observe(root.body, { attributes: true, attributeFilter: ["data-view"] });
+
+  globalThis.addEventListener?.("resize", () => queueScan(root), { passive: true });
+  root.addEventListener?.("visibilitychange", () => queueScan(root));
+  scanSurfaces(root);
+}
+
+if (typeof document !== "undefined") {
+  installRecipeReels(document);
+}

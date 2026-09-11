@@ -1,4 +1,4 @@
-/* Native recipe reel: Safari owns scrolling physics; no Swiper/3D transforms. */
+/* Native recipe reel: Safari owns scrolling physics; no carousel library or 3D transforms. */
 
 #recipesView:not(.detail-open) #recipePicksSection {
   display: none !important;
@@ -28,6 +28,7 @@
 .focused-recipe-results.recipe-native-reel,
 .meal-recipe-results.recipe-native-reel {
   --recipe-slide-width: min(79vw, 310px);
+  --recipe-reel-gutter: max(0px, calc((100% - var(--recipe-slide-width)) / 2));
   display: flex;
   align-items: flex-end;
   gap: 22px;
@@ -35,17 +36,31 @@
   min-width: 0;
   min-height: 414px;
   margin-top: 12px;
-  padding: 22px max(10.5vw, 24px) 28px;
+  padding-block: 22px 28px;
+  padding-inline: var(--recipe-reel-gutter);
   box-sizing: border-box;
   overflow-x: auto;
   overflow-y: hidden;
+  overflow-anchor: none;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--recipe-reel-gutter);
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
-  touch-action: pan-x pan-y;
+  touch-action: pan-x;
   scrollbar-width: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   border-radius: 24px;
   background: linear-gradient(180deg, #fafaf8 0%, #f4f5f3 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .94);
+}
+
+#recipeList.recipe-native-reel.is-dragging,
+.focused-recipe-results.recipe-native-reel.is-dragging,
+.meal-recipe-results.recipe-native-reel.is-dragging {
+  cursor: grabbing;
 }
 
 #recipeList.recipe-native-reel::-webkit-scrollbar,
@@ -63,6 +78,8 @@
   height: 352px;
   min-height: 352px;
   box-sizing: border-box;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
   opacity: .34;
   transition: opacity 120ms linear, box-shadow 120ms linear;
   display: grid;
@@ -75,6 +92,9 @@
   color: var(--ink);
   text-align: left;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
   box-shadow: 0 4px 10px rgba(26, 58, 92, .04);
 }
 
@@ -106,6 +126,8 @@
   background: transparent;
   box-shadow: none;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 #recipeList.recipe-native-reel .recipe-photo-shell,
@@ -124,6 +146,9 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
 }
 
 #recipeList.recipe-native-reel .recipe-card h3,
