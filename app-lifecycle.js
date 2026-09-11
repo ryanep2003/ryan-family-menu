@@ -27,20 +27,13 @@ export function bindInstallPrompt({
   }
 
   function isStandalone() {
-    return Boolean(
-      navigatorObject.standalone
-      || windowObject.matchMedia?.("(display-mode: standalone)").matches
-    );
+    return Boolean(navigatorObject.standalone || windowObject.matchMedia?.("(display-mode: standalone)").matches);
   }
 
   function dismiss() {
     prompt.hidden = true;
     canSuggest = false;
-    try {
-      storage.setItem(INSTALL_DISMISSED_KEY, "true");
-    } catch {
-      // Installation remains optional when browser storage is unavailable.
-    }
+    try { storage.setItem(INSTALL_DISMISSED_KEY, "true"); } catch {}
   }
 
   let canSuggest = !isDismissed() && !isStandalone();
@@ -62,7 +55,6 @@ export function bindInstallPrompt({
       if (choice?.outcome === "accepted") dismiss();
       return;
     }
-
     windowObject.alert(installInstructions(navigatorObject.userAgent, t));
     dismiss();
   });
@@ -72,10 +64,7 @@ export function bindInstallPrompt({
 }
 
 export function registerServiceWorker({ $, onUpdateAvailable }) {
-  $("#refreshApp").addEventListener("click", () => {
-    window.location.reload();
-  });
-
+  $("#refreshApp").addEventListener("click", () => window.location.reload());
   if (!("serviceWorker" in navigator)) return;
 
   let hadController = Boolean(navigator.serviceWorker.controller);
@@ -88,9 +77,7 @@ export function registerServiceWorker({ $, onUpdateAvailable }) {
     const now = Date.now();
     if (now - lastUpdateCheck < updateCheckWindow) return;
     lastUpdateCheck = now;
-    registrationRef.update().catch(() => {
-      // A suspended or offline device can fail this check; the cached app remains usable.
-    });
+    registrationRef.update().catch(() => {});
   }
 
   navigator.serviceWorker.addEventListener("controllerchange", () => {
@@ -350,6 +337,11 @@ function installRecipeGravityFieldPrototype() {
     cancelAnimation(state);
     const start = state.position;
     const distance = target - start;
+    if (Math.abs(distance) < .001) {
+      state.position = target;
+      layoutSurface(surface);
+      return;
+    }
     const startedAt = performance.now();
     const tick = (now) => {
       const t = Math.min(1, (now - startedAt) / duration);
