@@ -275,6 +275,34 @@ function installRecipeGravityFieldPrototype() {
       .recipe-reel-viewport { --gravity-height: 555px; --card-w: 316px; --card-h: 368px; --rail-bottom: 50px; }
       .recipe-gravity-field { gap: 22px !important; }
     }
+
+    @media (prefers-reduced-motion: reduce) {
+      .recipe-reel-viewport {
+        height: auto;
+        min-height: 0;
+        overflow-x: auto;
+        padding: 8px 0 16px;
+        scroll-snap-type: x mandatory;
+        touch-action: pan-x pan-y;
+      }
+      .recipe-reel-viewport::before,
+      .recipe-reel-viewport::after { display: none; }
+      .recipe-gravity-field {
+        position: relative !important;
+        left: auto !important;
+        bottom: auto !important;
+        height: auto !important;
+        transform: none !important;
+        padding-inline: calc((100vw - var(--card-w)) / 2) !important;
+      }
+      .recipe-gravity-field > .gravity-node {
+        opacity: 1 !important;
+        transform: none !important;
+        filter: none !important;
+        transition: none !important;
+        scroll-snap-align: center;
+      }
+    }
   `;
   document.head.append(style);
 
