@@ -5,12 +5,17 @@ import {
   applyDinnerItemRole,
   applyDinnerServingField,
   assignDinnerRecipe,
+  boundedCount,
+  confirmSelectedDinnerRecipe,
   dinnerIsOpen,
   dinnerMainItem,
   dinnerSideItem,
   filterDinnerRecipes,
+  parseCountableInput,
+  resolveDinnerSuggestionId,
   rewriteCountFieldDisplay,
   sampleDinnerRecipes,
+  selectedDinnerRecipeId,
   stepCountValue,
 } from "../dinner-flow.js";
 
@@ -60,6 +65,28 @@ test("choosing a dinner recipe replaces the main without adding a silent side", 
   assert.equal(changed.items.filter((item) => item.period === "dinner").length, 1);
 });
 
+test("selecting recipe A then B reviews and confirms B, not the catalog fallback", () => {
+  const recipes = [
+    { id: "instant-pot-pork", name: "Instant Pot Pork and Sauerkraut" },
+    { id: "picadillo", name: "Picadillo" },
+    { id: "carne-para-tacos", name: "Carne para tacos" },
+  ];
+  const fallbackById = (id) => recipes.find((recipe) => recipe.id === id) || recipes[0];
+
+  assert.equal(fallbackById("").id, "instant-pot-pork");
+  assert.equal(resolveDinnerSuggestionId(recipes, ""), "");
+  assert.equal(resolveDinnerSuggestionId(recipes, "missing-upload"), "");
+
+  let selectedId = selectedDinnerRecipeId(recipes, "picadillo");
+  selectedId = selectedDinnerRecipeId(recipes, "carne-para-tacos");
+  const draft = confirmSelectedDinnerRecipe({ items: [] }, recipes, selectedId);
+
+  assert.equal(selectedId, "carne-para-tacos");
+  assert.equal(dinnerMainItem(draft).recipeId, "carne-para-tacos");
+  assert.notEqual(dinnerMainItem(draft).recipeId, "instant-pot-pork");
+  assert.notEqual(dinnerMainItem(draft).recipeId, "picadillo");
+});
+
 test("optional sides stay separate from the dinner main", () => {
   const withSide = assignDinnerRecipe(assignDinnerRecipe({ items: [] }, "pasta"), "rice", "side");
   assert.equal(dinnerMainItem(withSide).recipeId, "pasta");
@@ -83,10 +110,22 @@ test("meal role edits stay on the chosen dinner item", () => {
   assert.equal(dinnerMainItem(next).role, "side");
 });
 
+test("typed 2.5 in a people field becomes 2 and never 20", () => {
+  const strippedDigits = (value) => Number(String(value).replace(/[^\d-]/g, ""));
+  assert.equal(parseCountableInput("2.5"), 2.5);
+  assert.equal(parseCountableInput("2,5"), 2.5);
+  assert.equal(boundedCount("2.5"), 2);
+  assert.notEqual(boundedCount("2.5"), 20);
+  assert.notEqual(boundedCount("2.5"), 25);
+  assert.equal(strippedDigits("2.5"), 25);
+  assert.notEqual(boundedCount("2.5"), strippedDigits("2.5"));
+});
+
 test("visible count fields rewrite decimals to the stored integer", () => {
   const adults = { value: "2.5" };
   assert.equal(rewriteCountFieldDisplay(adults, "adults"), 2);
   assert.equal(adults.value, "2");
+  assert.notEqual(adults.value, "20");
 
   const kids = { value: "1.9" };
   assert.equal(rewriteCountFieldDisplay(kids, "kids"), 1);

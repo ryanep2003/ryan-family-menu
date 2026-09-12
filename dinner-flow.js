@@ -1,18 +1,42 @@
 import {
   boundedCount,
   boundedServings,
+  countFieldIsIncomplete,
   countFieldNormalizedValue,
   normalizeMealPlan,
   normalizeServingPlan,
+  parseCountableInput,
   rewriteCountFieldDisplay,
 } from "./schedule-utils.js";
 
 export {
   boundedCount,
   boundedServings,
+  countFieldIsIncomplete,
   countFieldNormalizedValue,
+  parseCountableInput,
   rewriteCountFieldDisplay,
 };
+
+export function exactRecipeById(recipes, recipeId) {
+  const id = String(recipeId ?? "").trim();
+  if (!id) return null;
+  return (recipes || []).find((recipe) => recipe && String(recipe.id) === id) || null;
+}
+
+export function selectedDinnerRecipeId(recipes, recipeId) {
+  return exactRecipeById(recipes, recipeId)?.id || "";
+}
+
+export function resolveDinnerSuggestionId(recipes, suggestedRecipeId) {
+  return selectedDinnerRecipeId(recipes, suggestedRecipeId);
+}
+
+export function confirmSelectedDinnerRecipe(meal, recipes, selectedId, role = "main") {
+  const recipeId = selectedDinnerRecipeId(recipes, selectedId);
+  if (!recipeId) return normalizeMealPlan(meal);
+  return assignDinnerRecipe(meal, recipeId, role);
+}
 
 export function dinnerItems(meal) {
   return (normalizeMealPlan(meal).items || []).filter((item) => item.period === "dinner");

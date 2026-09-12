@@ -1,14 +1,19 @@
 import { allLocalizedText, localizedText, updateLocalizedText } from "./localized-data.js";
 import { renderHandoffDetails } from "./handoff-ui.js";
 import { cardPhotoFor, cardPhotoIsGenerated } from "./recipe-utils.js";
-import { applyPersistedMealTarget, rewriteCountFieldDisplay } from "./schedule-utils.js";
+import { applyPersistedMealTarget, countFieldIsIncomplete, rewriteCountFieldDisplay } from "./schedule-utils.js";
 import {
   applyDinnerItemRole,
   applyDinnerServingField,
   assignDinnerRecipe,
+  confirmSelectedDinnerRecipe,
   dinnerMainItem,
   dinnerSideItem,
+  exactRecipeById,
   filterDinnerRecipes,
+  resolveDinnerSuggestionId,
+  selectedDinnerRecipeId,
+  stepCountValue,
 } from "./dinner-flow.js";
 
 export function createScheduleUi({
@@ -219,7 +224,7 @@ export function createScheduleUi({
         <span>${escapeHtml(t(labelKey))}</span>
         <div class="dinner-stepper">
           <button type="button" data-count-step="-1" data-focused-serving="${escapeHtml(field)}" aria-label="${escapeHtml(t("decreaseCount"))}">−</button>
-          <input type="number" min="0" max="${max}" step="${escapeHtml(step)}" value="${value}" inputmode="numeric" data-focused-serving="${escapeHtml(field)}" />
+          <input type="text" inputmode="decimal" autocomplete="off" enterkeyhint="done" value="${escapeHtml(String(value))}" data-focused-serving="${escapeHtml(field)}" />
           <button type="button" data-count-step="1" data-focused-serving="${escapeHtml(field)}" aria-label="${escapeHtml(t("increaseCount"))}">+</button>
         </div>
       </div>
@@ -306,8 +311,8 @@ export function createScheduleUi({
   }
 
   function focusedSearchMarkup() {
-    const suggestion = focusedDinnerSuggestionId ? recipeById(focusedDinnerSuggestionId) : null;
-    const selected = recipeById(focusedDinnerSelectedId);
+    const suggestion = exactRecipeById(allRecipes(), focusedDinnerSuggestionId);
+    const selected = exactRecipeById(allRecipes(), focusedDinnerSelectedId);
     const matches = focusedDinnerMatches();
     const explore = focusedDinnerMode === "explore";
     return `
@@ -338,7 +343,7 @@ export function createScheduleUi({
   function dinnerReviewMarkup(meal, recipe, dinnerItem, dinnerPlan) {
     const extra = dinnerPlan.extraServings || 0;
     const side = dinnerSideItem(meal);
-    const sideRecipe = side ? recipeById(side.recipeId) : null;
+    const sideRecipe = side ? exactRecipeById(allRecipes(), side.recipeId) : null;
     const hasPhoto = recipe && !cardPhotoIsGenerated(recipe) && Boolean(cardPhotoFor(recipe));
     const canHydratePhoto = recipe && !hasPhoto && recipe.hasSourcePhotos;
     const sideChoices = filterDinnerRecipes(allRecipes(), {
@@ -422,7 +427,7 @@ export function createScheduleUi({
   function syncFocusedServingControl(control, { allowPartial = false } = {}) {
     const field = control.dataset.focusedServing;
     const raw = `${control.value ?? ""}`;
-    if (allowPartial && raw.trim().endsWith(".")) return;
+    if (allowPartial && countFieldIsIncomplete(raw)) return;
     const nextValue = rewriteCountFieldDisplay(control, field);
     focusedDinnerDraft = applyDinnerServingField(focusedDinnerDraft, field, nextValue);
     const names = $("#focusedEatingNames");
@@ -459,7 +464,7 @@ export function createScheduleUi({
 
     const meal = normalizeMealPlan(focusedDinnerDraft);
     const dinnerItem = focusedDinnerItem(meal);
-    const recipe = dinnerItem ? recipeById(dinnerItem.recipeId) : null;
+    const recipe = dinnerItem ? exactRecipeById(allRecipes(), dinnerItem.recipeId) : null;
     const dinnerPlan = meal.servingPlans?.dinner || meal.servingPlan;
     const choosing = focusedDinnerChoosing || !recipe;
 
@@ -513,9 +518,14 @@ export function createScheduleUi({
     });
     bindFocusedRecipeChoices();
     $("#advanceDinnerSelection")?.addEventListener("click", () => {
-      const selected = recipeById(focusedDinnerSelectedId);
-      if (!selected) return;
-      focusedDinnerDraft = assignDinnerRecipe(focusedDinnerDraft, selected.id, focusedDinnerFilter === "sides" ? "side" : "main");
+      const selectedId = selectedDinnerRecipeId(allRecipes(), focusedDinnerSelectedId);
+      if (!selectedId) return;
+      focusedDinnerDraft = confirmSelectedDinnerRecipe(
+        focusedDinnerDraft,
+        allRecipes(),
+        selectedId,
+        focusedDinnerFilter === "sides" ? "side" : "main",
+      );
       focusedDinnerChoosing = false;
       focusedDinnerAddingSide = false;
       renderFocusedDinner();
@@ -549,7 +559,8 @@ export function createScheduleUi({
         ));
         if (!input) return;
         const step = Number(button.dataset.countStep);
-        focusedDinnerDraft = applyDinnerServingField(focusedDinnerDraft, field, Number(input.value) + step);
+        const nextValue = stepCountValue(input.value, field, step);
+        focusedDinnerDraft = applyDinnerServingField(focusedDinnerDraft, field, nextValue);
         const dinnerPlan = focusedDinnerDraft.servingPlans?.dinner || focusedDinnerDraft.servingPlan;
         input.value = String(dinnerPlan[field]);
         rewriteCountFieldDisplay(input, field);
@@ -587,13 +598,18 @@ export function createScheduleUi({
     });
   }
 
+  function selectFocusedDinnerRecipe(recipeId) {
+    const nextId = selectedDinnerRecipeId(allRecipes(), recipeId);
+    if (!nextId) return false;
+    focusedDinnerSelectedId = nextId;
+    renderFocusedDinner();
+    return true;
+  }
+
   function bindFocusedRecipeChoices() {
     $$("[data-focused-recipe]").forEach((button) => {
       button.addEventListener("click", () => {
-        const recipe = recipeById(button.dataset.focusedRecipe);
-        if (!recipe) return;
-        focusedDinnerSelectedId = recipe.id;
-        renderFocusedDinner();
+        selectFocusedDinnerRecipe(button.dataset.focusedRecipe);
       });
     });
   }
@@ -604,8 +620,8 @@ export function createScheduleUi({
     const existing = focusedDinnerItem(focusedDinnerDraft);
     focusedDinnerChoosing = Boolean(options.choose) || !existing;
     focusedDinnerSearch = "";
-    focusedDinnerSuggestionId = recipeById(suggestedRecipeId)?.id || "";
-    focusedDinnerSelectedId = focusedDinnerSuggestionId || existing?.recipeId || "";
+    focusedDinnerSuggestionId = resolveDinnerSuggestionId(allRecipes(), suggestedRecipeId);
+    focusedDinnerSelectedId = focusedDinnerSuggestionId || selectedDinnerRecipeId(allRecipes(), existing?.recipeId);
     focusedDinnerFilter = "all";
     focusedDinnerMode = "list";
     focusedDinnerAddingSide = false;
@@ -1396,5 +1412,6 @@ export function createScheduleUi({
     renderCalendar,
     renderFocusedDinner,
     renderSchedule,
+    selectFocusedDinnerRecipe,
   };
 }

@@ -73,7 +73,7 @@ function calendarDates() {
   });
 }
 
-function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedCount: 1, skippedCount: 0 }, extraRecipes = [], currentWeekStartKey = "2026-06-22" } = {}) {
+function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedCount: 1, skippedCount: 0 }, extraRecipes = [], currentWeekStartKey = "2026-06-22", recipeById } = {}) {
   const elements = {
     "#scheduleGrid": element(),
     "#weekDateEditor": element(),
@@ -312,7 +312,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     mealRecipes,
     mealHasWarning: () => false,
     mealSummary: (meal) => mealRecipes(meal).map(({ recipe }) => recipe.name).join(" · ") || "No meal",
-    recipeById: (id) => recipes.find((recipe) => recipe.id === id),
+    recipeById: recipeById || ((id) => recipes.find((recipe) => recipe.id === id)),
     allRecipes: () => recipes,
     availableLeftoversForDate: () => leftovers,
     copyCurrentWeekToNextWeek: () => copyResult,
@@ -567,6 +567,41 @@ test("open dinner picker stays on List with a fixed tray and does not save yet",
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choosing a recipe won/);
   assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
   assert.equal(state.saveCalls, savesBefore);
+});
+
+test("selecting recipe A then B reviews and confirms B even if recipeById falls back", async () => {
+  const recipes = [
+    { id: "instant-pot-pork", name: "Instant Pot Pork and Sauerkraut", category: "main" },
+    { id: "picadillo", name: "Picadillo", category: "main" },
+    { id: "carne-para-tacos", name: "Carne para tacos", category: "main" },
+  ];
+  const { elements, state, ui } = harness({
+    extraRecipes: recipes,
+    recipeById: (id) => recipes.find((recipe) => recipe.id === id) || recipes[0],
+  });
+  state.schedule.mon = { ...emptyMeal };
+
+  ui.openFocusedDinner("2026-06-22");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose a recipe to continue/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /planFromHomePreview|Preview this recommendation/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-tray-kicker[\s\S]*Instant Pot Pork and Sauerkraut/);
+
+  ui.selectFocusedDinnerRecipe("picadillo");
+  ui.selectFocusedDinnerRecipe("carne-para-tacos");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Carne para tacos/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="carne-para-tacos"[^>]*aria-pressed="true"/);
+
+  await elements["#advanceDinnerSelection"].dispatch("click");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Carne para tacos/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Instant Pot Pork and Sauerkraut/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, />Picadillo</);
+
+  await elements["#focusedDinnerForm"].dispatch("submit");
+  assert.equal(state.calendarMeals["2026-06-22"].dinner, "carne-para-tacos");
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "carne-para-tacos"), true);
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "picadillo"), false);
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "instant-pot-pork"), false);
 });
 
 test("meal review confirm writes the dinner draft through the existing save path", async () => {

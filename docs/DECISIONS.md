@@ -6,7 +6,7 @@
 
 **Reason:** The approved Moving Table slice is a clearer Today job and a safer write. The earlier spatial prototype is not production-ready, and a second dinner save path would fork household data.
 
-**Consequences:** People counts stay on `boundedCount`; extra portions stay on `boundedServings`. Visible count fields must rewrite to the normalized value after blur, stepper, or confirm. English and Spanish chrome stay in parity. The four-tab shell is unchanged.
+**Consequences:** People counts stay on `boundedCount` (`2.5` becomes `2` via trunc, never `20`). Extra portions stay on `boundedServings`. Visible count fields must rewrite to the normalized value after blur, stepper, or confirm. The recipe id selected in the list is the only id review and Confirm may write; an empty Home suggestion must not fall back to the first catalog recipe. English and Spanish chrome stay in parity. The four-tab shell is unchanged.
 
 ## 2026-09-11 — Keep Library recipe discovery on native overflow and CSS snap
 

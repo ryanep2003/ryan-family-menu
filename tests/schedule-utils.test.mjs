@@ -15,6 +15,7 @@ import {
   normalizeServingPlan,
   boundedCount,
   boundedServings,
+  parseCountableInput,
   rewriteCountFieldDisplay,
   cookingServings,
   plannedServings,
@@ -26,11 +27,14 @@ import {
 } from "../schedule-utils.js";
 
 test("count fields rewrite visible decimals to the normalized stored value", () => {
+  assert.equal(parseCountableInput("2.5"), 2.5);
   assert.equal(boundedCount("2.5"), 2);
+  assert.notEqual(boundedCount("2.5"), 20);
   assert.equal(boundedServings("1.25"), 1.5);
   const adults = { value: "2.5" };
   assert.equal(rewriteCountFieldDisplay(adults, "adults"), 2);
   assert.equal(adults.value, "2");
+  assert.notEqual(adults.value, "20");
   const extras = { value: "2.1" };
   assert.equal(rewriteCountFieldDisplay(extras, "extraServings"), 2);
   assert.equal(extras.value, "2");

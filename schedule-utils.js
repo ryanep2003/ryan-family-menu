@@ -147,13 +147,25 @@ export const defaultServingPlan = {
   actualLeftovers: {},
 };
 
+export function parseCountableInput(value) {
+  if (typeof value === "number") return value;
+  const raw = String(value ?? "").trim().replace(",", ".");
+  if (!raw) return NaN;
+  return Number.parseFloat(raw);
+}
+
+export function countFieldIsIncomplete(value) {
+  const raw = String(value ?? "").trim();
+  return !raw || raw === "." || raw === "," || /[.,]$/.test(raw);
+}
+
 export function boundedCount(value, fallback = 0) {
-  const number = Number(value);
+  const number = parseCountableInput(value);
   return Number.isFinite(number) ? Math.min(20, Math.max(0, Math.trunc(number))) : fallback;
 }
 
 export function boundedServings(value, fallback = 0) {
-  const number = Number(value);
+  const number = parseCountableInput(value);
   return Number.isFinite(number) ? Math.min(100, Math.max(0, Math.round(number * 2) / 2)) : fallback;
 }
 

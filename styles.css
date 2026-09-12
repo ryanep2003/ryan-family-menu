@@ -550,6 +550,7 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   background: transparent;
   text-align: center;
   font-size: 1.1rem;
+  appearance: textfield;
 }
 .dinner-review-later { padding-top: var(--space-4); border-top: 1px solid var(--rule); }
 .dinner-side-choices { display: flex; flex-wrap: wrap; gap: var(--space-2); }

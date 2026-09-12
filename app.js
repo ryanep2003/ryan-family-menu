@@ -509,7 +509,9 @@ function persistRecipeCatalog(items) {
 
 function recipeById(id) {
   const visible = allRecipes();
-  return visible.find((recipe) => recipe.id === id)
+  const needle = `${id ?? ""}`.trim();
+  if (!needle) return null;
+  return visible.find((recipe) => String(recipe.id) === needle)
     || visible[0]
     || null;
 }
