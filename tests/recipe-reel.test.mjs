@@ -202,6 +202,7 @@ test("native reel module does not measure every card on every scroll tick", asyn
   assert.match(source, /syncReelToRecipeId/);
   assert.match(source, /is-start-locked|START_LOCK_CLASS/);
   assert.match(source, /lockedActiveIndex/);
+  assert.match(source, /typeof HTMLElement !== "undefined"/);
   assert.doesNotMatch(source, /scrollLeftToCenter\(/);
   assert.doesNotMatch(source, /item\.offsetLeft/);
 });

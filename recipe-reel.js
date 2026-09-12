@@ -44,8 +44,12 @@ function ensureStyles(root) {
   root.head?.append(localCss);
 }
 
+function isHtmlElement(node) {
+  return typeof HTMLElement !== "undefined" && node instanceof HTMLElement;
+}
+
 function isRecipeItem(node) {
-  return node instanceof HTMLElement && node.matches(ITEM_SELECTOR);
+  return isHtmlElement(node) && node.matches(ITEM_SELECTOR);
 }
 
 function itemsFor(surface) {
@@ -53,7 +57,7 @@ function itemsFor(surface) {
 }
 
 function recipeIdForItem(item) {
-  if (!(item instanceof HTMLElement)) return "";
+  if (!isHtmlElement(item)) return "";
   const fromCard = recipeIdFromElement(item);
   if (fromCard) return fromCard;
   const child = item.querySelector?.("[data-open], [data-recipe-id], [data-focused-recipe]");
@@ -91,7 +95,7 @@ function itemIdsFor(surface) {
 }
 
 function isLayoutVisible(surface) {
-  if (!(surface instanceof HTMLElement) || !surface.isConnected) return false;
+  if (!isHtmlElement(surface) || !surface.isConnected) return false;
   if (surface.hidden || surface.closest("[hidden]")) return false;
   const style = getComputedStyle(surface);
   if (style.display === "none" || style.visibility === "hidden") return false;
@@ -438,7 +442,7 @@ function refreshSurface(surface) {
 }
 
 function bindSurface(surface) {
-  if (!(surface instanceof HTMLElement)) return;
+  if (!isHtmlElement(surface)) return;
   if (stateBySurface.has(surface)) {
     refreshSurface(surface);
     return;
@@ -478,7 +482,7 @@ function unbindSurface(surface) {
 }
 
 function scheduleSurface(surface) {
-  if (!(surface instanceof HTMLElement) || scheduled.has(surface)) return;
+  if (!isHtmlElement(surface) || scheduled.has(surface)) return;
   scheduled.add(surface);
   requestAnimationFrame(() => {
     scheduled.delete(surface);
@@ -488,7 +492,7 @@ function scheduleSurface(surface) {
 }
 
 function watchSurface(surface) {
-  if (!(surface instanceof HTMLElement) || watchedSurfaces.has(surface)) {
+  if (!isHtmlElement(surface) || watchedSurfaces.has(surface)) {
     scheduleSurface(surface);
     return;
   }
@@ -514,7 +518,7 @@ function queueScan(root) {
 function mutationAddsSurface(mutations) {
   for (const mutation of mutations) {
     for (const node of mutation.addedNodes) {
-      if (!(node instanceof HTMLElement)) continue;
+      if (!isHtmlElement(node)) continue;
       if (node.matches?.(SURFACE_SELECTOR) || node.querySelector?.(SURFACE_SELECTOR)) return true;
     }
   }
@@ -522,7 +526,7 @@ function mutationAddsSurface(mutations) {
 }
 
 export function syncReelToRecipeId(surface, recipeId) {
-  if (!(surface instanceof HTMLElement) || !recipeId) return false;
+  if (!isHtmlElement(surface) || !recipeId) return false;
   surface.dataset.reelStart = recipeId;
   if (!stateBySurface.has(surface) && isLayoutVisible(surface)) {
     bindSurface(surface);
