@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v187";
-// v187: Change dinner starts empty; recipeById never swaps in another recipe.
+const CACHE_NAME = "ryan-family-menu-v188";
+// v188: Long household recipe ids advance to review; Choose for dinner is never silent.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",

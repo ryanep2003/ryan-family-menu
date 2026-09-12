@@ -1,6 +1,7 @@
 import {
   boundedCount,
   boundedServings,
+  cleanRecipeId,
   countFieldIsIncomplete,
   countFieldNormalizedValue,
   normalizeMealPlan,
@@ -12,6 +13,7 @@ import {
 export {
   boundedCount,
   boundedServings,
+  cleanRecipeId,
   countFieldIsIncomplete,
   countFieldNormalizedValue,
   parseCountableInput,
@@ -19,9 +21,9 @@ export {
 };
 
 export function exactRecipeById(recipes, recipeId) {
-  const id = String(recipeId ?? "").trim();
+  const id = cleanRecipeId(String(recipeId ?? ""));
   if (!id) return null;
-  return (recipes || []).find((recipe) => recipe && String(recipe.id) === id) || null;
+  return (recipes || []).find((recipe) => recipe && cleanRecipeId(String(recipe.id)) === id) || null;
 }
 
 export function selectedDinnerRecipeId(recipes, recipeId) {
@@ -52,14 +54,21 @@ export function writtenDinnerRecipeId(meal, role = "main") {
     : dinnerMainItem(meal)?.recipeId || "";
 }
 
+export function dinnerReviewIsReady(meal, recipes, selectedId, role = "main") {
+  const writtenId = writtenDinnerRecipeId(meal, role);
+  const recipe = exactRecipeById(recipes, writtenId);
+  return Boolean(recipe && writtenId && cleanRecipeId(writtenId) === cleanRecipeId(selectedId));
+}
+
 export function advanceDinnerSelection(meal, recipes, selectedId, role = "main") {
   const recipeId = selectedDinnerRecipeId(recipes, selectedId);
   if (!recipeId) return { ok: false, meal: normalizeMealPlan(meal), selectedId: "" };
   const next = assignDinnerRecipe(meal, recipeId, role);
-  if (writtenDinnerRecipeId(next, role) !== recipeId) {
+  const writtenId = writtenDinnerRecipeId(next, role);
+  if (!writtenId || cleanRecipeId(writtenId) !== cleanRecipeId(recipeId)) {
     return { ok: false, meal: normalizeMealPlan(meal), selectedId: "" };
   }
-  return { ok: true, meal: next, selectedId: recipeId };
+  return { ok: true, meal: next, selectedId: writtenId };
 }
 
 export function confirmSelectedDinnerRecipe(meal, recipes, selectedId, role = "main") {
@@ -134,9 +143,9 @@ function nextMealItemId(existingId = "") {
 }
 
 export function assignDinnerRecipe(meal, recipeId, role = "main") {
-  const cleanRecipeId = typeof recipeId === "string" ? recipeId.trim().slice(0, 120) : "";
+  const nextRecipeId = cleanRecipeId(recipeId);
   const next = normalizeMealPlan(meal);
-  if (!cleanRecipeId) {
+  if (!nextRecipeId) {
     if (role === "side") {
       next.items = next.items.filter((item) => !(item.period === "dinner" && item.role === "side"));
       return normalizeMealPlan(next);
@@ -151,7 +160,7 @@ export function assignDinnerRecipe(meal, recipeId, role = "main") {
       period: "dinner",
       role: "side",
       sourceType: "recipe",
-      recipeId: cleanRecipeId,
+      recipeId: nextRecipeId,
     });
     return normalizeMealPlan(next);
   }
@@ -162,7 +171,7 @@ export function assignDinnerRecipe(meal, recipeId, role = "main") {
     period: "dinner",
     role: role === "main" ? "main" : role,
     sourceType: "recipe",
-    recipeId: cleanRecipeId,
+    recipeId: nextRecipeId,
   });
   return normalizeMealPlan(next);
 }

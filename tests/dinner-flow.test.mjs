@@ -10,6 +10,7 @@ import {
   confirmSelectedDinnerRecipe,
   dinnerIsOpen,
   dinnerMainItem,
+  dinnerReviewIsReady,
   dinnerSideItem,
   filterDinnerRecipes,
   initialDinnerPickerSelection,
@@ -111,6 +112,18 @@ test("change dinner does not preselect the existing planned recipe", () => {
   assert.equal(advanced.selectedId, "carne-para-tacos");
   assert.equal(dinnerMainItem(advanced.meal).recipeId, "carne-para-tacos");
   assert.equal(advanced.meal.items.some((item) => item.recipeId === "instant-pot-pork"), false);
+});
+
+test("household upload ids longer than 120 characters still advance to review", () => {
+  const longId = `shared-upload-picadillo-${"x".repeat(140)}`;
+  assert.ok(longId.length > 150);
+  const recipes = [{ id: longId, name: "Picadillo Tacos", category: "main" }];
+  const selectedId = selectedDinnerRecipeId(recipes, longId);
+  const result = advanceDinnerSelection({ items: [] }, recipes, selectedId);
+  assert.equal(result.ok, true);
+  assert.equal(dinnerMainItem(result.meal).recipeId, longId);
+  assert.equal(result.selectedId, longId);
+  assert.equal(dinnerReviewIsReady(result.meal, recipes, result.selectedId), true);
 });
 
 test("dinner advance fails closed without a real selected id", () => {

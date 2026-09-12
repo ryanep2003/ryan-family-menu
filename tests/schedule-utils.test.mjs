@@ -15,6 +15,7 @@ import {
   normalizeServingPlan,
   boundedCount,
   boundedServings,
+  cleanRecipeId,
   parseCountableInput,
   rewriteCountFieldDisplay,
   cookingServings,
@@ -25,6 +26,18 @@ import {
   applyPersistedMealTarget,
   upcomingMealDateOptions,
 } from "../schedule-utils.js";
+
+test("meal recipe ids keep household upload ids up to the catalog bound", () => {
+  const longId = `shared-upload-picadillo-${"x".repeat(140)}`;
+  assert.ok(longId.length > 150);
+  assert.equal(cleanRecipeId(longId), longId);
+  const meal = normalizeMealPlan({
+    mealItemsVersion: 1,
+    items: [{ id: "dinner-1", period: "dinner", role: "main", recipeId: longId }],
+  });
+  assert.equal(meal.dinner, longId);
+  assert.equal(meal.items[0].recipeId, longId);
+});
 
 test("count fields rewrite visible decimals to the normalized stored value", () => {
   assert.equal(parseCountableInput("2.5"), 2.5);

@@ -268,6 +268,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
       chooseDinner: "Choose dinner",
       chooseForDinner: "Choose for dinner",
       chooseDinnerHint: "Choosing a recipe won't save the meal yet.",
+      chooseDinnerAdvanceFailed: "Couldn't open that recipe. Try choosing it again.",
       chooseDinnerNext: "Next, choose who is eating.",
       chooseDinnerBack: "{weekday} · Dinner",
       makeItAMeal: "Make it a meal",
@@ -633,6 +634,29 @@ test("change dinner from Instant Pot reviews and confirms Carne para tacos only"
   assert.equal(state.calendarMeals["2026-06-22"].dinner, "carne-para-tacos");
   assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "carne-para-tacos"), true);
   assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "instant-pot-pork"), false);
+});
+
+test("long household upload ids open meal review from Choose for dinner", async () => {
+  const longId = `shared-upload-picadillo-${"x".repeat(140)}`;
+  const extraRecipes = [{ id: longId, name: "Picadillo Tacos", category: "main" }];
+  const { elements, state, ui } = harness({ extraRecipes });
+  state.schedule.mon = { ...emptyMeal };
+
+  ui.openFocusedDinner("2026-06-22");
+  ui.selectFocusedDinnerRecipe(longId);
+  await elements["#advanceDinnerSelection"].dispatch("click");
+
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Picadillo Tacos/);
+});
+
+test("Choose for dinner shows a status when it cannot open review", async () => {
+  const { elements, state, ui } = harness();
+  state.schedule.mon = { ...emptyMeal };
+  ui.openFocusedDinner("2026-06-22");
+  await elements["#advanceDinnerSelection"].dispatch("click");
+  assert.match(elements["#focusedDinnerStatus"].textContent, /Couldn.t open that recipe/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
 });
 
 test("meal review confirm writes the dinner draft through the existing save path", async () => {

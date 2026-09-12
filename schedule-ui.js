@@ -1,13 +1,14 @@
 import { allLocalizedText, localizedText, updateLocalizedText } from "./localized-data.js";
 import { renderHandoffDetails } from "./handoff-ui.js";
 import { cardPhotoFor, cardPhotoIsGenerated } from "./recipe-utils.js";
-import { applyPersistedMealTarget, countFieldIsIncomplete, rewriteCountFieldDisplay } from "./schedule-utils.js";
+import { applyPersistedMealTarget, cleanRecipeId, countFieldIsIncomplete, rewriteCountFieldDisplay } from "./schedule-utils.js";
 import {
   applyDinnerItemRole,
   applyDinnerServingField,
   assignDinnerRecipe,
   advanceDinnerSelection,
   dinnerMainItem,
+  dinnerReviewIsReady,
   dinnerSideItem,
   exactRecipeById,
   filterDinnerRecipes,
@@ -85,6 +86,7 @@ export function createScheduleUi({
   let focusedDinnerFilter = "all";
   let focusedDinnerMode = "list";
   let focusedDinnerAddingSide = false;
+  let focusedDinnerAdvanceError = "";
   const mealSearchState = new Map();
   let planDirty = false;
   let planSaveBarHideTimer = 0;
@@ -293,6 +295,7 @@ export function createScheduleUi({
         <aside class="dinner-decision-tray" id="dinnerDecisionTray">
           <p class="dinner-tray-kicker">${escapeHtml(t("dinnerPickerSelected"))}</p>
           <h3>${escapeHtml(t("noDinnerSelection"))}</h3>
+          <p id="focusedDinnerStatus" role="status">${focusedDinnerAdvanceError ? escapeHtml(focusedDinnerAdvanceError) : ""}</p>
           <button class="primary-action" id="advanceDinnerSelection" type="button" disabled>${escapeHtml(t("chooseForDinner"))}</button>
           <p class="dinner-tray-hint">${escapeHtml(t("chooseDinnerHint"))}</p>
         </aside>
@@ -304,6 +307,7 @@ export function createScheduleUi({
         <h3>${escapeHtml(localize(recipe.name))}</h3>
         <p>${escapeHtml(dinnerRecipeMeta(recipe))}</p>
         <p class="dinner-tray-note">${escapeHtml(t("chooseDinnerNext"))}</p>
+        <p id="focusedDinnerStatus" role="status">${focusedDinnerAdvanceError ? escapeHtml(focusedDinnerAdvanceError) : ""}</p>
         <button class="primary-action" id="advanceDinnerSelection" type="button">${escapeHtml(t("chooseForDinner"))}</button>
         <p class="dinner-tray-hint">${escapeHtml(t("chooseDinnerHint"))}</p>
       </aside>
@@ -422,6 +426,7 @@ export function createScheduleUi({
     focusedDinnerFilter = "all";
     focusedDinnerMode = "list";
     focusedDinnerAddingSide = false;
+    focusedDinnerAdvanceError = "";
   }
 
   function syncFocusedServingControl(control, { allowPartial = false } = {}) {
@@ -466,11 +471,7 @@ export function createScheduleUi({
     const dinnerItem = focusedDinnerItem(meal);
     const recipe = dinnerItem ? exactRecipeById(allRecipes(), dinnerItem.recipeId) : null;
     const dinnerPlan = meal.servingPlans?.dinner || meal.servingPlan;
-    const reviewReady = Boolean(
-      recipe
-      && dinnerItem.recipeId
-      && dinnerItem.recipeId === focusedDinnerSelectedId
-    );
+    const reviewReady = dinnerReviewIsReady(meal, allRecipes(), focusedDinnerSelectedId);
     const choosing = focusedDinnerChoosing || !reviewReady;
 
     panel.innerHTML = `
@@ -524,14 +525,22 @@ export function createScheduleUi({
     bindFocusedRecipeChoices();
     $("#advanceDinnerSelection")?.addEventListener("click", () => {
       const selectedId = selectedDinnerRecipeId(allRecipes(), focusedDinnerSelectedId);
-      if (!selectedId) return;
-      const result = advanceDinnerSelection(
-        focusedDinnerDraft,
-        allRecipes(),
-        selectedId,
-        focusedDinnerFilter === "sides" ? "side" : "main",
-      );
-      if (!result.ok) return;
+      const result = selectedId
+        ? advanceDinnerSelection(
+          focusedDinnerDraft,
+          allRecipes(),
+          selectedId,
+          focusedDinnerFilter === "sides" ? "side" : "main",
+        )
+        : { ok: false };
+      if (!result.ok) {
+        focusedDinnerAdvanceError = t("chooseDinnerAdvanceFailed");
+        const status = $("#focusedDinnerStatus");
+        if (status) status.textContent = focusedDinnerAdvanceError;
+        else renderFocusedDinner();
+        return;
+      }
+      focusedDinnerAdvanceError = "";
       focusedDinnerDraft = result.meal;
       focusedDinnerSelectedId = result.selectedId;
       focusedDinnerChoosing = false;
@@ -592,7 +601,7 @@ export function createScheduleUi({
       event.preventDefault();
       const dinnerItem = focusedDinnerItem(focusedDinnerDraft);
       const confirmId = selectedDinnerRecipeId(allRecipes(), dinnerItem?.recipeId);
-      if (focusedDinnerChoosing || !confirmId || confirmId !== focusedDinnerSelectedId) return;
+      if (focusedDinnerChoosing || !confirmId || cleanRecipeId(confirmId) !== cleanRecipeId(focusedDinnerSelectedId)) return;
       rewriteFocusedDinnerCountFields();
       $$("[data-focused-serving]").forEach((control) => {
         if (control.dataset.countStep || control.tagName === "BUTTON") return;
@@ -612,6 +621,7 @@ export function createScheduleUi({
     const nextId = selectedDinnerRecipeId(allRecipes(), recipeId);
     if (!nextId) return false;
     focusedDinnerSelectedId = nextId;
+    focusedDinnerAdvanceError = "";
     renderFocusedDinner();
     return true;
   }
@@ -641,6 +651,7 @@ export function createScheduleUi({
     focusedDinnerFilter = "all";
     focusedDinnerMode = "list";
     focusedDinnerAddingSide = false;
+    focusedDinnerAdvanceError = "";
     renderFocusedDinner();
     globalThis.requestAnimationFrame?.(() => $(focusedDinnerChoosing ? "#focusedDinnerSearch" : "#focusedDinnerHeading")?.focus?.({ preventScroll: true }));
   }

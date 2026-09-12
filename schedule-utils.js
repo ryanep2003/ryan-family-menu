@@ -56,6 +56,12 @@ export const mealRoles = [
 const mealPeriodKeys = new Set(mealPeriods.map(({ key }) => key));
 const mealRoleKeys = new Set(mealRoles.map(({ key }) => key));
 
+export const RECIPE_ID_MAX = 160;
+
+export function cleanRecipeId(value) {
+  return typeof value === "string" ? value.trim().slice(0, RECIPE_ID_MAX) : "";
+}
+
 function legacyMealItems(value) {
   const dinner = typeof value?.dinner === "string" && value.dinner
     ? value.dinner
@@ -86,7 +92,7 @@ export function normalizeMealItems(value) {
       : legacyMealItems(value);
   return source.map((item, index) => {
     if (!item || typeof item !== "object") return null;
-    const recipeId = typeof item.recipeId === "string" ? item.recipeId.trim().slice(0, 120) : "";
+    const recipeId = cleanRecipeId(item.recipeId);
     if (!recipeId) return null;
     const period = mealPeriodKeys.has(item.period) ? item.period : "dinner";
     const role = mealRoleKeys.has(item.role) ? item.role : "other";
@@ -372,8 +378,8 @@ export function appendRecipeToMeal(meal, {
   role = "main",
   id = "",
 } = {}) {
-  const cleanRecipeId = typeof recipeId === "string" ? recipeId.trim().slice(0, 120) : "";
-  if (!cleanRecipeId) return normalizeMealPlan(meal);
+  const nextRecipeId = cleanRecipeId(recipeId);
+  if (!nextRecipeId) return normalizeMealPlan(meal);
   const itemId = typeof id === "string" && /^[a-z0-9-]{1,160}$/i.test(id)
     ? id
     : `meal-item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -387,7 +393,7 @@ export function appendRecipeToMeal(meal, {
         period: mealPeriodKeys.has(period) ? period : "dinner",
         role: mealRoleKeys.has(role) ? role : "other",
         sourceType: "recipe",
-        recipeId: cleanRecipeId,
+        recipeId: nextRecipeId,
       },
     ],
   });

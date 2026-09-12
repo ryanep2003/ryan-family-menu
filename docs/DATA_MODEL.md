@@ -104,7 +104,7 @@ The canonical meal format is `mealItemsVersion: 1` with an `items` array. Each i
 
 - meal period: breakfast, lunch, or dinner;
 - role: main, side, salad, dessert, sauce, drink, or other;
-- recipe ID;
+- recipe ID (trimmed, max 160 characters, the same bound as the recipe catalog; older meal writes that stored only 120 characters remain readable);
 - source type: recipe or allocated leftover;
 - optional leftover source date, source item ID, and servings.
 
