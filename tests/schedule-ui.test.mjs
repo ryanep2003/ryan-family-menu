@@ -593,6 +593,16 @@ test("List remains a first-class alternative to the dinner field", async () => {
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="list"/);
 });
 
+test("explore remounts keep the already selected dinner centered", () => {
+  const { elements, state, ui } = harness();
+  state.schedule.mon = { ...emptyMeal };
+
+  ui.openFocusedDinner("2026-06-22");
+  ui.selectFocusedDinnerRecipe("another-main");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-reel-start="another-main"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="another-main"[^>]*aria-pressed="true"/);
+});
+
 test("selecting recipe A then B reviews and confirms B even if recipeById falls back", async () => {
   const recipes = [
     { id: "instant-pot-pork", name: "Instant Pot Pork and Sauerkraut", category: "main" },

@@ -167,7 +167,11 @@ function applyActive(surface, items, activeIndex) {
 function restoreRemembered(surface, items) {
   if (!items.length) return;
   const remembered = positionBySurface.get(surface);
-  const index = rememberedIndex(items.map(recipeIdForItem), remembered, items.length);
+  const startId = surface.dataset?.reelStart || remembered?.recipeId;
+  const index = rememberedIndex(items.map(recipeIdForItem), {
+    ...remembered,
+    recipeId: startId || remembered?.recipeId,
+  }, items.length);
   centerItem(surface, items[index], "auto");
   applyActive(surface, items, index);
 }

@@ -146,4 +146,5 @@ test("native reel module does not measure every card on every scroll tick", asyn
   assert.match(source, /childList: true, subtree: true/);
   assert.match(source, /mutationAddsSurface/);
   assert.match(source, /recipe-reel-active/);
+  assert.match(source, /dataset\?\.reelStart|dataset\.reelStart/);
 });

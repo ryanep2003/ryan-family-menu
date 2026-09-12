@@ -344,7 +344,7 @@ export function createScheduleUi({
           <button class="ghost-button dinner-picker-mode" type="button" data-dinner-mode="${explore ? "list" : "explore"}" aria-pressed="${explore ? "false" : "true"}">${escapeHtml(t(explore ? "dinnerPickerList" : "dinnerPickerExplore"))}</button>
         </div>
         <p class="dinner-picker-count">${escapeHtml(t(matches.length === 1 ? "dinnerRecipeCountOne" : "dinnerRecipeCountMany").replace("{count}", `${matches.length}`))}</p>
-        <div class="${explore ? "focused-recipe-results dinner-picker-explore" : "dinner-picker-list"}" id="focusedDinnerResults">
+        <div class="${explore ? "focused-recipe-results dinner-picker-explore" : "dinner-picker-list"}" id="focusedDinnerResults"${explore && focusedDinnerSelectedId ? ` data-reel-start="${escapeHtml(focusedDinnerSelectedId)}"` : ""}>
           ${focusedRecipeResultsMarkup()}
         </div>
         ${explore ? `<p class="dinner-picker-explore-hint">${escapeHtml(t("dinnerPickerExploreHint"))}</p>` : ""}
