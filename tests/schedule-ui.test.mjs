@@ -637,7 +637,7 @@ test("change dinner from Instant Pot reviews and confirms Carne para tacos only"
 });
 
 test("long household upload ids open meal review from Choose for dinner", async () => {
-  const longId = `shared-upload-picadillo-${"x".repeat(140)}`;
+  const longId = `shared-upload-picadillo-${"x".repeat(130)}`;
   const extraRecipes = [{ id: longId, name: "Picadillo Tacos", category: "main" }];
   const { elements, state, ui } = harness({ extraRecipes });
   state.schedule.mon = { ...emptyMeal };

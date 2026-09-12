@@ -28,8 +28,9 @@ import {
 } from "../schedule-utils.js";
 
 test("meal recipe ids keep household upload ids up to the catalog bound", () => {
-  const longId = `shared-upload-picadillo-${"x".repeat(140)}`;
+  const longId = `shared-upload-picadillo-${"x".repeat(130)}`;
   assert.ok(longId.length > 150);
+  assert.ok(longId.length <= 160);
   assert.equal(cleanRecipeId(longId), longId);
   const meal = normalizeMealPlan({
     mealItemsVersion: 1,

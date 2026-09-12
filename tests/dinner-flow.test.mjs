@@ -115,8 +115,9 @@ test("change dinner does not preselect the existing planned recipe", () => {
 });
 
 test("household upload ids longer than 120 characters still advance to review", () => {
-  const longId = `shared-upload-picadillo-${"x".repeat(140)}`;
+  const longId = `shared-upload-picadillo-${"x".repeat(130)}`;
   assert.ok(longId.length > 150);
+  assert.ok(longId.length <= 160);
   const recipes = [{ id: longId, name: "Picadillo Tacos", category: "main" }];
   const selectedId = selectedDinnerRecipeId(recipes, longId);
   const result = advanceDinnerSelection({ items: [] }, recipes, selectedId);
