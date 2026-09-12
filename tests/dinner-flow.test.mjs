@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -8,17 +9,24 @@ import {
   advanceDinnerSelection,
   boundedCount,
   confirmSelectedDinnerRecipe,
+  DEFAULT_DINNER_PICKER_MODE,
+  dinnerFlowAllowsMotion,
   dinnerIsOpen,
   dinnerMainItem,
+  dinnerPickerMode,
+  dinnerRecipeFallbackLabel,
   dinnerReviewIsReady,
   dinnerSideItem,
+  dinnerStageName,
   filterDinnerRecipes,
   initialDinnerPickerSelection,
   parseCountableInput,
   resolveDinnerSuggestionId,
   rewriteCountFieldDisplay,
+  runDinnerStageTransition,
   sampleDinnerRecipes,
   selectedDinnerRecipeId,
+  shouldAcceptDinnerReelSelection,
   stepCountValue,
 } from "../dinner-flow.js";
 
@@ -227,4 +235,94 @@ test("steppers move from the normalized visible value", () => {
   assert.equal(stepCountValue("2.5", "adults", 1), 3);
   assert.equal(stepCountValue("2.5", "adults", -1), 1);
   assert.equal(stepCountValue("0", "guests", -1), 0);
+});
+
+test("upload cards without photos still have a readable name fallback", () => {
+  assert.equal(dinnerRecipeFallbackLabel("Picadillo Tacos"), "Picadillo Tacos");
+  assert.equal(dinnerRecipeFallbackLabel("  "), "");
+});
+
+test("choose dinner defaults to the native field and keeps List as an opt-in", () => {
+  assert.equal(DEFAULT_DINNER_PICKER_MODE, "explore");
+  assert.equal(dinnerPickerMode(), "explore");
+  assert.equal(dinnerPickerMode("explore"), "explore");
+  assert.equal(dinnerPickerMode("list"), "list");
+  assert.equal(dinnerPickerMode("camera"), "explore");
+});
+
+test("dinner stages name Today, picker, and review without inventing a fourth place", () => {
+  assert.equal(dinnerStageName({}), "");
+  assert.equal(dinnerStageName({ active: true, choosing: true }), "picker");
+  assert.equal(dinnerStageName({ active: true, choosing: false }), "review");
+});
+
+test("change-dinner reel settle does not invent a selection", () => {
+  assert.equal(shouldAcceptDinnerReelSelection({
+    nextId: "citrus-and-endive-salad",
+    selectedId: "",
+    existingRecipeId: "picadillo",
+    openedToChoose: true,
+    restore: true,
+  }), false);
+  assert.equal(shouldAcceptDinnerReelSelection({
+    nextId: "citrus-and-endive-salad",
+    selectedId: "",
+    existingRecipeId: "picadillo",
+    openedToChoose: true,
+    userHasInteracted: false,
+  }), false);
+  assert.equal(shouldAcceptDinnerReelSelection({
+    nextId: "picadillo",
+    selectedId: "",
+    existingRecipeId: "picadillo",
+    openedToChoose: true,
+    restore: true,
+    userHasInteracted: true,
+  }), false);
+  assert.equal(shouldAcceptDinnerReelSelection({
+    nextId: "citrus-and-endive-salad",
+    selectedId: "",
+    existingRecipeId: "picadillo",
+    openedToChoose: true,
+    userHasInteracted: true,
+  }), true);
+  assert.equal(shouldAcceptDinnerReelSelection({
+    nextId: "picadillo",
+    selectedId: "citrus-and-endive-salad",
+    existingRecipeId: "picadillo",
+    openedToChoose: true,
+    userHasInteracted: true,
+  }), true);
+  assert.equal(shouldAcceptDinnerReelSelection({
+    nextId: "picadillo",
+    selectedId: "picadillo",
+    userHasInteracted: true,
+  }), false);
+});
+
+test("dinner stage motion uses view transitions only when motion is allowed", () => {
+  assert.equal(dinnerFlowAllowsMotion(() => ({ matches: true })), false);
+  assert.equal(dinnerFlowAllowsMotion(() => ({ matches: false })), true);
+  let painted = 0;
+  let started = 0;
+  runDinnerStageTransition(() => {
+    painted += 1;
+  }, { reducedMotion: true, startViewTransition: () => { started += 1; } });
+  assert.equal(painted, 1);
+  assert.equal(started, 0);
+  runDinnerStageTransition(() => {
+    painted += 1;
+  }, { reducedMotion: false, startViewTransition: (update) => { started += 1; update(); return "ok"; } });
+  assert.equal(painted, 2);
+  assert.equal(started, 1);
+});
+
+test("dinner field styles keep native snap and honor reduced motion", async () => {
+  const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
+  assert.match(css, /#focusedDinnerResults\.dinner-picker-explore\.recipe-native-reel/);
+  assert.match(css, /border-radius:\s*20px/);
+  assert.match(css, /@keyframes dinner-stage-enter/);
+  assert.match(css, /prefers-reduced-motion: reduce[\s\S]*focused-dinner\.is-dinner-picker/);
+  assert.match(css, /\.dinner-picker-list \.focused-recipe-copy strong[\s\S]*white-space:\s*normal/);
+  assert.doesNotMatch(css, /translate3d|perspective\(|rotateY\(/);
 });

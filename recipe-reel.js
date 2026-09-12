@@ -5,18 +5,22 @@ import {
   isDragGesture,
   isNearIndex,
   itemIdsSignature,
+  itemIndexForRecipeId,
+  lockedActiveIndex,
   mostIntersectingIndex,
   nearestIndexByCenters,
   needsSnapCorrection,
+  preferredRestoreIndex,
+  recipeIdFromElement,
   recipeIdFromRecord,
   reelClickAction,
-  rememberedIndex,
-  scrollLeftToCenter,
+  scrollLeftToAlignCenter,
   shouldParkMedia,
   usesCustomPointerDrag,
 } from "./recipe-reel-logic.js";
 
-const REEL_CSS_URL = "./recipe-reel.css?v=8";
+const REEL_CSS_URL = "./recipe-reel.css?v=9";
+const START_LOCK_CLASS = "is-start-locked";
 const SURFACE_SELECTOR = "#recipeList, .focused-recipe-results, .meal-recipe-results";
 const ITEM_SELECTOR = ".recipe-browse-card, .focused-recipe-result, .meal-recipe-result";
 const REEL_CLASS = "recipe-native-reel";
@@ -40,8 +44,12 @@ function ensureStyles(root) {
   root.head?.append(localCss);
 }
 
+function isHtmlElement(node) {
+  return typeof HTMLElement !== "undefined" && node instanceof HTMLElement;
+}
+
 function isRecipeItem(node) {
-  return node instanceof HTMLElement && node.matches(ITEM_SELECTOR);
+  return isHtmlElement(node) && node.matches(ITEM_SELECTOR);
 }
 
 function itemsFor(surface) {
@@ -49,9 +57,14 @@ function itemsFor(surface) {
 }
 
 function recipeIdForItem(item) {
-  if (!(item instanceof HTMLElement)) return "";
+  if (!isHtmlElement(item)) return "";
+  const fromCard = recipeIdFromElement(item);
+  if (fromCard) return fromCard;
   const child = item.querySelector?.("[data-open], [data-recipe-id], [data-focused-recipe]");
   return recipeIdFromRecord({
+    attrFocusedRecipe: item.getAttribute("data-focused-recipe"),
+    attrRecipeId: item.getAttribute("data-recipe-id"),
+    attrOpen: item.getAttribute("data-open"),
     open: item.dataset.open,
     recipeId: item.dataset.recipeId,
     focusedRecipe: item.dataset.focusedRecipe,
@@ -61,12 +74,28 @@ function recipeIdForItem(item) {
   });
 }
 
+function indexForRecipeId(items, recipeId) {
+  const ids = items.map(recipeIdForItem);
+  const byId = itemIndexForRecipeId(ids, recipeId);
+  if (byId >= 0) return byId;
+  return items.findIndex((item) => recipeIdFromElement(item) === recipeId);
+}
+
+function startIsLocked(surface) {
+  const state = stateBySurface.get(surface);
+  return Boolean(startRecipeId(surface) && state && !state.releasedStart);
+}
+
+function setStartLock(surface, locked) {
+  surface.classList.toggle(START_LOCK_CLASS, Boolean(locked));
+}
+
 function itemIdsFor(surface) {
   return itemsFor(surface).map(recipeIdForItem);
 }
 
 function isLayoutVisible(surface) {
-  if (!(surface instanceof HTMLElement) || !surface.isConnected) return false;
+  if (!isHtmlElement(surface) || !surface.isConnected) return false;
   if (surface.hidden || surface.closest("[hidden]")) return false;
   const style = getComputedStyle(surface);
   if (style.display === "none" || style.visibility === "hidden") return false;
@@ -82,18 +111,36 @@ function snapBehavior() {
   return prefersReducedMotion() ? "auto" : "smooth";
 }
 
+function alignedScrollLeft(surface, item) {
+  return scrollLeftToAlignCenter(
+    surface.scrollLeft,
+    surface.getBoundingClientRect(),
+    item.getBoundingClientRect(),
+  );
+}
+
 function centerItem(surface, item, behavior = "auto") {
   if (!surface || !item) return;
+  const locked = startIsLocked(surface);
+  setStartLock(surface, true);
+  void surface.offsetWidth;
   surface.scrollTo({
-    left: scrollLeftToCenter(item.offsetLeft, item.offsetWidth, surface.clientWidth),
-    behavior,
+    left: alignedScrollLeft(surface, item),
+    behavior: behavior === "smooth" && !locked ? "smooth" : "auto",
   });
+  if (!locked) {
+    requestAnimationFrame(() => setStartLock(surface, false));
+  }
 }
 
 function nearestIndexFromSurface(surface, items) {
-  const center = surface.scrollLeft + surface.clientWidth / 2;
-  const centers = items.map((item) => item.offsetLeft + item.offsetWidth / 2);
-  return nearestIndexByCenters(centers, center);
+  const surfaceRect = surface.getBoundingClientRect();
+  const viewportCenter = surfaceRect.left + surfaceRect.width / 2;
+  const centers = items.map((item) => {
+    const rect = item.getBoundingClientRect();
+    return rect.left + rect.width / 2;
+  });
+  return nearestIndexByCenters(centers, viewportCenter);
 }
 
 function elementFromEventTarget(target) {
@@ -139,9 +186,18 @@ function syncImageBudget(items, activeIndex) {
   });
 }
 
-function applyActive(surface, items, activeIndex) {
+function applyActive(surface, items, activeIndex, { restore = false } = {}) {
   if (!items.length) return;
-  const index = Math.max(0, Math.min(items.length - 1, activeIndex));
+  const state = stateBySurface.get(surface);
+  const requested = Math.max(0, Math.min(items.length - 1, activeIndex));
+  const lockedIndex = lockedActiveIndex({
+    itemIds: items.map(recipeIdForItem),
+    startId: startRecipeId(surface),
+    releasedStart: Boolean(state?.releasedStart),
+    requestedIndex: requested,
+  });
+  if (lockedIndex < 0) return;
+  const index = lockedIndex;
   items.forEach((item, itemIndex) => {
     item.classList.toggle(ACTIVE_CLASS, itemIndex === index);
     item.classList.toggle(NEAR_CLASS, isNearIndex(itemIndex, index));
@@ -150,31 +206,73 @@ function applyActive(surface, items, activeIndex) {
     else item.removeAttribute("aria-current");
   });
   syncImageBudget(items, index);
+  const recipeId = recipeIdForItem(items[index]);
+  const previous = positionBySurface.get(surface);
   positionBySurface.set(surface, {
     index,
-    recipeId: recipeIdForItem(items[index]),
+    recipeId,
   });
+  if (recipeId && previous?.recipeId !== recipeId) {
+    surface.dispatchEvent(new CustomEvent("recipe-reel-active", {
+      bubbles: true,
+      detail: {
+        recipeId,
+        index,
+        restore: restore || Boolean(state?.ignoreActive),
+      },
+    }));
+  }
+}
+
+function startRecipeId(surface) {
+  return surface.dataset?.reelStart || "";
 }
 
 function restoreRemembered(surface, items) {
   if (!items.length) return;
   const remembered = positionBySurface.get(surface);
-  const index = rememberedIndex(items.map(recipeIdForItem), remembered, items.length);
+  const startId = startRecipeId(surface);
+  let index = preferredRestoreIndex(items.map(recipeIdForItem), startId, remembered, items.length);
+  if (index < 0 && startId) {
+    index = indexForRecipeId(items, startId);
+  }
+  if (index < 0) return;
+  if (startId && !stateBySurface.get(surface)?.releasedStart) {
+    setStartLock(surface, true);
+  }
   centerItem(surface, items[index], "auto");
-  applyActive(surface, items, index);
+  applyActive(surface, items, index, { restore: true });
 }
 
 function settleSnap(surface, state) {
   if (state.pointer) return;
   const items = itemsFor(surface);
   if (!items.length) return;
+  const lockId = !state.releasedStart && startRecipeId(surface);
+  if (lockId) {
+    restoreRemembered(surface, items);
+    return;
+  }
   const index = nearestIndexFromSurface(surface, items);
   const item = items[index];
-  const target = scrollLeftToCenter(item.offsetLeft, item.offsetWidth, surface.clientWidth);
+  const target = alignedScrollLeft(surface, item);
   if (needsSnapCorrection(surface.scrollLeft, target)) {
     surface.scrollTo({ left: target, behavior: snapBehavior() });
   }
   applyActive(surface, items, index);
+}
+
+function queueLockedRecenter(surface) {
+  const state = stateBySurface.get(surface);
+  if (!state || state.releasedStart || !startRecipeId(surface)) return;
+  let frames = 8;
+  const tick = () => {
+    if (!surface.isConnected || state.releasedStart || !startRecipeId(surface)) return;
+    restoreRemembered(surface, itemsFor(surface));
+    frames -= 1;
+    if (frames > 0) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 function observeActiveItems(surface, state) {
@@ -184,7 +282,7 @@ function observeActiveItems(surface, state) {
 
   const ratios = new Map();
   state.itemObserver = new IntersectionObserver((entries) => {
-    if (state.ignoreActive) return;
+    if (state.ignoreActive || (!state.releasedStart && startRecipeId(surface))) return;
     for (const entry of entries) ratios.set(entry.target, entry.intersectionRatio);
     const ordered = itemsFor(surface);
     if (!ordered.length) return;
@@ -207,6 +305,8 @@ function bindPointer(surface, state) {
 
   state.pointerDownHandler = (event) => {
     if (event.button !== 0) return;
+    state.releasedStart = true;
+    setStartLock(surface, false);
     state.suppressClick = false;
     state.pointer = {
       id: event.pointerId,
@@ -292,6 +392,30 @@ function bindScrollSettle(surface, state) {
   surface.addEventListener("scroll", state.scrollHandler, { passive: true });
 }
 
+function bindStartLayout(surface, state) {
+  if (typeof ResizeObserver !== "function") return;
+  if (!startRecipeId(surface)) return;
+  if (!state.startObserver) {
+    state.startObserver = new ResizeObserver(() => {
+      if (!surface.isConnected || state.releasedStart || state.pointer) return;
+      const items = itemsFor(surface);
+      const startId = startRecipeId(surface);
+      if (!startId || !items.length) return;
+      const index = indexForRecipeId(items, startId);
+      const item = items[index];
+      if (!item) return;
+      if (!needsSnapCorrection(surface.scrollLeft, alignedScrollLeft(surface, item))) return;
+      restoreRemembered(surface, items);
+    });
+  }
+  state.startObserver.disconnect();
+  state.startObserver.observe(surface);
+  if (surface.parentElement) state.startObserver.observe(surface.parentElement);
+  const items = itemsFor(surface);
+  const startItem = items[indexForRecipeId(items, startRecipeId(surface))];
+  if (startItem) state.startObserver.observe(startItem);
+}
+
 function refreshSurface(surface) {
   const state = stateBySurface.get(surface);
   if (!state) return;
@@ -307,15 +431,18 @@ function refreshSurface(surface) {
         if (!surface.isConnected) return;
         restoreRemembered(surface, itemsFor(surface));
         state.ignoreActive = false;
+        bindStartLayout(surface, state);
+        queueLockedRecenter(surface);
       });
     });
     return;
   }
   observeActiveItems(surface, state);
+  bindStartLayout(surface, state);
 }
 
 function bindSurface(surface) {
-  if (!(surface instanceof HTMLElement)) return;
+  if (!isHtmlElement(surface)) return;
   if (stateBySurface.has(surface)) {
     refreshSurface(surface);
     return;
@@ -328,6 +455,8 @@ function bindSurface(surface) {
     pointer: null,
     suppressClick: false,
     itemObserver: null,
+    startObserver: null,
+    releasedStart: false,
   };
   stateBySurface.set(surface, state);
   bindPointer(surface, state);
@@ -339,6 +468,7 @@ function unbindSurface(surface) {
   const state = stateBySurface.get(surface);
   if (!state) return;
   state.itemObserver?.disconnect();
+  state.startObserver?.disconnect();
   surface.removeEventListener("pointerdown", state.pointerDownHandler);
   surface.removeEventListener("pointermove", state.pointerMoveHandler);
   surface.removeEventListener("pointerup", state.pointerEndHandler);
@@ -352,7 +482,7 @@ function unbindSurface(surface) {
 }
 
 function scheduleSurface(surface) {
-  if (!(surface instanceof HTMLElement) || scheduled.has(surface)) return;
+  if (!isHtmlElement(surface) || scheduled.has(surface)) return;
   scheduled.add(surface);
   requestAnimationFrame(() => {
     scheduled.delete(surface);
@@ -362,7 +492,7 @@ function scheduleSurface(surface) {
 }
 
 function watchSurface(surface) {
-  if (!(surface instanceof HTMLElement) || watchedSurfaces.has(surface)) {
+  if (!isHtmlElement(surface) || watchedSurfaces.has(surface)) {
     scheduleSurface(surface);
     return;
   }
@@ -388,11 +518,29 @@ function queueScan(root) {
 function mutationAddsSurface(mutations) {
   for (const mutation of mutations) {
     for (const node of mutation.addedNodes) {
-      if (!(node instanceof HTMLElement)) continue;
+      if (!isHtmlElement(node)) continue;
       if (node.matches?.(SURFACE_SELECTOR) || node.querySelector?.(SURFACE_SELECTOR)) return true;
     }
   }
   return false;
+}
+
+export function syncReelToRecipeId(surface, recipeId) {
+  if (!isHtmlElement(surface) || !recipeId) return false;
+  surface.dataset.reelStart = recipeId;
+  if (!stateBySurface.has(surface) && isLayoutVisible(surface)) {
+    bindSurface(surface);
+  }
+  const items = itemsFor(surface);
+  const index = indexForRecipeId(items, recipeId);
+  if (index < 0) return false;
+  const state = stateBySurface.get(surface);
+  if (state && !state.pointer) {
+    state.releasedStart = false;
+    setStartLock(surface, true);
+  }
+  restoreRemembered(surface, items);
+  return true;
 }
 
 export function installRecipeReels(root = globalThis.document) {

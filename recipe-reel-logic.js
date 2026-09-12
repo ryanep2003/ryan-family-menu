@@ -20,6 +20,23 @@ export function scrollLeftToCenter(itemOffsetLeft, itemWidth, surfaceWidth) {
   return Math.max(0, itemOffsetLeft - ((surfaceWidth - itemWidth) / 2));
 }
 
+export function scrollLeftToAlignCenter(surfaceScrollLeft, surfaceRect = {}, itemRect = {}) {
+  const surfaceLeft = Number(surfaceRect.left) || 0;
+  const surfaceWidth = Number(surfaceRect.width) || 0;
+  const itemLeft = Number(itemRect.left) || 0;
+  const itemWidth = Number(itemRect.width) || 0;
+  const delta = (itemLeft + (itemWidth / 2)) - (surfaceLeft + (surfaceWidth / 2));
+  return Math.max(0, (Number(surfaceScrollLeft) || 0) + delta);
+}
+
+export function recipeIdFromElement(item) {
+  if (!item) return "";
+  return item.getAttribute?.("data-focused-recipe")
+    || item.getAttribute?.("data-recipe-id")
+    || item.getAttribute?.("data-open")
+    || "";
+}
+
 export function isDragGesture(startX, startY, currentX, currentY, threshold = DRAG_THRESHOLD_PX) {
   const deltaX = currentX - startX;
   const deltaY = currentY - startY;
@@ -38,6 +55,29 @@ export function rememberedIndex(itemIds, remembered, count) {
   return Math.floor((count - 1) / 2);
 }
 
+export function itemIndexForRecipeId(itemIds, recipeId) {
+  if (!recipeId) return -1;
+  return (itemIds || []).indexOf(recipeId);
+}
+
+export function preferredRestoreIndex(itemIds, startId, remembered, count) {
+  if (!count) return 0;
+  if (startId) {
+    const index = itemIndexForRecipeId(itemIds, startId);
+    // A requested start recipe must not fall back to the middle catalog card.
+    // Desktop List→Explore used that fallback and lit Cheesy Chicken while the tray kept Picadillo.
+    return index;
+  }
+  return rememberedIndex(itemIds, remembered, count);
+}
+
+export function lockedActiveIndex({ itemIds, startId, releasedStart, requestedIndex }) {
+  if (!releasedStart && startId) {
+    return itemIndexForRecipeId(itemIds, startId);
+  }
+  return requestedIndex;
+}
+
 export function isNearIndex(index, activeIndex) {
   return Math.abs(index - activeIndex) === 1;
 }
@@ -51,7 +91,10 @@ export function itemIdsSignature(ids) {
 }
 
 export function recipeIdFromRecord(record = {}) {
-  return record.open
+  return record.attrFocusedRecipe
+    || record.attrRecipeId
+    || record.attrOpen
+    || record.open
     || record.recipeId
     || record.focusedRecipe
     || record.childOpen

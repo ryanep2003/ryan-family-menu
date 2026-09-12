@@ -63,6 +63,12 @@
   cursor: grabbing;
 }
 
+#recipeList.recipe-native-reel.is-start-locked,
+.focused-recipe-results.recipe-native-reel.is-start-locked,
+.meal-recipe-results.recipe-native-reel.is-start-locked {
+  scroll-snap-type: none;
+}
+
 #recipeList.recipe-native-reel::-webkit-scrollbar,
 .focused-recipe-results.recipe-native-reel::-webkit-scrollbar,
 .meal-recipe-results.recipe-native-reel::-webkit-scrollbar {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { createScheduleUi } from "../schedule-ui.js";
@@ -103,6 +104,8 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     "#focusedDinnerStatus": element(),
     "#focusedEatingNames": element(),
     "#advanceDinnerSelection": element({ disabled: true }),
+    "#dinnerPickerMode": element({ dataset: { dinnerMode: "list" } }),
+    "#focusedDinnerResults": element(),
     "#cancelDinnerReview": element(),
     "#comprehensivePlanner": element(),
     "#planningModeSwitch": element(),
@@ -217,6 +220,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     },
     $$: (selector) => {
       if (selector === "[data-planning-mode]") return [elements["#weekPlanningTab"], elements["#monthPlanningTab"]];
+      if (selector === "[data-dinner-mode]") return [elements["#dinnerPickerMode"]];
       if (selector === "[data-edit-week-date]") return weekButtons;
       if (selector === "[data-edit-calendar-date]") return dateButtons;
       if (selector === '[data-meal-context^="weekdate:"]') return [weekHandoffControl, weekServingControl, weekExtraServingControl, weekActualLeftoverControl];
@@ -284,6 +288,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
       dinnerPickerExplore: "Explore",
       dinnerPickerList: "List",
       dinnerPickerSelected: "Selected",
+      dinnerPickerExploreHint: "Drag to explore",
       searchYourRecipes: "Search your recipes",
       confirmDinner: "Confirm dinner",
       cancelDinnerReview: "Cancel",
@@ -428,7 +433,8 @@ test("focused dinner search uses lazy compact imagery and keeps no-image results
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /class="focused-recipe-result has-image"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /src="assets\/card-lemon-chicken\.webp"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /loading="lazy" decoding="async"/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /class="focused-recipe-result"[^>]*data-focused-recipe="another-main"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="another-main"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-recipe-fallback[\s\S]*Another Main/);
 });
 
 test("planned meal can open groceries filtered to its date and meal period", async () => {
@@ -551,7 +557,7 @@ test("recipe search exposes every matching recipe instead of truncating the fami
   assert.equal((weekRecipeResults.innerHTML.match(/data-add-meal-result=/g) || []).length, 17);
 });
 
-test("open dinner picker stays on List with a fixed tray and does not save yet", () => {
+test("open dinner picker starts on the center-snap field with List available and does not save yet", () => {
   const { elements, state, ui } = harness();
   state.schedule.mon = { ...emptyMeal };
   const savesBefore = state.saveCalls;
@@ -563,11 +569,69 @@ test("open dinner picker stays on List with a fixed tray and does not save yet",
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="all"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="favorites"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="sides"/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-list/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /focused-recipe-results dinner-picker-explore/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="list"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Drag to explore/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose for dinner/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choosing a recipe won/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-list/);
   assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
   assert.equal(state.saveCalls, savesBefore);
+});
+
+test("List remains a first-class alternative to the dinner field", async () => {
+  const { elements, ui } = harness();
+  elements["#comprehensivePlanner"].hidden = false;
+
+  ui.openFocusedDinner("2026-06-22", "", { choose: true, mode: "list" });
+
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-list/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="explore"/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-explore/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Drag to explore/);
+
+  elements["#dinnerPickerMode"].dataset.dinnerMode = "explore";
+  await elements["#dinnerPickerMode"].dispatch("click");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /focused-recipe-results dinner-picker-explore/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="list"/);
+});
+
+test("explore remounts keep the already selected dinner centered", () => {
+  const { elements, state, ui } = harness();
+  state.schedule.mon = { ...emptyMeal };
+
+  ui.openFocusedDinner("2026-06-22");
+  ui.selectFocusedDinnerRecipe("another-main");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-reel-start="another-main"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="another-main"[^>]*aria-pressed="true"/);
+});
+
+test("List then Explore remounts lock the reel to the tray recipe", async () => {
+  const extraRecipes = [
+    { id: "picadillo", name: "Picadillo Tacos", category: "main" },
+    { id: "cheesy-chicken", name: "Cheesy Chicken and Rice Casserole", category: "main" },
+  ];
+  const { elements, state, ui } = harness({ extraRecipes });
+  state.schedule.mon = { ...emptyMeal };
+
+  ui.openFocusedDinner("2026-06-22", "", { choose: true, mode: "list" });
+  ui.selectFocusedDinnerRecipe("picadillo");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Picadillo Tacos/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /data-reel-start=/);
+
+  elements["#dinnerPickerMode"].dataset.dinnerMode = "explore";
+  await elements["#dinnerPickerMode"].dispatch("click");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /focused-recipe-results dinner-picker-explore/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-reel-start="picadillo"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="picadillo"[^>]*aria-pressed="true"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Picadillo Tacos/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Cheesy Chicken and Rice Casserole/);
+});
+
+test("List to Explore asks the reel to recenter the tray recipe", async () => {
+  const source = await readFile(new URL("../schedule-ui.js", import.meta.url), "utf8");
+  assert.match(source, /syncReelToRecipeId\(results, focusedDinnerSelectedId\)/);
+  assert.match(source, /dataset\.reelStart = focusedDinnerSelectedId/);
 });
 
 test("selecting recipe A then B reviews and confirms B even if recipeById falls back", async () => {
@@ -603,6 +667,31 @@ test("selecting recipe A then B reviews and confirms B even if recipeById falls 
   assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "carne-para-tacos"), true);
   assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "picadillo"), false);
   assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "instant-pot-pork"), false);
+});
+
+test("change dinner reel restore does not preselect a different recipe", async () => {
+  const extraRecipes = [
+    { id: "picadillo", name: "Picadillo Tacos", category: "main" },
+    { id: "citrus-and-endive-salad", name: "Citrus and Endive Salad", category: "salad" },
+  ];
+  const { elements, state, ui } = harness({ extraRecipes });
+  state.calendarMeals["2026-06-22"] = normalizeMealPlan({ dinner: "picadillo" });
+
+  ui.openFocusedDinner("2026-06-22", "", { choose: true });
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose a recipe to continue/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Citrus and Endive Salad/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Picadillo Tacos/);
+
+  await elements["#focusedDinnerResults"].dispatch("recipe-reel-active", elements["#focusedDinnerResults"], {
+    detail: { recipeId: "citrus-and-endive-salad", restore: true },
+  });
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose a recipe to continue/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Citrus and Endive Salad/);
+
+  await elements["#advanceDinnerSelection"].dispatch("click");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose dinner/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerStatus"].textContent, /Couldn.t open that recipe/);
 });
 
 test("change dinner from Instant Pot reviews and confirms Carne para tacos only", async () => {

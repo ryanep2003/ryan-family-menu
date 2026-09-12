@@ -187,6 +187,7 @@ summary { min-height: 44px; padding: 11px 0; cursor: pointer; font-weight: 600; 
 .household-history-meta { display: block; color: var(--muted); font-size: .84rem; }
 .household-history-restore { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); }
 .app-update-notice { position: fixed; z-index: 24; right: var(--space-4); bottom: calc(80px + env(safe-area-inset-bottom)); left: var(--space-4); display: flex; max-width: 34rem; align-items: center; justify-content: space-between; gap: var(--space-3); margin: auto; padding: var(--space-3); border-radius: var(--radius-sheet); background: var(--ink); color: var(--paper); }
+body.dinner-flow-open .app-update-notice { top: calc(var(--space-4) + env(safe-area-inset-top, 0px)); bottom: auto; z-index: 30; }
 main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min-height: calc(100vh - 60px); margin: 0 auto; padding: 0 var(--space-4) calc(var(--bottom-nav-space) + var(--space-6)); }
 .tabs { position: fixed; right: 0; bottom: 0; left: 0; z-index: 12; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom)); background: var(--paper); box-shadow: 0 -8px 20px rgba(26, 58, 92, .06); }
 .tabs button { display: grid; justify-items: center; gap: 2px; min-height: 48px; padding: 6px 1px; border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: clamp(.66rem, 2.8vw, .82rem); font-weight: 650; }
@@ -487,13 +488,22 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 }
 .dinner-picker-filters button[aria-pressed="true"] { background: var(--sage); }
 .dinner-picker-count { color: var(--muted); font-size: .86rem; }
-.dinner-picker-list { display: grid; min-width: 0; }
+.dinner-picker.is-explore .dinner-picker-count { display: none; }
+.dinner-picker-explore-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: .82rem;
+  text-align: center;
+}
+.dinner-picker-list { display: flex; flex-direction: column; width: 100%; min-width: 0; }
 .dinner-picker-list .focused-recipe-result {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-3);
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   min-height: 76px;
   padding: var(--space-3);
   border: 0;
@@ -503,7 +513,18 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   text-align: left;
 }
 .dinner-picker-list .focused-recipe-result.is-selected { background: color-mix(in srgb, var(--sage) 35%, var(--paper)); }
-.dinner-picker-list .focused-recipe-result img, .dinner-picker-list .recipe-photo-shell { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
+.dinner-picker-list .focused-recipe-result img, .dinner-picker-list .recipe-photo-shell { width: 56px; height: 56px; min-width: 56px; border-radius: 50%; object-fit: cover; }
+.dinner-picker-list .focused-recipe-copy,
+.dinner-picker-list .focused-recipe-copy strong,
+.dinner-picker-list .focused-recipe-copy small {
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
 .dinner-picker-check { color: var(--navy); font-weight: 700; }
 .dinner-decision-tray {
   position: sticky;
@@ -519,6 +540,20 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .dinner-tray-kicker { color: var(--success); font-size: .78rem; font-weight: 650; }
 .dinner-decision-tray h3 { font-size: 1.45rem; }
 .dinner-tray-note, .dinner-tray-hint { color: var(--muted); font-size: .88rem; }
+.dinner-recipe-fallback {
+  display: grid;
+  place-items: end start;
+  padding: 12px;
+  background: color-mix(in srgb, var(--sage) 55%, var(--paper));
+  color: var(--navy);
+}
+.dinner-recipe-fallback-name {
+  font-family: var(--font-reading);
+  font-size: 1.05rem;
+  font-weight: 550;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
 .dinner-review-recipe {
   display: grid;
   gap: var(--space-3);
@@ -556,6 +591,98 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .dinner-side-choices { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .dinner-side-choices button { min-height: 40px; padding: 8px 12px; border-radius: 999px; background: var(--paper); }
 .dinner-review-actions { margin-inline: 0; }
+.focused-dinner.is-dinner-picker,
+.focused-dinner.is-dinner-review {
+  max-width: 48rem;
+  animation: dinner-stage-enter 180ms ease;
+}
+.focused-dinner.is-dinner-picker .focused-dinner-header,
+.focused-dinner.is-dinner-review .focused-dinner-header {
+  gap: var(--space-2);
+  margin-inline: 0;
+  padding: var(--space-2) 0 var(--space-3);
+  background: transparent;
+}
+.focused-dinner.is-dinner-picker .focused-dinner-header .text-action,
+.focused-dinner.is-dinner-review .focused-dinner-header .text-action {
+  margin-left: -8px;
+}
+.dinner-picker.is-explore #focusedDinnerResults.dinner-picker-explore {
+  margin-inline: calc(var(--space-4) * -1);
+  width: calc(100% + (var(--space-4) * 2));
+}
+#focusedDinnerResults.dinner-picker-explore.recipe-native-reel {
+  --recipe-slide-width: min(78vw, 300px);
+  min-height: 430px;
+  padding-block: 10px 18px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#focusedDinnerResults.dinner-picker-explore.recipe-native-reel > .focused-recipe-result {
+  position: relative;
+  height: 390px;
+  min-height: 390px;
+  padding: 12px 12px 14px;
+  border-radius: 22px;
+}
+#focusedDinnerResults.dinner-picker-explore.recipe-native-reel .recipe-photo-shell,
+#focusedDinnerResults.dinner-picker-explore.recipe-native-reel .recipe-photo-shell img {
+  border-radius: 20px;
+}
+#focusedDinnerResults.dinner-picker-explore.recipe-native-reel .recipe-photo-shell {
+  height: 220px;
+  min-height: 220px;
+}
+#focusedDinnerResults.dinner-picker-explore .dinner-picker-check {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 4px 12px rgba(26, 58, 92, .12);
+  color: var(--navy);
+}
+#focusedDinnerResults.dinner-picker-explore .focused-recipe-copy {
+  padding: 4px 4px 0;
+}
+#focusedDinnerResults.dinner-picker-explore .focused-recipe-copy strong {
+  white-space: normal;
+}
+#focusedDinnerResults.dinner-picker-explore .dinner-recipe-fallback {
+  height: 220px;
+  min-height: 220px;
+  border-radius: 20px;
+}
+@media (max-width: 699px) {
+  .dinner-decision-tray {
+    gap: 4px;
+    padding: 10px 14px 12px;
+  }
+  .dinner-decision-tray h3 { font-size: 1.15rem; }
+  .dinner-tray-note { display: none; }
+  #focusedDinnerResults.dinner-picker-explore.recipe-native-reel {
+    min-height: 340px;
+    padding-block: 8px 10px;
+  }
+  #focusedDinnerResults.dinner-picker-explore.recipe-native-reel > .focused-recipe-result {
+    height: 320px;
+    min-height: 320px;
+  }
+  #focusedDinnerResults.dinner-picker-explore.recipe-native-reel .recipe-photo-shell,
+  #focusedDinnerResults.dinner-picker-explore .dinner-recipe-fallback {
+    height: 168px;
+    min-height: 168px;
+  }
+}
+@keyframes dinner-stage-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
 /* Comprehensive planning remains separate from the focused Today flow. */
 .planning-mode-switch, .inventory-mode-switch {
@@ -1330,7 +1457,21 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
     column-gap: var(--space-6);
     align-items: start;
   }
-  .dinner-picker h2, .dinner-picker-search, .dinner-picker-toolbar, .dinner-picker-count, .dinner-picker-list, .dinner-picker-explore { grid-column: 1; }
+  .dinner-picker h2, .dinner-picker-search, .dinner-picker-toolbar, .dinner-picker-count, .dinner-picker-list, .dinner-picker-explore, .dinner-picker-explore-hint { grid-column: 1; }
+  .dinner-picker.is-explore .dinner-picker-count { display: block; }
+  .dinner-picker.is-explore #focusedDinnerResults.dinner-picker-explore {
+    margin-inline: 0;
+    width: 100%;
+  }
+  #focusedDinnerResults.dinner-picker-explore.recipe-native-reel {
+    --recipe-slide-width: 320px;
+    min-height: 468px;
+    border-radius: 24px;
+  }
+  #focusedDinnerResults.dinner-picker-explore.recipe-native-reel > .focused-recipe-result {
+    height: 410px;
+    min-height: 410px;
+  }
   .dinner-decision-tray {
     grid-column: 2;
     grid-row: 1 / span 6;
@@ -1552,6 +1693,8 @@ body[data-view="grocery"] .tabs button[data-view="grocery"], body[data-view="sch
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
   .today-dinner-samples img { transform: none; }
+  .focused-dinner.is-dinner-picker,
+  .focused-dinner.is-dinner-review { animation: none; }
 }
 .dinner-picker, .dinner-review, .today-hero-card, .dinner-decision-tray { max-width: 100%; }
 .focused-dinner, .dinner-flow-form { overflow-x: clip; }
