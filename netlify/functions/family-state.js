@@ -102,7 +102,7 @@ function cleanMeal(value) {
   const dinner = firstRecipe("dinner", "main");
   const servingPlan = source.servingPlan && typeof source.servingPlan === "object" ? source.servingPlan : {};
   const cleanCount = (entry, fallback) => Number.isFinite(Number(entry))
-    ? Math.min(20, Math.max(0, Math.round(Number(entry))))
+    ? Math.min(20, Math.max(0, Math.trunc(Number(entry))))
     : fallback;
   const actualLeftovers = Object.fromEntries(Object.entries(servingPlan.actualLeftovers || {})
     .filter(([id]) => /^[a-z0-9-]{1,160}$/i.test(id))

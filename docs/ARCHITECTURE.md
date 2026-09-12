@@ -29,6 +29,7 @@ GitHub main
 - `styles.css`: design tokens, component styling, responsive layout, PWA-safe four-tab bottom navigation, the Plan dirty-save bar, the Action Assistant sheet, and motion preferences.
 - `recipe-reel.js` / `recipe-reel.css`: native overflow recipe discovery with CSS scroll-snap. Active/near cards use IntersectionObserver; off-screen images are parked. Do not add a transform carousel engine.
 - `plan-from-what-we-have.js`: deterministic, advisory dinner ranking from inventory, leftovers, recipes, family rules, prep time, and budget.
+- `dinner-flow.js`: Today open-dinner samples, list-first choose-dinner filtering, and serving-count field rewrite helpers used by meal review.
 
 Recipe catalog reads use `/.netlify/functions/recipes?view=catalog`, a text-only household-scoped response that omits embedded source photos. The browser stores a versioned, household-scoped stale-while-revalidate cache and keeps cached recipes visible when a refresh fails. The unqualified recipes endpoint remains available for older clients and full recipe writes.
 - `translations.js`: English and Spanish interface strings. Both languages must expose the same keys.
@@ -42,8 +43,8 @@ The initial remote collections use independent settled requests so one unavailab
 
 | Domain | Logic and state | Rendering and interaction |
 |---|---|---|
-| Today and handoffs | `available-food.js`, `activity-logic.js`, `family-state.js` | `dashboard-ui.js`, `handoff-ui.js`, `activity-ui.js` |
-| Meal planning and leftovers | `schedule-utils.js`, `recipe-utils.js` | `schedule-ui.js` |
+| Today and handoffs | `available-food.js`, `activity-logic.js`, `family-state.js`, `dinner-flow.js` | `dashboard-ui.js`, `handoff-ui.js`, `activity-ui.js` |
+| Meal planning and leftovers | `schedule-utils.js`, `recipe-utils.js`, `dinner-flow.js` | `schedule-ui.js` |
 | Family Help conversation | `assistant-logic.js`, `assistant-conversation.js`, `assistant-proposals.js` | `assistant-ui.js`, `netlify/functions/assistant.js` |
 | Cook Along and dinner memory | `memory-logic.js`, recipe steps | `cook-along-ui.js`, `app.js` |
 | Household memory | `memory-logic.js`, `family-state.js` | `family-ui.js`, Today feedback in `app.js` |

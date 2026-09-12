@@ -147,14 +147,24 @@ export const defaultServingPlan = {
   actualLeftovers: {},
 };
 
-function boundedCount(value, fallback = 0) {
+export function boundedCount(value, fallback = 0) {
   const number = Number(value);
-  return Number.isFinite(number) ? Math.min(20, Math.max(0, Math.round(number))) : fallback;
+  return Number.isFinite(number) ? Math.min(20, Math.max(0, Math.trunc(number))) : fallback;
 }
 
-function boundedServings(value, fallback = 0) {
+export function boundedServings(value, fallback = 0) {
   const number = Number(value);
   return Number.isFinite(number) ? Math.min(100, Math.max(0, Math.round(number * 2) / 2)) : fallback;
+}
+
+export function countFieldNormalizedValue(value, field = "adults") {
+  return field === "extraServings" ? boundedServings(value) : boundedCount(value);
+}
+
+export function rewriteCountFieldDisplay(input, field = "adults") {
+  const next = countFieldNormalizedValue(input?.value, field);
+  if (input && typeof input === "object") input.value = String(next);
+  return next;
 }
 
 export function normalizeServingPlan(value) {

@@ -13,6 +13,9 @@ import {
   normalizeMealServingPlans,
   normalizeSchedule,
   normalizeServingPlan,
+  boundedCount,
+  boundedServings,
+  rewriteCountFieldDisplay,
   cookingServings,
   plannedServings,
   recipeBatchPlan,
@@ -21,6 +24,17 @@ import {
   applyPersistedMealTarget,
   upcomingMealDateOptions,
 } from "../schedule-utils.js";
+
+test("count fields rewrite visible decimals to the normalized stored value", () => {
+  assert.equal(boundedCount("2.5"), 2);
+  assert.equal(boundedServings("1.25"), 1.5);
+  const adults = { value: "2.5" };
+  assert.equal(rewriteCountFieldDisplay(adults, "adults"), 2);
+  assert.equal(adults.value, "2");
+  const extras = { value: "2.1" };
+  assert.equal(rewriteCountFieldDisplay(extras, "extraServings"), 2);
+  assert.equal(extras.value, "2");
+});
 
 test("serving plans default to two adults and two kids", () => {
   const plan = normalizeServingPlan();

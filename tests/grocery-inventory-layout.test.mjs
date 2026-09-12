@@ -190,7 +190,7 @@ test("household attribution remains available for any family", () => {
 });
 
 test("Today has an explicit empty-state path to planning", () => {
-  assert.match(html, /id="cookToday"[^>]*data-i18n="cookTonight"/);
+  assert.match(html, /id="cookToday"[^>]*data-i18n="chooseDinner"/);
   assert.match(html, /data-view="schedule"/);
   assert.match(html, /data-i18n="planTab"/);
   assert.match(html, /id="focusedDinnerPanel"[^>]*hidden/);

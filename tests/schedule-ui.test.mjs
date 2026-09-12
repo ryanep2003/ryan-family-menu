@@ -99,6 +99,11 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     "#calendarDateEditor": element({ hidden: true }),
     "#calendarEditorHeading": element(),
     "#focusedDinnerPanel": element({ hidden: true }),
+    "#focusedDinnerForm": element(),
+    "#focusedDinnerStatus": element(),
+    "#focusedEatingNames": element(),
+    "#advanceDinnerSelection": element({ disabled: true }),
+    "#cancelDinnerReview": element(),
     "#comprehensivePlanner": element(),
     "#planningModeSwitch": element(),
     "#planSaveBar": element({ hidden: true }),
@@ -206,7 +211,10 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     .filter(({ recipe }) => recipe);
 
   const ui = createScheduleUi({
-    $: (selector) => selector === '[data-save-meal-context="weekdate:2026-06-22"]' ? weekSaveButton : elements[selector],
+    $: (selector) => {
+      if (selector === '[data-save-meal-context="weekdate:2026-06-22"]') return weekSaveButton;
+      return elements[selector];
+    },
     $$: (selector) => {
       if (selector === "[data-planning-mode]") return [elements["#weekPlanningTab"], elements["#monthPlanningTab"]];
       if (selector === "[data-edit-week-date]") return weekButtons;
@@ -257,6 +265,36 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
       makeExtraTomorrow: "Make extra for tomorrow",
       handoffAdd: "Leave a note for the next cook",
       whatShouldWeHave: "What should we have?",
+      chooseDinner: "Choose dinner",
+      chooseForDinner: "Choose for dinner",
+      chooseDinnerHint: "Choosing a recipe won't save the meal yet.",
+      chooseDinnerNext: "Next, choose who is eating.",
+      chooseDinnerBack: "{weekday} · Dinner",
+      makeItAMeal: "Make it a meal",
+      whosJoining: "Who's joining?",
+      whosJoiningHelper: "Keep eaters separate from extra food.",
+      aLittleForLater: "A little for later",
+      aLittleForLaterHelper: "Extra portions to cook for another meal.",
+      extraPortions: "Extra portions",
+      addASide: "Add a side",
+      dinnerFilterAll: "All",
+      dinnerFilterFavorites: "Favorites",
+      dinnerFilterSides: "Sides",
+      dinnerPickerExplore: "Explore",
+      dinnerPickerList: "List",
+      dinnerPickerSelected: "Selected",
+      searchYourRecipes: "Search your recipes",
+      confirmDinner: "Confirm dinner",
+      cancelDinnerReview: "Cancel",
+      mealRoleLabel: "Meal role",
+      noDinnerSelection: "Choose a recipe to continue.",
+      childrenCount: "Children",
+      dinnerRecipeCountOne: "1 recipe",
+      dinnerRecipeCountMany: "{count} recipes",
+      increaseCount: "Increase",
+      decreaseCount: "Decrease",
+      roleMain: "Main",
+      servedWith: "With",
     })[key] || key,
     escapeHtml,
     localize: (value) => value,
@@ -303,6 +341,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     getCurrentWeekStartKey: () => currentWeekStartKey,
     getVisibleMonth: () => new Date("2026-06-01T12:00:00"),
     setVisibleMonth: () => {},
+    getFavorites: () => ["main-recipe"],
     getFamilyMembers: () => [
       { id: "eric", name: "Eric", role: "adult", active: true },
       { id: "alyson", name: "Alyson", role: "adult", active: true },
@@ -366,9 +405,12 @@ test("Today can open a focused dinner decision without week administration", () 
   assert.equal(elements["#comprehensivePlanner"].hidden, true);
   assert.equal(elements["#planningModeSwitch"].hidden, true);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /Main Recipe/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Eating tonight/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Who's joining\?/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /Eric · Alyson · Theo · Pierce/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make extra for tomorrow/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Keep eaters separate from extra food/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /A little for later/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Confirm dinner/);
   assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Previous week|Next week|Breakfast|Lunch|Clear week/);
 
   ui.closeFocusedDinner();
@@ -506,6 +548,49 @@ test("recipe search exposes every matching recipe instead of truncating the fami
 
   assert.match(weekRecipeResults.innerHTML, /Family Main 14/);
   assert.equal((weekRecipeResults.innerHTML.match(/data-add-meal-result=/g) || []).length, 17);
+});
+
+test("open dinner picker stays on List with a fixed tray and does not save yet", () => {
+  const { elements, state, ui } = harness();
+  state.schedule.mon = { ...emptyMeal };
+  const savesBefore = state.saveCalls;
+
+  ui.openFocusedDinner("2026-06-22");
+
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose dinner/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Search your recipes/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="all"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="favorites"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="sides"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-list/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose for dinner/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choosing a recipe won/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.equal(state.saveCalls, savesBefore);
+});
+
+test("meal review confirm writes the dinner draft through the existing save path", async () => {
+  const { elements, state, ui } = harness();
+
+  ui.openFocusedDinner("2026-06-22");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Confirm dinner/);
+  assert.equal(state.saveCalls, 0);
+
+  await elements["#focusedDinnerForm"].dispatch("submit");
+
+  assert.equal(state.saveCalls, 1);
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "main-recipe"), true);
+});
+
+test("week serving inputs rewrite visible decimals after normalize", async () => {
+  const { state, ui, weekServingControl } = harness();
+  weekServingControl.value = "2.5";
+
+  ui.renderSchedule();
+  await weekServingControl.dispatch("change");
+
+  assert.equal(weekServingControl.value, "2");
+  assert.equal(state.schedule.mon.servingPlans.lunch.adults, 2);
 });
 
 test("focused dinner search also exposes the complete matching catalog", () => {
