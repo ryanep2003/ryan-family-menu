@@ -54,10 +54,13 @@ export function writtenDinnerRecipeId(meal, role = "main") {
     : dinnerMainItem(meal)?.recipeId || "";
 }
 
-export function dinnerReviewIsReady(meal, recipes, selectedId, role = "main") {
-  const writtenId = writtenDinnerRecipeId(meal, role);
-  const recipe = exactRecipeById(recipes, writtenId);
-  return Boolean(recipe && writtenId && cleanRecipeId(writtenId) === cleanRecipeId(selectedId));
+export function dinnerReviewIsReady(meal, recipes, selectedId) {
+  const selected = cleanRecipeId(selectedId);
+  const recipe = exactRecipeById(recipes, selected);
+  if (!recipe || !selected) return false;
+  const mainId = cleanRecipeId(dinnerMainItem(meal)?.recipeId);
+  const sideId = cleanRecipeId(dinnerSideItem(meal)?.recipeId);
+  return mainId === selected || sideId === selected;
 }
 
 export function advanceDinnerSelection(meal, recipes, selectedId, role = "main") {
@@ -164,8 +167,9 @@ export function assignDinnerRecipe(meal, recipeId, role = "main") {
     });
     return normalizeMealPlan(next);
   }
-  const existingMain = dinnerMainItem(next);
-  next.items = next.items.filter((item) => item.id !== existingMain?.id);
+  const existingMains = next.items.filter((item) => item.period === "dinner" && item.role === "main");
+  const existingMain = existingMains[0] || null;
+  next.items = next.items.filter((item) => !(item.period === "dinner" && item.role === "main"));
   next.items.push({
     id: nextMealItemId(existingMain?.id),
     period: "dinner",

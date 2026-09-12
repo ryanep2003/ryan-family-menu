@@ -114,6 +114,45 @@ test("change dinner does not preselect the existing planned recipe", () => {
   assert.equal(advanced.meal.items.some((item) => item.recipeId === "instant-pot-pork"), false);
 });
 
+test("choose dinner replaces every leftover dinner main on a messy day", () => {
+  const picadilloId = "shared-1788481879334-wuswm6";
+  const recipes = [
+    { id: "meatballs", name: "A 100% Chance of Meatballs" },
+    { id: "instant-pot-pork", name: "Instant Pot Pork and Sauerkraut" },
+    { id: "chicken-milanese", name: "Chicken Milanese" },
+    { id: "pesto-pasta", name: "Pesto Pasta" },
+    { id: picadilloId, name: "Picadillo Tacos" },
+    { id: "green-salad", name: "Green Salad" },
+    { id: "oatmeal", name: "Oatmeal" },
+  ];
+  const meal = {
+    mealItemsVersion: 1,
+    dinner: "meatballs",
+    main: "meatballs",
+    items: [
+      { id: "d1", period: "dinner", role: "main", recipeId: "meatballs" },
+      { id: "d2", period: "dinner", role: "main", recipeId: "instant-pot-pork" },
+      { id: "d3", period: "dinner", role: "main", recipeId: "instant-pot-pork" },
+      { id: "d4", period: "dinner", role: "main", recipeId: "chicken-milanese" },
+      { id: "d5", period: "dinner", role: "main", recipeId: "pesto-pasta" },
+      { id: "d6", period: "dinner", role: "salad", recipeId: "green-salad" },
+      { id: "b1", period: "breakfast", role: "main", recipeId: "oatmeal" },
+    ],
+  };
+
+  const result = advanceDinnerSelection(meal, recipes, picadilloId);
+  assert.equal(result.ok, true);
+  assert.equal(result.selectedId, picadilloId);
+  assert.equal(dinnerMainItem(result.meal).recipeId, picadilloId);
+  assert.equal(dinnerReviewIsReady(result.meal, recipes, result.selectedId), true);
+  assert.equal(result.meal.items.filter((item) => item.period === "dinner" && item.role === "main").length, 1);
+  assert.equal(result.meal.items.some((item) => item.recipeId === "meatballs"), false);
+  assert.equal(result.meal.items.some((item) => item.recipeId === "instant-pot-pork"), false);
+  assert.equal(result.meal.items.some((item) => item.recipeId === "green-salad" && item.role === "salad"), true);
+  assert.equal(result.meal.items.some((item) => item.period === "breakfast" && item.recipeId === "oatmeal"), true);
+  assert.equal(result.meal.dinner, picadilloId);
+});
+
 test("household upload ids longer than 120 characters still advance to review", () => {
   const longId = `shared-upload-picadillo-${"x".repeat(130)}`;
   assert.ok(longId.length > 150);

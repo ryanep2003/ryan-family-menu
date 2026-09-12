@@ -636,6 +636,47 @@ test("change dinner from Instant Pot reviews and confirms Carne para tacos only"
   assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "instant-pot-pork"), false);
 });
 
+test("Choose for dinner replaces every leftover dinner main on a messy day", async () => {
+  const picadilloId = "shared-1788481879334-wuswm6";
+  const extraRecipes = [
+    { id: "meatballs", name: "A 100% Chance of Meatballs", category: "main" },
+    { id: "instant-pot-pork", name: "Instant Pot Pork and Sauerkraut", category: "main" },
+    { id: "chicken-milanese", name: "Chicken Milanese", category: "main" },
+    { id: picadilloId, name: "Picadillo Tacos", category: "main" },
+    { id: "green-salad", name: "Green Salad", category: "salad" },
+  ];
+  const { elements, state, ui } = harness({ extraRecipes });
+  state.calendarMeals["2026-06-22"] = normalizeMealPlan({
+    mealItemsVersion: 1,
+    dinner: "meatballs",
+    main: "meatballs",
+    items: [
+      { id: "d1", period: "dinner", role: "main", recipeId: "meatballs" },
+      { id: "d2", period: "dinner", role: "main", recipeId: "instant-pot-pork" },
+      { id: "d3", period: "dinner", role: "main", recipeId: "instant-pot-pork" },
+      { id: "d4", period: "dinner", role: "main", recipeId: "chicken-milanese" },
+      { id: "d5", period: "dinner", role: "salad", recipeId: "green-salad" },
+    ],
+  });
+
+  ui.openFocusedDinner("2026-06-22", "", { choose: true });
+  ui.selectFocusedDinnerRecipe(picadilloId);
+  await elements["#advanceDinnerSelection"].dispatch("click");
+
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Picadillo Tacos/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /A 100% Chance of Meatballs/);
+  assert.equal(elements["#focusedDinnerStatus"].textContent, "");
+
+  await elements["#focusedDinnerForm"].dispatch("submit");
+  const saved = state.calendarMeals["2026-06-22"];
+  assert.equal(saved.dinner, picadilloId);
+  assert.equal(saved.items.filter((item) => item.period === "dinner" && item.role === "main").length, 1);
+  assert.equal(saved.items.some((item) => item.recipeId === picadilloId), true);
+  assert.equal(saved.items.some((item) => item.recipeId === "green-salad"), true);
+  assert.equal(saved.items.some((item) => item.recipeId === "meatballs"), false);
+});
+
 test("long household upload ids open meal review from Choose for dinner", async () => {
   const longId = `shared-upload-picadillo-${"x".repeat(130)}`;
   const extraRecipes = [{ id: longId, name: "Picadillo Tacos", category: "main" }];
