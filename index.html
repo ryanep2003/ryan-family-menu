@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=184" />
+    <link rel="stylesheet" href="styles.css?v=189" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -202,12 +202,15 @@
               <p class="today-hero-kicker" id="todayHeroKicker" data-i18n="dinnerSlot">Dinner</p>
               <p class="today-date" id="todayDate" hidden></p>
               <h2 id="todayDinnerName">Tonight</h2>
+              <p class="today-hero-note" id="todayOpenDinnerNote" hidden></p>
               <p class="today-hero-meta" id="todayDinnerMeta"></p>
             </div>
+            <div class="today-dinner-samples" id="todayDinnerSamples" hidden></div>
             <figure class="today-image" id="todayImage" hidden>
               <img class="today-backdrop" id="todayBackdrop" src="assets/meatballs-2.webp" alt="" />
             </figure>
-            <button class="primary-action" id="cookToday" type="button" data-i18n="cookTonight">Cook tonight</button>
+            <button class="primary-action" id="cookToday" type="button" data-i18n="chooseDinner">Choose dinner</button>
+            <button class="text-action" id="changeTonightDinner" type="button" hidden data-i18n="changeDinner">Change dinner</button>
           </div>
           <div class="today-date-mark" id="todayDateMark" hidden aria-hidden="true">
             <span id="todayDayName"></span>
@@ -1101,6 +1104,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=184"></script>
+    <script type="module" src="app.js?v=189"></script>
   </body>
 </html>

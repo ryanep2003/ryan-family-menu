@@ -1,5 +1,13 @@
 # Durable Decisions
 
+## 2026-09-12 — Keep Choose dinner list-first and confirm-to-write
+
+**Decision:** Tonight’s open-dinner path is a list-first recipe picker with search, All / Favorites / Sides filters, and a fixed decision tray. Choosing a recipe only advances to meal review. Confirm writes `servingPlans.dinner` through the existing schedule save. Do not add a free XY pan, spatial camera, Swiper, or gravity field. Explore may reuse the native Library reel.
+
+**Reason:** The approved Moving Table slice is a clearer Today job and a safer write. The earlier spatial prototype is not production-ready, and a second dinner save path would fork household data.
+
+**Consequences:** People counts stay on `boundedCount` (`2.5` becomes `2` via trunc, never `20`). Extra portions stay on `boundedServings`. Visible count fields must rewrite to the normalized value after blur, stepper, or confirm. The recipe id selected in the list is the only id review and Confirm may write. Choose for dinner replaces every leftover dinner main on that day and keeps sides and salads. Select, assign, advance, and review share one recipe-id cleaner (max 160, matching the catalog). Change dinner starts with an empty picker selection so the planned meal cannot be advanced by accident. `recipeById` returns null for a missing id and must never substitute another recipe. Choose for dinner must not fail silently. English and Spanish chrome stay in parity. The four-tab shell is unchanged.
+
 ## 2026-09-11 — Keep Library recipe discovery on native overflow and CSS snap
 
 **Decision:** Browse recipes with the browser’s own horizontal overflow, CSS `scroll-snap-type: x mandatory`, and a matching scroll-padding gutter so one card stays centered. Separate drag from tap in the reel module. Do not reintroduce Swiper, Embla, Coverflow, or other transform/3D carousel engines.

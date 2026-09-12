@@ -509,9 +509,9 @@ function persistRecipeCatalog(items) {
 
 function recipeById(id) {
   const visible = allRecipes();
-  return visible.find((recipe) => recipe.id === id)
-    || visible[0]
-    || null;
+  const needle = `${id ?? ""}`.trim();
+  if (!needle) return null;
+  return visible.find((recipe) => String(recipe.id) === needle) || null;
 }
 
 function draftById(id) {
@@ -1530,7 +1530,7 @@ function todaysRecipeId() {
   const meal = todaysMealPlan();
   return mealRecipes(meal).find(({ period, role }) => period === "dinner" && role === "main")?.recipe.id
     || mealRecipes(meal)[0]?.recipe.id
-    || "meatballs";
+    || "";
 }
 
 function mealRecipes(meal) {
@@ -2271,9 +2271,9 @@ const dashboardUi = createDashboardUi({
   setSelectedRecipeId: (id) => {
     selectedRecipeId = id;
   },
-  openFocusedDinnerPlan: (dateKey) => {
+  openFocusedDinnerPlan: (dateKey, options = {}) => {
     setView("schedule");
-    scheduleUi.openFocusedDinner(dateKey);
+    scheduleUi.openFocusedDinner(dateKey, options.suggestedRecipeId || "", options);
   },
   selectTodayStory: (input) => selectTodayStory(input),
   getRecipeMemory: (recipeId) => selectRecipeMemory(recipeId, dinnerEvents, familyMembers),
@@ -2360,6 +2360,7 @@ const scheduleUi = createScheduleUi({
     visibleMonth = month;
   },
   getFamilyMembers: () => familyMembers,
+  getFavorites: () => favorites,
   onRecipeMediaRendered: queueRecipePhotoHydration,
   onFocusedDinnerComplete: () => {
     setView("today");

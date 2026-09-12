@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v184";
-// v184: allow centered-card and Add-to-meal taps; keep drag-click suppression.
+const CACHE_NAME = "ryan-family-menu-v189";
+// v189: Choose for dinner replaces every leftover dinner main on a messy day.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",
@@ -16,6 +16,7 @@ const ASSETS = [
   "./available-food.js",
   "./api.js",
   "./dashboard-ui.js",
+  "./dinner-flow.js",
   "./activity-logic.js",
   "./activity-ui.js",
   "./audit-logic.js",

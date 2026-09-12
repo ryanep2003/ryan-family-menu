@@ -69,6 +69,9 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [], tasks = []
     "todayAvailableFoodFreshness",
     "todayAvailableFoodStatus",
     "cookToday",
+    "todayOpenDinnerNote",
+    "todayDinnerSamples",
+    "changeTonightDinner",
     "taskForm",
     "taskInput",
     "taskAssigneeInput",
@@ -101,6 +104,10 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [], tasks = []
       cookButton: "Cook this",
       cookTonight: "Cook tonight",
       planDinner: "Plan dinner",
+      chooseDinner: "Choose dinner",
+      changeDinner: "Change dinner",
+      whatSoundsGoodTonight: "What sounds good tonight?",
+      whatSoundsGoodTonightNote: "A family favorite, or something different.",
       nothingForTonight: "Nothing planned for tonight.",
       nothingForTonightNote: "Choose one meal and bring tonight into focus.",
       tonightServes: "Serves {count}",
@@ -201,8 +208,9 @@ function dashboardFixture({ mealOverride, availableFoodOverride = [], tasks = []
     setSelectedRecipeId: (id) => {
       events.selected = id;
     },
-    openFocusedDinnerPlan: (dateKey) => {
+    openFocusedDinnerPlan: (dateKey, options = {}) => {
       events.focusedDate = dateKey;
+      events.focusedOptions = options;
     },
     selectTodayStory,
     getRecipeMemory: () => ({
@@ -315,15 +323,56 @@ test("empty Today offers a direct planning action", () => {
   ui.bindDashboardControls();
 
   assert.equal(elements.todayBand.classList.contains("empty"), true);
+  assert.equal(elements.todayBand.classList.contains("is-open-dinner"), true);
   assert.equal(elements.todayBackdrop.hidden, true);
   assert.equal(elements.cookToday.hidden, false);
-  assert.equal(elements.cookToday.textContent, "Plan dinner");
+  assert.equal(elements.cookToday.textContent, "Choose dinner");
+  assert.equal(elements.todayDinnerName.textContent, "What sounds good tonight?");
+  assert.equal(elements.todayOpenDinnerNote.hidden, false);
+  assert.equal(elements.changeTonightDinner.hidden, true);
   assert.match(elements.todayMealsList.innerHTML, /Breakfast/);
   assert.match(elements.todayMealsList.innerHTML, /Lunch/);
   assert.doesNotMatch(elements.todayMealsList.innerHTML, /Dinner/);
 
   elements.cookToday.handlers.click();
   assert.equal(events.focusedDate, "2026-07-10");
+  assert.equal(events.focusedOptions.choose, true);
+});
+
+test("open-dinner hero shows sample photos and a single Choose dinner action", () => {
+  const { elements, ui } = dashboardFixture({
+    mealOverride: { items: [], notes: "" },
+    recipesOverride: {
+      main: { id: "main", name: "Lemon chicken", photos: ["lemon.jpg"], allergyWarning: "" },
+      pasta: { id: "pasta", name: "Tomato pasta", photos: ["pasta.jpg"], allergyWarning: "" },
+      lunch: { id: "lunch", name: "Green Monster Salad", photos: [], allergyWarning: "" },
+    },
+  });
+
+  ui.renderToday();
+
+  assert.equal(elements.todayDinnerName.textContent, "What sounds good tonight?");
+  assert.equal(elements.todayOpenDinnerNote.textContent, "A family favorite, or something different.");
+  assert.equal(elements.todayDinnerSamples.hidden, false);
+  assert.match(elements.todayDinnerSamples.innerHTML, /lemon\.jpg|pasta\.jpg/);
+  assert.equal(elements.cookToday.textContent, "Choose dinner");
+  assert.equal(elements.changeTonightDinner.hidden, true);
+});
+
+test("planned dinner hero keeps change and cook paths after confirm", () => {
+  const { elements, events, ui } = dashboardFixture();
+  ui.renderToday();
+  ui.bindDashboardControls();
+
+  assert.equal(elements.todayBand.classList.contains("is-planned-dinner"), true);
+  assert.equal(elements.todayDinnerName.textContent, "Main recipe");
+  assert.equal(elements.cookToday.textContent, "Cook tonight");
+  assert.equal(elements.changeTonightDinner.hidden, false);
+  assert.equal(elements.todayOpenDinnerNote.hidden, true);
+
+  elements.changeTonightDinner.handlers.click();
+  assert.equal(events.focusedDate, "2026-07-10");
+  assert.equal(events.focusedOptions.choose, true);
 });
 
 test("Today dinner meta omits empty recipe blurbs instead of a pending-language placeholder", () => {
@@ -379,7 +428,7 @@ test("Today keeps a planned lunch visible when dinner is open", () => {
   assert.match(elements.todayMealsList.innerHTML, /Green Monster Salad/);
   assert.doesNotMatch(elements.todayMealsList.innerHTML, /Dinner/);
   assert.equal(elements.cookToday.hidden, false);
-  assert.equal(elements.cookToday.textContent, "Plan dinner");
+  assert.equal(elements.cookToday.textContent, "Choose dinner");
 });
 
 test("task assignee Family displays through householdFamily", () => {

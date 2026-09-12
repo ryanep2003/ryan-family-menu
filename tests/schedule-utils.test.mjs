@@ -13,6 +13,11 @@ import {
   normalizeMealServingPlans,
   normalizeSchedule,
   normalizeServingPlan,
+  boundedCount,
+  boundedServings,
+  cleanRecipeId,
+  parseCountableInput,
+  rewriteCountFieldDisplay,
   cookingServings,
   plannedServings,
   recipeBatchPlan,
@@ -21,6 +26,33 @@ import {
   applyPersistedMealTarget,
   upcomingMealDateOptions,
 } from "../schedule-utils.js";
+
+test("meal recipe ids keep household upload ids up to the catalog bound", () => {
+  const longId = `shared-upload-picadillo-${"x".repeat(130)}`;
+  assert.ok(longId.length > 150);
+  assert.ok(longId.length <= 160);
+  assert.equal(cleanRecipeId(longId), longId);
+  const meal = normalizeMealPlan({
+    mealItemsVersion: 1,
+    items: [{ id: "dinner-1", period: "dinner", role: "main", recipeId: longId }],
+  });
+  assert.equal(meal.dinner, longId);
+  assert.equal(meal.items[0].recipeId, longId);
+});
+
+test("count fields rewrite visible decimals to the normalized stored value", () => {
+  assert.equal(parseCountableInput("2.5"), 2.5);
+  assert.equal(boundedCount("2.5"), 2);
+  assert.notEqual(boundedCount("2.5"), 20);
+  assert.equal(boundedServings("1.25"), 1.5);
+  const adults = { value: "2.5" };
+  assert.equal(rewriteCountFieldDisplay(adults, "adults"), 2);
+  assert.equal(adults.value, "2");
+  assert.notEqual(adults.value, "20");
+  const extras = { value: "2.1" };
+  assert.equal(rewriteCountFieldDisplay(extras, "extraServings"), 2);
+  assert.equal(extras.value, "2");
+});
 
 test("serving plans default to two adults and two kids", () => {
   const plan = normalizeServingPlan();

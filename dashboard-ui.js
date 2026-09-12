@@ -1,6 +1,7 @@
 import { localizedText, updateLocalizedText } from "./localized-data.js";
 import { renderHandoffDetails } from "./handoff-ui.js";
 import { cardPhotoFor, cardPhotoIsGenerated } from "./recipe-utils.js";
+import { dinnerIsOpen, sampleDinnerRecipes } from "./dinner-flow.js";
 import {
   addAvailableFood,
   availableFoodFreshness,
@@ -129,6 +130,7 @@ export function createDashboardUi({
     const dinnerItem = recipesForMeal.find(({ period, role }) => period === "dinner" && role === "main")
       || recipesForMeal.find(({ period }) => period === "dinner");
     const mainRecipe = dinnerItem?.recipe || null;
+    const openDinner = dinnerIsOpen(meal);
     const todayMealsList = $("#todayMealsList");
     if (todayMealsList) {
       todayMealsList.innerHTML = [
@@ -153,28 +155,55 @@ export function createDashboardUi({
     const dinnerName = $("#todayDinnerName");
     const dinnerMeta = $("#todayDinnerMeta");
     const heroKicker = $("#todayHeroKicker");
+    const openNote = $("#todayOpenDinnerNote");
+    const samples = $("#todayDinnerSamples");
+    const changeDinner = $("#changeTonightDinner");
     if (heroKicker) heroKicker.textContent = t("dinnerSlot");
     if (dinnerName) {
       dinnerName.textContent = mainRecipe
         ? localize(mainRecipe.name)
-        : t("nothingForTonight");
+        : t("whatSoundsGoodTonight");
+    }
+    if (openNote) {
+      openNote.textContent = t("whatSoundsGoodTonightNote");
+      openNote.hidden = !openDinner;
     }
     if (dinnerMeta) {
-      const weekday = new Intl.DateTimeFormat(getLang() === "es" ? "es-US" : "en-US", { weekday: "short" })
-        .format(new Date())
-        .replace(/\.$/, "");
-      const plan = meal.servingPlans?.dinner || meal.servingPlan || {};
-      const people = Math.max(1, (Number(plan.adults) || 0) + (Number(plan.kids) || 0) + (Number(plan.guests) || 0)) || 4;
-      const recipeBlurb = [mainRecipe?.meta, mainRecipe?.short]
-        .filter((value) => value != null && value !== "")
-        .map((value) => localize(value))
-        .find(Boolean) || "";
-      const metaBits = [
-        weekday,
-        recipeBlurb,
-        t("heroPeople").replace("{count}", `${people}`),
-      ].filter(Boolean);
-      dinnerMeta.textContent = metaBits.join(" • ");
+      if (openDinner) {
+        dinnerMeta.textContent = "";
+      } else {
+        const weekday = new Intl.DateTimeFormat(getLang() === "es" ? "es-US" : "en-US", { weekday: "short" })
+          .format(new Date())
+          .replace(/\.$/, "");
+        const plan = meal.servingPlans?.dinner || meal.servingPlan || {};
+        const people = Math.max(1, (Number(plan.adults) || 0) + (Number(plan.kids) || 0) + (Number(plan.guests) || 0)) || 4;
+        const recipeBlurb = [mainRecipe?.meta, mainRecipe?.short]
+          .filter((value) => value != null && value !== "")
+          .map((value) => localize(value))
+          .find(Boolean) || "";
+        const metaBits = [
+          weekday,
+          recipeBlurb,
+          t("heroPeople").replace("{count}", `${people}`),
+        ].filter(Boolean);
+        dinnerMeta.textContent = metaBits.join(" • ");
+      }
+    }
+    if (samples) {
+      const photos = sampleDinnerRecipes(allRecipes(), {
+        favorites: getFavorites(),
+        limit: 2,
+        hasPhoto: (recipe) => !cardPhotoIsGenerated(recipe) && Boolean(cardPhotoFor(recipe)),
+        categoryFor,
+      });
+      samples.hidden = !openDinner || !photos.length;
+      samples.innerHTML = openDinner
+        ? photos.map((recipe) => `<img src="${escapeHtml(cardPhotoFor(recipe))}" alt="" />`).join("")
+        : "";
+    }
+    if (changeDinner) {
+      changeDinner.hidden = openDinner || !mainRecipe;
+      changeDinner.textContent = t("changeDinner");
     }
     const story = selectTodayStory({
       recipe: mainRecipe,
@@ -187,9 +216,11 @@ export function createDashboardUi({
     const backdropSrc = mainRecipe && !cardPhotoIsGenerated(mainRecipe)
       ? cardPhotoFor(mainRecipe)
       : "";
-    $("#todayBand").classList.toggle("empty", !recipesForMeal.length);
-    $("#todayBand").classList.toggle("is-empty", !recipesForMeal.length);
-    $("#todayBand").classList.toggle("has-photo", Boolean(backdropSrc));
+    $("#todayBand").classList.toggle("empty", openDinner);
+    $("#todayBand").classList.toggle("is-empty", openDinner);
+    $("#todayBand").classList.toggle("is-open-dinner", openDinner);
+    $("#todayBand").classList.toggle("is-planned-dinner", Boolean(mainRecipe));
+    $("#todayBand").classList.toggle("has-photo", Boolean(backdropSrc) && !openDinner);
     const today = new Date();
     const dayName = new Intl.DateTimeFormat(getLang() === "es" ? "es-US" : "en-US", { weekday: "short" })
       .format(today)
@@ -265,7 +296,7 @@ export function createDashboardUi({
     $("#todayInventorySummary").textContent = `${getInventory().filter((item) => item.stockState !== "out").length} ${t("itemsAtHome")}`;
     $("#cookToday").hidden = false;
     $("#cookToday").disabled = false;
-    $("#cookToday").textContent = mainRecipe ? t("cookTonight") : t("planDinner");
+    $("#cookToday").textContent = mainRecipe ? t("cookTonight") : t("chooseDinner");
   }
 
   function taskAssigneeLabel(assignee) {
@@ -411,7 +442,7 @@ export function createDashboardUi({
         || items.find(({ period }) => period === "dinner")
         || items[0];
       if (!dinnerItem) {
-        openFocusedDinnerPlan(todayDateKey());
+        openFocusedDinnerPlan(todayDateKey(), { choose: true });
         return;
       }
       setSelectedRecipeId(dinnerItem.recipe.id);
@@ -420,6 +451,10 @@ export function createDashboardUi({
       $("#recipeDetail").hidden = false;
       $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
       $("#detailName").focus({ preventScroll: true });
+    });
+
+    $("#changeTonightDinner")?.addEventListener("click", () => {
+      openFocusedDinnerPlan(todayDateKey(), { choose: true });
     });
 
     $("#todayMealsList")?.addEventListener("click", (event) => {

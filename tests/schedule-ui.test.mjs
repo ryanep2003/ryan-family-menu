@@ -73,7 +73,7 @@ function calendarDates() {
   });
 }
 
-function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedCount: 1, skippedCount: 0 }, extraRecipes = [], currentWeekStartKey = "2026-06-22" } = {}) {
+function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedCount: 1, skippedCount: 0 }, extraRecipes = [], currentWeekStartKey = "2026-06-22", recipeById } = {}) {
   const elements = {
     "#scheduleGrid": element(),
     "#weekDateEditor": element(),
@@ -99,6 +99,11 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     "#calendarDateEditor": element({ hidden: true }),
     "#calendarEditorHeading": element(),
     "#focusedDinnerPanel": element({ hidden: true }),
+    "#focusedDinnerForm": element(),
+    "#focusedDinnerStatus": element(),
+    "#focusedEatingNames": element(),
+    "#advanceDinnerSelection": element({ disabled: true }),
+    "#cancelDinnerReview": element(),
     "#comprehensivePlanner": element(),
     "#planningModeSwitch": element(),
     "#planSaveBar": element({ hidden: true }),
@@ -206,7 +211,10 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     .filter(({ recipe }) => recipe);
 
   const ui = createScheduleUi({
-    $: (selector) => selector === '[data-save-meal-context="weekdate:2026-06-22"]' ? weekSaveButton : elements[selector],
+    $: (selector) => {
+      if (selector === '[data-save-meal-context="weekdate:2026-06-22"]') return weekSaveButton;
+      return elements[selector];
+    },
     $$: (selector) => {
       if (selector === "[data-planning-mode]") return [elements["#weekPlanningTab"], elements["#monthPlanningTab"]];
       if (selector === "[data-edit-week-date]") return weekButtons;
@@ -257,6 +265,37 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
       makeExtraTomorrow: "Make extra for tomorrow",
       handoffAdd: "Leave a note for the next cook",
       whatShouldWeHave: "What should we have?",
+      chooseDinner: "Choose dinner",
+      chooseForDinner: "Choose for dinner",
+      chooseDinnerHint: "Choosing a recipe won't save the meal yet.",
+      chooseDinnerAdvanceFailed: "Couldn't open that recipe. Try choosing it again.",
+      chooseDinnerNext: "Next, choose who is eating.",
+      chooseDinnerBack: "{weekday} · Dinner",
+      makeItAMeal: "Make it a meal",
+      whosJoining: "Who's joining?",
+      whosJoiningHelper: "Keep eaters separate from extra food.",
+      aLittleForLater: "A little for later",
+      aLittleForLaterHelper: "Extra portions to cook for another meal.",
+      extraPortions: "Extra portions",
+      addASide: "Add a side",
+      dinnerFilterAll: "All",
+      dinnerFilterFavorites: "Favorites",
+      dinnerFilterSides: "Sides",
+      dinnerPickerExplore: "Explore",
+      dinnerPickerList: "List",
+      dinnerPickerSelected: "Selected",
+      searchYourRecipes: "Search your recipes",
+      confirmDinner: "Confirm dinner",
+      cancelDinnerReview: "Cancel",
+      mealRoleLabel: "Meal role",
+      noDinnerSelection: "Choose a recipe to continue.",
+      childrenCount: "Children",
+      dinnerRecipeCountOne: "1 recipe",
+      dinnerRecipeCountMany: "{count} recipes",
+      increaseCount: "Increase",
+      decreaseCount: "Decrease",
+      roleMain: "Main",
+      servedWith: "With",
     })[key] || key,
     escapeHtml,
     localize: (value) => value,
@@ -274,7 +313,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     mealRecipes,
     mealHasWarning: () => false,
     mealSummary: (meal) => mealRecipes(meal).map(({ recipe }) => recipe.name).join(" · ") || "No meal",
-    recipeById: (id) => recipes.find((recipe) => recipe.id === id),
+    recipeById: recipeById || ((id) => recipes.find((recipe) => recipe.id === id)),
     allRecipes: () => recipes,
     availableLeftoversForDate: () => leftovers,
     copyCurrentWeekToNextWeek: () => copyResult,
@@ -303,6 +342,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     getCurrentWeekStartKey: () => currentWeekStartKey,
     getVisibleMonth: () => new Date("2026-06-01T12:00:00"),
     setVisibleMonth: () => {},
+    getFavorites: () => ["main-recipe"],
     getFamilyMembers: () => [
       { id: "eric", name: "Eric", role: "adult", active: true },
       { id: "alyson", name: "Alyson", role: "adult", active: true },
@@ -366,9 +406,12 @@ test("Today can open a focused dinner decision without week administration", () 
   assert.equal(elements["#comprehensivePlanner"].hidden, true);
   assert.equal(elements["#planningModeSwitch"].hidden, true);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /Main Recipe/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Eating tonight/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Who's joining\?/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /Eric · Alyson · Theo · Pierce/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make extra for tomorrow/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Keep eaters separate from extra food/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /A little for later/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Confirm dinner/);
   assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Previous week|Next week|Breakfast|Lunch|Clear week/);
 
   ui.closeFocusedDinner();
@@ -506,6 +549,179 @@ test("recipe search exposes every matching recipe instead of truncating the fami
 
   assert.match(weekRecipeResults.innerHTML, /Family Main 14/);
   assert.equal((weekRecipeResults.innerHTML.match(/data-add-meal-result=/g) || []).length, 17);
+});
+
+test("open dinner picker stays on List with a fixed tray and does not save yet", () => {
+  const { elements, state, ui } = harness();
+  state.schedule.mon = { ...emptyMeal };
+  const savesBefore = state.saveCalls;
+
+  ui.openFocusedDinner("2026-06-22");
+
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose dinner/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Search your recipes/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="all"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="favorites"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="sides"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-list/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose for dinner/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choosing a recipe won/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.equal(state.saveCalls, savesBefore);
+});
+
+test("selecting recipe A then B reviews and confirms B even if recipeById falls back", async () => {
+  const recipes = [
+    { id: "instant-pot-pork", name: "Instant Pot Pork and Sauerkraut", category: "main" },
+    { id: "picadillo", name: "Picadillo", category: "main" },
+    { id: "carne-para-tacos", name: "Carne para tacos", category: "main" },
+  ];
+  const { elements, state, ui } = harness({
+    extraRecipes: recipes,
+    recipeById: (id) => recipes.find((recipe) => recipe.id === id) || recipes[0],
+  });
+  state.schedule.mon = { ...emptyMeal };
+
+  ui.openFocusedDinner("2026-06-22");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose a recipe to continue/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /planFromHomePreview|Preview this recommendation/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-tray-kicker[\s\S]*Instant Pot Pork and Sauerkraut/);
+
+  ui.selectFocusedDinnerRecipe("picadillo");
+  ui.selectFocusedDinnerRecipe("carne-para-tacos");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Carne para tacos/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="carne-para-tacos"[^>]*aria-pressed="true"/);
+
+  await elements["#advanceDinnerSelection"].dispatch("click");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Carne para tacos/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Instant Pot Pork and Sauerkraut/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, />Picadillo</);
+
+  await elements["#focusedDinnerForm"].dispatch("submit");
+  assert.equal(state.calendarMeals["2026-06-22"].dinner, "carne-para-tacos");
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "carne-para-tacos"), true);
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "picadillo"), false);
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "instant-pot-pork"), false);
+});
+
+test("change dinner from Instant Pot reviews and confirms Carne para tacos only", async () => {
+  const extraRecipes = [
+    { id: "instant-pot-pork", name: "Instant Pot Pork and Sauerkraut", category: "main" },
+    { id: "carne-para-tacos", name: "Carne para tacos", category: "main" },
+  ];
+  const { elements, state, ui } = harness({
+    extraRecipes,
+    recipeById: (id) => extraRecipes.find((recipe) => recipe.id === id) || extraRecipes[0],
+  });
+  state.calendarMeals["2026-06-22"] = normalizeMealPlan({ dinner: "instant-pot-pork" });
+
+  ui.openFocusedDinner("2026-06-22", "", { choose: true });
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose dinner/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose a recipe to continue/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Instant Pot Pork and Sauerkraut/);
+
+  ui.selectFocusedDinnerRecipe("carne-para-tacos");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Carne para tacos/);
+
+  await elements["#advanceDinnerSelection"].dispatch("click");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Carne para tacos/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Instant Pot Pork and Sauerkraut/);
+
+  await elements["#focusedDinnerForm"].dispatch("submit");
+  assert.equal(state.calendarMeals["2026-06-22"].dinner, "carne-para-tacos");
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "carne-para-tacos"), true);
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "instant-pot-pork"), false);
+});
+
+test("Choose for dinner replaces every leftover dinner main on a messy day", async () => {
+  const picadilloId = "shared-1788481879334-wuswm6";
+  const extraRecipes = [
+    { id: "meatballs", name: "A 100% Chance of Meatballs", category: "main" },
+    { id: "instant-pot-pork", name: "Instant Pot Pork and Sauerkraut", category: "main" },
+    { id: "chicken-milanese", name: "Chicken Milanese", category: "main" },
+    { id: picadilloId, name: "Picadillo Tacos", category: "main" },
+    { id: "green-salad", name: "Green Salad", category: "salad" },
+  ];
+  const { elements, state, ui } = harness({ extraRecipes });
+  state.calendarMeals["2026-06-22"] = normalizeMealPlan({
+    mealItemsVersion: 1,
+    dinner: "meatballs",
+    main: "meatballs",
+    items: [
+      { id: "d1", period: "dinner", role: "main", recipeId: "meatballs" },
+      { id: "d2", period: "dinner", role: "main", recipeId: "instant-pot-pork" },
+      { id: "d3", period: "dinner", role: "main", recipeId: "instant-pot-pork" },
+      { id: "d4", period: "dinner", role: "main", recipeId: "chicken-milanese" },
+      { id: "d5", period: "dinner", role: "salad", recipeId: "green-salad" },
+    ],
+  });
+
+  ui.openFocusedDinner("2026-06-22", "", { choose: true });
+  ui.selectFocusedDinnerRecipe(picadilloId);
+  await elements["#advanceDinnerSelection"].dispatch("click");
+
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Picadillo Tacos/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /A 100% Chance of Meatballs/);
+  assert.equal(elements["#focusedDinnerStatus"].textContent, "");
+
+  await elements["#focusedDinnerForm"].dispatch("submit");
+  const saved = state.calendarMeals["2026-06-22"];
+  assert.equal(saved.dinner, picadilloId);
+  assert.equal(saved.items.filter((item) => item.period === "dinner" && item.role === "main").length, 1);
+  assert.equal(saved.items.some((item) => item.recipeId === picadilloId), true);
+  assert.equal(saved.items.some((item) => item.recipeId === "green-salad"), true);
+  assert.equal(saved.items.some((item) => item.recipeId === "meatballs"), false);
+});
+
+test("long household upload ids open meal review from Choose for dinner", async () => {
+  const longId = `shared-upload-picadillo-${"x".repeat(130)}`;
+  const extraRecipes = [{ id: longId, name: "Picadillo Tacos", category: "main" }];
+  const { elements, state, ui } = harness({ extraRecipes });
+  state.schedule.mon = { ...emptyMeal };
+
+  ui.openFocusedDinner("2026-06-22");
+  ui.selectFocusedDinnerRecipe(longId);
+  await elements["#advanceDinnerSelection"].dispatch("click");
+
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Picadillo Tacos/);
+});
+
+test("Choose for dinner shows a status when it cannot open review", async () => {
+  const { elements, state, ui } = harness();
+  state.schedule.mon = { ...emptyMeal };
+  ui.openFocusedDinner("2026-06-22");
+  await elements["#advanceDinnerSelection"].dispatch("click");
+  assert.match(elements["#focusedDinnerStatus"].textContent, /Couldn.t open that recipe/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+});
+
+test("meal review confirm writes the dinner draft through the existing save path", async () => {
+  const { elements, state, ui } = harness();
+
+  ui.openFocusedDinner("2026-06-22");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Confirm dinner/);
+  assert.equal(state.saveCalls, 0);
+
+  await elements["#focusedDinnerForm"].dispatch("submit");
+
+  assert.equal(state.saveCalls, 1);
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "main-recipe"), true);
+});
+
+test("week serving inputs rewrite visible decimals after normalize", async () => {
+  const { state, ui, weekServingControl } = harness();
+  weekServingControl.value = "2.5";
+
+  ui.renderSchedule();
+  await weekServingControl.dispatch("change");
+
+  assert.equal(weekServingControl.value, "2");
+  assert.equal(state.schedule.mon.servingPlans.lunch.adults, 2);
 });
 
 test("focused dinner search also exposes the complete matching catalog", () => {

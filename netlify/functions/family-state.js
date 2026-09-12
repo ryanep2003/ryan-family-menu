@@ -57,7 +57,7 @@ function cleanPhoto(value) {
 function cleanMeal(value) {
   const source = value && typeof value === "object" ? value : {};
   const handoff = source.handoff && typeof source.handoff === "object" ? source.handoff : {};
-  const legacyDinner = cleanText(source.dinner || source.main, 120);
+  const legacyDinner = cleanText(source.dinner || source.main, 160);
   const legacyItems = [
     ["breakfast", "main", source.breakfast],
     ["lunch", "main", source.lunch],
@@ -65,13 +65,13 @@ function cleanMeal(value) {
     ["dinner", "main", legacyDinner],
     ["dinner", "side", source.side],
     ["dinner", "salad", source.salad],
-  ].filter(([, , recipeId]) => cleanText(recipeId, 120))
+  ].filter(([, , recipeId]) => cleanText(recipeId, 160))
     .map(([period, role, recipeId], index) => ({
-      id: `legacy-${period}-${role}-${index}-${cleanText(recipeId, 120)}`.slice(0, 160),
+      id: `legacy-${period}-${role}-${index}-${cleanText(recipeId, 160)}`.slice(0, 160),
       period,
       role,
       sourceType: "recipe",
-      recipeId: cleanText(recipeId, 120),
+      recipeId: cleanText(recipeId, 160),
     }));
   const hasCanonicalItems = source.mealItemsVersion === 1 && Array.isArray(source.items);
   const rawItems = hasCanonicalItems
@@ -80,7 +80,7 @@ function cleanMeal(value) {
       ? source.items
       : legacyItems;
   const items = rawItems.map((item, index) => {
-    const recipeId = cleanText(item?.recipeId, 120);
+    const recipeId = cleanText(item?.recipeId, 160);
     if (!recipeId) return null;
     const leftoverSourceDate = /^\d{4}-\d{2}-\d{2}$/.test(item?.leftoverSourceDate) ? item.leftoverSourceDate : "";
     const leftoverSourceItemId = /^[a-z0-9-]{1,160}$/i.test(item?.leftoverSourceItemId) ? item.leftoverSourceItemId : "";
@@ -102,7 +102,7 @@ function cleanMeal(value) {
   const dinner = firstRecipe("dinner", "main");
   const servingPlan = source.servingPlan && typeof source.servingPlan === "object" ? source.servingPlan : {};
   const cleanCount = (entry, fallback) => Number.isFinite(Number(entry))
-    ? Math.min(20, Math.max(0, Math.round(Number(entry))))
+    ? Math.min(20, Math.max(0, Math.trunc(Number(entry))))
     : fallback;
   const actualLeftovers = Object.fromEntries(Object.entries(servingPlan.actualLeftovers || {})
     .filter(([id]) => /^[a-z0-9-]{1,160}$/i.test(id))
