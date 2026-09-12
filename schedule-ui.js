@@ -209,7 +209,8 @@ export function createScheduleUi({
   function dinnerRecipeMeta(recipe) {
     if (!recipe) return "";
     const role = mealRoles.find((item) => item.key === categoryFor(recipe)) || mealRoles.find((item) => item.key === "main");
-    return [localize(recipe.short || recipe.meta), t(role?.label || "roleMain")].filter(Boolean).join(" · ");
+    const detail = localize(recipe.meta) || localize(recipe.short);
+    return [detail, t(role?.label || "roleMain")].filter(Boolean).join(" · ");
   }
 
   function dinnerCountStepper(field, value, labelKey, { max = 20, step = "1" } = {}) {
@@ -558,6 +559,7 @@ export function createScheduleUi({
     });
     $$("[data-focused-serving]").forEach((control) => {
       if (control.dataset.countStep || control.tagName === "BUTTON") return;
+      control.addEventListener("focus", () => control.select?.());
       control.addEventListener("input", () => syncFocusedServingControl(control, { allowPartial: true }));
       control.addEventListener("change", () => syncFocusedServingControl(control));
       control.addEventListener("blur", () => syncFocusedServingControl(control));

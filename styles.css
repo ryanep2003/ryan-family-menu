@@ -242,7 +242,7 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .today-hero-card .text-action { justify-self: start; }
 .today-story.is-open-dinner .today-hero-card {
   background: color-mix(in srgb, #F3E4D4 82%, var(--paper));
-  overflow: hidden;
+  overflow: visible;
 }
 .today-story.is-open-dinner h2 { max-width: 14ch; font-size: clamp(1.85rem, 8vw, 2.6rem); line-height: 1.05; letter-spacing: -.03em; }
 .today-dinner-samples {
@@ -280,6 +280,12 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .today-story.is-planned-dinner .text-action { margin-bottom: var(--space-4); }
 .today-story.has-photo .today-hero-card { grid-template-columns: minmax(0, 1fr) 5.5rem; align-items: start; }
 .today-story.has-photo .today-hero-card .primary-action { grid-column: 1 / -1; }
+.today-story.is-planned-dinner.has-photo .today-hero-card {
+  grid-template-columns: minmax(0, 1fr);
+}
+.today-story.is-planned-dinner .today-image { order: -1; }
+.today-story.is-planned-dinner.has-photo .today-hero-card .primary-action,
+.today-story.is-planned-dinner.has-photo .today-hero-card .text-action { grid-column: 1; }
 .today-image { position: relative; z-index: 2; display: block; margin: 0; }
 .today-image img { width: 5.5rem; height: 5.5rem; border-radius: 50%; object-fit: cover; }
 .today-date { color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
@@ -1262,6 +1268,7 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
   .today-story { padding-top: var(--space-2); }
   .today-story.has-photo { display: block; max-width: none; }
   .today-story.has-photo .today-image img { width: 5.5rem; height: 5.5rem; aspect-ratio: auto; border-radius: 50%; }
+  .today-story.is-planned-dinner.has-photo .today-image img { width: 100%; height: auto; max-height: 20rem; aspect-ratio: 16 / 10; border-radius: 0; }
   .focused-dinner { max-width: 44rem; }
   .focused-dinner-confirmation { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-6); }
   .focused-eating { grid-column: 1 / -1; }
@@ -1334,8 +1341,13 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
     box-shadow: var(--card-shadow);
   }
   .dinner-review { grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr); align-items: start; }
-  .dinner-review h2 { grid-column: 1 / -1; }
-  .dinner-review-recipe { grid-row: span 3; }
+  .dinner-review h2,
+  .dinner-review-actions { grid-column: 1 / -1; }
+  .dinner-review-recipe { grid-column: 1; grid-row: span 3; }
+  .dinner-review-side { grid-column: 1; }
+  .dinner-review-eaters,
+  .dinner-review-later { grid-column: 2; }
+  .today-story.is-planned-dinner.has-photo .today-hero-card { grid-template-columns: minmax(0, 1fr); }
   .today-story.is-open-dinner .today-hero-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(12rem, 18rem);
