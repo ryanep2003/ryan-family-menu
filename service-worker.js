@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v191";
-// v191: Change dinner does not invent a reel selection; List titles wrap on phones.
+const CACHE_NAME = "ryan-family-menu-v192";
+// v192: Explore remounts stay on the selected recipe; compact phone tray and photo fallbacks.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",

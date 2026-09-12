@@ -26,6 +26,11 @@ export function dinnerPickerMode(value) {
   return value === "list" ? "list" : "explore";
 }
 
+export function dinnerRecipeFallbackLabel(name) {
+  const text = `${name || ""}`.trim();
+  return text;
+}
+
 export function dinnerStageName({ active = false, choosing = false } = {}) {
   if (!active) return "";
   return choosing ? "picker" : "review";

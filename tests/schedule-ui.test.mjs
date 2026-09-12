@@ -432,7 +432,8 @@ test("focused dinner search uses lazy compact imagery and keeps no-image results
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /class="focused-recipe-result has-image"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /src="assets\/card-lemon-chicken\.webp"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /loading="lazy" decoding="async"/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /class="focused-recipe-result"[^>]*data-focused-recipe="another-main"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="another-main"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-recipe-fallback[\s\S]*Another Main/);
 });
 
 test("planned meal can open groceries filtered to its date and meal period", async () => {

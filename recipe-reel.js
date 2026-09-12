@@ -8,9 +8,9 @@ import {
   mostIntersectingIndex,
   nearestIndexByCenters,
   needsSnapCorrection,
+  preferredRestoreIndex,
   recipeIdFromRecord,
   reelClickAction,
-  rememberedIndex,
   scrollLeftToCenter,
   shouldParkMedia,
   usesCustomPointerDrag,
@@ -169,14 +169,15 @@ function applyActive(surface, items, activeIndex, { restore = false } = {}) {
   }
 }
 
+function startRecipeId(surface) {
+  return surface.dataset?.reelStart || "";
+}
+
 function restoreRemembered(surface, items) {
   if (!items.length) return;
   const remembered = positionBySurface.get(surface);
-  const startId = surface.dataset?.reelStart || remembered?.recipeId;
-  const index = rememberedIndex(items.map(recipeIdForItem), {
-    ...remembered,
-    recipeId: startId || remembered?.recipeId,
-  }, items.length);
+  const startId = startRecipeId(surface);
+  const index = preferredRestoreIndex(items.map(recipeIdForItem), startId, remembered, items.length);
   centerItem(surface, items[index], "auto");
   applyActive(surface, items, index, { restore: true });
 }
@@ -185,6 +186,11 @@ function settleSnap(surface, state) {
   if (state.pointer) return;
   const items = itemsFor(surface);
   if (!items.length) return;
+  const lockId = !state.releasedStart && startRecipeId(surface);
+  if (lockId) {
+    restoreRemembered(surface, items);
+    return;
+  }
   const index = nearestIndexFromSurface(surface, items);
   const item = items[index];
   const target = scrollLeftToCenter(item.offsetLeft, item.offsetWidth, surface.clientWidth);
@@ -201,7 +207,7 @@ function observeActiveItems(surface, state) {
 
   const ratios = new Map();
   state.itemObserver = new IntersectionObserver((entries) => {
-    if (state.ignoreActive) return;
+    if (state.ignoreActive || (!state.releasedStart && startRecipeId(surface))) return;
     for (const entry of entries) ratios.set(entry.target, entry.intersectionRatio);
     const ordered = itemsFor(surface);
     if (!ordered.length) return;
@@ -224,6 +230,7 @@ function bindPointer(surface, state) {
 
   state.pointerDownHandler = (event) => {
     if (event.button !== 0) return;
+    state.releasedStart = true;
     state.suppressClick = false;
     state.pointer = {
       id: event.pointerId,
@@ -309,6 +316,24 @@ function bindScrollSettle(surface, state) {
   surface.addEventListener("scroll", state.scrollHandler, { passive: true });
 }
 
+function bindStartLayout(surface, state) {
+  if (state.startObserver || typeof ResizeObserver !== "function") return;
+  if (!startRecipeId(surface)) return;
+  state.startObserver = new ResizeObserver(() => {
+    if (!surface.isConnected || state.releasedStart || state.pointer) return;
+    const items = itemsFor(surface);
+    const startId = startRecipeId(surface);
+    if (!startId || !items.length) return;
+    const index = preferredRestoreIndex(items.map(recipeIdForItem), startId, positionBySurface.get(surface), items.length);
+    const item = items[index];
+    if (!item) return;
+    const target = scrollLeftToCenter(item.offsetLeft, item.offsetWidth, surface.clientWidth);
+    if (!needsSnapCorrection(surface.scrollLeft, target)) return;
+    restoreRemembered(surface, items);
+  });
+  state.startObserver.observe(surface);
+}
+
 function refreshSurface(surface) {
   const state = stateBySurface.get(surface);
   if (!state) return;
@@ -324,11 +349,13 @@ function refreshSurface(surface) {
         if (!surface.isConnected) return;
         restoreRemembered(surface, itemsFor(surface));
         state.ignoreActive = false;
+        bindStartLayout(surface, state);
       });
     });
     return;
   }
   observeActiveItems(surface, state);
+  bindStartLayout(surface, state);
 }
 
 function bindSurface(surface) {
@@ -345,6 +372,8 @@ function bindSurface(surface) {
     pointer: null,
     suppressClick: false,
     itemObserver: null,
+    startObserver: null,
+    releasedStart: false,
   };
   stateBySurface.set(surface, state);
   bindPointer(surface, state);
@@ -356,6 +385,7 @@ function unbindSurface(surface) {
   const state = stateBySurface.get(surface);
   if (!state) return;
   state.itemObserver?.disconnect();
+  state.startObserver?.disconnect();
   surface.removeEventListener("pointerdown", state.pointerDownHandler);
   surface.removeEventListener("pointermove", state.pointerMoveHandler);
   surface.removeEventListener("pointerup", state.pointerEndHandler);

@@ -7,6 +7,7 @@ import {
   applyDinnerServingField,
   assignDinnerRecipe,
   advanceDinnerSelection,
+  dinnerRecipeFallbackLabel,
   DEFAULT_DINNER_PICKER_MODE,
   dinnerMainItem,
   dinnerPickerMode,
@@ -283,13 +284,12 @@ export function createScheduleUi({
       const hasPhoto = !cardPhotoIsGenerated(recipe) && Boolean(cardPhotoFor(recipe));
       const canHydratePhoto = !hasPhoto && recipe.hasSourcePhotos;
       const selected = recipe.id === focusedDinnerSelectedId;
+      const fallbackName = dinnerRecipeFallbackLabel(localize(recipe.name));
       return `
-        <button class="focused-recipe-result${hasPhoto || canHydratePhoto ? " has-image" : ""}${selected ? " is-selected" : ""}" type="button" data-focused-recipe="${escapeHtml(recipe.id)}" aria-pressed="${selected}">
+        <button class="focused-recipe-result${hasPhoto || canHydratePhoto || fallbackName ? " has-image" : ""}${selected ? " is-selected" : ""}" type="button" data-focused-recipe="${escapeHtml(recipe.id)}" aria-pressed="${selected}">
           ${hasPhoto
             ? `<span class="recipe-photo-shell is-loaded"><img src="${escapeHtml(cardPhotoFor(recipe))}" alt="" loading="lazy" decoding="async" /></span>`
-            : canHydratePhoto
-              ? `<span class="recipe-photo-shell" data-recipe-photo-id="${escapeHtml(recipe.id)}" data-recipe-photo-alt="" aria-hidden="true"></span>`
-              : ""}
+            : `<span class="recipe-photo-shell dinner-recipe-fallback${canHydratePhoto ? "" : " is-loaded"}"${canHydratePhoto ? ` data-recipe-photo-id="${escapeHtml(recipe.id)}" data-recipe-photo-alt=""` : ""} aria-hidden="true"><span class="dinner-recipe-fallback-name">${escapeHtml(fallbackName)}</span></span>`}
           <span class="focused-recipe-copy"><strong>${escapeHtml(localize(recipe.name))}</strong>
           <small>${escapeHtml(dinnerRecipeMeta(recipe) || t("chooseRecipe"))}</small></span>
           ${selected ? `<span class="dinner-picker-check" aria-hidden="true">✓</span>` : ""}

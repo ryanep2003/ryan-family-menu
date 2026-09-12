@@ -11,6 +11,7 @@ import {
   mostIntersectingIndex,
   nearestIndexByCenters,
   needsSnapCorrection,
+  preferredRestoreIndex,
   recipeIdFromRecord,
   reelClickAction,
   rememberedIndex,
@@ -44,6 +45,14 @@ test("rememberedIndex prefers a still-present recipe id, then a clamped index", 
   assert.equal(rememberedIndex(ids, { recipeId: "missing", index: 99 }, ids.length), 3);
   assert.equal(rememberedIndex(ids, {}, ids.length), 1);
   assert.equal(rememberedIndex([], { recipeId: "a" }, 0), 0);
+});
+
+test("preferredRestoreIndex keeps an explicit start recipe ahead of the middle card", () => {
+  const ids = ["picadillo", "lemon-chicken", "cheesy-chicken", "tomato-pasta"];
+  assert.equal(preferredRestoreIndex(ids, "picadillo", { recipeId: "cheesy-chicken", index: 2 }, ids.length), 0);
+  assert.equal(preferredRestoreIndex(ids, "missing", { recipeId: "cheesy-chicken" }, ids.length), 2);
+  assert.equal(preferredRestoreIndex(ids, "", {}, ids.length), 1);
+  assert.equal(preferredRestoreIndex([], "picadillo", {}, 0), 0);
 });
 
 test("near and parked media stay limited to neighbors of the active card", () => {
@@ -148,4 +157,7 @@ test("native reel module does not measure every card on every scroll tick", asyn
   assert.match(source, /recipe-reel-active/);
   assert.match(source, /restore:\s*restore \|\| Boolean\(state\?\.ignoreActive\)/);
   assert.match(source, /dataset\?\.reelStart|dataset\.reelStart/);
+  assert.match(source, /preferredRestoreIndex/);
+  assert.match(source, /releasedStart/);
+  assert.match(source, /ResizeObserver/);
 });

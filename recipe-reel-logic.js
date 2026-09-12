@@ -38,6 +38,15 @@ export function rememberedIndex(itemIds, remembered, count) {
   return Math.floor((count - 1) / 2);
 }
 
+export function preferredRestoreIndex(itemIds, startId, remembered, count) {
+  if (!count) return 0;
+  if (startId) {
+    const index = (itemIds || []).indexOf(startId);
+    if (index >= 0) return index;
+  }
+  return rememberedIndex(itemIds, remembered, count);
+}
+
 export function isNearIndex(index, activeIndex) {
   return Math.abs(index - activeIndex) === 1;
 }

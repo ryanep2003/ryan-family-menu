@@ -14,6 +14,7 @@ import {
   dinnerIsOpen,
   dinnerMainItem,
   dinnerPickerMode,
+  dinnerRecipeFallbackLabel,
   dinnerReviewIsReady,
   dinnerSideItem,
   dinnerStageName,
@@ -234,6 +235,11 @@ test("steppers move from the normalized visible value", () => {
   assert.equal(stepCountValue("2.5", "adults", 1), 3);
   assert.equal(stepCountValue("2.5", "adults", -1), 1);
   assert.equal(stepCountValue("0", "guests", -1), 0);
+});
+
+test("upload cards without photos still have a readable name fallback", () => {
+  assert.equal(dinnerRecipeFallbackLabel("Picadillo Tacos"), "Picadillo Tacos");
+  assert.equal(dinnerRecipeFallbackLabel("  "), "");
 });
 
 test("choose dinner defaults to the native field and keeps List as an opt-in", () => {

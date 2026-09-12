@@ -538,6 +538,20 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .dinner-tray-kicker { color: var(--success); font-size: .78rem; font-weight: 650; }
 .dinner-decision-tray h3 { font-size: 1.45rem; }
 .dinner-tray-note, .dinner-tray-hint { color: var(--muted); font-size: .88rem; }
+.dinner-recipe-fallback {
+  display: grid;
+  place-items: end start;
+  padding: 12px;
+  background: color-mix(in srgb, var(--sage) 55%, var(--paper));
+  color: var(--navy);
+}
+.dinner-recipe-fallback-name {
+  font-family: var(--font-reading);
+  font-size: 1.05rem;
+  font-weight: 550;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
 .dinner-review-recipe {
   display: grid;
   gap: var(--space-3);
@@ -636,6 +650,32 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 }
 #focusedDinnerResults.dinner-picker-explore .focused-recipe-copy strong {
   white-space: normal;
+}
+#focusedDinnerResults.dinner-picker-explore .dinner-recipe-fallback {
+  height: 220px;
+  min-height: 220px;
+  border-radius: 20px;
+}
+@media (max-width: 699px) {
+  .dinner-decision-tray {
+    gap: 4px;
+    padding: 10px 14px 12px;
+  }
+  .dinner-decision-tray h3 { font-size: 1.15rem; }
+  .dinner-tray-note { display: none; }
+  #focusedDinnerResults.dinner-picker-explore.recipe-native-reel {
+    min-height: 340px;
+    padding-block: 8px 10px;
+  }
+  #focusedDinnerResults.dinner-picker-explore.recipe-native-reel > .focused-recipe-result {
+    height: 320px;
+    min-height: 320px;
+  }
+  #focusedDinnerResults.dinner-picker-explore.recipe-native-reel .recipe-photo-shell,
+  #focusedDinnerResults.dinner-picker-explore .dinner-recipe-fallback {
+    height: 168px;
+    min-height: 168px;
+  }
 }
 @keyframes dinner-stage-enter {
   from { opacity: 0; }
