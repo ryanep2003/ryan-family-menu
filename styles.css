@@ -187,6 +187,7 @@ summary { min-height: 44px; padding: 11px 0; cursor: pointer; font-weight: 600; 
 .household-history-meta { display: block; color: var(--muted); font-size: .84rem; }
 .household-history-restore { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); }
 .app-update-notice { position: fixed; z-index: 24; right: var(--space-4); bottom: calc(80px + env(safe-area-inset-bottom)); left: var(--space-4); display: flex; max-width: 34rem; align-items: center; justify-content: space-between; gap: var(--space-3); margin: auto; padding: var(--space-3); border-radius: var(--radius-sheet); background: var(--ink); color: var(--paper); }
+body.dinner-flow-open .app-update-notice { top: calc(var(--space-4) + env(safe-area-inset-top, 0px)); bottom: auto; z-index: 30; }
 main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min-height: calc(100vh - 60px); margin: 0 auto; padding: 0 var(--space-4) calc(var(--bottom-nav-space) + var(--space-6)); }
 .tabs { position: fixed; right: 0; bottom: 0; left: 0; z-index: 12; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; padding: var(--space-2) var(--space-3) calc(var(--space-2) + env(safe-area-inset-bottom)); background: var(--paper); box-shadow: 0 -8px 20px rgba(26, 58, 92, .06); }
 .tabs button { display: grid; justify-items: center; gap: 2px; min-height: 48px; padding: 6px 1px; border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: clamp(.66rem, 2.8vw, .82rem); font-weight: 650; }
@@ -498,7 +499,7 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .dinner-picker-list .focused-recipe-result {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) auto;
-  align-items: start;
+  align-items: center;
   gap: var(--space-3);
   width: 100%;
   max-width: 100%;
@@ -521,7 +522,8 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   overflow: visible;
   text-overflow: unset;
   white-space: normal;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .dinner-picker-check { color: var(--navy); font-weight: 700; }
 .dinner-decision-tray {

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { createScheduleUi } from "../schedule-ui.js";
@@ -603,6 +604,34 @@ test("explore remounts keep the already selected dinner centered", () => {
   ui.selectFocusedDinnerRecipe("another-main");
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-reel-start="another-main"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="another-main"[^>]*aria-pressed="true"/);
+});
+
+test("List then Explore remounts lock the reel to the tray recipe", async () => {
+  const extraRecipes = [
+    { id: "picadillo", name: "Picadillo Tacos", category: "main" },
+    { id: "cheesy-chicken", name: "Cheesy Chicken and Rice Casserole", category: "main" },
+  ];
+  const { elements, state, ui } = harness({ extraRecipes });
+  state.schedule.mon = { ...emptyMeal };
+
+  ui.openFocusedDinner("2026-06-22", "", { choose: true, mode: "list" });
+  ui.selectFocusedDinnerRecipe("picadillo");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Picadillo Tacos/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /data-reel-start=/);
+
+  elements["#dinnerPickerMode"].dataset.dinnerMode = "explore";
+  await elements["#dinnerPickerMode"].dispatch("click");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /focused-recipe-results dinner-picker-explore/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-reel-start="picadillo"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="picadillo"[^>]*aria-pressed="true"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Picadillo Tacos/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Cheesy Chicken and Rice Casserole/);
+});
+
+test("List to Explore asks the reel to recenter the tray recipe", async () => {
+  const source = await readFile(new URL("../schedule-ui.js", import.meta.url), "utf8");
+  assert.match(source, /syncReelToRecipeId\(results, focusedDinnerSelectedId\)/);
+  assert.match(source, /dataset\.reelStart = focusedDinnerSelectedId/);
 });
 
 test("selecting recipe A then B reviews and confirms B even if recipeById falls back", async () => {

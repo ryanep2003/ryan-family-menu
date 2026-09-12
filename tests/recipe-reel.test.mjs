@@ -8,6 +8,8 @@ import {
   isDragGesture,
   isNearIndex,
   itemIdsSignature,
+  itemIndexForRecipeId,
+  lockedActiveIndex,
   mostIntersectingIndex,
   nearestIndexByCenters,
   needsSnapCorrection,
@@ -15,6 +17,7 @@ import {
   recipeIdFromRecord,
   reelClickAction,
   rememberedIndex,
+  scrollLeftToAlignCenter,
   scrollLeftToCenter,
   shouldParkMedia,
   usesCustomPointerDrag,
@@ -30,6 +33,40 @@ test("scrollLeftToCenter leaves equal leftover space on both sides", () => {
   assert.equal(scrollLeftToCenter(80, 240, 390), 5);
   assert.equal(scrollLeftToCenter(0, 308, 390), 0);
   assert.equal(scrollLeftToCenter(440, 320, 1200), 0);
+});
+
+test("scrollLeftToAlignCenter uses viewport rects so a two-column tray does not shift the target", () => {
+  // Desktop picker: field at x=40 width=720, tray occupies the right column.
+  // Picadillo is the selected card. Its offsetParent is the stage, not the reel,
+  // so offsetLeft is inflated — the old helper would jump toward the catalog middle.
+  const surface = { left: 40, width: 720 };
+  const picadillo = { left: 240, width: 320 };
+  assert.equal(scrollLeftToAlignCenter(0, surface, picadillo), 0);
+  assert.equal(scrollLeftToAlignCenter(80, surface, picadillo), 80);
+
+  const offsetLeftTrap = scrollLeftToCenter(40 + (194 * 342), 320, 720);
+  const rectTarget = scrollLeftToAlignCenter(0, surface, picadillo);
+  assert.ok(offsetLeftTrap > 60000);
+  assert.equal(rectTarget, 0);
+});
+
+test("a locked start recipe must not fall back to the middle catalog card", () => {
+  const ids = ["picadillo", "lemon-chicken", "cheesy-chicken", "tomato-pasta"];
+  assert.equal(itemIndexForRecipeId(ids, "picadillo"), 0);
+  assert.equal(preferredRestoreIndex(ids, "picadillo", { recipeId: "cheesy-chicken", index: 2 }, ids.length), 0);
+  assert.equal(preferredRestoreIndex(ids, "missing", { recipeId: "cheesy-chicken" }, ids.length), -1);
+  assert.equal(lockedActiveIndex({
+    itemIds: ids,
+    startId: "picadillo",
+    releasedStart: false,
+    requestedIndex: 2,
+  }), 0);
+  assert.equal(lockedActiveIndex({
+    itemIds: ids,
+    startId: "picadillo",
+    releasedStart: true,
+    requestedIndex: 2,
+  }), 2);
 });
 
 test("isDragGesture ignores taps inside the movement threshold", () => {
@@ -50,7 +87,7 @@ test("rememberedIndex prefers a still-present recipe id, then a clamped index", 
 test("preferredRestoreIndex keeps an explicit start recipe ahead of the middle card", () => {
   const ids = ["picadillo", "lemon-chicken", "cheesy-chicken", "tomato-pasta"];
   assert.equal(preferredRestoreIndex(ids, "picadillo", { recipeId: "cheesy-chicken", index: 2 }, ids.length), 0);
-  assert.equal(preferredRestoreIndex(ids, "missing", { recipeId: "cheesy-chicken" }, ids.length), 2);
+  assert.equal(preferredRestoreIndex(ids, "missing", { recipeId: "cheesy-chicken" }, ids.length), -1);
   assert.equal(preferredRestoreIndex(ids, "", {}, ids.length), 1);
   assert.equal(preferredRestoreIndex([], "picadillo", {}, 0), 0);
 });
@@ -137,6 +174,7 @@ test("native reel CSS snaps to a centered card and disables text selection", asy
   assert.match(css, /scroll-snap-align:\s*center/);
   assert.match(css, /scroll-padding-inline:\s*var\(--recipe-reel-gutter\)/);
   assert.match(css, /user-select:\s*none/);
+  assert.match(css, /is-start-locked[\s\S]*scroll-snap-type:\s*none/);
   assert.doesNotMatch(css, /\.swiper|swiper-wrapper|coverflow/i);
   assert.doesNotMatch(css, /translate3d|perspective\(|rotateY\(/);
 });
@@ -160,4 +198,10 @@ test("native reel module does not measure every card on every scroll tick", asyn
   assert.match(source, /preferredRestoreIndex/);
   assert.match(source, /releasedStart/);
   assert.match(source, /ResizeObserver/);
+  assert.match(source, /scrollLeftToAlignCenter/);
+  assert.match(source, /syncReelToRecipeId/);
+  assert.match(source, /is-start-locked|START_LOCK_CLASS/);
+  assert.match(source, /lockedActiveIndex/);
+  assert.doesNotMatch(source, /scrollLeftToCenter\(/);
+  assert.doesNotMatch(source, /item\.offsetLeft/);
 });

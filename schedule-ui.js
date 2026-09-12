@@ -22,6 +22,7 @@ import {
   shouldAcceptDinnerReelSelection,
   stepCountValue,
 } from "./dinner-flow.js";
+import { syncReelToRecipeId } from "./recipe-reel.js";
 
 export function createScheduleUi({
   $,
@@ -713,6 +714,14 @@ export function createScheduleUi({
     const results = $("#focusedDinnerResults");
     if (!results || focusedDinnerMode !== "explore") return;
     focusedDinnerReelTouched = false;
+    if (focusedDinnerSelectedId) {
+      results.dataset.reelStart = focusedDinnerSelectedId;
+      const sync = () => syncReelToRecipeId(results, focusedDinnerSelectedId);
+      sync();
+      globalThis.requestAnimationFrame?.(() => {
+        globalThis.requestAnimationFrame?.(sync);
+      });
+    }
     results.addEventListener("pointerdown", () => {
       focusedDinnerReelTouched = true;
     });

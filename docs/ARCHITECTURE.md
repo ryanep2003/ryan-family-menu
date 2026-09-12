@@ -27,7 +27,7 @@ GitHub main
 - `index.html`: household gate and all main views.
 - `app.js`: application bootstrap, in-memory state, persistence orchestration, navigation, shared rendering, and domain-module composition.
 - `styles.css`: design tokens, component styling, responsive layout, PWA-safe four-tab bottom navigation, the Plan dirty-save bar, the Action Assistant sheet, and motion preferences.
-- `recipe-reel.js` / `recipe-reel.css`: native overflow recipe discovery with CSS scroll-snap. Active/near cards use IntersectionObserver; off-screen images are parked. Do not add a transform carousel engine.
+- `recipe-reel.js` / `recipe-reel.css`: native overflow recipe discovery with CSS scroll-snap. Active/near cards use IntersectionObserver; off-screen images are parked. Dinner Explore remounts lock to `data-reel-start` and center with viewport rects so the tray id and lit card stay the same on the desktop two-column picker. Do not add a transform carousel engine.
 - `plan-from-what-we-have.js`: deterministic, advisory dinner ranking from inventory, leftovers, recipes, family rules, prep time, and budget.
 - `dinner-flow.js`: Today open-dinner samples, choose-dinner filtering, exact recipe-id selection for field/list → review → confirm, and serving-count field rewrite helpers used by meal review. Missing recipe ids resolve to null and must not fall back to another catalog recipe. Meal recipe ids share the catalog’s 160-character bound. Choose dinner defaults to the native Library reel (center-snap field); List stays available. Do not add a free XY pan or spatial camera.
 

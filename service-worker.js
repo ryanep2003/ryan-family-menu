@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v192";
-// v192: Explore remounts stay on the selected recipe; compact phone tray and photo fallbacks.
+const CACHE_NAME = "ryan-family-menu-v193";
+// v193: Desktop List→Explore keeps the tray recipe centered; update notice stays off the tray.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",
