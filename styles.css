@@ -487,6 +487,13 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 }
 .dinner-picker-filters button[aria-pressed="true"] { background: var(--sage); }
 .dinner-picker-count { color: var(--muted); font-size: .86rem; }
+.dinner-picker.is-explore .dinner-picker-count { display: none; }
+.dinner-picker-explore-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: .82rem;
+  text-align: center;
+}
 .dinner-picker-list { display: grid; min-width: 0; }
 .dinner-picker-list .focused-recipe-result {
   display: grid;
@@ -556,6 +563,72 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .dinner-side-choices { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .dinner-side-choices button { min-height: 40px; padding: 8px 12px; border-radius: 999px; background: var(--paper); }
 .dinner-review-actions { margin-inline: 0; }
+.focused-dinner.is-dinner-picker,
+.focused-dinner.is-dinner-review {
+  max-width: 48rem;
+  animation: dinner-stage-enter 320ms ease;
+}
+.focused-dinner.is-dinner-picker .focused-dinner-header,
+.focused-dinner.is-dinner-review .focused-dinner-header {
+  gap: var(--space-2);
+  margin-inline: 0;
+  padding: var(--space-2) 0 var(--space-3);
+  background: transparent;
+}
+.focused-dinner.is-dinner-picker .focused-dinner-header .text-action,
+.focused-dinner.is-dinner-review .focused-dinner-header .text-action {
+  margin-left: -8px;
+}
+.dinner-picker.is-explore #focusedDinnerResults.dinner-picker-explore {
+  margin-inline: calc(var(--space-4) * -1);
+  width: calc(100% + (var(--space-4) * 2));
+}
+#focusedDinnerResults.dinner-picker-explore.recipe-native-reel {
+  --recipe-slide-width: min(78vw, 300px);
+  min-height: 430px;
+  padding-block: 10px 18px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+#focusedDinnerResults.dinner-picker-explore.recipe-native-reel > .focused-recipe-result {
+  position: relative;
+  height: 390px;
+  min-height: 390px;
+  padding: 12px 12px 14px;
+  border-radius: 22px;
+}
+#focusedDinnerResults.dinner-picker-explore.recipe-native-reel .recipe-photo-shell,
+#focusedDinnerResults.dinner-picker-explore.recipe-native-reel .recipe-photo-shell img {
+  border-radius: 20px;
+}
+#focusedDinnerResults.dinner-picker-explore.recipe-native-reel .recipe-photo-shell {
+  height: 220px;
+  min-height: 220px;
+}
+#focusedDinnerResults.dinner-picker-explore .dinner-picker-check {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--paper);
+  box-shadow: 0 4px 12px rgba(26, 58, 92, .12);
+  color: var(--navy);
+}
+#focusedDinnerResults.dinner-picker-explore .focused-recipe-copy {
+  padding: 4px 4px 0;
+}
+#focusedDinnerResults.dinner-picker-explore .focused-recipe-copy strong {
+  white-space: normal;
+}
+@keyframes dinner-stage-enter {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
 
 /* Comprehensive planning remains separate from the focused Today flow. */
 .planning-mode-switch, .inventory-mode-switch {
@@ -1330,7 +1403,21 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
     column-gap: var(--space-6);
     align-items: start;
   }
-  .dinner-picker h2, .dinner-picker-search, .dinner-picker-toolbar, .dinner-picker-count, .dinner-picker-list, .dinner-picker-explore { grid-column: 1; }
+  .dinner-picker h2, .dinner-picker-search, .dinner-picker-toolbar, .dinner-picker-count, .dinner-picker-list, .dinner-picker-explore, .dinner-picker-explore-hint { grid-column: 1; }
+  .dinner-picker.is-explore .dinner-picker-count { display: block; }
+  .dinner-picker.is-explore #focusedDinnerResults.dinner-picker-explore {
+    margin-inline: 0;
+    width: 100%;
+  }
+  #focusedDinnerResults.dinner-picker-explore.recipe-native-reel {
+    --recipe-slide-width: 320px;
+    min-height: 468px;
+    border-radius: 24px;
+  }
+  #focusedDinnerResults.dinner-picker-explore.recipe-native-reel > .focused-recipe-result {
+    height: 410px;
+    min-height: 410px;
+  }
   .dinner-decision-tray {
     grid-column: 2;
     grid-row: 1 / span 6;
@@ -1552,6 +1639,8 @@ body[data-view="grocery"] .tabs button[data-view="grocery"], body[data-view="sch
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
   .today-dinner-samples img { transform: none; }
+  .focused-dinner.is-dinner-picker,
+  .focused-dinner.is-dinner-review { animation: none; }
 }
 .dinner-picker, .dinner-review, .today-hero-card, .dinner-decision-tray { max-width: 100%; }
 .focused-dinner, .dinner-flow-form { overflow-x: clip; }

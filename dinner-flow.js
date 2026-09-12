@@ -20,6 +20,48 @@ export {
   rewriteCountFieldDisplay,
 };
 
+export const DEFAULT_DINNER_PICKER_MODE = "explore";
+
+export function dinnerPickerMode(value) {
+  return value === "list" ? "list" : "explore";
+}
+
+export function dinnerStageName({ active = false, choosing = false } = {}) {
+  if (!active) return "";
+  return choosing ? "picker" : "review";
+}
+
+export function shouldAcceptDinnerReelSelection({
+  nextId = "",
+  selectedId = "",
+  existingRecipeId = "",
+  openedToChoose = false,
+} = {}) {
+  const next = cleanRecipeId(nextId);
+  if (!next) return false;
+  if (cleanRecipeId(selectedId) === next) return false;
+  if (openedToChoose && !cleanRecipeId(selectedId) && cleanRecipeId(existingRecipeId) === next) {
+    return false;
+  }
+  return true;
+}
+
+export function dinnerFlowAllowsMotion(matchMedia = globalThis.matchMedia) {
+  return matchMedia?.("(prefers-reduced-motion: reduce)")?.matches !== true;
+}
+
+export function runDinnerStageTransition(update, {
+  reducedMotion = !dinnerFlowAllowsMotion(),
+  startViewTransition,
+} = {}) {
+  if (typeof update !== "function") return null;
+  if (reducedMotion || typeof startViewTransition !== "function") {
+    update();
+    return null;
+  }
+  return startViewTransition(update);
+}
+
 export function exactRecipeById(recipes, recipeId) {
   const id = cleanRecipeId(String(recipeId ?? ""));
   if (!id) return null;

@@ -103,6 +103,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     "#focusedDinnerStatus": element(),
     "#focusedEatingNames": element(),
     "#advanceDinnerSelection": element({ disabled: true }),
+    "#dinnerPickerMode": element({ dataset: { dinnerMode: "list" } }),
     "#cancelDinnerReview": element(),
     "#comprehensivePlanner": element(),
     "#planningModeSwitch": element(),
@@ -217,6 +218,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     },
     $$: (selector) => {
       if (selector === "[data-planning-mode]") return [elements["#weekPlanningTab"], elements["#monthPlanningTab"]];
+      if (selector === "[data-dinner-mode]") return [elements["#dinnerPickerMode"]];
       if (selector === "[data-edit-week-date]") return weekButtons;
       if (selector === "[data-edit-calendar-date]") return dateButtons;
       if (selector === '[data-meal-context^="weekdate:"]') return [weekHandoffControl, weekServingControl, weekExtraServingControl, weekActualLeftoverControl];
@@ -284,6 +286,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
       dinnerPickerExplore: "Explore",
       dinnerPickerList: "List",
       dinnerPickerSelected: "Selected",
+      dinnerPickerExploreHint: "Drag to explore",
       searchYourRecipes: "Search your recipes",
       confirmDinner: "Confirm dinner",
       cancelDinnerReview: "Cancel",
@@ -551,7 +554,7 @@ test("recipe search exposes every matching recipe instead of truncating the fami
   assert.equal((weekRecipeResults.innerHTML.match(/data-add-meal-result=/g) || []).length, 17);
 });
 
-test("open dinner picker stays on List with a fixed tray and does not save yet", () => {
+test("open dinner picker starts on the center-snap field with List available and does not save yet", () => {
   const { elements, state, ui } = harness();
   state.schedule.mon = { ...emptyMeal };
   const savesBefore = state.saveCalls;
@@ -563,11 +566,31 @@ test("open dinner picker stays on List with a fixed tray and does not save yet",
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="all"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="favorites"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="sides"/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-list/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /focused-recipe-results dinner-picker-explore/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="list"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Drag to explore/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose for dinner/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choosing a recipe won/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-list/);
   assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
   assert.equal(state.saveCalls, savesBefore);
+});
+
+test("List remains a first-class alternative to the dinner field", async () => {
+  const { elements, ui } = harness();
+  elements["#comprehensivePlanner"].hidden = false;
+
+  ui.openFocusedDinner("2026-06-22", "", { choose: true, mode: "list" });
+
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-list/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="explore"/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-explore/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Drag to explore/);
+
+  elements["#dinnerPickerMode"].dataset.dinnerMode = "explore";
+  await elements["#dinnerPickerMode"].dispatch("click");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /focused-recipe-results dinner-picker-explore/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="list"/);
 });
 
 test("selecting recipe A then B reviews and confirms B even if recipeById falls back", async () => {

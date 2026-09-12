@@ -150,10 +150,18 @@ function applyActive(surface, items, activeIndex) {
     else item.removeAttribute("aria-current");
   });
   syncImageBudget(items, index);
+  const recipeId = recipeIdForItem(items[index]);
+  const previous = positionBySurface.get(surface);
   positionBySurface.set(surface, {
     index,
-    recipeId: recipeIdForItem(items[index]),
+    recipeId,
   });
+  if (recipeId && previous?.recipeId !== recipeId) {
+    surface.dispatchEvent(new CustomEvent("recipe-reel-active", {
+      bubbles: true,
+      detail: { recipeId, index },
+    }));
+  }
 }
 
 function restoreRemembered(surface, items) {

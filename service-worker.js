@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v189";
-// v189: Choose for dinner replaces every leftover dinner main on a messy day.
+const CACHE_NAME = "ryan-family-menu-v190";
+// v190: Choose dinner defaults to a native center-snap field; List stays available.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",
