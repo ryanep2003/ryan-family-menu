@@ -250,28 +250,47 @@ test("dinner stages name Today, picker, and review without inventing a fourth pl
   assert.equal(dinnerStageName({ active: true, choosing: false }), "review");
 });
 
-test("change-dinner reel settle does not auto-select the planned recipe", () => {
+test("change-dinner reel settle does not invent a selection", () => {
   assert.equal(shouldAcceptDinnerReelSelection({
-    nextId: "instant-pot-pork",
+    nextId: "citrus-and-endive-salad",
     selectedId: "",
-    existingRecipeId: "instant-pot-pork",
+    existingRecipeId: "picadillo",
     openedToChoose: true,
+    restore: true,
+  }), false);
+  assert.equal(shouldAcceptDinnerReelSelection({
+    nextId: "citrus-and-endive-salad",
+    selectedId: "",
+    existingRecipeId: "picadillo",
+    openedToChoose: true,
+    userHasInteracted: false,
   }), false);
   assert.equal(shouldAcceptDinnerReelSelection({
     nextId: "picadillo",
     selectedId: "",
-    existingRecipeId: "instant-pot-pork",
+    existingRecipeId: "picadillo",
     openedToChoose: true,
+    restore: true,
+    userHasInteracted: true,
+  }), false);
+  assert.equal(shouldAcceptDinnerReelSelection({
+    nextId: "citrus-and-endive-salad",
+    selectedId: "",
+    existingRecipeId: "picadillo",
+    openedToChoose: true,
+    userHasInteracted: true,
   }), true);
   assert.equal(shouldAcceptDinnerReelSelection({
-    nextId: "instant-pot-pork",
-    selectedId: "picadillo",
-    existingRecipeId: "instant-pot-pork",
+    nextId: "picadillo",
+    selectedId: "citrus-and-endive-salad",
+    existingRecipeId: "picadillo",
     openedToChoose: true,
+    userHasInteracted: true,
   }), true);
   assert.equal(shouldAcceptDinnerReelSelection({
     nextId: "picadillo",
     selectedId: "picadillo",
+    userHasInteracted: true,
   }), false);
 });
 
@@ -298,5 +317,6 @@ test("dinner field styles keep native snap and honor reduced motion", async () =
   assert.match(css, /border-radius:\s*20px/);
   assert.match(css, /@keyframes dinner-stage-enter/);
   assert.match(css, /prefers-reduced-motion: reduce[\s\S]*focused-dinner\.is-dinner-picker/);
+  assert.match(css, /\.dinner-picker-list \.focused-recipe-copy strong[\s\S]*white-space:\s*normal/);
   assert.doesNotMatch(css, /translate3d|perspective\(|rotateY\(/);
 });

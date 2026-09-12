@@ -36,10 +36,14 @@ export function shouldAcceptDinnerReelSelection({
   selectedId = "",
   existingRecipeId = "",
   openedToChoose = false,
+  restore = false,
+  userHasInteracted = false,
 } = {}) {
   const next = cleanRecipeId(nextId);
   if (!next) return false;
   if (cleanRecipeId(selectedId) === next) return false;
+  if (restore) return false;
+  if (!userHasInteracted) return false;
   if (openedToChoose && !cleanRecipeId(selectedId) && cleanRecipeId(existingRecipeId) === next) {
     return false;
   }

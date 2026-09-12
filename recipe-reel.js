@@ -139,7 +139,7 @@ function syncImageBudget(items, activeIndex) {
   });
 }
 
-function applyActive(surface, items, activeIndex) {
+function applyActive(surface, items, activeIndex, { restore = false } = {}) {
   if (!items.length) return;
   const index = Math.max(0, Math.min(items.length - 1, activeIndex));
   items.forEach((item, itemIndex) => {
@@ -156,10 +156,15 @@ function applyActive(surface, items, activeIndex) {
     index,
     recipeId,
   });
+  const state = stateBySurface.get(surface);
   if (recipeId && previous?.recipeId !== recipeId) {
     surface.dispatchEvent(new CustomEvent("recipe-reel-active", {
       bubbles: true,
-      detail: { recipeId, index },
+      detail: {
+        recipeId,
+        index,
+        restore: restore || Boolean(state?.ignoreActive),
+      },
     }));
   }
 }
@@ -173,7 +178,7 @@ function restoreRemembered(surface, items) {
     recipeId: startId || remembered?.recipeId,
   }, items.length);
   centerItem(surface, items[index], "auto");
-  applyActive(surface, items, index);
+  applyActive(surface, items, index, { restore: true });
 }
 
 function settleSnap(surface, state) {

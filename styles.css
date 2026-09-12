@@ -494,13 +494,15 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   font-size: .82rem;
   text-align: center;
 }
-.dinner-picker-list { display: grid; min-width: 0; }
+.dinner-picker-list { display: flex; flex-direction: column; width: 100%; min-width: 0; }
 .dinner-picker-list .focused-recipe-result {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: start;
   gap: var(--space-3);
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   min-height: 76px;
   padding: var(--space-3);
   border: 0;
@@ -510,7 +512,17 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   text-align: left;
 }
 .dinner-picker-list .focused-recipe-result.is-selected { background: color-mix(in srgb, var(--sage) 35%, var(--paper)); }
-.dinner-picker-list .focused-recipe-result img, .dinner-picker-list .recipe-photo-shell { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
+.dinner-picker-list .focused-recipe-result img, .dinner-picker-list .recipe-photo-shell { width: 56px; height: 56px; min-width: 56px; border-radius: 50%; object-fit: cover; }
+.dinner-picker-list .focused-recipe-copy,
+.dinner-picker-list .focused-recipe-copy strong,
+.dinner-picker-list .focused-recipe-copy small {
+  min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
 .dinner-picker-check { color: var(--navy); font-weight: 700; }
 .dinner-decision-tray {
   position: sticky;
@@ -566,7 +578,7 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .focused-dinner.is-dinner-picker,
 .focused-dinner.is-dinner-review {
   max-width: 48rem;
-  animation: dinner-stage-enter 320ms ease;
+  animation: dinner-stage-enter 180ms ease;
 }
 .focused-dinner.is-dinner-picker .focused-dinner-header,
 .focused-dinner.is-dinner-review .focused-dinner-header {
@@ -626,8 +638,8 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   white-space: normal;
 }
 @keyframes dinner-stage-enter {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Comprehensive planning remains separate from the focused Today flow. */

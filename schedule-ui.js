@@ -95,6 +95,7 @@ export function createScheduleUi({
   let focusedDinnerOpenedToChoose = false;
   let focusedDinnerExistingRecipeId = "";
   let focusedDinnerStage = "";
+  let focusedDinnerReelTouched = false;
   const mealSearchState = new Map();
   let planDirty = false;
   let planSaveBarHideTimer = 0;
@@ -439,6 +440,7 @@ export function createScheduleUi({
     focusedDinnerOpenedToChoose = false;
     focusedDinnerExistingRecipeId = "";
     focusedDinnerStage = "";
+    focusedDinnerReelTouched = false;
     syncDinnerFlowStage("");
   }
 
@@ -520,9 +522,7 @@ export function createScheduleUi({
       update();
       return;
     }
-    runDinnerStageTransition(update, {
-      startViewTransition: globalThis.document?.startViewTransition?.bind(globalThis.document),
-    });
+    runDinnerStageTransition(update);
   }
 
   function bindFocusedDinnerControls(choosing) {
@@ -692,12 +692,14 @@ export function createScheduleUi({
     $("#advanceDinnerSelection")?.addEventListener("click", advanceFocusedDinnerSelection);
   }
 
-  function syncDinnerSelectionFromReel(recipeId) {
+  function syncDinnerSelectionFromReel(recipeId, { restore = false } = {}) {
     if (!shouldAcceptDinnerReelSelection({
       nextId: recipeId,
       selectedId: focusedDinnerSelectedId,
       existingRecipeId: focusedDinnerExistingRecipeId,
       openedToChoose: focusedDinnerOpenedToChoose,
+      restore,
+      userHasInteracted: focusedDinnerReelTouched,
     })) return false;
     const nextId = selectedDinnerRecipeId(allRecipes(), recipeId);
     if (!nextId) return false;
@@ -710,8 +712,12 @@ export function createScheduleUi({
   function bindDinnerReelSelection() {
     const results = $("#focusedDinnerResults");
     if (!results || focusedDinnerMode !== "explore") return;
+    focusedDinnerReelTouched = false;
+    results.addEventListener("pointerdown", () => {
+      focusedDinnerReelTouched = true;
+    });
     results.addEventListener("recipe-reel-active", (event) => {
-      syncDinnerSelectionFromReel(event.detail?.recipeId);
+      syncDinnerSelectionFromReel(event.detail?.recipeId, { restore: Boolean(event.detail?.restore) });
     });
   }
 
@@ -743,6 +749,7 @@ export function createScheduleUi({
     focusedDinnerMode = dinnerPickerMode(options.mode || DEFAULT_DINNER_PICKER_MODE);
     focusedDinnerAddingSide = false;
     focusedDinnerAdvanceError = "";
+    focusedDinnerReelTouched = false;
     renderFocusedDinner({ motion: true });
     globalThis.requestAnimationFrame?.(() => $(focusedDinnerChoosing ? "#focusedDinnerSearch" : "#focusedDinnerHeading")?.focus?.({ preventScroll: true }));
   }

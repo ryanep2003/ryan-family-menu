@@ -104,6 +104,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     "#focusedEatingNames": element(),
     "#advanceDinnerSelection": element({ disabled: true }),
     "#dinnerPickerMode": element({ dataset: { dinnerMode: "list" } }),
+    "#focusedDinnerResults": element(),
     "#cancelDinnerReview": element(),
     "#comprehensivePlanner": element(),
     "#planningModeSwitch": element(),
@@ -636,6 +637,31 @@ test("selecting recipe A then B reviews and confirms B even if recipeById falls 
   assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "carne-para-tacos"), true);
   assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "picadillo"), false);
   assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "instant-pot-pork"), false);
+});
+
+test("change dinner reel restore does not preselect a different recipe", async () => {
+  const extraRecipes = [
+    { id: "picadillo", name: "Picadillo Tacos", category: "main" },
+    { id: "citrus-and-endive-salad", name: "Citrus and Endive Salad", category: "salad" },
+  ];
+  const { elements, state, ui } = harness({ extraRecipes });
+  state.calendarMeals["2026-06-22"] = normalizeMealPlan({ dinner: "picadillo" });
+
+  ui.openFocusedDinner("2026-06-22", "", { choose: true });
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose a recipe to continue/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Citrus and Endive Salad/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Picadillo Tacos/);
+
+  await elements["#focusedDinnerResults"].dispatch("recipe-reel-active", elements["#focusedDinnerResults"], {
+    detail: { recipeId: "citrus-and-endive-salad", restore: true },
+  });
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose a recipe to continue/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Citrus and Endive Salad/);
+
+  await elements["#advanceDinnerSelection"].dispatch("click");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose dinner/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerStatus"].textContent, /Couldn.t open that recipe/);
 });
 
 test("change dinner from Instant Pot reviews and confirms Carne para tacos only", async () => {

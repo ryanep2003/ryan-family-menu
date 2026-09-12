@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v190";
-// v190: Choose dinner defaults to a native center-snap field; List stays available.
+const CACHE_NAME = "ryan-family-menu-v191";
+// v191: Change dinner does not invent a reel selection; List titles wrap on phones.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",
