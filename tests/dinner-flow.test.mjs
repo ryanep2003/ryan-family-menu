@@ -5,12 +5,14 @@ import {
   applyDinnerItemRole,
   applyDinnerServingField,
   assignDinnerRecipe,
+  advanceDinnerSelection,
   boundedCount,
   confirmSelectedDinnerRecipe,
   dinnerIsOpen,
   dinnerMainItem,
   dinnerSideItem,
   filterDinnerRecipes,
+  initialDinnerPickerSelection,
   parseCountableInput,
   resolveDinnerSuggestionId,
   rewriteCountFieldDisplay,
@@ -85,6 +87,38 @@ test("selecting recipe A then B reviews and confirms B, not the catalog fallback
   assert.equal(dinnerMainItem(draft).recipeId, "carne-para-tacos");
   assert.notEqual(dinnerMainItem(draft).recipeId, "instant-pot-pork");
   assert.notEqual(dinnerMainItem(draft).recipeId, "picadillo");
+});
+
+test("change dinner does not preselect the existing planned recipe", () => {
+  const recipes = [
+    { id: "instant-pot-pork", name: "Instant Pot Pork and Sauerkraut" },
+    { id: "carne-para-tacos", name: "Carne para tacos" },
+  ];
+  const opened = initialDinnerPickerSelection({
+    recipes,
+    existingRecipeId: "instant-pot-pork",
+    choose: true,
+  });
+  assert.equal(opened.selectedId, "");
+  assert.equal(opened.suggestionId, "");
+
+  const advanced = advanceDinnerSelection(
+    { items: [{ id: "dinner-1", period: "dinner", role: "main", recipeId: "instant-pot-pork" }] },
+    recipes,
+    "carne-para-tacos",
+  );
+  assert.equal(advanced.ok, true);
+  assert.equal(advanced.selectedId, "carne-para-tacos");
+  assert.equal(dinnerMainItem(advanced.meal).recipeId, "carne-para-tacos");
+  assert.equal(advanced.meal.items.some((item) => item.recipeId === "instant-pot-pork"), false);
+});
+
+test("dinner advance fails closed without a real selected id", () => {
+  const recipes = [{ id: "instant-pot-pork" }, { id: "carne-para-tacos" }];
+  const meal = { items: [{ id: "dinner-1", period: "dinner", role: "main", recipeId: "instant-pot-pork" }] };
+  const result = advanceDinnerSelection(meal, recipes, "");
+  assert.equal(result.ok, false);
+  assert.equal(dinnerMainItem(result.meal).recipeId, "instant-pot-pork");
 });
 
 test("optional sides stay separate from the dinner main", () => {

@@ -511,9 +511,7 @@ function recipeById(id) {
   const visible = allRecipes();
   const needle = `${id ?? ""}`.trim();
   if (!needle) return null;
-  return visible.find((recipe) => String(recipe.id) === needle)
-    || visible[0]
-    || null;
+  return visible.find((recipe) => String(recipe.id) === needle) || null;
 }
 
 function draftById(id) {
@@ -1532,7 +1530,7 @@ function todaysRecipeId() {
   const meal = todaysMealPlan();
   return mealRecipes(meal).find(({ period, role }) => period === "dinner" && role === "main")?.recipe.id
     || mealRecipes(meal)[0]?.recipe.id
-    || "meatballs";
+    || "";
 }
 
 function mealRecipes(meal) {

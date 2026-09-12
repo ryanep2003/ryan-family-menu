@@ -32,10 +32,39 @@ export function resolveDinnerSuggestionId(recipes, suggestedRecipeId) {
   return selectedDinnerRecipeId(recipes, suggestedRecipeId);
 }
 
-export function confirmSelectedDinnerRecipe(meal, recipes, selectedId, role = "main") {
+export function initialDinnerPickerSelection({
+  recipes = [],
+  suggestedRecipeId = "",
+  existingRecipeId = "",
+  choose = false,
+} = {}) {
+  const suggestionId = resolveDinnerSuggestionId(recipes, suggestedRecipeId);
+  if (choose) return { suggestionId, selectedId: suggestionId };
+  return {
+    suggestionId,
+    selectedId: suggestionId || selectedDinnerRecipeId(recipes, existingRecipeId),
+  };
+}
+
+export function writtenDinnerRecipeId(meal, role = "main") {
+  return role === "side"
+    ? dinnerSideItem(meal)?.recipeId || ""
+    : dinnerMainItem(meal)?.recipeId || "";
+}
+
+export function advanceDinnerSelection(meal, recipes, selectedId, role = "main") {
   const recipeId = selectedDinnerRecipeId(recipes, selectedId);
-  if (!recipeId) return normalizeMealPlan(meal);
-  return assignDinnerRecipe(meal, recipeId, role);
+  if (!recipeId) return { ok: false, meal: normalizeMealPlan(meal), selectedId: "" };
+  const next = assignDinnerRecipe(meal, recipeId, role);
+  if (writtenDinnerRecipeId(next, role) !== recipeId) {
+    return { ok: false, meal: normalizeMealPlan(meal), selectedId: "" };
+  }
+  return { ok: true, meal: next, selectedId: recipeId };
+}
+
+export function confirmSelectedDinnerRecipe(meal, recipes, selectedId, role = "main") {
+  const result = advanceDinnerSelection(meal, recipes, selectedId, role);
+  return result.ok ? result.meal : normalizeMealPlan(meal);
 }
 
 export function dinnerItems(meal) {

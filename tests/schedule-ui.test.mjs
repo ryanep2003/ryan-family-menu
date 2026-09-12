@@ -604,6 +604,37 @@ test("selecting recipe A then B reviews and confirms B even if recipeById falls 
   assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "instant-pot-pork"), false);
 });
 
+test("change dinner from Instant Pot reviews and confirms Carne para tacos only", async () => {
+  const extraRecipes = [
+    { id: "instant-pot-pork", name: "Instant Pot Pork and Sauerkraut", category: "main" },
+    { id: "carne-para-tacos", name: "Carne para tacos", category: "main" },
+  ];
+  const { elements, state, ui } = harness({
+    extraRecipes,
+    recipeById: (id) => extraRecipes.find((recipe) => recipe.id === id) || extraRecipes[0],
+  });
+  state.calendarMeals["2026-06-22"] = normalizeMealPlan({ dinner: "instant-pot-pork" });
+
+  ui.openFocusedDinner("2026-06-22", "", { choose: true });
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose dinner/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose a recipe to continue/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Instant Pot Pork and Sauerkraut/);
+
+  ui.selectFocusedDinnerRecipe("carne-para-tacos");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Carne para tacos/);
+
+  await elements["#advanceDinnerSelection"].dispatch("click");
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Carne para tacos/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Instant Pot Pork and Sauerkraut/);
+
+  await elements["#focusedDinnerForm"].dispatch("submit");
+  assert.equal(state.calendarMeals["2026-06-22"].dinner, "carne-para-tacos");
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "carne-para-tacos"), true);
+  assert.equal(state.calendarMeals["2026-06-22"].items.some((item) => item.recipeId === "instant-pot-pork"), false);
+});
+
 test("meal review confirm writes the dinner draft through the existing save path", async () => {
   const { elements, state, ui } = harness();
 

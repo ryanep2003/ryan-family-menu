@@ -219,5 +219,9 @@ export function visibleRecipes({
 }
 
 export function recipeById(recipes, id, fallbackRecipes = []) {
-  return recipes.find((recipe) => recipe.id === id) || recipes[0] || fallbackRecipes[0] || null;
+  const needle = `${id ?? ""}`.trim();
+  if (!needle) return null;
+  return (recipes || []).find((recipe) => recipe && String(recipe.id) === needle)
+    || (fallbackRecipes || []).find((recipe) => recipe && String(recipe.id) === needle)
+    || null;
 }

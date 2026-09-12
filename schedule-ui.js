@@ -6,12 +6,12 @@ import {
   applyDinnerItemRole,
   applyDinnerServingField,
   assignDinnerRecipe,
-  confirmSelectedDinnerRecipe,
+  advanceDinnerSelection,
   dinnerMainItem,
   dinnerSideItem,
   exactRecipeById,
   filterDinnerRecipes,
-  resolveDinnerSuggestionId,
+  initialDinnerPickerSelection,
   selectedDinnerRecipeId,
   stepCountValue,
 } from "./dinner-flow.js";
@@ -466,7 +466,12 @@ export function createScheduleUi({
     const dinnerItem = focusedDinnerItem(meal);
     const recipe = dinnerItem ? exactRecipeById(allRecipes(), dinnerItem.recipeId) : null;
     const dinnerPlan = meal.servingPlans?.dinner || meal.servingPlan;
-    const choosing = focusedDinnerChoosing || !recipe;
+    const reviewReady = Boolean(
+      recipe
+      && dinnerItem.recipeId
+      && dinnerItem.recipeId === focusedDinnerSelectedId
+    );
+    const choosing = focusedDinnerChoosing || !reviewReady;
 
     panel.innerHTML = `
       <header class="focused-dinner-header">
@@ -520,12 +525,15 @@ export function createScheduleUi({
     $("#advanceDinnerSelection")?.addEventListener("click", () => {
       const selectedId = selectedDinnerRecipeId(allRecipes(), focusedDinnerSelectedId);
       if (!selectedId) return;
-      focusedDinnerDraft = confirmSelectedDinnerRecipe(
+      const result = advanceDinnerSelection(
         focusedDinnerDraft,
         allRecipes(),
         selectedId,
         focusedDinnerFilter === "sides" ? "side" : "main",
       );
+      if (!result.ok) return;
+      focusedDinnerDraft = result.meal;
+      focusedDinnerSelectedId = result.selectedId;
       focusedDinnerChoosing = false;
       focusedDinnerAddingSide = false;
       renderFocusedDinner();
@@ -582,7 +590,9 @@ export function createScheduleUi({
     });
     $("#focusedDinnerForm")?.addEventListener("submit", async (event) => {
       event.preventDefault();
-      if (focusedDinnerChoosing || !focusedDinnerItem(focusedDinnerDraft)) return;
+      const dinnerItem = focusedDinnerItem(focusedDinnerDraft);
+      const confirmId = selectedDinnerRecipeId(allRecipes(), dinnerItem?.recipeId);
+      if (focusedDinnerChoosing || !confirmId || confirmId !== focusedDinnerSelectedId) return;
       rewriteFocusedDinnerCountFields();
       $$("[data-focused-serving]").forEach((control) => {
         if (control.dataset.countStep || control.tagName === "BUTTON") return;
@@ -620,8 +630,14 @@ export function createScheduleUi({
     const existing = focusedDinnerItem(focusedDinnerDraft);
     focusedDinnerChoosing = Boolean(options.choose) || !existing;
     focusedDinnerSearch = "";
-    focusedDinnerSuggestionId = resolveDinnerSuggestionId(allRecipes(), suggestedRecipeId);
-    focusedDinnerSelectedId = focusedDinnerSuggestionId || selectedDinnerRecipeId(allRecipes(), existing?.recipeId);
+    const picker = initialDinnerPickerSelection({
+      recipes: allRecipes(),
+      suggestedRecipeId,
+      existingRecipeId: existing?.recipeId,
+      choose: focusedDinnerChoosing,
+    });
+    focusedDinnerSuggestionId = picker.suggestionId;
+    focusedDinnerSelectedId = picker.selectedId;
     focusedDinnerFilter = "all";
     focusedDinnerMode = "list";
     focusedDinnerAddingSide = false;

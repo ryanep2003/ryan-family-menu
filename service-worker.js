@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v186";
-// v186: Exact list-to-confirm recipe ids; people fields parse 2.5 as 2, never 20.
+const CACHE_NAME = "ryan-family-menu-v187";
+// v187: Change dinner starts empty; recipeById never swaps in another recipe.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",

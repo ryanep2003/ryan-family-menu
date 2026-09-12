@@ -265,14 +265,15 @@ test("compact shared edits inherit their recipe media when rendered", () => {
   assert.equal(recipe.cardPhoto, photo);
 });
 
-test("recipeById returns selected recipe or sensible fallbacks", () => {
+test("recipeById returns the matching recipe or null", () => {
   const fallback = { id: "fallback" };
   const first = { id: "first" };
 
   assert.deepEqual(recipeById([first], "first", [fallback]), first);
-  assert.deepEqual(recipeById([first], "missing", [fallback]), first);
-  assert.deepEqual(recipeById([], "missing", [fallback]), fallback);
-  assert.equal(recipeById([], "missing", []), null);
+  assert.equal(recipeById([first], "missing", [fallback]), null);
+  assert.deepEqual(recipeById([], "fallback", [fallback]), fallback);
+  assert.equal(recipeById([], "missing", [fallback]), null);
+  assert.equal(recipeById([first], "", [fallback]), null);
 });
 
 test("seed recipes use polished Spanish and dedicated discovery photos", () => {
