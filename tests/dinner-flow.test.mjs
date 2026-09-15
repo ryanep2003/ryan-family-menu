@@ -182,6 +182,28 @@ test("dinner advance fails closed without a real selected id", () => {
   assert.equal(dinnerMainItem(result.meal).recipeId, "instant-pot-pork");
 });
 
+test("advancing a side-category recipe still writes a dinner main by default", () => {
+  const recipes = [
+    { id: "pasta", name: "Tomato pasta", category: "main" },
+    { id: "rice", name: "Rice & beans", category: "side" },
+  ];
+  const existing = {
+    items: [{ id: "dinner-1", period: "dinner", role: "main", recipeId: "pasta" }],
+  };
+  const changed = advanceDinnerSelection(existing, recipes, "rice");
+  assert.equal(changed.ok, true);
+  assert.equal(changed.selectedId, "rice");
+  assert.equal(dinnerMainItem(changed.meal).recipeId, "rice");
+  assert.equal(dinnerSideItem(changed.meal), null);
+  assert.equal(dinnerReviewIsReady(changed.meal, recipes, changed.selectedId), true);
+
+  const emptyNight = advanceDinnerSelection({ items: [] }, recipes, "rice");
+  assert.equal(emptyNight.ok, true);
+  assert.equal(dinnerMainItem(emptyNight.meal).recipeId, "rice");
+  assert.equal(dinnerMainItem(emptyNight.meal).role, "main");
+  assert.equal(dinnerSideItem(emptyNight.meal), null);
+});
+
 test("optional sides stay separate from the dinner main", () => {
   const withSide = assignDinnerRecipe(assignDinnerRecipe({ items: [] }, "pasta"), "rice", "side");
   assert.equal(dinnerMainItem(withSide).recipeId, "pasta");

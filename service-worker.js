@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v193";
-// v193: Desktop List→Explore keeps the tray recipe centered; update notice stays off the tray.
+const CACHE_NAME = "ryan-family-menu-v194";
+// v194: Sides chip in Choose dinner filters recipes only; Choose for dinner always writes a main.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",
