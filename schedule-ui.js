@@ -638,12 +638,7 @@ export function createScheduleUi({
   function advanceFocusedDinnerSelection() {
     const selectedId = selectedDinnerRecipeId(allRecipes(), focusedDinnerSelectedId);
     const result = selectedId
-      ? advanceDinnerSelection(
-        focusedDinnerDraft,
-        allRecipes(),
-        selectedId,
-        focusedDinnerFilter === "sides" ? "side" : "main",
-      )
+      ? advanceDinnerSelection(focusedDinnerDraft, allRecipes(), selectedId, "main")
       : { ok: false };
     if (!result.ok) {
       focusedDinnerAdvanceError = t("chooseDinnerAdvanceFailed");
