@@ -19,9 +19,9 @@ import {
   usesCustomPointerDrag,
 } from "./recipe-reel-logic.js";
 
-const REEL_CSS_URL = "./recipe-reel.css?v=10";
+const REEL_CSS_URL = "./recipe-reel.css?v=11";
 const START_LOCK_CLASS = "is-start-locked";
-const SURFACE_SELECTOR = "#recipeList, .focused-recipe-results, .meal-recipe-results";
+const SURFACE_SELECTOR = ".focused-recipe-results, .meal-recipe-results";
 const ITEM_SELECTOR = ".recipe-browse-card, .focused-recipe-result, .meal-recipe-result";
 const REEL_CLASS = "recipe-native-reel";
 const ACTIVE_CLASS = "recipe-reel-active";

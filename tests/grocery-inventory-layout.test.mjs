@@ -215,7 +215,7 @@ test("recipe detail owns the page instead of appearing under library chrome", ()
 });
 
 test("the household library opens to the complete catalog instead of hiding it behind a disclosure", () => {
-  assert.match(html, /<details class="recipe-browse" id="recipeBrowse" open>/);
+  assert.match(html, /<section class="recipe-browse" id="recipeBrowse"/);
   assert.ok(html.indexOf('id="recipeLibraryTools"') < html.indexOf('id="recipePicksSection"'));
   assert.doesNotMatch(html, /id="recipeBrowse"[\s\S]*id="recipeSearch"/);
 });

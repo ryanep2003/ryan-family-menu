@@ -177,11 +177,13 @@ test("native reel CSS snaps to a centered card and disables text selection", asy
   assert.match(css, /is-start-locked[\s\S]*scroll-snap-type:\s*none/);
   assert.doesNotMatch(css, /\.swiper|swiper-wrapper|coverflow/i);
   assert.doesNotMatch(css, /translate3d|perspective\(|rotateY\(/);
+  assert.doesNotMatch(css, /#recipePicksSection/);
+  assert.doesNotMatch(css, /#recipeList/);
 });
 
 test("native reel cards use one full-width column so titles are not crushed", async () => {
   const css = await readFile(new URL("../recipe-reel.css", import.meta.url), "utf8");
-  const reelItem = css.match(/#recipeList\.recipe-native-reel > \.recipe-browse-card,[\s\S]*?box-shadow: 0 4px 10px rgba\(26, 58, 92, \.04\);\n\}/)?.[0];
+  const reelItem = css.match(/\.focused-recipe-results\.recipe-native-reel > \.focused-recipe-result,[\s\S]*?box-shadow: 0 4px 10px rgba\(26, 58, 92, \.04\);\n\}/)?.[0];
   assert.ok(reelItem);
   assert.match(reelItem, /grid-template-columns:\s*minmax\(0,\s*1fr\)/);
   assert.match(reelItem, /grid-template-rows:\s*minmax\(0,\s*1fr\) auto/);
@@ -213,4 +215,6 @@ test("native reel module does not measure every card on every scroll tick", asyn
   assert.match(source, /typeof HTMLElement !== "undefined"/);
   assert.doesNotMatch(source, /scrollLeftToCenter\(/);
   assert.doesNotMatch(source, /item\.offsetLeft/);
+  assert.match(source, /SURFACE_SELECTOR = "\.focused-recipe-results, \.meal-recipe-results"/);
+  assert.doesNotMatch(source, /#recipeList/);
 });

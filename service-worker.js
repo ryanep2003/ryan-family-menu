@@ -1,4 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v196";
+const CACHE_NAME = "ryan-family-menu-v197";
+// v197: Library phone browse is a short Favorites/recent strip plus a photo grid.
 // v196: Choose dinner Explore posters and List rows are readable on phone width.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [

@@ -6,6 +6,7 @@ import {
   categoryLabel,
   cardPhotoFor,
   cardPhotoIsGenerated,
+  recipeTileTone,
   compactRecipeEditsForSync,
   isUsableRecipeLine,
   recipeById,
@@ -132,6 +133,14 @@ test("recipes without card art receive distinct generated fallbacks", () => {
   assert.match(cardPhotoFor(second), /^data:image\/svg\+xml,/);
   assert.notEqual(cardPhotoFor(first), cardPhotoFor(second));
   assert.equal(cardPhotoIsGenerated(first), true);
+});
+
+test("library photo tiles stay inside a small navy/sage/cream tone set", () => {
+  const first = { id: "fallback-one", name: { en: "Soup" }, photos: [] };
+  const second = { id: "fallback-two", name: { en: "Beans" }, photos: [] };
+  assert.equal(recipeTileTone(first), recipeTileTone({ ...first }));
+  assert.ok(recipeTileTone(first) >= 0 && recipeTileTone(first) <= 3);
+  assert.ok(recipeTileTone(second) >= 0 && recipeTileTone(second) <= 3);
 });
 
 test("uploadToRecipe preserves an explicit curated card photo", () => {

@@ -177,7 +177,7 @@ Geometry is square and calm. Controls use the compact control radius; temporary 
 - Today’s Plan & shop band uses a navy Shopping list action and a filled soft-blue Find a recipe action.
 - Plan empty meal slots use filled soft-blue Add controls; today’s day card uses a sage highlight.
 - Shop uses a full-width Shopping | At home switch and short aisle names. The list stays visually primary; only checked purchases reveal a compact direct action to move them to At Home. Receipt capture remains a secondary list tool.
-- Library search is the first control on that screen, ahead of Family picks and Browse all. Add to a meal stays a soft-blue secondary action.
+- Library search is the first control on that screen, ahead of a short Favorites & recent strip and the main photo grid. Grid | List switches only the main browse area. Add to a meal stays a soft-blue secondary action on the recipe screen and in list layout.
 
 ### School Lunches
 

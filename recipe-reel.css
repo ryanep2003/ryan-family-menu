@@ -1,30 +1,11 @@
-/* Native recipe reel: Safari owns scrolling physics; no carousel library or 3D transforms. */
+/* Native recipe reel: Safari owns scrolling physics; no carousel library or 3D transforms.
+   Library browse is a photo grid. This reel is only Choose dinner Explore and Plan meal search. */
 
-#recipesView:not(.detail-open) #recipePicksSection {
-  display: none !important;
-}
-
-#recipesView:not(.detail-open) #recipeBrowse {
-  display: block !important;
-  margin-top: 10px !important;
-  border-top: 0 !important;
-}
-
-#recipesView:not(.detail-open) #recipeBrowse > summary {
-  display: none !important;
-}
-
-#recipesView:not(.detail-open) #recipeBrowse .recipe-browse-content {
-  display: block !important;
-}
-
-#recipeList,
 .focused-recipe-results,
 .meal-recipe-results {
   background: transparent;
 }
 
-#recipeList.recipe-native-reel,
 .focused-recipe-results.recipe-native-reel,
 .meal-recipe-results.recipe-native-reel {
   --recipe-slide-width: min(79vw, 310px);
@@ -57,25 +38,21 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .94);
 }
 
-#recipeList.recipe-native-reel.is-dragging,
 .focused-recipe-results.recipe-native-reel.is-dragging,
 .meal-recipe-results.recipe-native-reel.is-dragging {
   cursor: grabbing;
 }
 
-#recipeList.recipe-native-reel.is-start-locked,
 .focused-recipe-results.recipe-native-reel.is-start-locked,
 .meal-recipe-results.recipe-native-reel.is-start-locked {
   scroll-snap-type: none;
 }
 
-#recipeList.recipe-native-reel::-webkit-scrollbar,
 .focused-recipe-results.recipe-native-reel::-webkit-scrollbar,
 .meal-recipe-results.recipe-native-reel::-webkit-scrollbar {
   display: none;
 }
 
-#recipeList.recipe-native-reel > .recipe-browse-card,
 .focused-recipe-results.recipe-native-reel > .focused-recipe-result,
 .meal-recipe-results.recipe-native-reel > .meal-recipe-result {
   flex: 0 0 var(--recipe-slide-width);
@@ -108,20 +85,17 @@
   box-shadow: 0 4px 10px rgba(26, 58, 92, .04);
 }
 
-#recipeList.recipe-native-reel > .recipe-reel-near,
 .focused-recipe-results.recipe-native-reel > .recipe-reel-near,
 .meal-recipe-results.recipe-native-reel > .recipe-reel-near {
   opacity: .58;
 }
 
-#recipeList.recipe-native-reel > .recipe-reel-active,
 .focused-recipe-results.recipe-native-reel > .recipe-reel-active,
 .meal-recipe-results.recipe-native-reel > .recipe-reel-active {
   opacity: 1;
   box-shadow: 0 10px 22px rgba(26, 58, 92, .10), 0 2px 6px rgba(26, 58, 92, .04);
 }
 
-#recipeList.recipe-native-reel .recipe-card,
 .focused-recipe-results.recipe-native-reel .recipe-card,
 .meal-recipe-results.recipe-native-reel .recipe-card {
   display: grid;
@@ -140,7 +114,6 @@
   -webkit-user-select: none;
 }
 
-#recipeList.recipe-native-reel .recipe-photo-shell,
 .focused-recipe-results.recipe-native-reel .recipe-photo-shell,
 .meal-recipe-results.recipe-native-reel .recipe-photo-shell {
   width: 100%;
@@ -150,7 +123,6 @@
   overflow: hidden;
 }
 
-#recipeList.recipe-native-reel .recipe-photo-shell img,
 .focused-recipe-results.recipe-native-reel .recipe-photo-shell img,
 .meal-recipe-results.recipe-native-reel .recipe-photo-shell img {
   width: 100%;
@@ -161,14 +133,13 @@
   pointer-events: none;
 }
 
-#recipeList.recipe-native-reel .recipe-card h3,
-#recipeList.recipe-native-reel .recipe-card p,
-#recipeList.recipe-native-reel .category-pill {
+.focused-recipe-results.recipe-native-reel .recipe-card h3,
+.focused-recipe-results.recipe-native-reel .recipe-card p,
+.focused-recipe-results.recipe-native-reel .category-pill {
   grid-column: 1;
 }
 
 @media (min-width: 760px) {
-  #recipeList.recipe-native-reel,
   .focused-recipe-results.recipe-native-reel,
   .meal-recipe-results.recipe-native-reel {
     --recipe-slide-width: 320px;
@@ -176,7 +147,6 @@
     padding-block: 26px 36px;
   }
 
-  #recipeList.recipe-native-reel > .recipe-browse-card,
   .focused-recipe-results.recipe-native-reel > .focused-recipe-result,
   .meal-recipe-results.recipe-native-reel > .meal-recipe-result {
     height: 370px;
@@ -185,7 +155,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #recipeList.recipe-native-reel > .recipe-browse-card,
   .focused-recipe-results.recipe-native-reel > .focused-recipe-result,
   .meal-recipe-results.recipe-native-reel > .meal-recipe-result {
     transition: none;

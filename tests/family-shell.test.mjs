@@ -62,6 +62,16 @@ test("Library search is the first library control and IDs stay unique", () => {
   assert.deepEqual(duplicates, []);
 });
 
+test("Library browse uses a short strip plus a phone photo grid", () => {
+  assert.match(html, /id="libraryBrowseGrid"/);
+  assert.match(html, /id="libraryBrowseList"/);
+  assert.match(html, /<section class="recipe-browse" id="recipeBrowse"/);
+  assert.doesNotMatch(html, /<details class="recipe-browse"/);
+  assert.match(css, /#recipeList\.library-browse-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,/);
+  assert.match(css, /\.recipe-photo-tile\[data-tone="0"\]/);
+  assert.match(css, /\.recipe-pick-card\s*\{[\s\S]*flex:\s*0 0 6\.75rem/);
+});
+
 test("family preference section links are styled as compact chips", () => {
   assert.match(html, /class="family-section-links"/);
   assert.match(css, /\.family-section-links\s*\{/);
