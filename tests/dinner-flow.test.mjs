@@ -359,5 +359,22 @@ test("dinner Explore cards stack a full-width photo over a wrapping title", asyn
   assert.match(explorePhoto, /width:\s*100%/);
   assert.match(exploreTitle, /white-space:\s*normal/);
   assert.match(exploreTitle, /overflow-wrap:\s*break-word/);
-  assert.match(css, /\.dinner-picker-list \.dinner-recipe-fallback-name \{\s*display:\s*none;/);
+  assert.match(css, /#focusedDinnerResults\.dinner-picker-explore \.dinner-recipe-fallback-name \{\s*display:\s*none;/);
+});
+
+test("dinner List rows keep a 56px thumb beside a wrapping title column", async () => {
+  const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
+  const listCard = css.match(/#focusedDinnerResults\.dinner-picker-list > \.focused-recipe-result,[\s\S]*?overflow:\s*hidden;\n\}/)?.[0];
+  const listCopy = css.match(/#focusedDinnerResults\.dinner-picker-list \.focused-recipe-copy strong,[\s\S]*?-webkit-box-orient:\s*unset;\n\}/)?.[0];
+  const listThumb = css.match(/#focusedDinnerResults\.dinner-picker-list \.recipe-photo-shell,[\s\S]*?object-fit:\s*cover;\n\}/)?.[0];
+  assert.ok(listCard);
+  assert.match(listCard, /grid-template-columns:\s*56px minmax\(0,\s*1fr\) auto/);
+  assert.match(listCard, /grid-template-rows:\s*auto/);
+  assert.match(listCard, /height:\s*auto/);
+  assert.doesNotMatch(listCard, /grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  assert.match(listThumb, /width:\s*56px/);
+  assert.match(listThumb, /max-width:\s*56px/);
+  assert.match(listCopy, /overflow-wrap:\s*break-word/);
+  assert.match(listCopy, /word-break:\s*normal/);
+  assert.doesNotMatch(listCopy, /overflow-wrap:\s*anywhere/);
 });

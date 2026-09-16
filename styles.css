@@ -495,35 +495,120 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   font-size: .82rem;
   text-align: center;
 }
-.dinner-picker-list { display: flex; flex-direction: column; width: 100%; min-width: 0; }
+.dinner-picker-list,
+#focusedDinnerResults.dinner-picker-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  gap: 2px;
+  overflow: visible;
+  height: auto;
+  min-height: 0;
+  padding-inline: 0;
+}
+#focusedDinnerResults.dinner-picker-list > .focused-recipe-result,
 .dinner-picker-list .focused-recipe-result {
   display: grid;
   grid-template-columns: 56px minmax(0, 1fr) auto;
+  grid-template-rows: auto;
+  grid-auto-flow: column;
+  grid-auto-rows: auto;
   align-items: center;
+  align-content: center;
+  justify-items: stretch;
   gap: var(--space-3);
+  flex: 0 0 auto;
   width: 100%;
   max-width: 100%;
-  box-sizing: border-box;
+  min-width: 0;
+  height: auto;
   min-height: 76px;
+  max-height: none;
+  box-sizing: border-box;
   padding: var(--space-3);
   border: 0;
   border-radius: var(--radius-sheet);
   background: transparent;
   color: var(--ink);
   text-align: left;
+  opacity: 1;
+  box-shadow: none;
+  overflow: hidden;
 }
 .dinner-picker-list .focused-recipe-result.is-selected { background: color-mix(in srgb, var(--sage) 35%, var(--paper)); }
-.dinner-picker-list .focused-recipe-result img, .dinner-picker-list .recipe-photo-shell { width: 56px; height: 56px; min-width: 56px; border-radius: 50%; object-fit: cover; }
-.dinner-picker-list .focused-recipe-copy,
+#focusedDinnerResults.dinner-picker-list .recipe-photo-shell,
+#focusedDinnerResults.dinner-picker-list .recipe-photo-shell img,
+.dinner-picker-list .focused-recipe-result img,
+.dinner-picker-list .recipe-photo-shell {
+  grid-column: 1;
+  grid-row: 1;
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  max-width: 56px;
+  min-height: 56px;
+  max-height: 56px;
+  padding: 0;
+  border-radius: 50%;
+  object-fit: cover;
+}
+#focusedDinnerResults.dinner-picker-list .focused-recipe-copy,
+.dinner-picker-list .focused-recipe-copy {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+  padding: 0;
+  gap: 2px;
+}
+#focusedDinnerResults.dinner-picker-list .focused-recipe-copy strong,
+#focusedDinnerResults.dinner-picker-list .focused-recipe-copy small,
 .dinner-picker-list .focused-recipe-copy strong,
 .dinner-picker-list .focused-recipe-copy small {
+  display: block;
   min-width: 0;
   max-width: 100%;
-  overflow: visible;
+  overflow: hidden;
   text-overflow: unset;
   white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
+}
+#focusedDinnerResults.dinner-picker-list .focused-recipe-copy strong,
+.dinner-picker-list .focused-recipe-copy strong {
+  line-height: 1.25;
+}
+#focusedDinnerResults.dinner-picker-list .focused-recipe-copy small,
+.dinner-picker-list .focused-recipe-copy small {
+  color: var(--muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+#focusedDinnerResults.dinner-picker-list .dinner-picker-check,
+.dinner-picker-list .dinner-picker-check {
+  position: static;
+  grid-column: 3;
+  grid-row: 1;
+  width: auto;
+  height: auto;
+  min-width: 1.25rem;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.dinner-picker-list .dinner-recipe-fallback {
+  display: block;
+  padding: 0;
+}
+.dinner-picker-list .dinner-recipe-fallback-name,
+#focusedDinnerResults.dinner-picker-explore .dinner-recipe-fallback-name {
+  display: none;
 }
 .dinner-picker-check { color: var(--navy); font-weight: 700; }
 .dinner-decision-tray {
@@ -695,9 +780,6 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   min-height: 0;
   border-radius: 20px;
 }
-.dinner-picker-list .dinner-recipe-fallback-name {
-  display: none;
-}
 @media (max-width: 699px) {
   .dinner-decision-tray {
     gap: 4px;
@@ -705,6 +787,9 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   }
   .dinner-decision-tray h3 { font-size: 1.15rem; }
   .dinner-tray-note { display: none; }
+  .dinner-picker.is-list #focusedDinnerResults.dinner-picker-list {
+    padding-bottom: 12px;
+  }
   #focusedDinnerResults.dinner-picker-explore.recipe-native-reel {
     min-height: 340px;
     padding-block: 8px 10px;
