@@ -12,11 +12,14 @@ import {
   groceryMealRowState,
   groceryRowParts,
   inventoryMatchFor,
+  manualGroceryItemsFromText,
   mergeGroceries,
   parseIngredientAmount,
   replacePlannedGroceries,
   scaleIngredientText,
 } from "../grocery-logic.js";
+
+const WEIRD_SHOP_NAME = "QA long weird item — extra-long-name / 1,000 g (test)";
 
 test("ingredient quantities scale with the planned recipe batch", () => {
   assert.deepEqual(parseIngredientAmount("1 1/2 cups rice"), { quantity: 1.5, remainder: "cups rice" });
@@ -328,4 +331,38 @@ test("shopping rows collapse shared meal provenance to a count", () => {
   assert.equal(state.collapsed, true);
   assert.equal(formatCompactGroceryMealCue({ dateLabel: "Thu, Sep 3", mealLabel: "Lunch" }), "Thu, Sep 3 · Lunch");
   assert.equal(formatCompactGroceryMealCue({ dateLabel: "jue, 3 de sept", mealLabel: "Almuerzo" }), "jue, 3 de sept · Almuerzo");
+});
+
+test("manual shop add keeps punctuation, slashes, and thousands commas as one item", () => {
+  const items = manualGroceryItemsFromText(WEIRD_SHOP_NAME);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].text.en, WEIRD_SHOP_NAME);
+  assert.equal(items[0].source, "manual");
+  assert.deepEqual(groceryRowParts(items[0].text.en, { preserveName: true }), {
+    name: WEIRD_SHOP_NAME,
+    quantityLabel: "",
+  });
+
+  const thousandsName = "Organic flour 1,000 g";
+  const slashName = "BBQ sauce / marinade";
+  const commaName = "milk, 2%";
+  assert.equal(manualGroceryItemsFromText(thousandsName)[0].text.en, thousandsName);
+  assert.equal(manualGroceryItemsFromText(slashName)[0].text.en, slashName);
+  assert.equal(manualGroceryItemsFromText(commaName).length, 1);
+  assert.equal(manualGroceryItemsFromText(commaName)[0].text.en, commaName);
+
+  const fromLines = manualGroceryItemsFromText("Milk, 2%\nLemons");
+  assert.equal(fromLines.length, 2);
+  assert.equal(fromLines[0].text.en, "Milk, 2%");
+  assert.equal(fromLines[1].text.en, "Lemons");
+
+  const oneLineList = manualGroceryItemsFromText("milk, lemons, pasta");
+  assert.equal(oneLineList.length, 1);
+  assert.equal(oneLineList[0].text.en, "milk, lemons, pasta");
+
+  assert.equal(groceryItem(WEIRD_SHOP_NAME).text.en, WEIRD_SHOP_NAME);
+  assert.equal(
+    groceryItem("garlic cloves (roughly chopped)", { source: "meal-plan" }).text.en,
+    "garlic cloves",
+  );
 });

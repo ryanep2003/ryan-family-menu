@@ -4,6 +4,7 @@ import {
   groceryItem,
   groceryItemsFromRecipe,
   inventoryMatchFor as findInventoryMatch,
+  manualGroceryItemsFromText,
   mergeGroceries,
   replacePlannedGroceries,
 } from "./grocery-logic.js";
@@ -1773,22 +1774,6 @@ function generatedGroceriesForMeal(dateKey, mealSlot) {
     });
 }
 
-function manualGroceryItemsFromText(text, store) {
-  const source = `${text || ""}`;
-  const parts = source.includes("\n") || source.includes(";")
-    ? source.split(/\n|;/)
-    : source.split(/,(?!\s*\d+(?:%|\s*%))/);
-  return parts
-    .map((item) => cleanIngredientForGrocery(item))
-    .filter(Boolean)
-    .map((item) => groceryItem(item, {
-      store,
-      source: "manual",
-      lang,
-      updatedBy: householdMember,
-    }));
-}
-
 let inventoryUi;
 
 function inventoryLocationLabel(location) {
@@ -3546,7 +3531,11 @@ $("#groceryForm").addEventListener("submit", async (event) => {
   if (!text) return;
 
   groceries = [
-    ...manualGroceryItemsFromText(text, $("#groceryStoreInput").value),
+    ...manualGroceryItemsFromText(text, {
+      store: $("#groceryStoreInput").value,
+      lang,
+      updatedBy: householdMember,
+    }),
     ...groceries,
   ];
   $("#groceryInput").value = "";

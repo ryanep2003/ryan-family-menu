@@ -202,7 +202,17 @@ export function groceryAisleOrder() {
   return [...GROCERY_AISLE_ORDER];
 }
 
-export function groceryRowParts(text) {
+const MANUAL_GROCERY_TEXT_LIMIT = 220;
+
+export function preserveManualGroceryText(value) {
+  return `${value || ""}`.replace(/\s+/g, " ").trim().slice(0, MANUAL_GROCERY_TEXT_LIMIT);
+}
+
+export function groceryRowParts(text, { preserveName = false } = {}) {
+  if (preserveName) {
+    const name = preserveManualGroceryText(text);
+    return { name, quantityLabel: "" };
+  }
   const cleaned = cleanIngredientForGrocery(text);
   if (!cleaned) return { name: "", quantityLabel: "" };
   const parsed = parseIngredientAmount(cleaned);
@@ -349,12 +359,19 @@ export function groceryItem(text, {
   plannedUnits = {},
   inventorySuggested = false,
   inventoryDecision = "",
+  preserveText,
 } = {}) {
   const timestamp = new Date().toISOString();
+  const shouldPreserveText = preserveText ?? source === "manual";
+  const nextText = typeof text !== "string"
+    ? text
+    : shouldPreserveText
+      ? preserveManualGroceryText(text)
+      : cleanIngredientForGrocery(text);
   return {
     id: `grocery-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     text: typeof text === "string"
-      ? updateLocalizedText("", cleanIngredientForGrocery(text), lang)
+      ? updateLocalizedText("", nextText, lang)
       : text,
     checked: inventoryDecision === "have",
     store,
@@ -373,6 +390,27 @@ export function groceryItem(text, {
     ...(Object.keys(plannedUnits).length ? { plannedUnits } : {}),
     ...(updatedBy ? { updatedBy } : {}),
   };
+}
+
+export function manualGroceryItemsFromText(text, {
+  store = "any",
+  lang = "en",
+  updatedBy = "",
+} = {}) {
+  const source = `${text || ""}`;
+  const parts = source.includes("\n")
+    ? source.split(/\r?\n/)
+    : [source];
+  return parts
+    .map((item) => preserveManualGroceryText(item))
+    .filter(Boolean)
+    .map((item) => groceryItem(item, {
+      store,
+      source: "manual",
+      lang,
+      updatedBy,
+      preserveText: true,
+    }));
 }
 
 export function mergeGroceries(existing, incoming) {

@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v194";
-// v194: Sides chip in Choose dinner filters recipes only; Choose for dinner always writes a main.
+const CACHE_NAME = "ryan-family-menu-v195";
+// v195: Shop Add item keeps the typed name as one item, including commas, slashes, and dashes.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",

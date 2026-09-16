@@ -1,5 +1,13 @@
 # Durable Decisions
 
+## 2026-09-16 — Shop Add item keeps the typed name as one item
+
+**Decision:** The Shop “Add item” field treats the typed string as one grocery name. Do not split that string on commas, slashes, em-dashes, parentheses, or similar punctuation. Newlines are the only multi-add separator, so a pasted list can still be one item per line. Recipe-ingredient cleaning (prep notes, parentheticals, aisle shortening) applies to generated recipe rows, not to a name someone typed.
+
+**Reason:** Real item names include thousands commas (`1,000 g`), slashes, dashes, and notes in parentheses. Splitting or recipe-cleaning that text created extra rows and dropped part of the name.
+
+**Consequences:** Comma-separated multi-add from a single line no longer works. Placeholder copy must not teach comma lists. Existing recipe-generated aisle shortening is unchanged.
+
 ## 2026-09-12 — Keep Choose dinner confirm-to-write on a native field
 
 **Decision:** Tonight’s open-dinner path defaults to a tactile center-snap recipe field that reuses the native Library reel, with search, All / Favorites / Sides filters, an always-available List alternative, and a fixed decision tray. Choosing a recipe only advances to meal review. Confirm writes `servingPlans.dinner` through the existing schedule save. Do not add a free XY pan, spatial camera, Swiper, or gravity field.
