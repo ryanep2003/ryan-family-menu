@@ -213,7 +213,9 @@ export function createGroceryUi({
   }
 
   function shopRowParts(item) {
-    return groceryRowParts(groceryDisplayText(item));
+    return groceryRowParts(groceryDisplayText(item), {
+      preserveName: item.source === "manual",
+    });
   }
 
   function isShopDisplayableItem(item) {

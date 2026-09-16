@@ -676,3 +676,36 @@ test("renderGroceries escapes grocery ids in checkbox attributes", () => {
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /autofocus="true/);
   assert.equal(state.saveCalls, 0);
 });
+
+test("manual shop items keep punctuation, slashes, and thousands commas in the row name", () => {
+  const name = "QA long weird item — extra-long-name / 1,000 g (test)";
+  const { elements, ui } = harness({
+    state: {
+      lang: "en",
+      groceries: [
+        {
+          id: "qa-weird",
+          text: { en: name },
+          checked: false,
+          source: "manual",
+          store: "any",
+        },
+        {
+          id: "slash-name",
+          text: { en: "BBQ sauce / marinade" },
+          checked: false,
+          source: "manual",
+          store: "any",
+        },
+      ],
+      recipes: [],
+    },
+  });
+
+  ui.renderGroceries();
+
+  assert.match(elements["#groceryList"].innerHTML, /<strong>QA long weird item — extra-long-name \/ 1,000 g \(test\)<\/strong>/);
+  assert.match(elements["#groceryList"].innerHTML, /<strong>BBQ sauce \/ marinade<\/strong>/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /<strong>QA long weird item<\/strong>/);
+  assert.doesNotMatch(elements["#groceryList"].innerHTML, /<strong>000 g<\/strong>/);
+});
