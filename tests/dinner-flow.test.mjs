@@ -348,3 +348,16 @@ test("dinner field styles keep native snap and honor reduced motion", async () =
   assert.match(css, /\.dinner-picker-list \.focused-recipe-copy strong[\s\S]*white-space:\s*normal/);
   assert.doesNotMatch(css, /translate3d|perspective\(|rotateY\(/);
 });
+
+test("dinner Explore cards stack a full-width photo over a wrapping title", async () => {
+  const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
+  const exploreCard = css.match(/#focusedDinnerResults\.dinner-picker-explore\.recipe-native-reel > \.focused-recipe-result \{[^}]+\}/)?.[0];
+  const explorePhoto = css.match(/#focusedDinnerResults\.dinner-picker-explore\.recipe-native-reel \.recipe-photo-shell,[\s\S]*?border-radius:\s*20px;[\s\S]*?\}/)?.[0];
+  const exploreTitle = css.match(/#focusedDinnerResults\.dinner-picker-explore \.focused-recipe-copy strong \{[^}]+\}/)?.[0];
+  assert.match(exploreCard, /grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  assert.doesNotMatch(exploreCard, /grid-template-columns:\s*56px/);
+  assert.match(explorePhoto, /width:\s*100%/);
+  assert.match(exploreTitle, /white-space:\s*normal/);
+  assert.match(exploreTitle, /overflow-wrap:\s*break-word/);
+  assert.match(css, /\.dinner-picker-list \.dinner-recipe-fallback-name \{\s*display:\s*none;/);
+});
