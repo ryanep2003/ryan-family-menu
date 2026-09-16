@@ -1,7 +1,44 @@
 import { allLocalizedText, hasLocalizedContent, isMeaningfulText, localizedTextExact } from "./localized-data.js";
 import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
-import { cardPhotoFor, cardPhotoIsGenerated, isUsableRecipeLine, servingsForRecipe } from "./recipe-utils.js";
+import { cardPhotoFor, cardPhotoIsGenerated, isUsableRecipeLine, recipeTileTone, servingsForRecipe } from "./recipe-utils.js";
 import { appendRecipeToMeal, mealRoles, upcomingMealDateOptions } from "./schedule-utils.js";
+
+export const LIBRARY_STRIP_LIMIT = 5;
+
+export function libraryStripRecipes({
+  recipes = [],
+  favoriteIds = [],
+  getRecipeMemory = () => ({}),
+  limit = LIBRARY_STRIP_LIMIT,
+} = {}) {
+  const byId = new Map((Array.isArray(recipes) ? recipes : [])
+    .filter((recipe) => recipe?.id)
+    .map((recipe) => [recipe.id, recipe]));
+  const seen = new Set();
+  const picks = [];
+
+  function push(id, reason) {
+    if (picks.length >= limit) return;
+    const recipe = byId.get(id);
+    if (!recipe || seen.has(recipe.id)) return;
+    seen.add(recipe.id);
+    picks.push({ recipe, reason });
+  }
+
+  for (const id of Array.isArray(favoriteIds) ? favoriteIds : []) push(id, "favorite");
+
+  const recent = (Array.isArray(recipes) ? recipes : [])
+    .map((recipe) => ({
+      id: recipe?.id,
+      lastMade: getRecipeMemory(recipe?.id)?.lastMade || "",
+    }))
+    .filter((entry) => entry.id && /^\d{4}-\d{2}-\d{2}$/.test(entry.lastMade))
+    .sort((left, right) => `${right.lastMade}`.localeCompare(`${left.lastMade}`)
+      || `${left.id}`.localeCompare(`${right.id}`));
+
+  for (const entry of recent) push(entry.id, "recent");
+  return picks;
+}
 
 export function createRecipeLibraryUi({
   $,
@@ -14,7 +51,6 @@ export function createRecipeLibraryUi({
   categoryLabel,
   getLang,
   getFavorites,
-  getPlannedRecipeIds = () => [],
   allRecipes,
   recipeById,
   draftById,
@@ -39,6 +75,7 @@ export function createRecipeLibraryUi({
   clearDirtyForm = () => {},
 }) {
   let lastLibraryButton = null;
+  let browseLayout = "grid";
 
   function requiredText(value) {
     return exactText(value) || fallbackText(value) || t("translationPendingShort");
@@ -102,43 +139,74 @@ export function createRecipeLibraryUi({
     return t("memoryMadeDaysAgo").replace("{count}", `${days}`);
   }
 
-  function recipeCardMarkup(recipe, index, { pick = false, plannedIds = new Set() } = {}) {
-    const name = requiredText(recipe.name);
-    const meta = displayText(recipe.meta).text;
-    const short = displayText(recipe.short).text;
+  function photoRegion(recipe, name) {
     const cardPhoto = cardPhotoFor(recipe);
     const hasPhoto = !cardPhotoIsGenerated(recipe) && Boolean(cardPhoto);
     const canHydratePhoto = !hasPhoto && recipe.hasSourcePhotos;
+    if (hasPhoto) {
+      return {
+        markup: `<span class="recipe-photo-shell is-loaded"><img src="${escapeHtml(cardPhoto)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" /></span>`,
+        mediaClass: "has-media",
+      };
+    }
+    if (canHydratePhoto) {
+      return {
+        markup: `<span class="recipe-photo-shell" data-recipe-photo-id="${escapeHtml(recipe.id)}" data-recipe-photo-alt="${escapeHtml(name)}" aria-hidden="true"></span>`,
+        mediaClass: "has-media",
+      };
+    }
+    return {
+      markup: `<span class="recipe-photo-tile" data-tone="${recipeTileTone(recipe)}" aria-hidden="true"></span>`,
+      mediaClass: "has-tile",
+    };
+  }
+
+  function recipeCardMarkup(recipe, index, { pick = false, pickReason = "", layout = browseLayout } = {}) {
+    const name = requiredText(recipe.name);
+    const meta = displayText(recipe.meta).text;
+    const photo = photoRegion(recipe, name);
     const pickLabel = pick
-      ? plannedIds.has(recipe.id) ? t("recipePickPlanned") : t("recipePickFavorite")
+      ? t(pickReason === "recent" ? "recipePickRecent" : "recipePickFavorite")
       : "";
-    const copy = `
-        ${hasPhoto
-          ? `<span class="recipe-photo-shell is-loaded"><img src="${escapeHtml(cardPhoto)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" /></span>`
-          : canHydratePhoto
-            ? `<span class="recipe-photo-shell" data-recipe-photo-id="${escapeHtml(recipe.id)}" data-recipe-photo-alt="${escapeHtml(name)}" aria-hidden="true"></span>`
-            : ""}
-        ${pickLabel ? `<span class="recipe-pick-label">${escapeHtml(pickLabel)}</span>` : ""}
-        <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
-        ${getFavorites().includes(recipe.id) ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>` : ""}
-        ${hasLocalizedContent(recipe.allergyWarning) ? `<span class="warning-pill">${t("allergyBadge")}</span>` : ""}
-        <h3>${escapeHtml(name)}</h3>
-        ${meta ? `<p>${escapeHtml(meta)}</p>` : ""}
-        ${short && pick ? `<p>${escapeHtml(short)}</p>` : ""}
-    `;
+    const favoriteMark = getFavorites().includes(recipe.id)
+      ? `<span class="favorite-pill" aria-label="${t("removeFavorite")}">★</span>`
+      : "";
+    const warningMark = hasLocalizedContent(recipe.allergyWarning)
+      ? `<span class="warning-pill">${t("allergyBadge")}</span>`
+      : "";
     if (pick) {
       return `
-      <button class="recipe-card recipe-pick-card${hasPhoto || canHydratePhoto ? " has-media" : " no-media"}" style="--card-order: ${Math.min(index, 8)}" type="button" data-open="${escapeHtml(recipe.id)}">
-        ${copy}
+      <button class="recipe-card recipe-pick-card ${photo.mediaClass}" type="button" data-open="${escapeHtml(recipe.id)}">
+        ${photo.markup}
+        ${pickLabel ? `<span class="recipe-pick-label">${escapeHtml(pickLabel)}</span>` : ""}
+        ${favoriteMark}
+        <h3>${escapeHtml(name)}</h3>
       </button>
     `;
     }
-    return `
-      <article class="recipe-browse-card${hasPhoto || canHydratePhoto ? " has-media" : " no-media"}" style="--card-order: ${Math.min(index, 8)}">
+    if (layout === "list") {
+      return `
+      <article class="recipe-browse-card library-list-card ${photo.mediaClass}">
         <button class="recipe-card" type="button" data-open="${escapeHtml(recipe.id)}">
-          ${copy}
+          ${photo.markup}
+          <span class="category-pill">${escapeHtml(categoryLabel(categoryFor(recipe)))}</span>
+          ${favoriteMark}
+          ${warningMark}
+          <h3>${escapeHtml(name)}</h3>
+          ${meta ? `<p>${escapeHtml(meta)}</p>` : ""}
         </button>
         <button class="soft-action recipe-add-meal" type="button" data-open="${escapeHtml(recipe.id)}">${escapeHtml(t("addRecipeToMeal"))}</button>
+      </article>
+    `;
+    }
+    return `
+      <article class="recipe-browse-card library-grid-card ${photo.mediaClass}">
+        <button class="recipe-card" type="button" data-open="${escapeHtml(recipe.id)}">
+          ${photo.markup}
+          ${favoriteMark}
+          ${warningMark}
+          <h3>${escapeHtml(name)}</h3>
+        </button>
       </article>
     `;
   }
@@ -157,14 +225,13 @@ export function createRecipeLibraryUi({
       return categoryMatch && (!search || haystack.includes(search));
     });
 
-    const favoriteIds = new Set(getFavorites());
-    const plannedIds = new Set(getPlannedRecipeIds());
-    const picks = recipes
-      .filter((recipe) => favoriteIds.has(recipe.id) || plannedIds.has(recipe.id))
-      .sort((left, right) => (
-        Number(plannedIds.has(right.id)) - Number(plannedIds.has(left.id))
-        || Number(favoriteIds.has(right.id)) - Number(favoriteIds.has(left.id))
-      ));
+    const picks = catalogStatus === "ready"
+      ? libraryStripRecipes({
+        recipes,
+        favoriteIds: getFavorites(),
+        getRecipeMemory,
+      })
+      : [];
 
     $("#recipeCount").textContent = catalogStatus === "loading"
       ? t("recipeCatalogLoading")
@@ -173,15 +240,20 @@ export function createRecipeLibraryUi({
         : t(filtered.length === recipes.length ? "recipeCount" : "recipeCountFiltered")
           .replace("{count}", filtered.length)
           .replace("{total}", recipes.length);
-    $("#recipePicksList").innerHTML = picks.slice(0, 6)
-      .map((recipe, index) => recipeCardMarkup(recipe, index, { pick: true, plannedIds }))
+    $("#recipePicksList").innerHTML = picks
+      .map(({ recipe, reason }, index) => recipeCardMarkup(recipe, index, { pick: true, pickReason: reason }))
       .join("");
-    $("#recipePicksEmpty").hidden = picks.length > 0;
+    if ($("#recipePicksEmpty")) $("#recipePicksEmpty").hidden = picks.length > 0;
     if ($("#recipePicksSection")) {
-      $("#recipePicksSection").hidden = Boolean(search) || (catalogStatus === "ready" && recipes.length === 0);
+      $("#recipePicksSection").hidden = Boolean(search) || picks.length === 0;
     }
+    syncBrowseLayoutControls();
     if ($("#recipeSearch") && globalThis.document?.activeElement !== $("#recipeSearch")) {
       $("#recipeSearch").value = getRecipeSearch();
+    }
+    if ($("#recipeList")?.classList) {
+      $("#recipeList").classList.toggle("library-browse-grid", browseLayout === "grid");
+      $("#recipeList").classList.toggle("library-browse-list", browseLayout === "list");
     }
     $("#recipeList").innerHTML = catalogStatus === "loading"
       ? `<p class="empty-state">${t("recipeCatalogLoading")}<br><button class="ghost-button compact-button" type="button" data-retry-recipe-catalog>${t("retrySync")}</button></p>`
@@ -354,6 +426,29 @@ export function createRecipeLibraryUi({
     });
   }
 
+  function syncBrowseLayoutControls() {
+    const gridButton = $("#libraryBrowseGrid");
+    const listButton = $("#libraryBrowseList");
+    if (gridButton) {
+      gridButton.classList.toggle("active", browseLayout === "grid");
+      gridButton.setAttribute("aria-pressed", `${browseLayout === "grid"}`);
+    }
+    if (listButton) {
+      listButton.classList.toggle("active", browseLayout === "list");
+      listButton.setAttribute("aria-pressed", `${browseLayout === "list"}`);
+    }
+    if ($("#recipeBrowse")) {
+      if ($("#recipeBrowse").dataset) $("#recipeBrowse").dataset.browseLayout = browseLayout;
+      else $("#recipeBrowse").setAttribute?.("data-browse-layout", browseLayout);
+    }
+  }
+
+  function setBrowseLayout(nextLayout) {
+    browseLayout = nextLayout === "list" ? "list" : "grid";
+    renderRecipes();
+    bindOpenButtons();
+  }
+
   function bindLibraryControls() {
     $("#closeRecipeDetail").addEventListener("click", () => {
       $("#recipeDetail").hidden = true;
@@ -380,6 +475,9 @@ export function createRecipeLibraryUi({
       renderRecipes();
       bindOpenButtons();
     });
+
+    $("#libraryBrowseGrid")?.addEventListener("click", () => setBrowseLayout("grid"));
+    $("#libraryBrowseList")?.addEventListener("click", () => setBrowseLayout("list"));
 
     $("#addRecipeToMealForm")?.addEventListener("submit", async (event) => {
       event.preventDefault();

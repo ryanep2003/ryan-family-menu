@@ -26,7 +26,7 @@ The shipped product currently supports:
 - Flexible meal composition using mains, sides, salads, desserts, sauces, drinks, and other recipe roles.
 - Per-meal serving plans for adults, children, and guests, with batch and leftover estimates.
 - Intentional leftover recording and allocation to later meals.
-- A shared household recipe library backed by the platform catalog, local drafts, editing, favorites, and hiding/deletion overlays. Search is at the top of the library, and a recipe can be added directly to a day and meal from the recipe screen. The platform catalog is the single source for starter and family recipes; local cache supports brief offline recovery.
+- A shared household recipe library backed by the platform catalog, local drafts, editing, favorites, and hiding/deletion overlays. Search is at the top of the library. On phones, a short Favorites-and-recently-cooked strip sits above a two-column photo grid of the filtered set; Grid | List can switch the main browse layout, and a recipe can be added directly to a day and meal from the recipe screen. The platform catalog is the single source for starter and family recipes; local cache supports brief offline recovery.
 - Recipe creation from photos, public links, or manual entry.
 - A grocery list generated from meal plans, with shared-ingredient aggregation, advisory inventory matches, compact meal cues (expandable when an item is used in more than one meal), aisle-style short names, and per-meal shopping.
 - Approved school lunches contribute to that same grocery list, so overlapping dinner, breakfast, and lunchbox ingredients consolidate instead of becoming a separate shopping system.

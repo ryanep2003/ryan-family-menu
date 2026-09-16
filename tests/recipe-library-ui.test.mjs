@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createRecipeLibraryUi } from "../recipe-library-ui.js";
+import { createRecipeLibraryUi, libraryStripRecipes, LIBRARY_STRIP_LIMIT } from "../recipe-library-ui.js";
 import { textMatchesLanguage } from "../language-quality.js";
 
 function element(initial = {}) {
@@ -27,6 +27,9 @@ function element(initial = {}) {
         }
         this.remove(name);
         return false;
+      },
+      contains(name) {
+        return this.values.has(name);
       },
     },
     addEventListener(type, listener) {
@@ -91,6 +94,9 @@ function harness(overrides = {}) {
     "#addRecipeToMealSubmit": element({ disabled: false }),
     "#addRecipeToMealStatus": element(),
     "#recipePicksSection": element({ hidden: false }),
+    "#recipeBrowse": element(),
+    "#libraryBrowseGrid": element(),
+    "#libraryBrowseList": element(),
     "#closeRecipeDetail": element(),
     "#editRecipeForm": element(),
     "#detailName": element(),
@@ -135,11 +141,10 @@ function harness(overrides = {}) {
       : value?.[overrides.lang || "en"] || "";
       return textMatchesLanguage(text, overrides.lang || "en") ? text : "";
     },
-    categoryFor: () => "main",
+    categoryFor: (recipe) => recipe?.category || "main",
     categoryLabel: () => "Main",
     getLang: () => overrides.lang || "en",
-    getFavorites: () => [],
-    getPlannedRecipeIds: () => overrides.plannedRecipeIds || [],
+    getFavorites: () => overrides.favorites || [],
     allRecipes: () => overrides.recipes || [recipe],
     recipeById: overrides.recipeById || (() => recipe),
     draftById: () => null,
@@ -147,9 +152,10 @@ function harness(overrides = {}) {
     setSelectedRecipeId: () => {},
     getRecipeSearch: () => overrides.search || "",
     setRecipeSearch: () => {},
-    getCategoryFilter: () => "all",
+    getCategoryFilter: () => overrides.categoryFilter || "all",
     setCategoryFilter: () => {},
     setDetailStatus: () => {},
+    getRecipeMemory: overrides.getRecipeMemory || (() => ({})),
     isRecipeTranslationPending: () => Boolean(overrides.translationPending),
     getRecipeCatalogStatus: () => overrides.catalogStatus || "ready",
     setView: () => {},
@@ -175,23 +181,59 @@ test("renderRecipes escapes recipe ids and photo URLs in card markup", () => {
   assert.doesNotMatch(elements["#recipeList"].innerHTML, /onerror="alert/);
 });
 
-test("renderRecipes puts planned recipes in the family picks shelf", () => {
-  const { elements, ui } = harness({ plannedRecipeIds: ['recipe-1" autofocus="true'] });
+test("library strip prefers favorites, then recently cooked, and caps at five", () => {
+  const recipes = [
+    { id: "fav-old" },
+    { id: "fav-new" },
+    { id: "cooked-a" },
+    { id: "cooked-b" },
+    { id: "cooked-c" },
+    { id: "cooked-d" },
+    { id: "untouched" },
+  ];
+  const picks = libraryStripRecipes({
+    recipes,
+    favoriteIds: ["fav-new", "fav-old"],
+    getRecipeMemory: (id) => ({
+      lastMade: ({
+        "fav-old": "2026-01-01",
+        "cooked-a": "2026-09-14",
+        "cooked-b": "2026-09-13",
+        "cooked-c": "2026-09-12",
+        "cooked-d": "2026-09-11",
+      })[id] || "",
+    }),
+  });
+  assert.equal(LIBRARY_STRIP_LIMIT, 5);
+  assert.deepEqual(picks.map((entry) => [entry.recipe.id, entry.reason]), [
+    ["fav-new", "favorite"],
+    ["fav-old", "favorite"],
+    ["cooked-a", "recent"],
+    ["cooked-b", "recent"],
+    ["cooked-c", "recent"],
+  ]);
+});
+
+test("renderRecipes puts favorites and recently cooked in the short library strip", () => {
+  const { elements, ui } = harness({
+    favorites: ['recipe-1" autofocus="true'],
+  });
 
   ui.renderRecipes();
 
   assert.match(elements["#recipePicksList"].innerHTML, /recipe-pick-label/);
+  assert.match(elements["#recipePicksList"].innerHTML, /recipePickFavorite/);
   assert.match(elements["#recipePicksList"].innerHTML, /recipe-1&quot; autofocus=&quot;true/);
-  assert.equal(elements["#recipePicksEmpty"].hidden, true);
+  assert.equal(elements["#recipePicksSection"].hidden, false);
 });
 
-test("renderRecipes keeps the picks shelf empty when there are no favorites or plans", () => {
+test("renderRecipes hides the strip when there are no favorites or recently cooked recipes", () => {
   const { elements, ui } = harness();
 
   ui.renderRecipes();
 
   assert.equal(elements["#recipePicksList"].innerHTML, "");
-  assert.equal(elements["#recipePicksEmpty"].hidden, false);
+  assert.equal(elements["#recipePicksSection"].hidden, true);
 });
 
 test("catalog loading, unavailable, and genuinely empty states remain distinct", () => {
@@ -237,6 +279,7 @@ test("a loaded household catalog reports and renders every returned recipe", () 
   }));
   const { elements, ui } = harness({ recipes });
   ui.renderRecipes();
+  assert.match(elements["#recipeList"].innerHTML, /library-grid-card/);
   assert.equal((elements["#recipeList"].innerHTML.match(/class="recipe-card/g) || []).length, 60);
   assert.match(elements["#recipeCount"].textContent, /60/);
 });
@@ -267,7 +310,7 @@ test("renderDetail escapes photo URLs in detail markup", () => {
   assert.doesNotMatch(elements["#photoStrip"].innerHTML, /onerror="alert/);
 });
 
-test("photo-less recipes stay typographic instead of showing generic food art", () => {
+test("photo-less recipes use a compact colored tile instead of generic food art", () => {
   const { elements, ui } = harness({
     recipe: {
       photos: [],
@@ -279,7 +322,8 @@ test("photo-less recipes stay typographic instead of showing generic food art", 
   ui.renderRecipes();
   ui.renderDetail();
 
-  assert.match(elements["#recipeList"].innerHTML, /recipe-browse-card no-media/);
+  assert.match(elements["#recipeList"].innerHTML, /recipe-photo-tile/);
+  assert.match(elements["#recipeList"].innerHTML, /library-grid-card has-tile/);
   assert.doesNotMatch(elements["#recipeList"].innerHTML, /data:image\/svg\+xml,/);
   assert.doesNotMatch(elements["#recipeList"].innerHTML, /<img/);
   assert.equal(elements["#photoStrip"].innerHTML, "");
@@ -381,7 +425,7 @@ test("complete translated recipe does not show translation controls", () => {
   assert.equal(elements["#addRecipeGroceries"].disabled, false);
 });
 
-test("searching hides family picks so results are immediate", () => {
+test("searching hides the strip so filtered grid results are immediate", () => {
   const { elements, ui } = harness({ search: "chicken" });
   ui.renderRecipes();
   assert.equal(elements["#recipePicksSection"].hidden, true);
@@ -513,4 +557,43 @@ test("English placeholder steps do not leak as numbered steps in Spanish", () =>
   assert.equal(elements["#stepListEmpty"].hidden, false);
   assert.equal(elements["#stepListEmpty"].textContent, "recipeStepsEmpty");
   assert.match(elements["#ingredientList"].innerHTML, /1 lb ground beef/);
+});
+
+test("search and category filters still drive the main library grid", () => {
+  const recipes = [
+    { id: "chicken-main", name: { en: "Lemon chicken" }, category: "main", tags: { en: "chicken" } },
+    { id: "pasta-side", name: { en: "Garlic bread" }, category: "side", tags: { en: "bread" } },
+    { id: "salad", name: { en: "Crunch salad" }, category: "salad", tags: { en: "salad" } },
+  ];
+  const searched = harness({ recipes, search: "chicken" });
+  searched.ui.renderRecipes();
+  assert.match(searched.elements["#recipeList"].innerHTML, /Lemon chicken/);
+  assert.doesNotMatch(searched.elements["#recipeList"].innerHTML, /Garlic bread/);
+  assert.doesNotMatch(searched.elements["#recipeList"].innerHTML, /Crunch salad/);
+  assert.match(searched.elements["#recipeCount"].textContent, /Showing 1 of 3/);
+
+  const filtered = harness({ recipes, categoryFilter: "side" });
+  filtered.ui.renderRecipes();
+  assert.match(filtered.elements["#recipeList"].innerHTML, /Garlic bread/);
+  assert.doesNotMatch(filtered.elements["#recipeList"].innerHTML, /Lemon chicken/);
+  assert.match(filtered.elements["#recipeCount"].textContent, /Showing 1 of 3/);
+});
+
+test("Grid | List toggle only changes the main browse markup", async () => {
+  const { elements, ui } = harness({
+    favorites: ['recipe-1" autofocus="true'],
+  });
+  ui.bindLibraryControls();
+  ui.renderRecipes();
+  assert.match(elements["#recipeList"].innerHTML, /library-grid-card/);
+  assert.doesNotMatch(elements["#recipeList"].innerHTML, /library-list-card/);
+  assert.equal(elements["#recipeList"].classList.values.has("library-browse-grid"), true);
+  assert.match(elements["#recipePicksList"].innerHTML, /recipe-pick-card/);
+
+  await elements["#libraryBrowseList"].dispatch("click");
+  assert.match(elements["#recipeList"].innerHTML, /library-list-card/);
+  assert.match(elements["#recipeList"].innerHTML, /addRecipeToMeal/);
+  assert.doesNotMatch(elements["#recipeList"].innerHTML, /library-grid-card/);
+  assert.equal(elements["#recipeList"].classList.values.has("library-browse-list"), true);
+  assert.match(elements["#recipePicksList"].innerHTML, /recipe-pick-card/);
 });

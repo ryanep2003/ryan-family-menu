@@ -2367,8 +2367,6 @@ const recipeLibraryUi = createRecipeLibraryUi({
   categoryLabel,
   getLang: () => lang,
   getFavorites: () => favorites,
-  getPlannedRecipeIds: () => [...new Set(Object.values(schedule)
-    .flatMap((meal) => normalizeMealPlan(meal).items.map((item) => item.recipeId)))],
   allRecipes,
   getRecipeCatalogStatus: () => sharedRecipesStatus,
   recipeById,

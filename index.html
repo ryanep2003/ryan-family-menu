@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=196" />
+    <link rel="stylesheet" href="styles.css?v=197" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -936,26 +936,28 @@
             </aside>
           </div>
         </section>
-        <section class="recipe-picks" id="recipePicksSection" aria-labelledby="recipePicksHeading">
+        <section class="recipe-picks" id="recipePicksSection" aria-labelledby="recipePicksHeading" hidden>
           <div class="panel-heading">
             <div>
-              <p class="section-label" data-i18n="recipePicksKicker">Start with likely choices</p>
-              <h2 id="recipePicksHeading" data-i18n="recipePicksHeading">Family picks</h2>
+              <p class="section-label" data-i18n="recipePicksKicker">Quick picks</p>
+              <h2 id="recipePicksHeading" data-i18n="recipePicksHeading">Favorites & recent</h2>
             </div>
           </div>
-          <p class="section-note" data-i18n="recipePicksHelper">Your favorites and this week's planned recipes appear here first.</p>
-          <div class="recipe-list recipe-picks-list" id="recipePicksList"></div>
-          <p class="empty-state compact" id="recipePicksEmpty" data-i18n="recipePicksEmpty" hidden>Favorite a recipe or plan one in Week to see it here.</p>
+          <p class="section-note" data-i18n="recipePicksHelper">Starred recipes, then meals cooked recently.</p>
+          <div class="recipe-picks-list" id="recipePicksList"></div>
         </section>
-        <details class="recipe-browse" id="recipeBrowse" open>
-          <summary>
-            <span data-i18n="browseAllRecipes">Browse all recipes</span>
-            <small data-i18n="browseAllRecipesNote">The full library stays open here.</small>
-          </summary>
-          <div class="recipe-browse-content">
-            <div class="recipe-list" id="recipeList"></div>
+        <section class="recipe-browse" id="recipeBrowse" aria-labelledby="recipeBrowseHeading" data-browse-layout="grid">
+          <div class="recipe-browse-heading">
+            <h2 id="recipeBrowseHeading" data-i18n="browseAllRecipes">Browse all recipes</h2>
+            <div class="library-browse-layout segmented" role="group" aria-label="Browse layout" data-i18n-aria-label="libraryBrowseLayout">
+              <button class="active" id="libraryBrowseGrid" type="button" aria-pressed="true" data-i18n="libraryBrowseGrid">Grid</button>
+              <button id="libraryBrowseList" type="button" aria-pressed="false" data-i18n="libraryBrowseList">List</button>
+            </div>
           </div>
-        </details>
+          <div class="recipe-browse-content">
+            <div class="recipe-list library-browse-grid" id="recipeList"></div>
+          </div>
+        </section>
       </section>
 
       <section class="view" id="addView">
@@ -1104,6 +1106,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=196"></script>
+    <script type="module" src="app.js?v=197"></script>
   </body>
 </html>

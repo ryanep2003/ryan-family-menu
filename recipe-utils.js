@@ -14,13 +14,21 @@ function recipeHash(value) {
   ), 0) >>> 0;
 }
 
+function recipeIdentity(recipe) {
+  return `${recipe?.id || "recipe"}:${localizedTextExact(recipe?.name, "en") || localizedTextExact(recipe?.name, "es") || "recipe"}`;
+}
+
 function generatedCardPhoto(recipe) {
-  const identity = `${recipe?.id || "recipe"}:${localizedTextExact(recipe?.name, "en") || localizedTextExact(recipe?.name, "es") || "recipe"}`;
+  const identity = recipeIdentity(recipe);
   const hash = recipeHash(identity);
   const hue = hash % 360;
   const accent = (hue + 52) % 360;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" data-recipe="${encodeURIComponent(identity)}"><rect width="640" height="420" fill="hsl(${hue} 24% 91%)"/><circle cx="520" cy="95" r="130" fill="hsl(${accent} 42% 82%)" opacity=".72"/><ellipse cx="320" cy="236" rx="190" ry="92" fill="hsl(${hue} 18% 98%)" stroke="hsl(${hue} 22% 74%)" stroke-width="8"/><ellipse cx="320" cy="236" rx="132" ry="54" fill="hsl(${accent} 45% 66%)"/><circle cx="258" cy="222" r="24" fill="hsl(${hue} 62% 48%)"/><circle cx="326" cy="250" r="27" fill="hsl(${accent} 67% 42%)"/><circle cx="388" cy="220" r="21" fill="hsl(${hue} 70% 58%)"/><path d="M180 105c38-54 90-62 132-25-28 8-53 32-66 65-25-3-47-16-66-40Z" fill="hsl(${accent} 36% 42%)"/><path d="M448 304c42-35 84-34 112-5-33 3-58 22-77 53-18-9-29-25-35-48Z" fill="hsl(${hue} 42% 43%)"/></svg>`;
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+export function recipeTileTone(recipe) {
+  return recipeHash(recipeIdentity(recipe)) % 4;
 }
 
 const categoryLabels = {
