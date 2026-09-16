@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v195";
-// v195: Shop Add item keeps the typed name as one item, including commas, slashes, and dashes.
+const CACHE_NAME = "ryan-family-menu-v196";
+// v196: Choose dinner Explore posters and List rows are readable on phone width.
 // Review hosts must stay network-first so branch/deploy previews cannot serve a stale app shell.
 const ASSETS = [
   "./",

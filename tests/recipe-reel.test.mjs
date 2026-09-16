@@ -179,6 +179,14 @@ test("native reel CSS snaps to a centered card and disables text selection", asy
   assert.doesNotMatch(css, /translate3d|perspective\(|rotateY\(/);
 });
 
+test("native reel cards use one full-width column so titles are not crushed", async () => {
+  const css = await readFile(new URL("../recipe-reel.css", import.meta.url), "utf8");
+  const reelItem = css.match(/#recipeList\.recipe-native-reel > \.recipe-browse-card,[\s\S]*?box-shadow: 0 4px 10px rgba\(26, 58, 92, \.04\);\n\}/)?.[0];
+  assert.ok(reelItem);
+  assert.match(reelItem, /grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  assert.match(reelItem, /grid-template-rows:\s*minmax\(0,\s*1fr\) auto/);
+});
+
 test("native reel module does not measure every card on every scroll tick", async () => {
   const source = await readFile(new URL("../recipe-reel.js", import.meta.url), "utf8");
   assert.match(source, /IntersectionObserver/);
