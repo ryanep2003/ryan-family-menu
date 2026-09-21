@@ -2346,6 +2346,7 @@ const scheduleUi = createScheduleUi({
   },
   getFamilyMembers: () => familyMembers,
   getFavorites: () => favorites,
+  getRecipeMemory: (recipeId) => selectRecipeMemory(recipeId, dinnerEvents, familyMembers),
   onRecipeMediaRendered: queueRecipePhotoHydration,
   onFocusedDinnerComplete: () => {
     setView("today");

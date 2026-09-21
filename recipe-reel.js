@@ -1,4 +1,6 @@
 // Native recipe reel. Safari owns momentum scrolling; no carousel library, no 3D engine.
+// Choose dinner, Plan meal search, and Library browse use the photo grid instead.
+// The reel stays installed only for an explicit [data-recipe-reel-surface] host.
 import {
   DRAG_THRESHOLD_PX,
   IMAGE_NEAR_RADIUS,
@@ -21,7 +23,7 @@ import {
 
 const REEL_CSS_URL = "./recipe-reel.css?v=11";
 const START_LOCK_CLASS = "is-start-locked";
-const SURFACE_SELECTOR = ".focused-recipe-results, .meal-recipe-results";
+const SURFACE_SELECTOR = "[data-recipe-reel-surface]";
 const ITEM_SELECTOR = ".recipe-browse-card, .focused-recipe-result, .meal-recipe-result";
 const REEL_CLASS = "recipe-native-reel";
 const ACTIVE_CLASS = "recipe-reel-active";

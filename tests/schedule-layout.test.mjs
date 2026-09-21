@@ -12,9 +12,9 @@ test("week planning stacks days in the page width without horizontal overflow", 
   assert.match(styles, /\.week-day-card\s*\{[\s\S]*min-width: 0;/s);
 });
 
-test("mobile recipe search rows keep their natural height in the page scroll", () => {
-  assert.match(styles, /\.meal-recipe-results\.is-open:not\(:empty\)\s*\{[^}]*display: block;/s);
-  assert.doesNotMatch(styles, /\.meal-recipe-results\.is-open:not\(:empty\)\s*\{[^}]*(?:max-height|overflow-y):/s);
-  assert.match(styles, /\.meal-recipe-results button\s*\{[^}]*height: auto;/s);
-  assert.match(styles, /\.meal-recipe-result-copy small\s*\{[^}]*-webkit-line-clamp: 2;/s);
+test("meal recipe browse grows in the page instead of a nested scroller", () => {
+  assert.match(styles, /\[data-meal-recipe-results\]:not\(\.is-open\)\s*\{[^}]*display:\s*none;/s);
+  assert.doesNotMatch(styles, /\[data-meal-recipe-results\][^{]*\{[^}]*(?:max-height|overflow-y):/s);
+  assert.match(styles, /\.library-browse-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/s);
+  assert.match(styles, /\.library-grid-card h3\s*\{[^}]*-webkit-line-clamp:\s*2;/s);
 });

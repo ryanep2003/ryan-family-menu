@@ -1,12 +1,20 @@
 # Durable Decisions
 
+## 2026-09-21 — Choose dinner and Plan recipe search use the Library hybrid
+
+**Decision:** Choose dinner, Change dinner, and Plan’s add-to-meal recipe search use the same browse as Library: a short Favorites-and-recent strip (hidden while searching or when it has nothing to show) above a dense photo grid. Grid | List switches only that main browse area. Search and the existing filters stay. Choose dinner keeps All / Favorites / Sides; the Sides chip still only filters the browse, and Choose for dinner still writes a dinner main. Tapping a card selects it. The decision tray, Choose for dinner, review, and Confirm path are unchanged, and nothing is saved until Confirm. Do not mount the full-library native reel on these surfaces, and do not add a free XY pan.
+
+**Reason:** A single tall carousel card is a poor way to find one recipe in a household catalog. Library already proved the short strip plus photo grid. Leaving Plan’s recipe search on the same reel would keep a second full-library carousel.
+
+**Consequences:** The native reel engine remains in the repo but is not attached to Library, Choose dinner, or Plan meal search. Reel scroll must not invent a dinner selection. English and Spanish browse-layout strings stay in parity with Library.
+
 ## 2026-09-16 — Library browse is a short strip plus a photo grid
 
-**Decision:** On Library, replace the full-catalog one-card carousel with a short horizontal Favorites-and-recently-cooked strip (about 3–5 cards) above a dense photo grid of the filtered recipe set. Search and category still filter the main grid. A cheap Grid | List toggle may switch only that main browse area. Choose dinner Explore on Today stays the tactile native reel.
+**Decision:** On Library, replace the full-catalog one-card carousel with a short horizontal Favorites-and-recently-cooked strip (about 3–5 cards) above a dense photo grid of the filtered recipe set. Search and category still filter the main grid. A cheap Grid | List toggle may switch only that main browse area. Choose dinner later moved to this same hybrid (see 2026-09-21).
 
 **Reason:** A single tall carousel card is a poor way to find one recipe among a household catalog of ~70. Favorites are the strongest jump-back signal; recently cooked meals fill remaining strip slots. Missing photos use a small navy/sage/cream tile instead of a blank half-screen.
 
-**Consequences:** `recipe-reel.js` no longer mounts on `#recipeList`. English and Spanish browse-layout strings stay in parity. The dinner picker reel, snap, and restore behavior are unchanged.
+**Consequences:** `recipe-reel.js` no longer mounts on `#recipeList`. English and Spanish browse-layout strings stay in parity. Choose dinner’s later move off the reel is recorded on 2026-09-21.
 
 ## 2026-09-16 — Shop Add item keeps the typed name as one item
 
@@ -18,15 +26,15 @@
 
 ## 2026-09-12 — Keep Choose dinner confirm-to-write on a native field
 
-**Decision:** Tonight’s open-dinner path defaults to a tactile center-snap recipe field that reuses the native recipe reel, with search, All / Favorites / Sides filters, an always-available List alternative, and a fixed decision tray. Choosing a recipe only advances to meal review. Confirm writes `servingPlans.dinner` through the existing schedule save. Do not add a free XY pan, spatial camera, Swiper, or gravity field.
+**Decision:** Tonight’s open-dinner path keeps search, All / Favorites / Sides filters, a List alternative, and a fixed decision tray. Choosing a recipe only advances to meal review. Confirm writes `servingPlans.dinner` through the existing schedule save. Do not add a free XY pan, spatial camera, Swiper, or gravity field. The browse surface itself moved from the center-snap reel to the Library hybrid on 2026-09-21; the write rules below still apply.
 
 **Reason:** The approved Moving Table slice is a clearer Today job and a safer write. The earlier spatial prototype is not production-ready, and a second dinner save path would fork household data. Native overflow plus CSS snap is the same discovery model that already works for Choose dinner Explore.
 
-**Consequences:** People counts stay on `boundedCount` (`2.5` becomes `2` via trunc, never `20`). Extra portions stay on `boundedServings`. Visible count fields must rewrite to the normalized value after blur, stepper, or confirm. The recipe id selected in the field or list is the only id review and Confirm may write. The Sides chip is a browse filter only; Choose for dinner always writes a dinner main, and optional sides are added on Make it a meal. Choose for dinner replaces every leftover dinner main on that day and keeps sides and salads. Select, assign, advance, and review share one recipe-id cleaner (max 160, matching the catalog). Change dinner starts with an empty picker selection so the planned meal cannot be advanced by accident. Reel restore/settle must not invent a selection; the tray stays empty and Choose for dinner stays disabled until the family taps or drags a recipe. After List→Explore or any Explore remount with a selected id, the centered and lit card must be that same id — a missing start id must not fall back to the middle catalog card, and centering must use viewport rects rather than `offsetLeft` (desktop two-column offsetParent is not the scroll surface). `recipeById` returns null for a missing id and must never substitute another recipe. Choose for dinner must not fail silently. Stage motion between Today, picker, and review respects `prefers-reduced-motion`. English and Spanish chrome stay in parity. The four-tab shell is unchanged.
+**Consequences:** People counts stay on `boundedCount` (`2.5` becomes `2` via trunc, never `20`). Extra portions stay on `boundedServings`. Visible count fields must rewrite to the normalized value after blur, stepper, or confirm. The recipe id selected in the field or list is the only id review and Confirm may write. The Sides chip is a browse filter only; Choose for dinner always writes a dinner main, and optional sides are added on Make it a meal. Choose for dinner replaces every leftover dinner main on that day and keeps sides and salads. Select, assign, advance, and review share one recipe-id cleaner (max 160, matching the catalog). Change dinner starts with an empty picker selection so the planned meal cannot be advanced by accident. Opening the picker or switching Grid | List must not invent a selection; the tray stays empty and Choose for dinner stays disabled until the family taps a recipe. After a layout change, the selected card must stay the tray recipe. `recipeById` returns null for a missing id and must never substitute another recipe. Choose for dinner must not fail silently. Stage motion between Today, picker, and review respects `prefers-reduced-motion`. English and Spanish chrome stay in parity. The four-tab shell is unchanged.
 
 ## 2026-09-11 — Keep Choose dinner recipe discovery on native overflow and CSS snap
 
-**Decision:** Browse dinner recipes with the browser’s own horizontal overflow, CSS `scroll-snap-type: x mandatory`, and a matching scroll-padding gutter so one card stays centered. Separate drag from tap in the reel module. Do not reintroduce Swiper, Embla, Coverflow, or other transform/3D carousel engines. Library browse later moved to a photo grid; this decision still governs Choose dinner Explore.
+**Decision:** Browse dinner recipes with the browser’s own horizontal overflow, CSS `scroll-snap-type: x mandatory`, and a matching scroll-padding gutter so one card stays centered. Separate drag from tap in the reel module. Do not reintroduce Swiper, Embla, Coverflow, or other transform/3D carousel engines. Library browse, and later Choose dinner and Plan meal search, moved to a photo grid (see 2026-09-21). Do not remount that reel on those surfaces.
 
 **Reason:** The previous carousel engine crashed iPhone Safari for some household members. Measuring every card on every scroll tick, keeping every recipe image decoded, and observing the whole document for any mutation were enough to recreate that pressure even after Swiper was removed.
 

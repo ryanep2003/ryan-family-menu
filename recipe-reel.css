@@ -1,5 +1,6 @@
 /* Native recipe reel: Safari owns scrolling physics; no carousel library or 3D transforms.
-   Library browse is a photo grid. This reel is only Choose dinner Explore and Plan meal search. */
+   Library, Choose dinner, and Plan meal search use a short strip plus a photo grid.
+   These rules apply only if a host opts in with the recipe-native-reel class. */
 
 .focused-recipe-results,
 .meal-recipe-results {

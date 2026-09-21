@@ -1,5 +1,6 @@
 import { allLocalizedText, localizedText, updateLocalizedText } from "./localized-data.js";
 import { renderHandoffDetails } from "./handoff-ui.js";
+import { libraryStripRecipes, recipeBrowsePhotoMarkup } from "./recipe-browse.js";
 import { cardPhotoFor, cardPhotoIsGenerated } from "./recipe-utils.js";
 import { applyPersistedMealTarget, cleanRecipeId, countFieldIsIncomplete, rewriteCountFieldDisplay } from "./schedule-utils.js";
 import {
@@ -7,7 +8,6 @@ import {
   applyDinnerServingField,
   assignDinnerRecipe,
   advanceDinnerSelection,
-  dinnerRecipeFallbackLabel,
   DEFAULT_DINNER_PICKER_MODE,
   dinnerMainItem,
   dinnerPickerMode,
@@ -19,10 +19,8 @@ import {
   initialDinnerPickerSelection,
   runDinnerStageTransition,
   selectedDinnerRecipeId,
-  shouldAcceptDinnerReelSelection,
   stepCountValue,
 } from "./dinner-flow.js";
-import { syncReelToRecipeId } from "./recipe-reel.js";
 
 export function createScheduleUi({
   $,
@@ -78,6 +76,7 @@ export function createScheduleUi({
   setVisibleMonth,
   getFamilyMembers = () => [],
   getFavorites = () => [],
+  getRecipeMemory = () => ({}),
   onRecipeMediaRendered = () => {},
   onFocusedDinnerComplete = () => {},
 }) {
@@ -94,11 +93,9 @@ export function createScheduleUi({
   let focusedDinnerMode = DEFAULT_DINNER_PICKER_MODE;
   let focusedDinnerAddingSide = false;
   let focusedDinnerAdvanceError = "";
-  let focusedDinnerOpenedToChoose = false;
-  let focusedDinnerExistingRecipeId = "";
   let focusedDinnerStage = "";
-  let focusedDinnerReelTouched = false;
   const mealSearchState = new Map();
+  let mealBrowseLayout = "grid";
   let planDirty = false;
   let planSaveBarHideTimer = 0;
   let planSaveContext = "";
@@ -194,30 +191,76 @@ export function createScheduleUi({
     });
   }
 
+  function mealRoleLabel(recipe) {
+    const category = categoryFor(recipe);
+    const role = mealRoles.find((item) => item.key === category) || mealRoles.find((item) => item.key === "other");
+    return t(role?.label || "roleOther");
+  }
+
+  function mealBrowsePicks(categoryFilter) {
+    return libraryStripRecipes({
+      recipes: matchingRecipes("", categoryFilter),
+      favoriteIds: getFavorites(),
+      getRecipeMemory,
+    });
+  }
+
+  function mealChoiceAttrs(context, period, recipeId) {
+    return `data-add-meal-result="${escapeHtml(context)}" data-period="${escapeHtml(period)}" data-recipe-id="${escapeHtml(recipeId)}"`;
+  }
+
+  function mealBrowseCard(recipe, context, period, layout) {
+    const name = localize(recipe.name);
+    const photo = recipeBrowsePhotoMarkup(recipe, name, escapeHtml);
+    const attrs = mealChoiceAttrs(context, period, recipe.id);
+    if (layout === "list") {
+      const detail = localize(recipe.short || recipe.meta);
+      return `
+        <article class="recipe-browse-card library-list-card ${photo.mediaClass}">
+          <button class="recipe-card" type="button" ${attrs}>
+            ${photo.markup}
+            <span class="category-pill">${escapeHtml(mealRoleLabel(recipe))}</span>
+            <h3>${escapeHtml(name)}</h3>
+            ${detail ? `<p>${escapeHtml(detail)}</p>` : ""}
+          </button>
+        </article>`;
+    }
+    return `
+      <article class="recipe-browse-card library-grid-card ${photo.mediaClass}">
+        <button class="recipe-card" type="button" ${attrs}>
+          ${photo.markup}
+          <h3>${escapeHtml(name)}</h3>
+        </button>
+      </article>`;
+  }
+
+  function mealPickCard(recipe, reason, context, period) {
+    const name = localize(recipe.name);
+    const photo = recipeBrowsePhotoMarkup(recipe, name, escapeHtml);
+    const pickLabel = t(reason === "recent" ? "recipePickRecent" : "recipePickFavorite");
+    return `
+      <button class="recipe-card recipe-pick-card ${photo.mediaClass}" type="button" ${mealChoiceAttrs(context, period, recipe.id)}>
+        ${photo.markup}
+        <span class="recipe-pick-label">${escapeHtml(pickLabel)}</span>
+        <h3>${escapeHtml(name)}</h3>
+      </button>`;
+  }
+
+  function mealPicksMarkup(categoryFilter, context, period, query = "") {
+    if (`${query || ""}`.trim()) return "";
+    return mealBrowsePicks(categoryFilter)
+      .map(({ recipe, reason }) => mealPickCard(recipe, reason, context, period))
+      .join("");
+  }
+
   function recipeResults(query, categoryFilter, context, period) {
     const catalogStatus = getRecipeCatalogStatus();
     if (catalogStatus !== "ready") {
       return `<p class="meal-search-state">${escapeHtml(t(catalogStatus === "loading" ? "recipeCatalogLoading" : "recipeCatalogUnavailable"))}</p>`;
     }
-    const matches = matchingRecipes(query, categoryFilter);
-    return matches.map((recipe) => {
-      const category = categoryFor(recipe);
-      const role = mealRoles.find((item) => item.key === category) || mealRoles.find((item) => item.key === "other");
-      const hasPhoto = !cardPhotoIsGenerated(recipe) && Boolean(cardPhotoFor(recipe));
-      const canHydratePhoto = !hasPhoto && recipe.hasSourcePhotos;
-      return `<button class="meal-recipe-result${hasPhoto || canHydratePhoto ? " has-image" : ""}" type="button" data-add-meal-result="${escapeHtml(context)}" data-period="${escapeHtml(period)}" data-recipe-id="${escapeHtml(recipe.id)}">
-        ${hasPhoto
-          ? `<span class="recipe-photo-shell is-loaded"><img src="${escapeHtml(cardPhotoFor(recipe))}" alt="" loading="lazy" decoding="async" /></span>`
-          : canHydratePhoto
-            ? `<span class="recipe-photo-shell" data-recipe-photo-id="${escapeHtml(recipe.id)}" data-recipe-photo-alt="" aria-hidden="true"></span>`
-            : ""}
-        <span class="meal-recipe-result-copy">
-          <strong>${escapeHtml(localize(recipe.name))}</strong>
-          ${localize(recipe.short || recipe.meta) ? `<small>${escapeHtml(localize(recipe.short || recipe.meta))}</small>` : ""}
-        </span>
-        <span class="category-pill">${escapeHtml(t(role?.label || "roleOther"))}</span>
-      </button>`;
-    }).join("");
+    return matchingRecipes(query, categoryFilter)
+      .map((recipe) => mealBrowseCard(recipe, context, period, mealBrowseLayout))
+      .join("");
   }
 
   function focusedDinnerItem(meal) {
@@ -274,29 +317,85 @@ export function createScheduleUi({
     });
   }
 
+  function focusedDinnerPickModels() {
+    if (`${focusedDinnerSearch || ""}`.trim()) return [];
+    return libraryStripRecipes({
+      recipes: filterDinnerRecipes(allRecipes(), {
+        query: "",
+        filter: focusedDinnerFilter,
+        favorites: getFavorites(),
+        lang: getLang(),
+        categoryFor,
+        textValues: allLocalizedText,
+      }),
+      favoriteIds: getFavorites(),
+      getRecipeMemory,
+    });
+  }
+
+  function dinnerChoiceCheck(selected) {
+    return selected ? `<span class="dinner-picker-check" aria-hidden="true">✓</span>` : "";
+  }
+
+  function dinnerBrowseCard(recipe, layout) {
+    const name = localize(recipe.name);
+    const photo = recipeBrowsePhotoMarkup(recipe, name, escapeHtml);
+    const selected = cleanRecipeId(recipe.id) === cleanRecipeId(focusedDinnerSelectedId);
+    const pressed = selected ? "true" : "false";
+    const check = dinnerChoiceCheck(selected);
+    if (layout === "list") {
+      const meta = dinnerRecipeMeta(recipe);
+      return `
+        <article class="recipe-browse-card library-list-card${selected ? " is-selected" : ""} ${photo.mediaClass}">
+          <button class="recipe-card" type="button" data-focused-recipe="${escapeHtml(recipe.id)}" aria-pressed="${pressed}">
+            ${photo.markup}
+            <span class="category-pill">${escapeHtml(mealRoleLabel(recipe))}</span>
+            <h3>${escapeHtml(name)}</h3>
+            ${meta ? `<p>${escapeHtml(meta)}</p>` : ""}
+            ${check}
+          </button>
+        </article>`;
+    }
+    return `
+      <article class="recipe-browse-card library-grid-card${selected ? " is-selected" : ""} ${photo.mediaClass}">
+        <button class="recipe-card" type="button" data-focused-recipe="${escapeHtml(recipe.id)}" aria-pressed="${pressed}">
+          ${photo.markup}
+          <h3>${escapeHtml(name)}</h3>
+          ${check}
+        </button>
+      </article>`;
+  }
+
+  function dinnerPickCard(recipe, reason) {
+    const name = localize(recipe.name);
+    const photo = recipeBrowsePhotoMarkup(recipe, name, escapeHtml);
+    const selected = cleanRecipeId(recipe.id) === cleanRecipeId(focusedDinnerSelectedId);
+    const pickLabel = t(reason === "recent" ? "recipePickRecent" : "recipePickFavorite");
+    return `
+      <button class="recipe-card recipe-pick-card ${photo.mediaClass}${selected ? " is-selected" : ""}" type="button" data-focused-recipe="${escapeHtml(recipe.id)}" aria-pressed="${selected ? "true" : "false"}">
+        ${photo.markup}
+        <span class="recipe-pick-label">${escapeHtml(pickLabel)}</span>
+        <h3>${escapeHtml(name)}</h3>
+        ${dinnerChoiceCheck(selected)}
+      </button>`;
+  }
+
+  function dinnerPicksInnerMarkup(picks = focusedDinnerPickModels()) {
+    if (!picks.length) return "";
+    return `
+      <h2 class="dinner-picker-picks-heading">${escapeHtml(t("recipePicksHeading"))}</h2>
+      <div class="recipe-picks-list">${picks.map(({ recipe, reason }) => dinnerPickCard(recipe, reason)).join("")}</div>
+    `;
+  }
+
   function focusedRecipeResultsMarkup() {
     const catalogStatus = getRecipeCatalogStatus();
     const matches = focusedDinnerMatches();
     if (catalogStatus !== "ready") {
-      return `<p>${escapeHtml(t(catalogStatus === "loading" ? "recipeCatalogLoading" : "recipeCatalogUnavailable"))}</p>`;
+      return `<p class="meal-search-state">${escapeHtml(t(catalogStatus === "loading" ? "recipeCatalogLoading" : "recipeCatalogUnavailable"))}</p>`;
     }
-    if ((focusedDinnerSearch || focusedDinnerFilter !== "all") && !matches.length) return `<p>${t("noRecipeMatches")}</p>`;
-    return matches.map((recipe) => {
-      const hasPhoto = !cardPhotoIsGenerated(recipe) && Boolean(cardPhotoFor(recipe));
-      const canHydratePhoto = !hasPhoto && recipe.hasSourcePhotos;
-      const selected = recipe.id === focusedDinnerSelectedId;
-      const fallbackName = dinnerRecipeFallbackLabel(localize(recipe.name));
-      return `
-        <button class="focused-recipe-result${hasPhoto || canHydratePhoto || fallbackName ? " has-image" : ""}${selected ? " is-selected" : ""}" type="button" data-focused-recipe="${escapeHtml(recipe.id)}" aria-pressed="${selected}">
-          ${hasPhoto
-            ? `<span class="recipe-photo-shell is-loaded"><img src="${escapeHtml(cardPhotoFor(recipe))}" alt="" loading="lazy" decoding="async" /></span>`
-            : `<span class="recipe-photo-shell dinner-recipe-fallback${canHydratePhoto ? "" : " is-loaded"}"${canHydratePhoto ? ` data-recipe-photo-id="${escapeHtml(recipe.id)}" data-recipe-photo-alt=""` : ""} aria-hidden="true"><span class="dinner-recipe-fallback-name">${escapeHtml(fallbackName)}</span></span>`}
-          <span class="focused-recipe-copy"><strong>${escapeHtml(localize(recipe.name))}</strong>
-          <small>${escapeHtml(dinnerRecipeMeta(recipe) || t("chooseRecipe"))}</small></span>
-          ${selected ? `<span class="dinner-picker-check" aria-hidden="true">✓</span>` : ""}
-        </button>
-      `;
-    }).join("");
+    if ((focusedDinnerSearch || focusedDinnerFilter !== "all") && !matches.length) return `<p class="meal-search-state">${escapeHtml(t("noRecipeMatches"))}</p>`;
+    return matches.map((recipe) => dinnerBrowseCard(recipe, focusedDinnerMode)).join("");
   }
 
   function dinnerDecisionTrayMarkup(recipe) {
@@ -328,9 +427,10 @@ export function createScheduleUi({
     const suggestion = exactRecipeById(allRecipes(), focusedDinnerSuggestionId);
     const selected = exactRecipeById(allRecipes(), focusedDinnerSelectedId);
     const matches = focusedDinnerMatches();
-    const explore = focusedDinnerMode === "explore";
+    const listLayout = focusedDinnerMode === "list";
+    const picks = focusedDinnerPickModels();
     return `
-      <div class="dinner-picker${explore ? " is-explore" : " is-list"}">
+      <div class="dinner-picker${listLayout ? " is-list" : " is-grid"}">
         <h2 id="focusedDinnerHeading">${escapeHtml(t("chooseDinner"))}</h2>
         ${suggestion ? `<aside class="focused-dinner-suggestion"><strong>${escapeHtml(localize(suggestion.name))}</strong><p>${t("planFromHomePreview")}</p><button class="ghost-button" type="button" data-focused-recipe="${escapeHtml(suggestion.id)}">${t("chooseThisRecipe")}</button></aside>` : ""}
         <label class="dinner-picker-search">
@@ -343,13 +443,18 @@ export function createScheduleUi({
             <button type="button" data-dinner-filter="favorites" aria-pressed="${focusedDinnerFilter === "favorites"}">${escapeHtml(t("dinnerFilterFavorites"))}</button>
             <button type="button" data-dinner-filter="sides" aria-pressed="${focusedDinnerFilter === "sides"}">${escapeHtml(t("dinnerFilterSides"))}</button>
           </div>
-          <button class="ghost-button dinner-picker-mode" type="button" data-dinner-mode="${explore ? "list" : "explore"}" aria-pressed="${explore ? "false" : "true"}">${escapeHtml(t(explore ? "dinnerPickerList" : "dinnerPickerExplore"))}</button>
+          <div class="library-browse-layout segmented" role="group" aria-label="${escapeHtml(t("libraryBrowseLayout"))}">
+            <button type="button" data-dinner-mode="grid" aria-pressed="${listLayout ? "false" : "true"}"${listLayout ? "" : ` class="active"`}>${escapeHtml(t("libraryBrowseGrid"))}</button>
+            <button type="button" data-dinner-mode="list" aria-pressed="${listLayout ? "true" : "false"}"${listLayout ? ` class="active"` : ""}>${escapeHtml(t("libraryBrowseList"))}</button>
+          </div>
         </div>
         <p class="dinner-picker-count">${escapeHtml(t(matches.length === 1 ? "dinnerRecipeCountOne" : "dinnerRecipeCountMany").replace("{count}", `${matches.length}`))}</p>
-        <div class="${explore ? "focused-recipe-results dinner-picker-explore" : "dinner-picker-list"}" id="focusedDinnerResults"${explore && focusedDinnerSelectedId ? ` data-reel-start="${escapeHtml(focusedDinnerSelectedId)}"` : ""}>
+        <section class="recipe-picks dinner-picker-picks" id="focusedDinnerPicks"${picks.length ? "" : " hidden"}>
+          ${dinnerPicksInnerMarkup(picks)}
+        </section>
+        <div class="dinner-picker-results library-browse-${listLayout ? "list" : "grid"}" id="focusedDinnerResults">
           ${focusedRecipeResultsMarkup()}
         </div>
-        ${explore ? `<p class="dinner-picker-explore-hint">${escapeHtml(t("dinnerPickerExploreHint"))}</p>` : ""}
         ${dinnerDecisionTrayMarkup(selected)}
       </div>
     `;
@@ -438,10 +543,7 @@ export function createScheduleUi({
     focusedDinnerMode = DEFAULT_DINNER_PICKER_MODE;
     focusedDinnerAddingSide = false;
     focusedDinnerAdvanceError = "";
-    focusedDinnerOpenedToChoose = false;
-    focusedDinnerExistingRecipeId = "";
     focusedDinnerStage = "";
-    focusedDinnerReelTouched = false;
     syncDinnerFlowStage("");
   }
 
@@ -541,9 +643,15 @@ export function createScheduleUi({
       const results = $("#focusedDinnerResults");
       if (results) {
         results.innerHTML = focusedRecipeResultsMarkup();
-        bindFocusedRecipeChoices();
         onRecipeMediaRendered();
       }
+      const picksRoot = $("#focusedDinnerPicks");
+      if (picksRoot) {
+        const picks = focusedDinnerPickModels();
+        picksRoot.hidden = picks.length === 0;
+        picksRoot.innerHTML = dinnerPicksInnerMarkup(picks);
+      }
+      bindFocusedRecipeChoices();
       const count = $(".dinner-picker-count");
       if (count) {
         const matches = focusedDinnerMatches();
@@ -563,7 +671,6 @@ export function createScheduleUi({
       });
     });
     bindFocusedRecipeChoices();
-    bindDinnerReelSelection();
     $("#advanceDinnerSelection")?.addEventListener("click", advanceFocusedDinnerSelection);
     $("#focusedDinnerRole")?.addEventListener("change", (event) => {
       const dinnerItem = focusedDinnerItem(focusedDinnerDraft);
@@ -665,68 +772,10 @@ export function createScheduleUi({
     return true;
   }
 
-  function updateDinnerDecisionTray() {
-    const tray = $("#dinnerDecisionTray");
-    const selected = exactRecipeById(allRecipes(), focusedDinnerSelectedId);
-    const markup = dinnerDecisionTrayMarkup(selected);
-    if (tray?.outerHTML !== undefined) {
-      tray.outerHTML = markup;
-    } else if (tray) {
-      tray.innerHTML = markup;
-    }
-    $$("[data-focused-recipe]").forEach((button) => {
-      const selectedCard = cleanRecipeId(button.dataset.focusedRecipe) === cleanRecipeId(focusedDinnerSelectedId);
-      button.classList.toggle("is-selected", selectedCard);
-      button.setAttribute("aria-pressed", selectedCard ? "true" : "false");
-      const check = button.querySelector(".dinner-picker-check");
-      if (selectedCard && !check) {
-        button.insertAdjacentHTML?.("beforeend", `<span class="dinner-picker-check" aria-hidden="true">✓</span>`);
-      } else if (!selectedCard && check) {
-        check.remove();
-      }
-    });
-    $("#advanceDinnerSelection")?.addEventListener("click", advanceFocusedDinnerSelection);
-  }
-
-  function syncDinnerSelectionFromReel(recipeId, { restore = false } = {}) {
-    if (!shouldAcceptDinnerReelSelection({
-      nextId: recipeId,
-      selectedId: focusedDinnerSelectedId,
-      existingRecipeId: focusedDinnerExistingRecipeId,
-      openedToChoose: focusedDinnerOpenedToChoose,
-      restore,
-      userHasInteracted: focusedDinnerReelTouched,
-    })) return false;
-    const nextId = selectedDinnerRecipeId(allRecipes(), recipeId);
-    if (!nextId) return false;
-    focusedDinnerSelectedId = nextId;
-    focusedDinnerAdvanceError = "";
-    updateDinnerDecisionTray();
-    return true;
-  }
-
-  function bindDinnerReelSelection() {
-    const results = $("#focusedDinnerResults");
-    if (!results || focusedDinnerMode !== "explore") return;
-    focusedDinnerReelTouched = false;
-    if (focusedDinnerSelectedId) {
-      results.dataset.reelStart = focusedDinnerSelectedId;
-      const sync = () => syncReelToRecipeId(results, focusedDinnerSelectedId);
-      sync();
-      globalThis.requestAnimationFrame?.(() => {
-        globalThis.requestAnimationFrame?.(sync);
-      });
-    }
-    results.addEventListener("pointerdown", () => {
-      focusedDinnerReelTouched = true;
-    });
-    results.addEventListener("recipe-reel-active", (event) => {
-      syncDinnerSelectionFromReel(event.detail?.recipeId, { restore: Boolean(event.detail?.restore) });
-    });
-  }
-
   function bindFocusedRecipeChoices() {
     $$("[data-focused-recipe]").forEach((button) => {
+      if (button.dataset.dinnerChoiceBound === "true") return;
+      button.dataset.dinnerChoiceBound = "true";
       button.addEventListener("click", () => {
         selectFocusedDinnerRecipe(button.dataset.focusedRecipe);
       });
@@ -738,8 +787,6 @@ export function createScheduleUi({
     focusedDinnerDraft = normalizeMealPlan(calendarMealForDateKey(focusedDinnerDateKey));
     const existing = focusedDinnerItem(focusedDinnerDraft);
     focusedDinnerChoosing = Boolean(options.choose) || !existing;
-    focusedDinnerOpenedToChoose = Boolean(options.choose);
-    focusedDinnerExistingRecipeId = existing?.recipeId || "";
     focusedDinnerSearch = "";
     const picker = initialDinnerPickerSelection({
       recipes: allRecipes(),
@@ -753,7 +800,6 @@ export function createScheduleUi({
     focusedDinnerMode = dinnerPickerMode(options.mode || DEFAULT_DINNER_PICKER_MODE);
     focusedDinnerAddingSide = false;
     focusedDinnerAdvanceError = "";
-    focusedDinnerReelTouched = false;
     renderFocusedDinner({ motion: true });
     globalThis.requestAnimationFrame?.(() => $(focusedDinnerChoosing ? "#focusedDinnerSearch" : "#focusedDinnerHeading")?.focus?.({ preventScroll: true }));
   }
@@ -826,7 +872,16 @@ export function createScheduleUi({
               </label>
             </div>
             <small class="meal-search-hint">${t("tapRecipeToAdd")}</small>
-            <div class="meal-recipe-results${searchState.open ? " is-open" : ""}" data-meal-recipe-results="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}">${searchState.open ? recipeResults(searchState.query, searchState.category, context, period.key) : ""}</div>
+            <section class="recipe-picks meal-recipe-picks" data-meal-recipe-picks="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}"${searchState.open && !`${searchState.query || ""}`.trim() && mealBrowsePicks(searchState.category).length ? "" : " hidden"}>
+              ${searchState.open ? `<h3 class="dinner-picker-picks-heading">${escapeHtml(t("recipePicksHeading"))}</h3><div class="recipe-picks-list">${mealPicksMarkup(searchState.category, context, period.key, searchState.query)}</div>` : ""}
+            </section>
+            <div class="recipe-browse-heading meal-browse-heading">
+              <div class="library-browse-layout segmented" role="group" aria-label="${escapeHtml(t("libraryBrowseLayout"))}">
+                <button type="button" data-meal-browse-layout="grid" data-meal-browse-context="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}" aria-pressed="${mealBrowseLayout === "grid" ? "true" : "false"}"${mealBrowseLayout === "grid" ? ` class="active"` : ""}>${escapeHtml(t("libraryBrowseGrid"))}</button>
+                <button type="button" data-meal-browse-layout="list" data-meal-browse-context="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}" aria-pressed="${mealBrowseLayout === "list" ? "true" : "false"}"${mealBrowseLayout === "list" ? ` class="active"` : ""}>${escapeHtml(t("libraryBrowseList"))}</button>
+              </div>
+            </div>
+            <div class="library-browse-${mealBrowseLayout === "list" ? "list" : "grid"}${searchState.open ? " is-open" : ""}" data-meal-recipe-results="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}">${searchState.open ? recipeResults(searchState.query, searchState.category, context, period.key) : ""}</div>
             <small class="meal-search-empty" data-meal-item-empty="${escapeHtml(context)}" data-period="${escapeHtml(period.key)}"${searchState.open && searchState.query.trim() && getRecipeCatalogStatus() === "ready" && !matchingRecipes(searchState.query, searchState.category).length ? "" : " hidden"}>${t("noRecipeMatches")}</small>
           </div>
         </details>
@@ -1008,9 +1063,21 @@ export function createScheduleUi({
       ));
       const matches = matchingRecipes(search.value, category);
       if (results) {
+        results.classList?.toggle?.("library-browse-grid", mealBrowseLayout !== "list");
+        results.classList?.toggle?.("library-browse-list", mealBrowseLayout === "list");
         results.innerHTML = recipeResults(search.value, category, context, period);
         results.classList?.add?.("is-open");
         onRecipeMediaRendered();
+      }
+      const picksRoot = $$(`[data-meal-recipe-picks^="${contextType}:"]`).find((control) => (
+        control.dataset.mealRecipePicks === context && control.dataset.period === period
+      ));
+      if (picksRoot) {
+        const pickMarkup = mealPicksMarkup(category, context, period, search.value);
+        picksRoot.hidden = !pickMarkup;
+        picksRoot.innerHTML = pickMarkup
+          ? `<h3 class="dinner-picker-picks-heading">${escapeHtml(t("recipePicksHeading"))}</h3><div class="recipe-picks-list">${pickMarkup}</div>`
+          : "";
       }
       const empty = $$(`[data-meal-item-empty^="${contextType}:"]`).find((item) => (
         item.dataset.mealItemEmpty === context && item.dataset.period === period
@@ -1053,9 +1120,29 @@ export function createScheduleUi({
       });
     });
 
-    $$(`[data-meal-recipe-results^="${contextType}:"]`).forEach((results) => {
-      results.addEventListener("click", async (event) => {
-        const button = event.target.closest("[data-add-meal-result]");
+    $$(`[data-meal-browse-layout][data-meal-browse-context^="${contextType}:"]`).forEach((button) => {
+      button.addEventListener("click", () => {
+        mealBrowseLayout = button.dataset.mealBrowseLayout === "list" ? "list" : "grid";
+        const context = button.dataset.mealBrowseContext;
+        const period = button.dataset.period;
+        const search = $$(`[data-meal-item-search^="${contextType}:"]`).find((control) => (
+          control.dataset.mealItemSearch === context && control.dataset.period === period
+        ));
+        const categoryFilter = $$(`[data-meal-category-filter^="${contextType}:"]`).find((control) => (
+          control.dataset.mealCategoryFilter === context && control.dataset.period === period
+        ));
+        $$("[data-meal-browse-layout]").forEach((control) => {
+          const on = control.dataset.mealBrowseLayout === mealBrowseLayout;
+          control.setAttribute?.("aria-pressed", on ? "true" : "false");
+          control.classList?.toggle?.("active", on);
+        });
+        if (search) updateMealSearch(search, categoryFilter);
+      });
+    });
+
+    function bindMealRecipeChoice(root) {
+      root.addEventListener("click", async (event) => {
+        const button = event.target.closest?.("[data-add-meal-result]");
         if (!button) return;
         const context = button.dataset.addMealResult;
         const period = button.dataset.period;
@@ -1074,7 +1161,10 @@ export function createScheduleUi({
         }];
         await persistMealTarget(context, target);
       });
-    });
+    }
+
+    $$(`[data-meal-recipe-results^="${contextType}:"]`).forEach(bindMealRecipeChoice);
+    $$(`[data-meal-recipe-picks^="${contextType}:"]`).forEach(bindMealRecipeChoice);
 
     $$(`[data-add-leftover-source^="${contextType}:"]`).forEach((select) => {
       select.addEventListener("change", () => {
