@@ -5,8 +5,8 @@ colors:
   ground: "#F5F1EA"
   paper: "#FFFFFF"
   ink: "#1A3A5C"
-  muted: "#7A7A7A"
-  rule: "#D9D4C8"
+  muted: "#746C63"
+  rule: "#E3DCD1"
   primary-action: "#1A3A5C"
   focus: "#AFCBFF"
   memory: "#CFE8D5"
@@ -18,17 +18,17 @@ colors:
   soft-blue: "#AFCBFF"
 typography:
   display:
-    fontFamily: "ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "clamp(2.35rem, 9vw, 4.8rem)"
-    fontWeight: 500
-    lineHeight: 1.05
-    letterSpacing: "-0.025em"
+    fontFamily: "ui-serif, Georgia, Iowan Old Style, Palatino Linotype, Palatino, Times New Roman, serif"
+    fontSize: "clamp(2.05rem, 7.5vw, 2.55rem)"
+    fontWeight: 680
+    lineHeight: 1.02
+    letterSpacing: "-0.045em"
   headline:
-    fontFamily: "ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
-    fontSize: "clamp(1.25rem, 4vw, 1.8rem)"
-    fontWeight: 500
-    lineHeight: 1.05
-    letterSpacing: "-0.025em"
+    fontFamily: "ui-serif, Georgia, Iowan Old Style, Palatino Linotype, Palatino, Times New Roman, serif"
+    fontSize: "clamp(1.28rem, 4.2vw, 1.72rem)"
+    fontWeight: 650
+    lineHeight: 1.08
+    letterSpacing: "-0.034em"
   body:
     fontFamily: "ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
     fontSize: "16px"
@@ -38,8 +38,8 @@ typography:
     fontSize: "0.78rem"
     fontWeight: 600
 rounded:
-  control: "8px"
-  sheet: "16px"
+  control: "14px"
+  sheet: "22px"
 spacing:
   space-1: "4px"
   space-2: "8px"
@@ -112,17 +112,17 @@ The system uses warm beige, white, navy, sage, and soft blue. Color supports hie
 
 ### Neutral
 
-- **Ground, paper, ink, muted, and rule:** use these for a nearly-flat mineral canvas, readable ceramic-paper content, secondary context, and structural separation. Texture is only implied through those surfaces; never use literal wood, stone, tile, or repeating/noise backgrounds behind content.
+- **Ground, paper, ink, muted, and rule:** use these for one continuous warm-paper canvas across Today, Plan, Shop, and Library. Do not give each tab its own page wash. Muted labels are a warm stone, quieter than titles. Texture is only implied through those surfaces; never use literal wood, stone, tile, or repeating/noise backgrounds behind content.
 
 **The State-First Color Rule.** Color clarifies a real state or a broad reading chapter; it never substitutes for labels, hierarchy, or navigation.
 
 ## Typography
 
-**Display Font:** the editorial reading stack in the frontmatter.
+**Display Font:** the system serif reading stack in the frontmatter. It is a platform face, not a downloaded webfont.
 
 **Body Font:** the platform-aware UI stack in the frontmatter.
 
-**Character:** Sans-serif type keeps meal names, recipe names, controls, labels, quantities, navigation, and status readable on a phone.
+**Character:** Serif titles carry page headings and recipe names. Sans-serif type keeps controls, labels, quantities, navigation, and status readable on a phone. Section labels stay sentence case, small, and warm-muted. A short meal kicker may use quiet uppercase tracking.
 
 ### Hierarchy
 
@@ -147,13 +147,13 @@ Plan uses Day → Meal → Recipe / dish / component. On phones, days stack vert
 
 ## Elevation & Depth
 
-Surfaces are flat at rest. Depth comes from paper, rules, tonal page washes, broad shaded chapters, and clear spacing. Shadows are reserved for temporary overlays such as menus, result popovers, or sheets that physically sit above the working document.
+The working page is one warm paper. Photo cards, day cards, and list cards may rest with a soft shadow and a larger radius. Depth for temporary overlays—menus, result popovers, and sheets—stays stronger than those resting cards.
 
-**The Flat-Working-Surface Rule.** Do not use resting shadows, nested cards, glass effects, or decorative side stripes to manufacture hierarchy. Use content order, type, spacing, rules, and tonal fields first.
+**The Quiet-Card Rule.** Do not nest a bordered card inside another card, and do not paint a different wash behind each tab. Use photo, type, spacing, and one soft elevation first. Sage marks a real state, such as today on the week, not a resting chip or a page background.
 
 ## Shapes
 
-Geometry is square and calm. Controls use the compact control radius; temporary sheets and media may use the larger sheet radius. Borders are quiet rules, not a substitute for hierarchy. Interactive controls maintain practical touch targets even when their visible label is compact.
+Cards and sheets use a soft radius. Controls stay compact. Borders are quiet rules, not a substitute for hierarchy. Interactive controls maintain practical touch targets even when their visible label is compact. Library and Choose dinner photos stay square inside the card.
 
 ## Components
 

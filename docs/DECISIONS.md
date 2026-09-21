@@ -1,5 +1,13 @@
 # Durable Decisions
 
+## 2026-09-21 — Phase 1 chrome is one paper, quiet nav, and soft photo cards
+
+**Decision:** Today, Plan, Shop, Library, and School Lunches share the warm paper ground. Do not restore a different page wash per tab. Titles use the system serif stack with tighter tracking; interface controls stay the system sans. Resting recipe, meal, and day cards use a slightly larger radius and a soft shadow. Bottom navigation is a hairline on the same paper, with a navy underline for the active tab. Sage is for a real state or a selected chip, not the resting color of every segment. Navy remains the primary action. Library and Choose dinner keep the square photo grid, short strip, and List switch.
+
+**Reason:** The household locked an Airbnb browse chrome crossed with NYT Cooking editorial food. The previous per-tab washes, harsh card borders, and loud sage chips made each destination feel like a different page.
+
+**Consequences:** This is presentation only. Meal save behavior, navigation scroll, recipe browse structure, and stored records stay as they are. A later phase may refine recipe-detail composition; it should not reintroduce per-tab washes or retail-loud buttons.
+
 ## 2026-09-21 — Choose dinner and Plan recipe search use the Library hybrid
 
 **Decision:** Choose dinner, Change dinner, and Plan’s add-to-meal recipe search use the same browse as Library: a short Favorites-and-recent strip (hidden while searching or when it has nothing to show) above a dense photo grid. Grid | List switches only that main browse area. Search and the existing filters stay. Choose dinner keeps All / Favorites / Sides; the Sides chip still only filters the browse, and Choose for dinner still writes a dinner main. Tapping a card selects it. The decision tray, Choose for dinner, review, and Confirm path are unchanged, and nothing is saved until Confirm. Do not mount the full-library native reel on these surfaces, and do not add a free XY pan.
