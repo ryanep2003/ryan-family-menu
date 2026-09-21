@@ -264,12 +264,13 @@ test("upload cards without photos still have a readable name fallback", () => {
   assert.equal(dinnerRecipeFallbackLabel("  "), "");
 });
 
-test("choose dinner defaults to the native field and keeps List as an opt-in", () => {
-  assert.equal(DEFAULT_DINNER_PICKER_MODE, "explore");
-  assert.equal(dinnerPickerMode(), "explore");
-  assert.equal(dinnerPickerMode("explore"), "explore");
+test("choose dinner defaults to the photo grid and keeps List as an opt-in", () => {
+  assert.equal(DEFAULT_DINNER_PICKER_MODE, "grid");
+  assert.equal(dinnerPickerMode(), "grid");
+  assert.equal(dinnerPickerMode("grid"), "grid");
+  assert.equal(dinnerPickerMode("explore"), "grid");
   assert.equal(dinnerPickerMode("list"), "list");
-  assert.equal(dinnerPickerMode("camera"), "explore");
+  assert.equal(dinnerPickerMode("camera"), "grid");
 });
 
 test("dinner stages name Today, picker, and review without inventing a fourth place", () => {
@@ -339,42 +340,31 @@ test("dinner stage motion uses view transitions only when motion is allowed", ()
   assert.equal(started, 1);
 });
 
-test("dinner field styles keep native snap and honor reduced motion", async () => {
+test("dinner browse uses the shared photo grid and honors reduced motion", async () => {
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
-  assert.match(css, /#focusedDinnerResults\.dinner-picker-explore\.recipe-native-reel/);
-  assert.match(css, /border-radius:\s*20px/);
+  assert.match(css, /\.library-browse-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /\.dinner-picker-results/);
+  assert.match(css, /\.dinner-picker \.library-grid-card\.is-selected/);
   assert.match(css, /@keyframes dinner-stage-enter/);
   assert.match(css, /prefers-reduced-motion: reduce[\s\S]*focused-dinner\.is-dinner-picker/);
-  assert.match(css, /\.dinner-picker-list \.focused-recipe-copy strong[\s\S]*white-space:\s*normal/);
+  assert.doesNotMatch(css, /#focusedDinnerResults\.dinner-picker-explore\.recipe-native-reel/);
   assert.doesNotMatch(css, /translate3d|perspective\(|rotateY\(/);
 });
 
-test("dinner Explore cards stack a full-width photo over a wrapping title", async () => {
+test("dinner grid cards reuse the square library photo, not a tall reel poster", async () => {
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
-  const exploreCard = css.match(/#focusedDinnerResults\.dinner-picker-explore\.recipe-native-reel > \.focused-recipe-result \{[^}]+\}/)?.[0];
-  const explorePhoto = css.match(/#focusedDinnerResults\.dinner-picker-explore\.recipe-native-reel \.recipe-photo-shell,[\s\S]*?border-radius:\s*20px;[\s\S]*?\}/)?.[0];
-  const exploreTitle = css.match(/#focusedDinnerResults\.dinner-picker-explore \.focused-recipe-copy strong \{[^}]+\}/)?.[0];
-  assert.match(exploreCard, /grid-template-columns:\s*minmax\(0,\s*1fr\)/);
-  assert.doesNotMatch(exploreCard, /grid-template-columns:\s*56px/);
-  assert.match(explorePhoto, /width:\s*100%/);
-  assert.match(exploreTitle, /white-space:\s*normal/);
-  assert.match(exploreTitle, /overflow-wrap:\s*break-word/);
-  assert.match(css, /#focusedDinnerResults\.dinner-picker-explore \.dinner-recipe-fallback-name \{\s*display:\s*none;/);
+  const gridPhoto = css.match(/\.library-grid-card \.recipe-photo-shell,[\s\S]*?border-radius:\s*0;\n\}/)?.[0];
+  assert.ok(gridPhoto);
+  assert.match(gridPhoto, /width:\s*100%/);
+  assert.match(gridPhoto, /aspect-ratio:\s*1 \/ 1/);
+  assert.doesNotMatch(css, /#focusedDinnerResults\.dinner-picker-explore/);
 });
 
-test("dinner List rows keep a 56px thumb beside a wrapping title column", async () => {
+test("dinner list rows reuse the library list card", async () => {
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
-  const listCard = css.match(/#focusedDinnerResults\.dinner-picker-list > \.focused-recipe-result,[\s\S]*?overflow:\s*hidden;\n\}/)?.[0];
-  const listCopy = css.match(/#focusedDinnerResults\.dinner-picker-list \.focused-recipe-copy strong,[\s\S]*?-webkit-box-orient:\s*unset;\n\}/)?.[0];
-  const listThumb = css.match(/#focusedDinnerResults\.dinner-picker-list \.recipe-photo-shell,[\s\S]*?object-fit:\s*cover;\n\}/)?.[0];
+  const listCard = css.match(/\.recipe-browse-card \.recipe-card \{[^}]+\}/)?.[0];
   assert.ok(listCard);
-  assert.match(listCard, /grid-template-columns:\s*56px minmax\(0,\s*1fr\) auto/);
-  assert.match(listCard, /grid-template-rows:\s*auto/);
-  assert.match(listCard, /height:\s*auto/);
-  assert.doesNotMatch(listCard, /grid-template-columns:\s*minmax\(0,\s*1fr\)/);
-  assert.match(listThumb, /width:\s*56px/);
-  assert.match(listThumb, /max-width:\s*56px/);
-  assert.match(listCopy, /overflow-wrap:\s*break-word/);
-  assert.match(listCopy, /word-break:\s*normal/);
-  assert.doesNotMatch(listCopy, /overflow-wrap:\s*anywhere/);
+  assert.match(listCard, /grid-template-columns:\s*64px minmax\(0,\s*1fr\)/);
+  assert.match(css, /\.library-browse-list\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  assert.match(css, /\.library-list-card \.recipe-card h3 \{[^}]*font-size:\s*1\.05rem/);
 });

@@ -27,9 +27,10 @@ GitHub main
 - `index.html`: household gate and all main views.
 - `app.js`: application bootstrap, in-memory state, persistence orchestration, navigation, shared rendering, and domain-module composition.
 - `styles.css`: design tokens, component styling, responsive layout, PWA-safe four-tab bottom navigation, the Plan dirty-save bar, the Action Assistant sheet, and motion preferences.
-- `recipe-reel.js` / `recipe-reel.css`: native overflow recipe discovery with CSS scroll-snap for Choose dinner Explore and Plan meal search. Active/near cards use IntersectionObserver; off-screen images are parked. Reel slides use one full-width column (photo over title) so Choose dinner Explore does not inherit the compact 56px list grid. Choose dinner List stays a horizontal row: 56px thumb plus a wrapping title column. Dinner Explore remounts lock to `data-reel-start` and center with viewport rects so the tray id and lit card stay the same on the desktop two-column picker. Library browse is not a reel: it uses a short Favorites/recent strip plus a photo grid. Do not add a transform carousel engine.
+- `recipe-browse.js`: shared Favorites/recent strip selection and recipe photo markup used by Library, Choose dinner, and Plan meal search.
+- `recipe-reel.js` / `recipe-reel.css`: dormant native overflow helper. It mounts only on an explicit `[data-recipe-reel-surface]`. Library, Choose dinner, and Plan meal search do not use it. Do not add a transform carousel engine or a free XY pan.
 - `plan-from-what-we-have.js`: deterministic, advisory dinner ranking from inventory, leftovers, recipes, family rules, prep time, and budget.
-- `dinner-flow.js`: Today open-dinner samples, choose-dinner filtering, exact recipe-id selection for field/list → review → confirm, and serving-count field rewrite helpers used by meal review. Missing recipe ids resolve to null and must not fall back to another catalog recipe. Meal recipe ids share the catalog’s 160-character bound. Choose dinner defaults to the native recipe reel (center-snap field); List stays available. All / Favorites / Sides chips filter the picker only; Choose for dinner always assigns `role: "main"`. Do not add a free XY pan or spatial camera.
+- `dinner-flow.js`: Today open-dinner samples, choose-dinner filtering, exact recipe-id selection for grid/list → review → confirm, and serving-count field rewrite helpers used by meal review. Missing recipe ids resolve to null and must not fall back to another catalog recipe. Meal recipe ids share the catalog’s 160-character bound. Choose dinner defaults to the Library hybrid: a short Favorites/recent strip plus a photo grid, with List as the other browse layout. All / Favorites / Sides chips filter the picker only; Choose for dinner always assigns `role: "main"`. Tapping a card selects it. Reel motion must not invent a selection. Do not add a free XY pan or spatial camera.
 
 Recipe catalog reads use `/.netlify/functions/recipes?view=catalog`, a text-only household-scoped response that omits embedded source photos. The browser stores a versioned, household-scoped stale-while-revalidate cache and keeps cached recipes visible when a refresh fails. The unqualified recipes endpoint remains available for older clients and full recipe writes.
 - `translations.js`: English and Spanish interface strings. Both languages must expose the same keys.
@@ -53,7 +54,7 @@ The initial remote collections use independent settled requests so one unavailab
 | Saved shopping lists | `shopping-list-logic.js`, versioned collection helpers | saved-list controls in `app.js` |
 | Inventory | `inventory-logic.js`, versioned collection helpers | `inventory-ui.js` |
 | Budget and receipts | `budget-logic.js`, shared family state | `budget-ui.js`, `receipt-ui.js` |
-| Recipes | `recipe-utils.js`, platform/household catalog, local drafts | `recipe-library-ui.js`, `recipe-form-ui.js`, `recipe-reel.js` |
+| Recipes | `recipe-utils.js`, platform/household catalog, local drafts | `recipe-library-ui.js`, `recipe-form-ui.js`, `recipe-browse.js` |
 | Household access | `household-access.js`, `api.js` | household gate in `index.html` |
 | PWA lifecycle | `app-lifecycle.js`, `storage-utils.js`, `sync-status.js` | install/update/status controls |
 

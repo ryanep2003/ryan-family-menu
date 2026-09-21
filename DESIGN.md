@@ -178,6 +178,7 @@ Geometry is square and calm. Controls use the compact control radius; temporary 
 - Plan empty meal slots use filled soft-blue Add controls; today’s day card uses a sage highlight.
 - Shop uses a full-width Shopping | At home switch and short aisle names. The list stays visually primary; only checked purchases reveal a compact direct action to move them to At Home. Receipt capture remains a secondary list tool.
 - Library search is the first control on that screen, ahead of a short Favorites & recent strip and the main photo grid. Grid | List switches only the main browse area. Add to a meal stays a soft-blue secondary action on the recipe screen and in list layout.
+- Choose dinner and Plan’s add-to-meal search use that same strip and photo grid. The strip hides while a search is active or when it is empty. Grid | List switches only the main browse area. On Choose dinner, tapping a card selects it for the decision tray; the meal is saved only from Confirm.
 
 ### School Lunches
 

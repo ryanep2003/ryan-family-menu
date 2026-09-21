@@ -215,6 +215,7 @@ test("native reel module does not measure every card on every scroll tick", asyn
   assert.match(source, /typeof HTMLElement !== "undefined"/);
   assert.doesNotMatch(source, /scrollLeftToCenter\(/);
   assert.doesNotMatch(source, /item\.offsetLeft/);
-  assert.match(source, /SURFACE_SELECTOR = "\.focused-recipe-results, \.meal-recipe-results"/);
+  assert.match(source, /SURFACE_SELECTOR = "\[data-recipe-reel-surface\]"/);
+  assert.doesNotMatch(source, /SURFACE_SELECTOR = "\.focused-recipe-results, \.meal-recipe-results"/);
   assert.doesNotMatch(source, /#recipeList/);
 });

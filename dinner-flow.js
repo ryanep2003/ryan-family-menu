@@ -20,10 +20,10 @@ export {
   rewriteCountFieldDisplay,
 };
 
-export const DEFAULT_DINNER_PICKER_MODE = "explore";
+export const DEFAULT_DINNER_PICKER_MODE = "grid";
 
 export function dinnerPickerMode(value) {
-  return value === "list" ? "list" : "explore";
+  return value === "list" ? "list" : "grid";
 }
 
 export function dinnerRecipeFallbackLabel(name) {

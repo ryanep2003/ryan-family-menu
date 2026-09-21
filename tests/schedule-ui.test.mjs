@@ -109,6 +109,8 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     "#dinnerFilterFavorites": element({ dataset: { dinnerFilter: "favorites" } }),
     "#dinnerFilterSides": element({ dataset: { dinnerFilter: "sides" } }),
     "#focusedDinnerResults": element(),
+    "#focusedDinnerSearch": element(),
+    "#focusedDinnerPicks": element({ hidden: true }),
     "#cancelDinnerReview": element(),
     "#comprehensivePlanner": element(),
     "#planningModeSwitch": element(),
@@ -295,6 +297,12 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
       dinnerPickerList: "List",
       dinnerPickerSelected: "Selected",
       dinnerPickerExploreHint: "Drag to explore",
+      libraryBrowseLayout: "Browse layout",
+      libraryBrowseGrid: "Grid",
+      libraryBrowseList: "List",
+      recipePicksHeading: "Favorites & recent",
+      recipePickFavorite: "Family favorite",
+      recipePickRecent: "Recently cooked",
       searchYourRecipes: "Search your recipes",
       confirmDinner: "Confirm dinner",
       cancelDinnerReview: "Cancel",
@@ -436,11 +444,11 @@ test("focused dinner search uses lazy compact imagery and keeps no-image results
 
   ui.openFocusedDinner("2026-06-22");
 
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /class="focused-recipe-result has-image"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /src="assets\/card-lemon-chicken\.webp"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /loading="lazy" decoding="async"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="another-main"/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-recipe-fallback[\s\S]*Another Main/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /recipe-photo-tile[\s\S]*Another Main/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /focused-recipe-results|dinner-picker-explore/);
 });
 
 test("planned meal can open groceries filtered to its date and meal period", async () => {
@@ -506,6 +514,10 @@ test("meal-period planning shows breakfast, lunch, and dinner together", () => {
   assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /data-period="lunchSalad"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /type="search"/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-recipe-results=/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /library-browse-grid/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-browse-layout="grid"/);
+  assert.match(elements["#weekDateEditor"].innerHTML, /data-meal-browse-layout="list"/);
+  assert.doesNotMatch(elements["#weekDateEditor"].innerHTML, /recipe-native-reel|focused-recipe-results/);
   assert.match(elements["#weekDateEditor"].innerHTML, /data-save-meal-context="weekdate:2026-06-22"/);
 });
 
@@ -563,7 +575,7 @@ test("recipe search exposes every matching recipe instead of truncating the fami
   assert.equal((weekRecipeResults.innerHTML.match(/data-add-meal-result=/g) || []).length, 17);
 });
 
-test("open dinner picker starts on the center-snap field with List available and does not save yet", () => {
+test("open dinner picker starts on the photo grid with a favorites strip and does not save yet", () => {
   const { elements, state, ui } = harness();
   state.schedule.mon = { ...emptyMeal };
   const savesBefore = state.saveCalls;
@@ -575,44 +587,45 @@ test("open dinner picker starts on the center-snap field with List available and
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="all"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="favorites"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-filter="sides"/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /focused-recipe-results dinner-picker-explore/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /library-browse-grid/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="grid"[^>]*aria-pressed="true"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="list"/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Drag to explore/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /Favorites &amp; recent/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /recipe-pick-card[\s\S]*data-focused-recipe="main-recipe"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choose for dinner/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /Choosing a recipe won/);
-  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-list/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /focused-recipe-results|dinner-picker-explore|Drag to explore|data-reel-start/);
   assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Make it a meal/);
   assert.equal(state.saveCalls, savesBefore);
 });
 
-test("List remains a first-class alternative to the dinner field", async () => {
+test("List remains a first-class alternative to the dinner grid", async () => {
   const { elements, ui } = harness();
   elements["#comprehensivePlanner"].hidden = false;
 
   ui.openFocusedDinner("2026-06-22", "", { choose: true, mode: "list" });
 
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-list/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="explore"/);
-  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-picker-explore/);
-  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /Drag to explore/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /library-browse-list/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="grid"/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /library-browse-grid|dinner-picker-explore|Drag to explore/);
 
-  elements["#dinnerPickerMode"].dataset.dinnerMode = "explore";
+  elements["#dinnerPickerMode"].dataset.dinnerMode = "grid";
   await elements["#dinnerPickerMode"].dispatch("click");
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /focused-recipe-results dinner-picker-explore/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /library-browse-grid/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-dinner-mode="list"/);
 });
 
-test("explore remounts keep the already selected dinner centered", () => {
+test("selecting a grid card keeps that recipe pressed without a reel lock", () => {
   const { elements, state, ui } = harness();
   state.schedule.mon = { ...emptyMeal };
 
   ui.openFocusedDinner("2026-06-22");
   ui.selectFocusedDinnerRecipe("another-main");
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-reel-start="another-main"/);
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /data-reel-start=/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="another-main"[^>]*aria-pressed="true"/);
 });
 
-test("List then Explore remounts lock the reel to the tray recipe", async () => {
+test("List and Grid keep the tray recipe selected", async () => {
   const extraRecipes = [
     { id: "picadillo", name: "Picadillo Tacos", category: "main" },
     { id: "cheesy-chicken", name: "Cheesy Chicken and Rice Casserole", category: "main" },
@@ -625,19 +638,33 @@ test("List then Explore remounts lock the reel to the tray recipe", async () => 
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Picadillo Tacos/);
   assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /data-reel-start=/);
 
-  elements["#dinnerPickerMode"].dataset.dinnerMode = "explore";
+  elements["#dinnerPickerMode"].dataset.dinnerMode = "grid";
   await elements["#dinnerPickerMode"].dispatch("click");
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /focused-recipe-results dinner-picker-explore/);
-  assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-reel-start="picadillo"/);
+  assert.match(elements["#focusedDinnerPanel"].innerHTML, /library-browse-grid/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /data-focused-recipe="picadillo"[^>]*aria-pressed="true"/);
   assert.match(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Picadillo Tacos/);
   assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /dinner-decision-tray[\s\S]*Cheesy Chicken and Rice Casserole/);
 });
 
-test("List to Explore asks the reel to recenter the tray recipe", async () => {
+test("dinner search hides the favorites strip and the picker does not mount a reel", async () => {
+  const { elements, state, ui } = harness();
+  state.schedule.mon = { ...emptyMeal };
+  ui.openFocusedDinner("2026-06-22");
+  assert.doesNotMatch(elements["#focusedDinnerPanel"].innerHTML, /id="focusedDinnerPicks"[^>]*hidden/);
+
+  elements["#focusedDinnerSearch"].value = "salad";
+  await elements["#focusedDinnerSearch"].dispatch("input");
+  assert.equal(elements["#focusedDinnerPicks"].hidden, true);
+  assert.equal(elements["#focusedDinnerPicks"].innerHTML, "");
+
+  elements["#focusedDinnerSearch"].value = "";
+  await elements["#focusedDinnerSearch"].dispatch("input");
+  assert.equal(elements["#focusedDinnerPicks"].hidden, false);
+  assert.match(elements["#focusedDinnerPicks"].innerHTML, /data-focused-recipe="main-recipe"/);
+
   const source = await readFile(new URL("../schedule-ui.js", import.meta.url), "utf8");
-  assert.match(source, /syncReelToRecipeId\(results, focusedDinnerSelectedId\)/);
-  assert.match(source, /dataset\.reelStart = focusedDinnerSelectedId/);
+  assert.doesNotMatch(source, /syncReelToRecipeId|focused-recipe-results|recipe-native-reel/);
+  assert.match(source, /libraryStripRecipes/);
 });
 
 test("selecting recipe A then B reviews and confirms B even if recipeById falls back", async () => {
