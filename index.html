@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=199" />
+    <link rel="stylesheet" href="styles.css?v=200" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -811,9 +811,13 @@
           </div>
         </div>
         <section class="recipe-detail" id="recipeDetail" hidden>
+          <button class="text-action detail-back" id="closeRecipeDetail" type="button" data-i18n="backToRecipes">Back to recipes</button>
+          <aside class="recipe-hero" id="recipePhotoRegion" hidden>
+            <h3 class="visually-hidden" data-i18n="sourcePhotos">Source photos</h3>
+            <div class="photo-strip" id="photoStrip"></div>
+          </aside>
           <div class="detail-context-bar">
             <div class="detail-title-group">
-              <button class="text-action detail-back" id="closeRecipeDetail" type="button" data-i18n="backToRecipes">Back to recipes</button>
               <div>
                 <h2 id="detailName" tabindex="-1">A 100% Chance of Meatballs</h2>
                 <p id="detailMeta">Makes 18 meatballs · 1 hour · Mess 2/4</p>
@@ -929,11 +933,6 @@
               <h3 data-i18n="notes">Family notes</h3>
               <p id="familyNotes"></p>
             </article>
-
-            <aside id="recipePhotoRegion" hidden>
-              <h3 data-i18n="sourcePhotos">Source photos</h3>
-              <div class="photo-strip" id="photoStrip"></div>
-            </aside>
           </div>
         </section>
         <section class="recipe-picks" id="recipePicksSection" aria-labelledby="recipePicksHeading" hidden>
@@ -1106,6 +1105,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=199"></script>
+    <script type="module" src="app.js?v=200"></script>
   </body>
 </html>
