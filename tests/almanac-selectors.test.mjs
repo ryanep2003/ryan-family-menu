@@ -56,17 +56,20 @@ test("family visual system uses the locked navy and sage tokens", async () => {
   assert.match(css, /--ground: #F5F1EA/);
 });
 
-test("family screens keep distinct page atmosphere without leftover undeclared tokens", async () => {
+test("family screens share one paper ground without leftover undeclared tokens", async () => {
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 
   for (const view of ["today", "schedule", "grocery", "recipes"]) {
     assert.match(css, new RegExp(`body\\[data-view="${view}"\\]`));
   }
-  assert.match(css, /--page-wash-primary: color-mix\(in srgb, var\(--memory\)/);
+  assert.match(css, /--page-wash-primary: var\(--ground\)/);
+  assert.doesNotMatch(css, /--page-wash-primary: color-mix/);
   assert.match(css, /--surface-clay: #FFFFFF/);
   assert.match(css, /--surface-herb: #CFE8D5/);
   assert.match(css, /--surface-utility: #FFFFFF/);
-  assert.match(css, /\.recipe-browse[\s\S]*background: var\(--surface-utility\)/);
+  const recipeBrowseRule = css.match(/\.recipe-browse\s*\{([^}]*)\}/)?.[1] || "";
+  assert.match(recipeBrowseRule, /background: transparent/);
+  assert.doesNotMatch(recipeBrowseRule, /surface-utility/);
   const recipeBannerRule = css.match(/\.recipe-banner\s*\{([^}]*)\}/)?.[1] || "";
   assert.doesNotMatch(recipeBannerRule, /min-height:\s*12rem/);
   assert.match(recipeBannerRule, /background: transparent/);
