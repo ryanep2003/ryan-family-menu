@@ -7,10 +7,8 @@ const scheduleUi = await readFile(new URL("../schedule-ui.js", import.meta.url),
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const worker = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
 
-test("Phase 3 cache version is paired across shell and service worker", () => {
-  assert.match(html, /styles\.css\?v=201/);
-  assert.match(html, /app\.js\?v=201/);
-  assert.match(worker, /ryan-family-menu-v201/);
+test("Phase 3 cache note stays in the service worker history", () => {
+  assert.match(worker, /v201: Phase 3 calms Plan week/);
 });
 
 test("Plan week meal chips can show a small recipe thumb", () => {

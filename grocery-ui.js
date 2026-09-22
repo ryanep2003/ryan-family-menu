@@ -1,5 +1,6 @@
 import { allLocalizedText, canonicalText, localizedTextExact, usableLocalizedText } from "./localized-data.js";
 import { linesMatchLanguage, textMatchesLanguage } from "./language-quality.js";
+import { cardPhotoFor, cardPhotoIsGenerated, recipeTileTone } from "./recipe-utils.js";
 import {
   collapseGroceryItemsByDisplayName,
   formatCompactGroceryMealCue,
@@ -144,6 +145,43 @@ export function createGroceryUi({
   function touchItem(item) {
     item.updatedBy = getHouseholdMember();
     item.updatedAt = new Date().toISOString();
+  }
+
+  function linkedRecipes(item) {
+    const recipes = [];
+    const seen = new Set();
+    const add = (recipe) => {
+      if (!recipe?.id || seen.has(recipe.id)) return;
+      seen.add(recipe.id);
+      recipes.push(recipe);
+    };
+    add(recipeForGroceryItem(item));
+    mealUsesFor(item).forEach((use) => {
+      if (!use.recipeId) return;
+      add(allRecipes().find((recipe) => recipe.id === use.recipeId) || null);
+    });
+    return recipes;
+  }
+
+  function displayableRecipePhoto(recipe) {
+    if (!recipe || cardPhotoIsGenerated(recipe)) return "";
+    const src = `${cardPhotoFor(recipe) || ""}`.trim();
+    // Inline photo blobs can be hundreds of kilobytes. Repeating them on every
+    // aisle row would make the shopping list heavy on a phone, so only a short
+    // existing reference (an asset path or remote URL) becomes a thumb.
+    if (!src || src.startsWith("data:") || src.length > 2048) return "";
+    return src;
+  }
+
+  function groceryLeadingMark(item) {
+    const recipes = linkedRecipes(item);
+    if (!recipes.length) return "";
+    const src = recipes.map(displayableRecipePhoto).find(Boolean) || "";
+    if (src) {
+      return `<img class="grocery-item-mark" src="${escapeHtml(src)}" alt="" loading="lazy" decoding="async" />`;
+    }
+    const tone = recipeTileTone(recipes[0]);
+    return `<span class="grocery-item-mark is-soft tone-${tone}" aria-hidden="true"></span>`;
   }
 
   function recipeForGroceryItem(item) {
@@ -330,10 +368,12 @@ export function createGroceryUi({
           const activity = formatItemActivity(item);
           const store = item.store && item.store !== "any" ? groceryStoreLabel(item.store) : "";
           const mealMeta = groceryMealMetaParts(item);
+          const leadingMark = groceryLeadingMark(item);
           return `
             <article class="grocery-item-row${inventoryDecisionFor(item) === "review" ? " inventory-review" : ""}${item.checked && inventoryDecisionFor(item) !== "review" ? " is-checked" : " is-unchecked"}">
-              <label class="grocery-item">
+              <label class="grocery-item${leadingMark ? " has-mark" : ""}">
                 <input type="checkbox" data-grocery-id="${escapeHtml(item.id)}" data-collapsed-ids="${escapeHtml(rowIds.join("|"))}" ${item.checked && inventoryDecisionFor(item) !== "review" ? "checked" : ""} />
+                ${leadingMark}
                   <span>
                     <strong>${escapeHtml(parts.name)}</strong>
                     ${mealMeta.inline}

@@ -153,7 +153,7 @@ The working page is one warm paper. Browse photos and recipe heroes sit on that 
 
 ## Shapes
 
-Cards and sheets use a soft radius. Controls stay compact. Borders are quiet rules, not a substitute for hierarchy. Interactive controls maintain practical touch targets even when their visible label is compact. Library and Choose dinner photos are tall and rounded, with the name on the page under the photo. Recipe detail leads with one large hero, then a cleaner title block, quieter secondary photos, and ingredients and steps as a reading stack. Plan week day rows stay on the paper with rule separators rather than stacked white cards.
+Cards and sheets use a soft radius. Controls stay compact. Borders are quiet rules, not a substitute for hierarchy. Interactive controls maintain practical touch targets even when their visible label is compact. Library and Choose dinner photos are tall and rounded, with the name on the page under the photo. Recipe detail leads with one large hero, then a cleaner title block, quieter secondary photos, and ingredients and steps as a reading stack. Cook along continues that reading: one large serif step, a quiet step count, and a single navy next action. Timers and voice stay secondary text actions. Plan week day rows stay on the paper with rule separators rather than stacked white cards.
 
 ## Components
 
@@ -176,7 +176,7 @@ Cards and sheets use a soft radius. Controls stay compact. Borders are quiet rul
 - While Plan has unsaved meal changes, a navy Save bar stays fixed above the bottom nav so a long week scroll cannot hide Save / Guardar cambios.
 - Today’s Plan & shop band uses a navy Shopping list action and a filled soft-blue Find a recipe action.
 - Plan empty meal slots use filled soft-blue Add controls; today’s day card uses a sage highlight.
-- Shop uses a full-width Shopping | At home switch and short aisle names. The list stays visually primary; only checked purchases reveal a compact direct action to move them to At Home. Receipt capture remains a secondary list tool.
+- Shop uses a full-width Shopping | At home switch and short aisle names. Aisles are one continuous paper list: a sentence-case serif label, a quiet count, and hairline rows. Unchecked names stay in ink; checked names recede with a strikethrough. A small recipe photo leads a row only when that item already maps to a short recipe photo reference; otherwise a soft tone mark stands in, and manually added items have no mark. The add row is an underline field. The list stays visually primary; only checked purchases reveal a compact direct action to move them to At Home. Receipt capture remains a secondary list tool.
 - Library search is the first control on that screen, ahead of a short Favorites & recent strip and the main photo grid. Grid | List switches only the main browse area. Add to a meal stays a soft-blue secondary action on the recipe screen and in list layout.
 - Choose dinner and Plan’s add-to-meal search use that same strip and photo grid. The strip hides while a search is active or when it is empty. Grid | List switches only the main browse area. On Choose dinner, tapping a card selects it for the decision tray; the meal is saved only from Confirm.
 

@@ -55,10 +55,10 @@ export function createCookAlongUi({ $, t, localize, escapeHtml, getLang = () => 
     const currentStep = steps[stepIndex] || "";
     const complete = stepIndex >= steps.length;
     panel.innerHTML = complete ? `
-      <div class="cook-along-heading">
-        <div><p class="section-label">${t("cookAlongLabel")}</p><h3>${t("cookAlongComplete")}</h3></div>
-        <button class="text-button" type="button" data-cook-close>${t("close")}</button>
-      </div>
+      <header class="cook-along-heading">
+        <div><p class="cook-along-kicker">${t("cookAlongLabel")}</p><h3>${t("cookAlongComplete")}</h3></div>
+        <button class="text-button cook-along-close" type="button" data-cook-close>${t("close")}</button>
+      </header>
       <p class="cook-along-helper">${t("cookAlongFinishHelper")}</p>
       <form class="cook-along-finish" data-cook-finish>
         <label><span>${t("cookAlongServings")}</span><input name="servings" type="number" min="0.5" max="100" step="0.5" inputmode="decimal" value="${escapeHtml(session.servings)}" /></label>
@@ -70,10 +70,10 @@ export function createCookAlongUi({ $, t, localize, escapeHtml, getLang = () => 
         <button class="primary-action" type="submit">${t("cookAlongSave")}</button>
       </form>
     ` : `
-      <div class="cook-along-heading">
-        <div><p class="section-label">${t("cookAlongLabel")}</p><h3>${escapeHtml(localize(recipe.name))}</h3></div>
-        <button class="text-button" type="button" data-cook-close>${t("close")}</button>
-      </div>
+      <header class="cook-along-heading">
+        <div><p class="cook-along-kicker">${t("cookAlongLabel")}</p><h3>${escapeHtml(localize(recipe.name))}</h3></div>
+        <button class="text-button cook-along-close" type="button" data-cook-close>${t("close")}</button>
+      </header>
       <p class="cook-along-progress">${t("cookAlongStep").replace("{current}", stepIndex + 1).replace("{total}", steps.length)}</p>
       <article class="cook-along-step"><p>${escapeHtml(localize(currentStep))}</p></article>
       <div class="cook-along-actions">
