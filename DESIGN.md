@@ -147,13 +147,13 @@ Plan uses Day → Meal → Recipe / dish / component. On phones, days stack vert
 
 ## Elevation & Depth
 
-The working page is one warm paper. Browse photos and recipe heroes sit on that paper without a resting card. Day and meal rows separate with a rule. Depth for temporary overlays—menus, result popovers, and sheets—stays stronger than the page.
+The working page is one warm paper. Browse photos and recipe heroes sit on that paper without a resting card. Day and meal rows separate with a rule. Plan week reads like a calm calendar list: serif day labels, uppercase meal labels, soft-blue empty Add slots, and small photo thumbs on filled meals when a real recipe photo exists. Recipe detail leads with one large hero, a strong title block, quieter secondary source photos, and ingredients/steps as a plain reading stack. Depth for temporary overlays—menus, result popovers, and sheets—stays stronger than the page.
 
 **The Quiet-Card Rule.** Do not nest a bordered card inside another card, and do not paint a different wash behind each tab. Use photo, type, spacing, and one soft elevation first. Sage marks a real state, such as today on the week, not a resting chip or a page background.
 
 ## Shapes
 
-Cards and sheets use a soft radius. Controls stay compact. Borders are quiet rules, not a substitute for hierarchy. Interactive controls maintain practical touch targets even when their visible label is compact. Library and Choose dinner photos are tall and rounded, with the name on the page under the photo. Recipe detail leads with one large hero, then ingredients and steps.
+Cards and sheets use a soft radius. Controls stay compact. Borders are quiet rules, not a substitute for hierarchy. Interactive controls maintain practical touch targets even when their visible label is compact. Library and Choose dinner photos are tall and rounded, with the name on the page under the photo. Recipe detail leads with one large hero, then a cleaner title block, quieter secondary photos, and ingredients and steps as a reading stack. Plan week day rows stay on the paper with rule separators rather than stacked white cards.
 
 ## Components
 

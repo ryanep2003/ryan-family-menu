@@ -838,7 +838,15 @@ export function createScheduleUi({
           ${items.length ? items.map((item) => {
             const recipe = recipeById(item.recipeId);
             if (!recipe) return "";
-            return `<article class="meal-item-row">
+            const hasPhoto = !cardPhotoIsGenerated(recipe) && Boolean(cardPhotoFor(recipe));
+            const canHydratePhoto = !hasPhoto && recipe.hasSourcePhotos;
+            const rowThumb = hasPhoto
+              ? `<img class="meal-item-thumb" src="${escapeHtml(cardPhotoFor(recipe))}" alt="" loading="lazy" decoding="async" />`
+              : canHydratePhoto
+                ? `<span class="meal-item-thumb recipe-photo-shell" data-recipe-photo-id="${escapeHtml(recipe.id)}" data-recipe-photo-alt="" aria-hidden="true"></span>`
+                : "";
+            return `<article class="meal-item-row${rowThumb ? " has-thumb" : ""}">
+              ${rowThumb}
               <button class="meal-item-open" type="button" data-open="${escapeHtml(recipe.id)}">
                 <strong>${escapeHtml(localize(recipe.name))}</strong>
                 <span>${item.sourceType === "leftover"
@@ -1304,19 +1312,29 @@ export function createScheduleUi({
         const weekday = day[lang].slice(0, 3);
         const dateLabel = rangeFormatter.format(day.date);
         const slots = mealPeriods.map((period) => {
-          const names = recipes
-            .filter((item) => item.period === period.key)
+          const periodRecipes = recipes.filter((item) => item.period === period.key);
+          const names = periodRecipes
             .map((item) => localize(item.recipe.name))
             .filter(Boolean);
           const filled = names.length > 0;
-          return `<div class="week-day-slot">
+          const lead = periodRecipes.find((item) => item.recipe && !cardPhotoIsGenerated(item.recipe) && cardPhotoFor(item.recipe));
+          const thumbSrc = lead ? cardPhotoFor(lead.recipe) : "";
+          const hydrateLead = !thumbSrc
+            ? periodRecipes.find((item) => item.recipe?.hasSourcePhotos)
+            : null;
+          const thumb = thumbSrc
+            ? `<img class="week-day-meal-thumb" src="${escapeHtml(thumbSrc)}" alt="" loading="lazy" decoding="async" />`
+            : hydrateLead
+              ? `<span class="week-day-meal-thumb recipe-photo-shell" data-recipe-photo-id="${escapeHtml(hydrateLead.recipe.id)}" data-recipe-photo-alt="" aria-hidden="true"></span>`
+              : "";
+          return `<div class="week-day-slot${filled ? " is-filled" : " is-empty"}">
             <span>${escapeHtml(t(period.label))}</span>
             <button
-              class="${filled ? "week-day-meal" : "week-day-add"}"
+              class="${filled ? `week-day-meal${thumb ? " has-thumb" : ""}` : "week-day-add"}"
               type="button"
               data-edit-week-date="${day.dateKey}"
               data-plan-period="${escapeHtml(period.key)}"
-            >${filled ? escapeHtml(names.join(", ")) : escapeHtml(t("planAddSlot"))}</button>
+            >${filled ? `${thumb}<span class="week-day-meal-name">${escapeHtml(names.join(", "))}</span>` : escapeHtml(t("planAddSlot"))}</button>
           </div>`;
         }).join("");
         return `
@@ -1369,6 +1387,8 @@ export function createScheduleUi({
         $("#weekEditorHeading").focus({ preventScroll: true });
       });
     });
+    onRecipeMediaRendered(grid);
+    onRecipeMediaRendered(editor);
   }
 
   function monthName(date) {
@@ -1499,6 +1519,7 @@ export function createScheduleUi({
         ${hasOverride ? `<button class="text-action calendar-inherit" type="button" data-use-weekly-plan="${selectedCalendarDateKey}">${t("useWeeklyPlan")}</button>` : ""}
       `;
       bindMealControls("calendar");
+      onRecipeMediaRendered(editor);
     }
 
     $$("[data-edit-calendar-date]").forEach((button) => {
