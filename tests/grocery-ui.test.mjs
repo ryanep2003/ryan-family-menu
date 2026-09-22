@@ -709,3 +709,68 @@ test("manual shop items keep punctuation, slashes, and thousands commas in the r
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /<strong>QA long weird item<\/strong>/);
   assert.doesNotMatch(elements["#groceryList"].innerHTML, /<strong>000 g<\/strong>/);
 });
+
+test("grocery rows show a recipe photo or a soft mark only when a recipe is already linked", () => {
+  const photo = harness({
+    state: {
+      lang: "en",
+      groceries: [{
+        id: "lemons",
+        text: { en: "4 lemons" },
+        checked: false,
+        store: "any",
+        source: "week-plan",
+        recipeId: "lemon-chicken",
+      }],
+      recipes: [{
+        id: "lemon-chicken",
+        name: { en: "Lemon Chicken" },
+        cardPhoto: "assets/card-lemon-chicken.webp",
+        ingredients: { en: ["4 lemons"] },
+      }],
+    },
+  });
+  photo.ui.renderGroceries();
+  assert.match(photo.elements["#groceryList"].innerHTML, /class="grocery-item has-mark"/);
+  assert.match(photo.elements["#groceryList"].innerHTML, /class="grocery-item-mark" src="assets\/card-lemon-chicken\.webp"/);
+
+  const inline = harness({
+    state: {
+      lang: "en",
+      groceries: [{
+        id: "lemons",
+        text: { en: "4 lemons" },
+        checked: false,
+        store: "any",
+        source: "week-plan",
+        recipeId: "lemon-chicken",
+      }],
+      recipes: [{
+        id: "lemon-chicken",
+        name: { en: "Lemon Chicken" },
+        cardPhoto: "data:image/webp;base64,AAAA",
+        ingredients: { en: ["4 lemons"] },
+      }],
+    },
+  });
+  inline.ui.renderGroceries();
+  assert.match(inline.elements["#groceryList"].innerHTML, /grocery-item-mark is-soft tone-/);
+  assert.doesNotMatch(inline.elements["#groceryList"].innerHTML, /src="data:image/);
+
+  const manual = harness({
+    state: {
+      lang: "en",
+      groceries: [{
+        id: "milk",
+        text: { en: "milk" },
+        checked: false,
+        source: "manual",
+        store: "any",
+      }],
+      recipes: [],
+    },
+  });
+  manual.ui.renderGroceries();
+  assert.doesNotMatch(manual.elements["#groceryList"].innerHTML, /grocery-item-mark/);
+  assert.doesNotMatch(manual.elements["#groceryList"].innerHTML, /has-mark/);
+});

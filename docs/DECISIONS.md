@@ -1,5 +1,13 @@
 # Durable Decisions
 
+## 2026-09-22 — Phase 4 Shop and Cook join the editorial paper
+
+**Decision:** Shop is one continuous paper list. Aisle names are sentence-case serif labels with a quiet count, not boxed category bars or count pills. Unchecked items stay in ink; checked items recede with a strikethrough and no sage wash. A row may lead with a recipe photo only when that item already maps to a short photo reference (an asset path or remote URL). Inline photo blobs stay off the list and use a soft tone mark instead. Manually added items have no mark. The add row is an underline field. Cook along is a reading step on the recipe page: a large serif instruction, a quiet step count, text-level timer and voice actions, and one navy next action. Cache moves to v202 with the styles/app query pair.
+
+**Reason:** Library, Plan, and recipe detail already read as Airbnb browse crossed with NYT Cooking. Shop and Cook still felt like checklist chrome.
+
+**Consequences:** Presentation only. Grocery merge, check-off, aisle grouping, and cook timer behavior stay as they are. Do not put the sage checked wash, quantity pills, or boxed cook panel back.
+
 ## 2026-09-22 — Phase 3 Plan week and recipe detail finish the editorial read
 
 **Decision:** Plan week keeps rule-separated days and soft-blue empty Add slots, with clearer day hierarchy, quieter today highlighting, and small photo thumbs on filled meal chips when a real recipe photo exists. Recipe detail pushes further toward magazine reading: a taller hero, quieter secondary source photos, a stronger title block, and ingredients/steps as a plain reading stack. Shop aisle headers and School Lunches tomorrow cards lose resting card chrome where they still looked boxier than Today/Library. Cache moves to v201 with the styles/app query pair.
