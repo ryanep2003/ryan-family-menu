@@ -1,4 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v200";
+const CACHE_NAME = "ryan-family-menu-v201";
+// v201: Phase 3 calms Plan week and polishes recipe detail toward magazine reading.
 // v200: Phase 2 photo browse uses taller cards, a dinner hero, and a recipe hero on the same paper.
 // v199: Phase 1 chrome uses one paper ground, quieter nav, and softer photo cards.
 // v198: Choose dinner and Plan recipe search use the Library strip plus photo grid.

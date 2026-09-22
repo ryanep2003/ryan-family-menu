@@ -1,5 +1,13 @@
 # Durable Decisions
 
+## 2026-09-22 — Phase 3 Plan week and recipe detail finish the editorial read
+
+**Decision:** Plan week keeps rule-separated days and soft-blue empty Add slots, with clearer day hierarchy, quieter today highlighting, and small photo thumbs on filled meal chips when a real recipe photo exists. Recipe detail pushes further toward magazine reading: a taller hero, quieter secondary source photos, a stronger title block, and ingredients/steps as a plain reading stack. Shop aisle headers and School Lunches tomorrow cards lose resting card chrome where they still looked boxier than Today/Library. Cache moves to v201 with the styles/app query pair.
+
+**Reason:** Phase 2 made browse photo-first; Plan week and recipe detail still read denser and more boxed than the locked Airbnb × NYT Cooking direction.
+
+**Consequences:** Presentation only. Meal save behavior, sticky Save, navigation scroll, and stored records stay as they are. Do not restore nested day cards or boxy recipe panels.
+
 ## 2026-09-21 — Phase 2 browse is photo-first on the same paper
 
 **Decision:** Library and Choose dinner grid cards are tall rounded photos (4:5) with the recipe name on the page under the photo. The Favorites & recent strip uses that same photo, only larger. Today’s planned dinner is a wide photo, then the name and Cook action on the paper. Recipe detail opens with a large hero, then the name, then ingredients and steps in one stack. Day rows, breakfast/lunch rows, and the recipe “add to a meal” block separate with rules instead of nested paper cards. Keep the Phase 1 paper ground, serif titles, and navy underline. Keep Grid | List and the strip-plus-grid structure.
