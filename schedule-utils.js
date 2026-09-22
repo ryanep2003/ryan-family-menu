@@ -515,3 +515,117 @@ export function removeRecipeFromPlans(
     ),
   };
 }
+
+function cleanWeekStartKey(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(`${value || ""}`) ? `${value}` : "";
+}
+
+function planMaps(serverMap, localMap, baseMap) {
+  const server = serverMap && typeof serverMap === "object" ? serverMap : {};
+  const local = localMap && typeof localMap === "object" ? localMap : {};
+  const base = baseMap && typeof baseMap === "object" ? baseMap : {};
+  const keys = new Set([...Object.keys(server), ...Object.keys(local), ...Object.keys(base)]);
+  return Object.fromEntries([...keys].map((key) => [
+    key,
+    JSON.stringify(local[key]) !== JSON.stringify(base[key]) ? local[key] : server[key],
+  ]).filter(([, value]) => value !== undefined));
+}
+
+export function mergePlanRecords(server = {}, local = {}, base = {}) {
+  return {
+    schedule: planMaps(server?.schedule, local?.schedule, base?.schedule),
+    calendarMeals: planMaps(server?.calendarMeals, local?.calendarMeals, base?.calendarMeals),
+    weekStartKey: local?.weekStartKey !== base?.weekStartKey ? (local?.weekStartKey || "") : (server?.weekStartKey || ""),
+  };
+}
+
+function plansDiffer(left = {}, right = {}) {
+  return JSON.stringify(left.schedule) !== JSON.stringify(right.schedule)
+    || JSON.stringify(left.calendarMeals) !== JSON.stringify(right.calendarMeals)
+    || (left.weekStartKey || "") !== (right.weekStartKey || "");
+}
+
+// Unsent Plan edits stay on this phone until the schedule record Plan reloads accepts them.
+export function normalizePlanPending(value) {
+  if (!value || typeof value !== "object") return null;
+  const baseVersion = Number(value.baseVersion);
+  if (!Number.isFinite(baseVersion) || baseVersion < 0) return null;
+  const baseSource = value.base && typeof value.base === "object" ? value.base : {};
+  return {
+    schedule: normalizeSchedule(value.schedule),
+    calendarMeals: normalizeCalendar(value.calendarMeals),
+    weekStartKey: cleanWeekStartKey(value.weekStartKey),
+    baseVersion,
+    allowEmptySchedule: value.allowEmptySchedule === true,
+    base: {
+      schedule: normalizeSchedule(baseSource.schedule),
+      calendarMeals: normalizeCalendar(baseSource.calendarMeals),
+      weekStartKey: cleanWeekStartKey(baseSource.weekStartKey),
+    },
+  };
+}
+
+export function reconcileLoadedPlan({ server, pending } = {}) {
+  const serverPlan = {
+    schedule: normalizeSchedule(server?.schedule),
+    calendarMeals: normalizeCalendar(server?.calendarMeals),
+    weekStartKey: cleanWeekStartKey(server?.weekStartKey),
+    version: Number(server?.version) || 0,
+  };
+  const local = normalizePlanPending(pending);
+  if (!local) {
+    return { ...serverPlan, pending: false, retry: false, allowEmptySchedule: false, base: null };
+  }
+
+  const merged = local.baseVersion === serverPlan.version
+    ? {
+      schedule: local.schedule,
+      calendarMeals: local.calendarMeals,
+      weekStartKey: local.weekStartKey || serverPlan.weekStartKey,
+    }
+    : mergePlanRecords(serverPlan, local, local.base);
+  const next = {
+    schedule: normalizeSchedule(merged.schedule),
+    calendarMeals: normalizeCalendar(merged.calendarMeals),
+    weekStartKey: cleanWeekStartKey(merged.weekStartKey) || serverPlan.weekStartKey,
+  };
+  if (!plansDiffer(next, serverPlan)) {
+    return { ...serverPlan, pending: false, retry: false, allowEmptySchedule: false, base: null };
+  }
+  return {
+    ...next,
+    version: serverPlan.version,
+    pending: true,
+    retry: true,
+    allowEmptySchedule: local.allowEmptySchedule === true,
+    base: {
+      schedule: serverPlan.schedule,
+      calendarMeals: serverPlan.calendarMeals,
+      weekStartKey: serverPlan.weekStartKey,
+    },
+  };
+}
+
+export function planSavePresentation({
+  dirty = false,
+  saving = false,
+  pending = false,
+  saved = false,
+  blocked = false,
+  view = "",
+} = {}) {
+  if (blocked) return { state: "clean", visible: false, showButton: false };
+  if (saving) return { state: "saving", visible: true, showButton: true };
+  if (pending || dirty) {
+    return {
+      state: pending ? "pending" : "dirty",
+      visible: true,
+      showButton: true,
+    };
+  }
+  if (saved) {
+    const onPlan = view === "" || view === "schedule";
+    return { state: "saved", visible: onPlan, showButton: false };
+  }
+  return { state: "clean", visible: false, showButton: false };
+}

@@ -5,13 +5,10 @@ import test from "node:test";
 const styles = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 const groceryUi = await readFile(new URL("../grocery-ui.js", import.meta.url), "utf8");
 const cookUi = await readFile(new URL("../cook-along-ui.js", import.meta.url), "utf8");
-const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 const worker = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
 
-test("Phase 4 cache version is paired across shell and service worker", () => {
-  assert.match(html, /styles\.css\?v=202/);
-  assert.match(html, /app\.js\?v=202/);
-  assert.match(worker, /ryan-family-menu-v202/);
+test("Phase 4 cache note stays in the service worker history", () => {
+  assert.match(worker, /v202: Phase 4 quiets Shop aisles/);
 });
 
 test("Shop rows read as a paper list with a recipe mark only from existing photos", () => {

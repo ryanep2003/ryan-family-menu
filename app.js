@@ -8,7 +8,7 @@ import {
   mergeGroceries,
   replacePlannedGroceries,
 } from "./grocery-logic.js";
-import { bindInstallPrompt, registerServiceWorker } from "./app-lifecycle.js";
+import { bindInstallPrompt, registerServiceWorker, viewScrollAfterChange } from "./app-lifecycle.js";
 import {
   normalizeSharedState,
   normalizeRecipeFeedback,
@@ -99,9 +99,12 @@ import {
   mealRoles,
   formatDateKey,
   mealHasContent,
+  mergePlanRecords,
   normalizeCalendar,
   normalizeMealPlan,
+  normalizePlanPending,
   normalizeSchedule,
+  reconcileLoadedPlan,
   removeRecipeFromPlans,
   plannedServings,
   cookingServings,
@@ -143,6 +146,7 @@ function applyViewPageTitle(viewName = document.body.dataset.view || "today") {
 
 function applyStaticTranslations() {
   document.documentElement.lang = lang;
+  document.title = t("eyebrow");
   document.querySelectorAll("[data-i18n]").forEach((node) => {
     node.textContent = t(node.dataset.i18n);
   });
@@ -191,6 +195,8 @@ let sharedStateVersion = readNumberStorage(householdStorage, "dinner-state-versi
 let sharedStateBaseState = null;
 let pendingRemoteSharedData = null;
 let scheduleVersion = readNumberStorage(householdStorage, "dinner-schedule-version", 0);
+const schedulePendingKey = "dinner-schedule-pending";
+let schedulePending = normalizePlanPending(readJsonStorage(householdStorage, schedulePendingKey, null));
 let scheduleBase = null;
 let scheduleSaveInFlight = null;
 let scheduleSaveQueued = false;
@@ -1081,33 +1087,46 @@ function persistScheduleLocally() {
 }
 
 function mergeSchedule(server, local, base) {
-  const mergeMap = (serverMap = {}, localMap = {}, baseMap = {}) => {
-    const keys = new Set([...Object.keys(serverMap), ...Object.keys(localMap), ...Object.keys(baseMap)]);
-    return Object.fromEntries([...keys].map((key) => [
-      key,
-      JSON.stringify(localMap[key]) !== JSON.stringify(baseMap[key]) ? localMap[key] : serverMap[key],
-    ]).filter(([, value]) => value !== undefined));
-  };
+  return mergePlanRecords(server, local, base);
+}
+
+function planFromSchedulePayload(data) {
+  const next = data?.schedule && data.schedule.schedule ? data.schedule : data;
   return {
-    schedule: mergeMap(server.schedule, local.schedule, base?.schedule),
-    calendarMeals: mergeMap(server.calendarMeals, local.calendarMeals, base?.calendarMeals),
-    weekStartKey: local.weekStartKey !== base?.weekStartKey ? local.weekStartKey : server.weekStartKey,
+    schedule: normalizeSchedule(next?.schedule),
+    calendarMeals: normalizeCalendar(next?.calendarMeals),
+    weekStartKey: /^\d{4}-\d{2}-\d{2}$/.test(next?.weekStartKey || "") ? next.weekStartKey : "",
+    version: Number(data?.version) || 0,
   };
 }
 
+function writeSchedulePending(pending) {
+  schedulePending = normalizePlanPending(pending);
+  try {
+    if (!schedulePending) householdStorage.removeItem(schedulePendingKey);
+    else householdStorage.setItem(schedulePendingKey, JSON.stringify(schedulePending));
+  } catch {
+    console.warn("Meal plan changes could not be cached on this device.");
+  }
+}
+
+function clearSchedulePending() {
+  writeSchedulePending(null);
+}
+
 function applyScheduleRecord(data) {
-  const next = data?.schedule && data.schedule.schedule ? data.schedule : data;
-  schedule = normalizeSchedule(next?.schedule || schedule);
-  calendarMeals = normalizeCalendar(next?.calendarMeals || calendarMeals);
-  if (next?.weekStartKey) weekStartKey = next.weekStartKey;
-  scheduleVersion = Number(data?.version) || 0;
+  const next = planFromSchedulePayload(data);
+  schedule = next.schedule;
+  calendarMeals = next.calendarMeals;
+  if (next.weekStartKey) weekStartKey = next.weekStartKey;
+  scheduleVersion = next.version;
   scheduleAuthoritativeLoaded = true;
   scheduleBase = cloneVersionedValue({ schedule, calendarMeals, weekStartKey });
   persistScheduleLocally();
 }
 
 async function saveSchedule({ retrying = false, allowEmptySchedule = false } = {}) {
-  setSharedRetryAction(() => saveSchedule({ retrying: false }));
+  setSharedRetryAction(() => saveSchedule({ retrying: false, allowEmptySchedule }));
   if (scheduleSaveInFlight && !retrying) {
     scheduleSaveQueued = true;
     return scheduleSaveInFlight;
@@ -1116,10 +1135,19 @@ async function saveSchedule({ retrying = false, allowEmptySchedule = false } = {
     let saved = false;
     let conflictRetried = retrying;
     try {
+      scheduleUi?.notePlanPersistence?.({ dirty: true, saving: true, pending: false, saved: false });
       do {
         scheduleSaveQueued = false;
         const savedDirtySnapshot = dirtySnapshotForSurface("schedule");
         const local = { schedule, calendarMeals, weekStartKey };
+        writeSchedulePending({
+          schedule: local.schedule,
+          calendarMeals: local.calendarMeals,
+          weekStartKey: local.weekStartKey,
+          baseVersion: scheduleVersion,
+          allowEmptySchedule,
+          base: scheduleBase || local,
+        });
         persistScheduleLocally();
         try {
           const data = await putJson("/.netlify/functions/schedule", {
@@ -1135,37 +1163,60 @@ async function saveSchedule({ retrying = false, allowEmptySchedule = false } = {
             saved = true;
             continue;
           }
+          clearSchedulePending();
           applyScheduleRecord(data);
           clearAreaStatus("shared");
           if (activityDirty) await saveLedger("activity");
           clearDirtySnapshot(savedDirtySnapshot);
           saved = true;
         } catch (error) {
-          if (error.status === 409 && !conflictRetried) {
-            const server = {
-              schedule: normalizeSchedule(error.data?.schedule),
-              calendarMeals: normalizeCalendar(error.data?.calendarMeals),
-              weekStartKey: error.data?.weekStartKey || weekStartKey,
-            };
+          if (error.status === 409 && error.data?.code === "empty-overwrite-blocked") {
+            const serverPlan = planFromSchedulePayload(error.data);
+            schedule = serverPlan.schedule;
+            calendarMeals = serverPlan.calendarMeals;
+            if (serverPlan.weekStartKey) weekStartKey = serverPlan.weekStartKey;
+            scheduleVersion = serverPlan.version > 0 ? serverPlan.version : scheduleVersion;
+            scheduleAuthoritativeLoaded = true;
+            scheduleBase = cloneVersionedValue({ schedule, calendarMeals, weekStartKey });
+            clearSchedulePending();
+            persistScheduleLocally();
+            render();
+            setSyncStatus("shared", "emptyOverwriteBlocked", { state: "error" });
+            saved = "blocked";
+            scheduleSaveQueued = false;
+          } else if (error.status === 409 && !conflictRetried) {
+            const server = planFromSchedulePayload(error.data);
             const merged = mergeSchedule(server, local, scheduleBase || server);
             schedule = normalizeSchedule(merged.schedule);
             calendarMeals = normalizeCalendar(merged.calendarMeals);
             weekStartKey = merged.weekStartKey || weekStartKey;
-            scheduleVersion = Number(error.data?.version) || scheduleVersion;
-            scheduleBase = cloneVersionedValue(server);
+            scheduleVersion = server.version > 0 ? server.version : scheduleVersion;
+            scheduleBase = cloneVersionedValue({
+              schedule: server.schedule,
+              calendarMeals: server.calendarMeals,
+              weekStartKey: server.weekStartKey || weekStartKey,
+            });
             persistScheduleLocally();
             render();
             conflictRetried = true;
             scheduleSaveQueued = true;
             saved = false;
             continue;
+          } else {
+            setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
+            saved = false;
           }
-          setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
-          saved = false;
         }
       } while (scheduleSaveQueued);
       return saved;
     } finally {
+      scheduleUi?.notePlanPersistence?.({
+        dirty: saved === false,
+        saving: false,
+        pending: saved === false,
+        saved: saved === true,
+        blocked: saved === "blocked",
+      });
       if (scheduleSaveInFlight === run) scheduleSaveInFlight = null;
     }
   })();
@@ -1177,12 +1228,42 @@ async function loadSchedule() {
   setSharedRetryAction(() => loadSchedule());
   try {
     const data = await getJson("/.netlify/functions/schedule", "Could not load the meal plan.");
+    const serverPlan = planFromSchedulePayload(data);
+    if (scheduleAuthoritativeLoaded && serverPlan.version < scheduleVersion && !schedulePending) return true;
+    const reconciled = reconcileLoadedPlan({ server: serverPlan, pending: schedulePending });
+    if (reconciled.pending) {
+      schedule = reconciled.schedule;
+      calendarMeals = reconciled.calendarMeals;
+      weekStartKey = reconciled.weekStartKey || weekStartKey;
+      scheduleVersion = serverPlan.version;
+      scheduleAuthoritativeLoaded = true;
+      scheduleBase = cloneVersionedValue(reconciled.base || {
+        schedule: serverPlan.schedule,
+        calendarMeals: serverPlan.calendarMeals,
+        weekStartKey: serverPlan.weekStartKey,
+      });
+      writeSchedulePending({
+        schedule,
+        calendarMeals,
+        weekStartKey,
+        baseVersion: scheduleVersion,
+        allowEmptySchedule: reconciled.allowEmptySchedule,
+        base: scheduleBase,
+      });
+      persistScheduleLocally();
+      render();
+      scheduleUi?.notePlanPersistence?.({ dirty: true, pending: true, saving: false, saved: false });
+      if (reconciled.retry) void saveSchedule({ allowEmptySchedule: reconciled.allowEmptySchedule === true });
+      return true;
+    }
     applyScheduleRecord(data);
+    clearSchedulePending();
     render();
     return true;
   } catch (error) {
     console.warn(error);
     setSyncStatus("shared", "sharedMenuUnavailable", { state: "error", canRetry: true });
+    if (schedulePending) scheduleUi?.notePlanPersistence?.({ dirty: true, pending: true, saving: false, saved: false });
     return false;
   }
 }
@@ -1981,6 +2062,11 @@ async function restoreAuditSnapshot(snapshotId) {
     schedule: snapshot.schedule,
     calendarMeals: snapshot.calendarMeals,
   }, currentSharedState());
+  // The schedule record is authoritative after load. Apply the snapshot meals
+  // before shared-state merge, or Restore would write the live plan again.
+  schedule = normalizeSchedule(restored.schedule);
+  calendarMeals = normalizeCalendar(restored.calendarMeals);
+  if (restored.weekStartKey) weekStartKey = restored.weekStartKey;
   applySharedState(restored);
   persistScheduleLocally();
   saveSharedStateLocally();
@@ -2081,6 +2167,7 @@ function renderPlanFromHome() {
 
 function renderTranslations() {
   document.documentElement.lang = lang;
+  document.title = t("eyebrow");
   $$("[data-i18n]").forEach((node) => {
     node.textContent = t(node.dataset.i18n);
   });
@@ -2833,8 +2920,17 @@ function render() {
   queueRecipePhotoHydration();
 }
 
+const viewScrollMemory = new Map();
+
 function setView(viewName) {
-  const viewChanged = document.body.dataset.view !== viewName;
+  const previousView = document.body.dataset.view || "";
+  const scroll = viewScrollAfterChange({
+    positions: viewScrollMemory,
+    previousView,
+    nextView: viewName,
+    currentScroll: window.scrollY || document.documentElement?.scrollTop || 0,
+  });
+  const viewChanged = previousView !== viewName;
   $$(".view").forEach((view) => view.classList.toggle("active", view.id === `${viewName}View`));
   const tabView = viewName === "add" ? "recipes" : viewName === "lunches" ? "schedule" : viewName;
   $$(".tabs button").forEach((button) => {
@@ -2852,7 +2948,8 @@ function setView(viewName) {
   }
   document.body.dataset.view = viewName;
   applyViewPageTitle(viewName);
-  if (viewChanged) window.scrollTo({ top: 0, behavior: "auto" });
+  if (viewChanged && scroll.scrollTop !== null) window.scrollTo({ top: scroll.scrollTop, behavior: "auto" });
+  scheduleUi?.refreshPlanSaveBar?.();
   $("#recipeDetail").hidden = true;
   $("#recipesView").classList.remove("detail-open");
   if (viewName !== "today" && $("#quickGuide") && $("#quickGuideToggle")) {
@@ -3431,6 +3528,7 @@ $$("[data-scroll-to]").forEach((button) => {
 });
 
 scheduleUi.bindScheduleControls();
+if (schedulePending) scheduleUi.notePlanPersistence({ dirty: true, pending: true, saving: false, saved: false });
 
 dashboardUi.bindDashboardControls();
 

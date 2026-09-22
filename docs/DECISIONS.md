@@ -1,5 +1,13 @@
 # Durable Decisions
 
+## 2026-09-22 — Phase 5 Plan save, tab scroll, and Spanish chrome
+
+**Decision:** Plan edits are trustworthy only when they land on the household `schedule` record that Plan reloads. Until that write succeeds, keep the edit in household-scoped `dinner-schedule-pending` and show the navy Save bar (dirty, saving, or waiting). After the schedule record accepts it, Plan shows a quiet saved confirmation and hides the Save button. A reload must not replace that pending edit with the older schedule record. An empty overwrite stays blocked unless the person confirmed Clear week; the phone puts the saved meals back instead of looking empty. Restore this menu copies the snapshot into the schedule fields before saving shared state and the schedule record. Bottom tabs restore the scroll position they had when the person left. Spanish “Menú familiar” and “Volver a Hoy” stay on one line on a phone. Cache moves to v203 with the styles/app query pair.
+
+**Reason:** Meals could disappear on reload when a save had not reached the schedule record, Restore could write the live plan back over a snapshot, and Spanish chrome was clipped or wrapped in the phone header and family banner.
+
+**Consequences:** No new meal-plan model, Blob store, or record key. The pending key is local only and safe for older clients to ignore. Do not hide the Save bar while a plan edit is still dirty or waiting. Do not scroll a returning tab back to the top.
+
 ## 2026-09-22 — Phase 4 Shop and Cook join the editorial paper
 
 **Decision:** Shop is one continuous paper list. Aisle names are sentence-case serif labels with a quiet count, not boxed category bars or count pills. Unchecked items stay in ink; checked items recede with a strikethrough and no sage wash. A row may lead with a recipe photo only when that item already maps to a short photo reference (an asset path or remote URL). Inline photo blobs stay off the list and use a soft tone mark instead. Manually added items have no mark. The add row is an underline field. Cook along is a reading step on the recipe page: a large serif instruction, a quiet step count, text-level timer and voice actions, and one navy next action. Cache moves to v202 with the styles/app query pair.

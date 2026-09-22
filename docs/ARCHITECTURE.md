@@ -153,7 +153,7 @@ The current Content Security Policy keeps scripts, styles, images, and connectio
 
 - `app.js`: application wiring and most shared workflow orchestration.
 - `netlify/functions/family-state.js`: the largest persisted record sanitizer.
-- `schedule-utils.js` and `schedule-ui.js`: canonical meals, legacy compatibility, portions, leftovers, next-week calendar persist, and the always-visible Plan save bar.
+- `schedule-utils.js` and `schedule-ui.js`: canonical meals, legacy compatibility, portions, leftovers, next-week calendar persist, the Plan save bar, and the local pending plan reconciled on reload. `app.js` restores each bottom tab’s scroll position when that tab is opened again.
 - `grocery-logic.js`: quantity aggregation, inventory coverage, generation idempotency, and typed Shop add names.
 - `translations.js`: every interface string in both languages.
 - `service-worker.js`: manual static module list.

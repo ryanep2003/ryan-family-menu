@@ -2,7 +2,7 @@ import { allLocalizedText, localizedText, updateLocalizedText } from "./localize
 import { renderHandoffDetails } from "./handoff-ui.js";
 import { libraryStripRecipes, recipeBrowsePhotoMarkup } from "./recipe-browse.js";
 import { cardPhotoFor, cardPhotoIsGenerated } from "./recipe-utils.js";
-import { applyPersistedMealTarget, cleanRecipeId, countFieldIsIncomplete, rewriteCountFieldDisplay } from "./schedule-utils.js";
+import { applyPersistedMealTarget, cleanRecipeId, countFieldIsIncomplete, planSavePresentation, rewriteCountFieldDisplay } from "./schedule-utils.js";
 import {
   applyDinnerItemRole,
   applyDinnerServingField,
@@ -96,9 +96,14 @@ export function createScheduleUi({
   let focusedDinnerStage = "";
   const mealSearchState = new Map();
   let mealBrowseLayout = "grid";
-  let planDirty = false;
-  let planSaveBarHideTimer = 0;
-  let planSaveContext = "";
+  let planSaveFlags = {
+    dirty: false,
+    saving: false,
+    saved: false,
+    pending: false,
+    blocked: false,
+    context: "",
+  };
 
   function planSaveBarElements() {
     return {
@@ -108,58 +113,55 @@ export function createScheduleUi({
     };
   }
 
-  function syncPlanSaveBar({
-    dirty = planDirty,
-    saving = false,
-    saved = false,
-    pending = false,
-    context = planSaveContext,
-  } = {}) {
-    const { bar, button, status } = planSaveBarElements();
-    planDirty = Boolean(dirty);
-    planSaveContext = context || planSaveContext;
-    if (planSaveBarHideTimer) {
-      globalThis.clearTimeout?.(planSaveBarHideTimer);
-      planSaveBarHideTimer = 0;
+  function syncPlanSaveBar(update) {
+    const next = update ? { ...planSaveFlags, ...update } : planSaveFlags;
+    if (next.blocked) {
+      planSaveFlags = { dirty: false, saving: false, saved: false, pending: false, blocked: false, context: next.context || "" };
+    } else {
+      const dirty = Boolean(next.dirty);
+      const saving = Boolean(next.saving);
+      const pending = Boolean(next.pending);
+      planSaveFlags = {
+        dirty,
+        saving,
+        pending,
+        saved: Boolean(next.saved) && !dirty && !saving && !pending,
+        blocked: false,
+        context: next.context || planSaveFlags.context || "",
+      };
     }
-    const show = planDirty || saving || pending || saved;
+    const view = globalThis.document?.body?.dataset?.view || "";
+    const presentation = planSavePresentation({ ...planSaveFlags, view });
+    const { bar, button, status } = planSaveBarElements();
     if (bar) {
-      bar.hidden = !show;
-      bar.setAttribute("data-plan-save-state", saving
-        ? "saving"
-        : pending
-          ? "pending"
-          : saved
-            ? "saved"
-            : planDirty
-              ? "dirty"
-              : "clean");
+      bar.hidden = !presentation.visible;
+      bar.setAttribute("data-plan-save-state", presentation.state);
     }
     if (status) {
-      status.textContent = saving
+      status.textContent = presentation.state === "saving"
         ? t("mealChangeSaving")
-        : pending
+        : presentation.state === "pending"
           ? t("mealChangePending")
-          : saved
+          : presentation.state === "saved"
             ? t("mealChangeSaved")
-            : planDirty
+            : presentation.state === "dirty"
               ? t("planUnsavedHint")
               : "";
     }
     if (button) {
-      button.disabled = Boolean(saving);
-      if (planSaveContext) button.dataset.saveMealContext = planSaveContext;
+      button.disabled = Boolean(planSaveFlags.saving);
+      button.hidden = !presentation.showButton;
+      if (planSaveFlags.context) button.dataset.saveMealContext = planSaveFlags.context;
     }
-    globalThis.document?.body?.classList?.toggle("plan-save-bar-visible", Boolean(show));
-    if (saved && !planDirty && bar) {
-      planSaveBarHideTimer = globalThis.setTimeout?.(() => {
-        if (planDirty) return;
-        const current = planSaveBarElements();
-        if (current.bar) current.bar.hidden = true;
-        if (current.status) current.status.textContent = "";
-        globalThis.document?.body?.classList?.remove("plan-save-bar-visible");
-      }, 1600);
-    }
+    globalThis.document?.body?.classList?.toggle("plan-save-bar-visible", presentation.visible);
+  }
+
+  function notePlanPersistence(flags = {}) {
+    syncPlanSaveBar(flags);
+  }
+
+  function refreshPlanSaveBar() {
+    syncPlanSaveBar();
   }
 
   function renderPlanningMode() {
@@ -1037,25 +1039,30 @@ export function createScheduleUi({
       status.textContent = t("mealChangeSaving");
       status.classList.add("pending");
     }
-    syncPlanSaveBar({ dirty: true, saving: true, context: context || planSaveContext });
+    syncPlanSaveBar({ dirty: true, saving: true, context: context || planSaveFlags.context });
     let saved = false;
     try {
       saved = await saveSchedule();
     } catch {
       saved = false;
     }
+    const blocked = saved === "blocked";
+    const failed = saved === false;
     const currentStatus = $(`[data-meal-save-status="${context}"]`);
     if (currentStatus) {
-      currentStatus.textContent = t(saved === false ? "mealChangePending" : "mealChangeSaved");
-      currentStatus.classList.toggle("pending", saved === false);
+      currentStatus.textContent = blocked
+        ? t("emptyOverwriteBlocked")
+        : t(failed ? "mealChangePending" : "mealChangeSaved");
+      currentStatus.classList.toggle("pending", failed);
     }
     if (button) button.disabled = false;
     syncPlanSaveBar({
-      dirty: saved === false,
+      dirty: failed,
       saving: false,
-      saved: saved !== false,
-      pending: saved === false,
-      context: context || planSaveContext,
+      saved: !failed && !blocked,
+      pending: failed,
+      blocked,
+      context: context || planSaveFlags.context,
     });
     return saved;
   }
@@ -1553,10 +1560,10 @@ export function createScheduleUi({
 
   function bindScheduleControls() {
     $("#planSaveBarButton")?.addEventListener("click", async () => {
-      await saveMealContext($("#planSaveBarButton")?.dataset?.saveMealContext || planSaveContext);
+      await saveMealContext($("#planSaveBarButton")?.dataset?.saveMealContext || planSaveFlags.context);
     });
     globalThis.addEventListener?.("beforeunload", (event) => {
-      if (!planDirty) return;
+      if (!planSaveFlags.dirty && !planSaveFlags.pending && !planSaveFlags.saving) return;
       event.preventDefault();
       event.returnValue = "";
     });
@@ -1648,7 +1655,9 @@ export function createScheduleUi({
   return {
     bindScheduleControls,
     closeFocusedDinner,
+    notePlanPersistence,
     openFocusedDinner,
+    refreshPlanSaveBar,
     renderCalendar,
     renderFocusedDinner,
     renderSchedule,
