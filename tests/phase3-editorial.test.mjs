@@ -22,7 +22,7 @@ test("Plan week meal chips can show a small recipe thumb", () => {
 });
 
 test("recipe detail keeps a magazine hero and quieter secondary photos", () => {
-  assert.match(styles, /\.recipe-hero \.photo-strip img:first-child\s*\{[\s\S]*aspect-ratio: 4 \/ 5/s);
+  assert.match(styles, /\.recipe-hero \.photo-strip img:first-child\s*\{[\s\S]*aspect-ratio: 5 \/ 4/s);
   assert.match(styles, /\.recipe-hero \.photo-strip img\s*\{[\s\S]*opacity: \.88/s);
   assert.match(styles, /\.detail-title-group h2\s*\{[\s\S]*clamp\(2rem/s);
   assert.match(styles, /#ingredientList li\s*\{[\s\S]*border-bottom:/s);

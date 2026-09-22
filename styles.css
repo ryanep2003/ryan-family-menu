@@ -1154,13 +1154,12 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
   flex: 1 0 100%;
   width: 100%;
   max-height: 34rem;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 5 / 4;
   border-radius: 0;
   opacity: 1;
 }
 .recipe-hero .photo-strip img:first-child:only-child {
-  aspect-ratio: 5 / 4;
-  max-height: 30rem;
+  max-height: 32rem;
 }
 .photo-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr)); gap: var(--space-2); }
 .photo-strip img { width: 100%; aspect-ratio: 4 / 3; border-radius: var(--radius-sheet); object-fit: cover; }
@@ -1807,7 +1806,7 @@ body.plan-save-bar-visible #scheduleView { padding-bottom: calc(var(--bottom-nav
   .today-story.is-planned-dinner.has-photo .today-image img { width: 100%; height: auto; max-height: 28rem; aspect-ratio: 4 / 3; border-radius: var(--radius-sheet); }
   .recipe-hero { margin-inline: 0; }
   .recipe-hero .photo-strip img:first-child { border-radius: var(--radius-sheet); max-height: 36rem; }
-  .recipe-hero .photo-strip img:first-child:only-child { aspect-ratio: 5 / 4; max-height: 32rem; }
+  .recipe-hero .photo-strip img:first-child:only-child { max-height: 34rem; }
   .focused-dinner { max-width: 44rem; }
   .focused-dinner-confirmation { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-6); }
   .focused-eating { grid-column: 1 / -1; }
