@@ -1,8 +1,16 @@
 # Durable Decisions
 
+## 2026-09-21 — Phase 2 browse is photo-first on the same paper
+
+**Decision:** Library and Choose dinner grid cards are tall rounded photos (4:5) with the recipe name on the page under the photo. The Favorites & recent strip uses that same photo, only larger. Today’s planned dinner is a wide photo, then the name and Cook action on the paper. Recipe detail opens with a large hero, then the name, then ingredients and steps in one stack. Day rows, breakfast/lunch rows, and the recipe “add to a meal” block separate with rules instead of nested paper cards. Keep the Phase 1 paper ground, serif titles, and navy underline. Keep Grid | List and the strip-plus-grid structure.
+
+**Reason:** Phase 1 softened the chrome, and the household still read it as the previous app. The locked direction is Airbnb’s quiet photo browse crossed with NYT Cooking’s hero-then-text recipe page.
+
+**Consequences:** This is presentation only. Meal save behavior, navigation scroll, stored records, and the List row stay as they are. Do not put the page washes back, and do not turn the grid into the old full-screen reel.
+
 ## 2026-09-21 — Phase 1 chrome is one paper, quiet nav, and soft photo cards
 
-**Decision:** Today, Plan, Shop, Library, and School Lunches share the warm paper ground. Do not restore a different page wash per tab. Titles use the system serif stack with tighter tracking; interface controls stay the system sans. Resting recipe, meal, and day cards use a slightly larger radius and a soft shadow. Bottom navigation is a hairline on the same paper, with a navy underline for the active tab. Sage is for a real state or a selected chip, not the resting color of every segment. Navy remains the primary action. Library and Choose dinner keep the square photo grid, short strip, and List switch.
+**Decision:** Today, Plan, Shop, Library, and School Lunches share the warm paper ground. Do not restore a different page wash per tab. Titles use the system serif stack with tighter tracking; interface controls stay the system sans. Bottom navigation is a hairline on the same paper, with a navy underline for the active tab. Sage is for a real state or a selected chip, not the resting color of every segment. Navy remains the primary action. Library and Choose dinner keep the short strip, photo grid, and List switch. Phase 2, recorded above, replaces the square photo and resting card with a taller photo on the page.
 
 **Reason:** The household locked an Airbnb browse chrome crossed with NYT Cooking editorial food. The previous per-tab washes, harsh card borders, and loud sage chips made each destination feel like a different page.
 

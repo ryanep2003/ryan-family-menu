@@ -351,12 +351,12 @@ test("dinner browse uses the shared photo grid and honors reduced motion", async
   assert.doesNotMatch(css, /translate3d|perspective\(|rotateY\(/);
 });
 
-test("dinner grid cards reuse the square library photo, not a tall reel poster", async () => {
+test("dinner grid cards reuse the tall library photo, not a reel poster", async () => {
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
-  const gridPhoto = css.match(/\.library-grid-card \.recipe-photo-shell,[\s\S]*?border-radius:\s*0;\n\}/)?.[0];
+  const gridPhoto = css.match(/\.library-grid-card \.recipe-photo-shell,[\s\S]*?border-radius:\s*16px;\n\}/)?.[0];
   assert.ok(gridPhoto);
   assert.match(gridPhoto, /width:\s*100%/);
-  assert.match(gridPhoto, /aspect-ratio:\s*1 \/ 1/);
+  assert.match(gridPhoto, /aspect-ratio:\s*4 \/ 5/);
   assert.doesNotMatch(css, /#focusedDinnerResults\.dinner-picker-explore/);
 });
 

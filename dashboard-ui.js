@@ -139,8 +139,13 @@ export function createDashboardUi({
       ].map((period) => {
         const items = recipesForMeal.filter((item) => item.period === period.key);
         const recipes = items.map((item) => item.recipe).filter(Boolean);
-        return `<button class="today-also-row" type="button"${recipes[0] ? ` data-open-today-recipe="${escapeHtml(recipes[0].id)}"` : ` data-plan-today-period="${escapeHtml(period.key)}"`}>
-          <span class="today-also-icon" aria-hidden="true"></span>
+        const lead = recipes[0];
+        const photo = lead && !cardPhotoIsGenerated(lead) ? cardPhotoFor(lead) : "";
+        const media = photo
+          ? `<img class="today-also-photo" src="${escapeHtml(photo)}" alt="" />`
+          : `<span class="today-also-icon" aria-hidden="true"></span>`;
+        return `<button class="today-also-row" type="button"${lead ? ` data-open-today-recipe="${escapeHtml(lead.id)}"` : ` data-plan-today-period="${escapeHtml(period.key)}"`}>
+          ${media}
           <span class="today-also-copy">
             <strong>${escapeHtml(t(period.label))}</strong>
             <small>${recipes.length
