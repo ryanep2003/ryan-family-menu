@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=202" />
+    <link rel="stylesheet" href="styles.css?v=203" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -67,9 +67,9 @@
 
     <header class="app-header">
       <div class="app-header-top">
-        <div class="brand-lockup" aria-label="Family Menu">
+        <div class="brand-lockup" aria-label="Family Menu" data-i18n-aria-label="eyebrow">
           <span class="brand-mark" aria-hidden="true">F</span>
-          <span class="brand-name">Family Menu</span>
+          <span class="brand-name eyebrow" data-i18n="eyebrow">Family Menu</span>
         </div>
         <div class="header-actions">
           <button class="guide-button" id="quickGuideToggle" type="button" aria-controls="quickGuide" aria-expanded="false" data-i18n="quickGuide">Quick guide</button>
@@ -463,13 +463,6 @@
           <p class="upload-status" id="scheduleStatus" role="status"></p>
           <div class="schedule-grid" id="scheduleGrid"></div>
           <section class="schedule-editor" id="weekDateEditor"></section>
-          <div class="plan-save-bar" id="planSaveBar" data-plan-save-bar hidden>
-            <p class="plan-save-bar-status" id="planSaveBarStatus" role="status"></p>
-            <div class="plan-save-bar-actions">
-              <button class="assistant-entry" id="assistantHelpPlanSticky" type="button" data-open-assistant="plan" data-i18n="assistantHelpPlan">Help plan</button>
-              <button class="primary-action" id="planSaveBarButton" type="button" data-plan-save-bar-button data-i18n="saveMealChanges">Save changes</button>
-            </div>
-          </div>
         </div>
 
         <div id="monthPlanningPanel" role="tabpanel" aria-labelledby="monthPlanningTab" data-dirty-area="schedule" data-dirty-surface="schedule" hidden>
@@ -1066,6 +1059,14 @@
 
     </main>
 
+    <div class="plan-save-bar" id="planSaveBar" data-plan-save-bar hidden>
+      <p class="plan-save-bar-status" id="planSaveBarStatus" role="status"></p>
+      <div class="plan-save-bar-actions">
+        <button class="assistant-entry" id="assistantHelpPlanSticky" type="button" data-open-assistant="plan" data-i18n="assistantHelpPlan">Help plan</button>
+        <button class="primary-action" id="planSaveBarButton" type="button" data-plan-save-bar-button data-i18n="saveMealChanges">Save changes</button>
+      </div>
+    </div>
+
     <div class="assistant-sheet" id="assistantSheet" hidden aria-hidden="true">
       <div class="assistant-sheet-backdrop" data-assistant-close></div>
       <section class="assistant-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="assistantSheetTitle">
@@ -1105,6 +1106,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=202"></script>
+    <script type="module" src="app.js?v=203"></script>
   </body>
 </html>

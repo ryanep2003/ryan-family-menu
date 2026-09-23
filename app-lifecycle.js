@@ -1,5 +1,19 @@
 import "./recipe-reel.js?v=10";
 
+// Remember each bottom-tab scroll and restore it when that tab is opened again.
+export function viewScrollAfterChange({
+  positions,
+  previousView = "",
+  nextView = "",
+  currentScroll = 0,
+} = {}) {
+  const memory = positions instanceof Map ? positions : new Map();
+  const changed = Boolean(nextView) && previousView !== nextView;
+  if (changed && previousView) memory.set(previousView, Math.max(0, Number(currentScroll) || 0));
+  const scrollTop = changed ? (memory.has(nextView) ? memory.get(nextView) : 0) : null;
+  return { positions: memory, scrollTop };
+}
+
 export function installInstructions(userAgent, t) {
   const isAndroid = /Android/i.test(userAgent || "");
   const isIos = /iPhone|iPad|iPod/i.test(userAgent || "");

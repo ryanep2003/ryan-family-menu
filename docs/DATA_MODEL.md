@@ -96,7 +96,7 @@ Food IDs and grocery quantities come from the code-owned catalog in `lunch-logic
 
 ## Household audit history
 
-The `family-menu-audit` record is separate from editable shared state so a stale or empty browser save cannot erase the recovery trail. It contains bounded arrays of `events` (actor, time, version, action, and changed dates) and `snapshots` (the prior schedule/calendar meal plan). The server keeps at most 200 events and 30 snapshots. Reading requires the same household key as the main menu. Restoring a snapshot writes a new shared-state version for the audit trail **and** writes the same `schedule` / `calendarMeals` / `weekStart` through the household `schedule` record Plan uses day-to-day. A reload then keeps the restored meals instead of replacing them from the live schedule record. Restore never deletes history.
+The `family-menu-audit` record is separate from editable shared state so a stale or empty browser save cannot erase the recovery trail. It contains bounded arrays of `events` (actor, time, version, action, and changed dates) and `snapshots` (the prior schedule/calendar meal plan). The server keeps at most 200 events and 30 snapshots. Reading requires the same household key as the main menu. Restoring a snapshot writes a new shared-state version for the audit trail **and** writes the same `schedule` / `calendarMeals` / `weekStart` through the household `schedule` record Plan uses day-to-day. The browser copies those snapshot meals into memory before that save. An already-loaded schedule record is authoritative, so applying the snapshot only through shared state would keep the live plan and write it back. A reload then keeps the restored meals instead of replacing them from the live schedule record. Restore never deletes history.
 
 ## Meal Record
 
@@ -199,6 +199,8 @@ family-menu:<household-id>:<local-key>
 ```
 
 Important local keys include schedule, calendar, versions, favorites, tasks, groceries, inventory, budget, receipts, activity, family memory, `school-lunches`, dinner history, recipe edits, deleted recipe IDs, and drafts.
+
+`dinner-schedule-pending` is an additive household-scoped copy of a Plan edit that has not yet been accepted by the `schedule` record. It stores the desired schedule, calendar meals, week start, the schedule version it was based on, that version’s baseline, and whether an intentional clear may replace every meal. Reload keeps it when the server version still matches, or merges it when another device saved first. It is removed only after the schedule write succeeds, or when the server refuses an empty overwrite and the phone puts the saved meals back. Older clients ignore the key. Discarding it before a successful write drops only the unsaved edit.
 
 The grocery fallback also uses the additive `dinner-groceries-pending-v1` retry journal described above. It remains inside `createHouseholdStorage()` and is safe to discard only after the matching grocery write succeeds.
 

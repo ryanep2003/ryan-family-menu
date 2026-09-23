@@ -10,6 +10,8 @@ const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 
 test("Restore this menu writes the Plan schedule record after applying the snapshot", () => {
   const restoreFn = app.match(/async function restoreAuditSnapshot\([\s\S]*?\n\}/)?.[0] || "";
+  assert.match(restoreFn, /schedule = normalizeSchedule\(restored\.schedule\)/);
+  assert.match(restoreFn, /calendarMeals = normalizeCalendar\(restored\.calendarMeals\)/);
   assert.match(restoreFn, /applySharedState\(restored\)/);
   assert.match(restoreFn, /persistScheduleLocally\(\)/);
   assert.match(restoreFn, /persistRestoredMealPlan\(\{ saveSharedState, saveSchedule \}\)/);

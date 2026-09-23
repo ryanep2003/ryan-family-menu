@@ -1,4 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v202";
+const CACHE_NAME = "ryan-family-menu-v203";
+// v203: Phase 5 keeps Plan saves on the schedule record, restores tab scroll, and fits Spanish chrome.
 // v202: Phase 4 quiets Shop aisles and Cook along into the same editorial paper.
 // v201: Phase 3 calms Plan week and polishes recipe detail toward magazine reading.
 // v200: Phase 2 photo browse uses taller cards, a dinner hero, and a recipe hero on the same paper.
