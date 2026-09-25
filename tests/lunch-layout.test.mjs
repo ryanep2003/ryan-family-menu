@@ -46,11 +46,13 @@ test("the lunch UI exposes all required fast paths without a chatbot", () => {
   assert.doesNotMatch(ui, /chat|prompt|message composer/i);
 });
 
-test("approved lunches rebuild the existing planned grocery contribution", () => {
+test("approved lunches rebuild planned groceries only after checked-purchase review", () => {
   assert.match(app, /approvedLunchFoodUses/);
   assert.match(app, /generatedSchoolLunchGroceries/);
   assert.match(app, /approvedLunchDateKeys\(schoolLunches/);
-  assert.match(app, /replacePlannedGroceries\(groceries, generatedGroceriesFromPlan\(range, upcomingLunchDates\)\)/);
+  assert.match(app, /generatedGroceriesFromPlan\(range, upcomingLunchDates\)/);
+  assert.match(app, /previewPlannedGroceryChanges\(groceries, generated\)\.needsPurchaseReview/);
+  assert.match(app, /replacePlannedGroceries\(groceries, generated\)/);
   assert.match(app, /recipeGroceries\(recipe, "meal-plan"/);
   assert.match(ui, /replacedApprovedPlan/);
   assert.match(ui, /persist\(next, \{ groceries: replacedApprovedPlan \}\)/);

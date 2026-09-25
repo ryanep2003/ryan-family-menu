@@ -379,9 +379,12 @@ export function createLunchUi({
     setSchoolLunches(normalizeSchoolLunches(next));
     render();
     const saved = await saveSharedState();
-    if (groceries) await syncApprovedLunchGroceries();
+    const groceriesSaved = groceries && saved ? await syncApprovedLunchGroceries() : !groceries;
     const status = $("#lunchStatus");
-    if (status) status.textContent = saved ? t(groceries ? "lunchSavedWithGroceries" : "lunchSavedStatus") : t("lunchSavedOffline");
+    if (status) status.textContent = saved
+      ? t(groceries ? groceriesSaved ? "lunchSavedWithGroceries" : "lunchSavedShoppingNeedsReview" : "lunchSavedStatus")
+      : t("lunchSavedOffline");
+    if (saved) clearDirtySurface("lunchesView");
   }
 
   function openBuilder(memberId, dateKey, plan = null) {

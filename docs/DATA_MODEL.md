@@ -20,6 +20,14 @@ The household profile lookup is the exception: it is keyed by a SHA-256 digest o
 - The default shared device identity is stored as the English name `Family`. The UI shows it through the `householdFamily` translation and must not persist `Familia` as a second identity.
 - Local drafts and fallback copies are owned by one browser but are still namespaced by household ID.
 
+The weekly dinner suggestion draft is temporary in-memory UI state, not a new Blob or local-storage record. Only explicitly approved dinner overrides enter the existing versioned `schedule` record; the draft does not write groceries.
+
+The optional shopping comparison after draft approval is in-memory only. It reads the existing versioned grocery record, compares planned ingredient amounts and meal uses, and marks checked changed/removed rows for human review. A separate explicit update can write the existing `items` record only when the previewed schedule and grocery versions are still current and no checked purchase would be changed or removed. It introduces no new field, store, key, or migration; matching planned rows retain their IDs and creation times. A checked box is never reinterpreted as covering a larger amount by this new path.
+
+The existing Shop build and approved-lunch sync now refuse a local rebuild when it would change or remove a checked row. No purchase quantity or new persisted field is inferred from that checkbox. Their older conflict-save behavior remains separate from the explicit Plan shopping update and needs review for concurrent shopping edits.
+
+Today dinner-attendance changes and reviewed quick-recipe swaps write a single date override through the existing versioned `schedule` record. Each save re-reads the record and compares the target effective meal with the preview baseline; undo uses the meal returned by the successful write as its new baseline. A quick swap changes the existing dinner main's recipe ID while keeping its item ID, sides, other meals, servings, and other dates. Neither flow changes the grocery record. No new field, key, or migration is involved.
+
 ## Blob Stores
 
 | Store | Household record | Contents |

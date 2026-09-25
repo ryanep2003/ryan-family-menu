@@ -465,13 +465,52 @@ export function mergeGroceries(existing, incoming) {
 export function replacePlannedGroceries(existing, generated) {
   const retained = existing.filter((item) => !["meal-plan", "week-plan"].includes(item.source));
   const previous = new Map(existing
-    .filter((item) => ["meal-plan", "week-plan"].includes(item.source) && item.ingredientKey)
-    .map((item) => [item.ingredientKey, item]));
+    .filter((item) => ["meal-plan", "week-plan"].includes(item.source))
+    .map((item) => [itemKey(item), item]));
   const rebuilt = mergeGroceries([], generated).map((item) => {
-    const old = previous.get(item.ingredientKey);
-    return old ? { ...item, checked: Boolean(old.checked), inInventory: Boolean(old.inInventory), inventoryDecision: old.inventoryDecision || item.inventoryDecision, inventorySuggested: Boolean(old.inventorySuggested || item.inventorySuggested), updatedBy: old.updatedBy || item.updatedBy, updatedAt: old.updatedAt || item.updatedAt } : item;
+    const old = previous.get(itemKey(item));
+    return old ? { ...item, id: old.id, createdAt: old.createdAt, checked: Boolean(old.checked), inInventory: Boolean(old.inInventory), inventoryDecision: old.inventoryDecision || item.inventoryDecision, inventorySuggested: Boolean(old.inventorySuggested || item.inventorySuggested), updatedBy: old.updatedBy || item.updatedBy, updatedAt: old.updatedAt || item.updatedAt } : item;
   });
   return [...retained, ...rebuilt];
+}
+
+// Compare a rebuilt plan without changing the shopper's current list or purchase evidence.
+export function previewPlannedGroceryChanges(existing, generated) {
+  const plannedSources = new Set(["meal-plan", "week-plan"]);
+  const previous = new Map(existing.filter((item) => plannedSources.has(item.source)).map((item) => [itemKey(item), item]));
+  const next = new Map(mergeGroceries([], generated).map((item) => [itemKey(item), item]));
+  const changes = [];
+  for (const key of new Set([...previous.keys(), ...next.keys()])) {
+    const before = previous.get(key) || null;
+    const after = next.get(key) || null;
+    let kind = !before ? "added" : !after ? "removed" : "unchanged";
+    if (before && after) {
+      const quantities = ["en", "es"].map((language) => ({
+        before: Number(before.plannedQuantities?.[language] || 0),
+        after: Number(after.plannedQuantities?.[language] || 0),
+      })).filter(({ before: oldAmount, after: newAmount }) => oldAmount > 0 && newAmount > 0);
+      const greater = quantities.some(({ before: oldAmount, after: newAmount }) => newAmount > oldAmount + 0.0001);
+      const smaller = quantities.some(({ before: oldAmount, after: newAmount }) => newAmount < oldAmount - 0.0001);
+      if (greater && !smaller) kind = "increased";
+      else if (smaller && !greater) kind = "decreased";
+      else if (greater || smaller
+        || JSON.stringify(before.text) !== JSON.stringify(after.text)
+        || JSON.stringify(normalizeMealUses(before.mealUses)) !== JSON.stringify(normalizeMealUses(after.mealUses))) kind = "changed";
+    }
+    if (kind !== "unchanged") changes.push({
+      key,
+      kind,
+      before,
+      after,
+      needsPurchaseReview: Boolean(before?.checked && kind !== "unchanged"),
+    });
+  }
+  return { changes, needsPurchaseReview: changes.some((change) => change.needsPurchaseReview) };
+}
+
+export function checkedGroceryEvidenceAtRisk(existing, rebuilt) {
+  return existing.some((old) => old.checked
+    && !rebuilt.some((next) => next.id === old.id && next.checked));
 }
 
 export function applyInventoryCoverage(items, inventory) {

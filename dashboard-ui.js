@@ -2,6 +2,8 @@ import { localizedText, updateLocalizedText } from "./localized-data.js";
 import { renderHandoffDetails } from "./handoff-ui.js";
 import { cardPhotoFor, cardPhotoIsGenerated } from "./recipe-utils.js";
 import { dinnerIsOpen, sampleDinnerRecipes } from "./dinner-flow.js";
+import { previewDinnerAttendanceChange, previewQuickDinnerReplacement, quickDinnerAlternatives } from "./change-of-plans-logic.js";
+import { normalizeMealPlan } from "./schedule-utils.js";
 import {
   addAvailableFood,
   availableFoodFreshness,
@@ -47,7 +49,22 @@ export function createDashboardUi({
   openFocusedDinnerPlan = () => setView("schedule"),
   selectTodayStory = () => ({}),
   getRecipeMemory = () => ({}),
+  getScheduleWeekStartKey = () => "",
+  onSaveDinnerAttendance = async () => ({ status: "pending" }),
+  onSaveQuickDinner = async () => ({ status: "pending" }),
+  getFamilyMembers = () => [],
+  getFamilyPreferences = () => [],
+  getFamilyRules = () => ({}),
+  getDinnerEvents = () => [],
+  markDirtySurface = () => {},
+  clearDirtySurface = () => {},
 }) {
+  let attendancePreview = null;
+  let attendanceUndo = null;
+  let attendanceBusy = false;
+  let quickPreview = null;
+  let quickUndo = null;
+
   function todayDateKey() {
     return formatDateKey(new Date());
   }
@@ -302,6 +319,39 @@ export function createDashboardUi({
     $("#cookToday").hidden = false;
     $("#cookToday").disabled = false;
     $("#cookToday").textContent = mainRecipe ? t("cookTonight") : t("chooseDinner");
+    const dinnerPlan = meal.servingPlans?.dinner || meal.servingPlan;
+    if ($("#todayChange")) {
+      const result = $("#todayChangePreview");
+      const sameCurrentMeal = (candidate) => candidate?.dateKey === todayDateKey()
+        && JSON.stringify(normalizeMealPlan(meal)) === JSON.stringify(normalizeMealPlan(candidate.before));
+      if (attendancePreview && (!sameCurrentMeal(attendancePreview)
+        || attendancePreview.baseWeekStartKey !== getScheduleWeekStartKey()
+        || attendancePreview.lang !== getLang())) {
+        attendancePreview = null;
+        result.replaceChildren();
+      }
+      if (quickPreview && (!sameCurrentMeal(quickPreview)
+        || quickPreview.baseWeekStartKey !== getScheduleWeekStartKey()
+        || quickPreview.lang !== getLang())) {
+        quickPreview = null;
+        result.replaceChildren();
+      }
+      if (quickUndo) {
+        if (sameCurrentMeal(quickUndo)) {
+          result.innerHTML = `<p>${escapeHtml(t("changePlansQuickSaved"))}</p><p>${escapeHtml(t("changePlansShoppingAfterSave"))}</p><button type="button" class="text-action" data-undo-quick>${escapeHtml(t("changePlansUndoQuick"))}</button>`;
+        } else quickUndo = null;
+      }
+      if (attendanceUndo) {
+        if (sameCurrentMeal(attendanceUndo)) {
+          result.innerHTML = `<p>${escapeHtml(t("changePlansAttendanceSaved"))}</p><p>${escapeHtml(t("changePlansShoppingAfterSave"))}</p><button type="button" class="text-action" data-undo-attendance>${escapeHtml(t("changePlansUndo"))}</button>`;
+        } else attendanceUndo = null;
+      }
+    }
+    if ($("#todayChange") && !$("#todayChange").open) {
+      $("#todayChangeAdults").value = dinnerPlan.adults;
+      $("#todayChangeKids").value = dinnerPlan.kids;
+      $("#todayChangeGuests").value = dinnerPlan.guests;
+    }
   }
 
   function taskAssigneeLabel(assignee) {
@@ -461,6 +511,136 @@ export function createDashboardUi({
     $("#changeTonightDinner")?.addEventListener("click", () => {
       openFocusedDinnerPlan(todayDateKey(), { choose: true });
     });
+    $("#todayChangeReason")?.addEventListener("change", (event) => {
+      const time = event.target.value === "time";
+      $("#todayAttendanceFields").hidden = time;
+      $("#todayTimeFields").hidden = !time;
+      for (const input of $$("#todayAttendanceFields input")) input.required = !time;
+      $("#todayChangeMinutes").required = time;
+      $("#todayChangePreview").replaceChildren();
+      attendancePreview = null;
+      attendanceUndo = null;
+      quickPreview = null;
+      quickUndo = null;
+    });
+    $("#todayChangeForm")?.addEventListener("input", () => {
+      $("#todayChangePreview").replaceChildren();
+      attendancePreview = null;
+      attendanceUndo = null;
+      quickPreview = null;
+      quickUndo = null;
+    });
+    $("#todayChangeForm")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const dateKey = todayDateKey();
+      const meal = todaysMealPlan();
+      const result = $("#todayChangePreview");
+      if ($("#todayChangeReason").value === "time") {
+        attendancePreview = null;
+        quickPreview = null;
+        quickUndo = null;
+        const options = quickDinnerAlternatives({
+          dateKey, meal, recipes: allRecipes(), maxMinutes: Number($("#todayChangeMinutes").value),
+          members: getFamilyMembers(), preferences: getFamilyPreferences(), rules: getFamilyRules(), events: getDinnerEvents(),
+        });
+        result.innerHTML = `<strong>${escapeHtml(t("changePlansQuickChoices"))}</strong>${options.options.length
+          ? `<ul>${options.options.slice(0, 5).map((option) => `<li>${escapeHtml(localize(allRecipes().find((recipe) => recipe.id === option.recipeId)?.name) || t("changePlansRecipeUnavailable"))} · ${option.minutes} ${escapeHtml(t("changePlansMinutesShort"))}${option.needsRestrictionReview ? ` · ${escapeHtml(t("changePlansRestrictionReview"))}` : ` <button type="button" class="text-action" data-preview-quick="${escapeHtml(option.recipeId)}">${escapeHtml(t("changePlansReviewQuick"))}</button>`}</li>`).join("")}</ul>`
+          : `<p>${escapeHtml(t(options.currentRecipeId ? "changePlansNoKnownQuick" : "changePlansNoDinnerToSwap"))}</p>`}<p>${escapeHtml(t("changePlansManualOption"))}</p><p>${escapeHtml(t("changePlansPreviewOnly"))}</p>`;
+      } else {
+        const preview = previewDinnerAttendanceChange({
+          dateKey, meal,
+          attendance: {
+            adults: Number($("#todayChangeAdults").value),
+            kids: Number($("#todayChangeKids").value),
+            guests: Number($("#todayChangeGuests").value),
+          },
+          recipes: allRecipes(),
+        });
+        attendancePreview = { ...preview, baseWeekStartKey: getScheduleWeekStartKey(), lang: getLang() };
+        attendanceUndo = null;
+        quickPreview = null;
+        quickUndo = null;
+        const canApply = preview.before.items.some((item) => item.period === "dinner")
+          && JSON.stringify(preview.before.servingPlans.dinner) !== JSON.stringify(preview.after.servingPlans.dinner);
+        result.innerHTML = `<strong>${escapeHtml(t("changePlansAttendanceSummary").replace("{before}", preview.beforeServings).replace("{after}", preview.afterServings))}</strong><p>${escapeHtml(t("changePlansRecipeContributions").replace("{date}", preview.dateKey))}</p>${preview.groceryContributions.length
+          ? `<ul>${preview.groceryContributions.map((item) => `<li>${escapeHtml(localize(allRecipes().find((recipe) => recipe.id === item.recipeId)?.name) || t("changePlansRecipeUnavailable"))}: ${item.beforeBatches ?? "—"} → ${item.afterBatches ?? "—"} ${escapeHtml(t("changePlansBatches"))}${item.assumedYield ? ` · ${escapeHtml(t("changePlansYieldEstimate"))}` : ""}${item.ingredients.length
+            ? `<ul class="today-change-ingredients">${item.ingredients.map((ingredient) => `<li>${escapeHtml(localize(ingredient.before) || "—")} → ${escapeHtml(localize(ingredient.after) || "—")}${ingredient.quantityKnown ? "" : ` · ${escapeHtml(t("changePlansAmountUnspecified"))}`}</li>`).join("")}</ul>`
+            : `<p>${escapeHtml(t("changePlansIngredientsUnknown"))}</p>`}</li>`).join("")}</ul>`
+          : `<p>${escapeHtml(t("changePlansNoDinner"))}</p>`}<p>${escapeHtml(preview.needsShoppingReview ? t("changePlansShoppingReview") : t("changePlansShoppingUnchanged"))}</p><p>${escapeHtml(t("changePlansPreviewOnly"))}</p>${canApply ? `<button type="button" class="secondary-button" data-apply-attendance>${escapeHtml(t("changePlansSaveAttendance"))}</button>` : ""}`;
+      }
+    });
+    $("#todayChangePreview")?.addEventListener("click", async (event) => {
+      const quickChoice = event.target.closest?.("[data-preview-quick]");
+      if (quickChoice) {
+        const recipeId = quickChoice.dataset.previewQuick;
+        const options = quickDinnerAlternatives({
+          dateKey: todayDateKey(), meal: todaysMealPlan(), recipes: allRecipes(),
+          maxMinutes: Number($("#todayChangeMinutes").value), members: getFamilyMembers(),
+          preferences: getFamilyPreferences(), rules: getFamilyRules(), events: getDinnerEvents(),
+        });
+        if (!options.options.some((option) => option.recipeId === recipeId && !option.needsRestrictionReview)) return;
+        try {
+          const preview = previewQuickDinnerReplacement({
+            dateKey: todayDateKey(), meal: todaysMealPlan(), recipeId, recipes: allRecipes(),
+          });
+          quickPreview = { ...preview, baseWeekStartKey: getScheduleWeekStartKey(), lang: getLang() };
+          quickUndo = null;
+          const ingredientList = (contribution) => contribution?.ingredients?.length
+            ? `<ul class="today-change-ingredients">${contribution.ingredients.map((item) => `<li>${escapeHtml(localize(item.before) || t("changePlansAmountUnspecified"))}</li>`).join("")}</ul>`
+            : `<p>${escapeHtml(t("changePlansIngredientsUnknown"))}</p>`;
+          $("#todayChangePreview").innerHTML = `<strong>${escapeHtml(t("changePlansQuickSwapSummary").replace("{before}", localize(allRecipes().find((recipe) => recipe.id === preview.oldRecipeId)?.name) || t("changePlansRecipeUnavailable")).replace("{after}", localize(allRecipes().find((recipe) => recipe.id === recipeId)?.name) || t("changePlansRecipeUnavailable")))}</strong><p>${escapeHtml(t("changePlansRecipeContributions").replace("{date}", preview.dateKey))}</p><p>${escapeHtml(t("changePlansBeforeIngredients"))}</p>${ingredientList(preview.beforeContribution)}<p>${escapeHtml(t("changePlansAfterIngredients"))}</p>${ingredientList(preview.afterContribution)}<p>${escapeHtml(t("changePlansShoppingReview"))}</p><p>${escapeHtml(t("changePlansPreviewOnly"))}</p><button type="button" class="secondary-button" data-apply-quick>${escapeHtml(t("changePlansSaveQuick"))}</button>`;
+        } catch {
+          $("#todayChangePreview").textContent = t("changePlansNoKnownQuick");
+        }
+        return;
+      }
+      const applyQuick = event.target.closest?.("[data-apply-quick]");
+      const undoQuick = event.target.closest?.("[data-undo-quick]");
+      if (applyQuick || undoQuick) {
+        if (attendanceBusy) return;
+        const active = undoQuick ? quickUndo : quickPreview;
+        if (!active) return;
+        attendanceBusy = true;
+        event.target.disabled = true;
+        const outcome = await onSaveQuickDinner(active, active.baseWeekStartKey);
+        attendanceBusy = false;
+        if (outcome.status === "saved") {
+          quickPreview = null;
+          quickUndo = undoQuick ? null : { ...outcome.undo, baseWeekStartKey: outcome.record.weekStartKey || active.baseWeekStartKey, lang: getLang() };
+          $("#todayChangePreview").innerHTML = `<p>${escapeHtml(t(undoQuick ? "changePlansQuickUndone" : "changePlansQuickSaved"))}</p><p>${escapeHtml(t("changePlansShoppingAfterSave"))}</p>${quickUndo ? `<button type="button" class="text-action" data-undo-quick>${escapeHtml(t("changePlansUndoQuick"))}</button>` : ""}`;
+        } else {
+          quickPreview = null;
+          quickUndo = null;
+          $("#todayChangePreview").textContent = t({ pending: "changePlansPending", conflict: "changePlansConflict", "load-error": "changePlansLoadError", "save-error": "changePlansSaveError", "saved-pending-review": "changePlansSavedPending" }[outcome.status] || "changePlansConflict");
+        }
+        return;
+      }
+      const apply = event.target.closest?.("[data-apply-attendance]");
+      const undo = event.target.closest?.("[data-undo-attendance]");
+      if ((!apply && !undo) || attendanceBusy) return;
+      const active = undo ? attendanceUndo : attendancePreview;
+      if (!active) return;
+      attendanceBusy = true;
+      event.target.disabled = true;
+      const attendance = undo ? active.attendance : {
+        adults: active.after.servingPlans.dinner.adults,
+        kids: active.after.servingPlans.dinner.kids,
+        guests: active.after.servingPlans.dinner.guests,
+      };
+      const outcome = await onSaveDinnerAttendance(active, attendance, active.baseWeekStartKey);
+      attendanceBusy = false;
+      const result = $("#todayChangePreview");
+      if (outcome.status === "saved") {
+        attendancePreview = null;
+        attendanceUndo = undo ? null : outcome.undo;
+        result.innerHTML = `<p>${escapeHtml(t(undo ? "changePlansUndoSaved" : "changePlansAttendanceSaved"))}</p><p>${escapeHtml(t("changePlansShoppingAfterSave"))}</p>${attendanceUndo ? `<button type="button" class="text-action" data-undo-attendance>${escapeHtml(t("changePlansUndo"))}</button>` : ""}`;
+      } else {
+        result.textContent = t({ pending: "changePlansPending", conflict: "changePlansConflict", "load-error": "changePlansLoadError", "save-error": "changePlansSaveError", "saved-pending-review": "changePlansSavedPending" }[outcome.status] || "changePlansConflict");
+        attendancePreview = null;
+        attendanceUndo = null;
+      }
+    });
+    $("#todayChangeOpenPlan")?.addEventListener("click", () => openFocusedDinnerPlan(todayDateKey()));
 
     $("#todayMealsList")?.addEventListener("click", (event) => {
       const recipeButton = event.target.closest?.("[data-open-today-recipe]");

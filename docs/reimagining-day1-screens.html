@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ryan Family Menu · Day 1 screen study</title>
+  <style>
+    :root { color-scheme: light; --paper:#fffdf9; --ground:#f4f0e9; --ink:#2d1b2e; --muted:#5d535e; --red:#bc3035; --red-hover:#9c222a; --peach:#fbe7dc; --line:#d9d0d0; --focus:#265fc6; --ok:#35654b; }
+    * { box-sizing:border-box; }
+    html { background:var(--ground); color:var(--ink); font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    body { margin:0; }
+    button { font:inherit; cursor:pointer; }
+    button:focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
+    header.intro { max-width:1100px; padding:28px 20px 12px; margin:auto; }
+    .intro h1 { font-size:1.65rem; margin:0 0 8px; }
+    .intro p { color:var(--muted); margin:0; max-width:68ch; line-height:1.45; }
+    .boards { max-width:1800px; margin:auto; padding:16px 12px 32px; display:grid; gap:22px; grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr)); justify-items:center; }
+    .screen { width:min(390px,100%); min-height:760px; background:var(--paper); border:1px solid var(--line); display:flex; flex-direction:column; }
+    .apphead { min-height:58px; padding:10px 16px; display:flex; justify-content:space-between; align-items:center; gap:8px; border-bottom:1px solid var(--line); }
+    .brand { font-size:.75rem; font-weight:800; letter-spacing:.06em; }
+    .household { font-size:.78rem; white-space:nowrap; }
+    main { padding:20px 16px 28px; flex:1; }
+    h2 { font-size:1.72rem; letter-spacing:-.025em; line-height:1.1; margin:0 0 5px; }
+    h3 { font-size:1.12rem; line-height:1.2; margin:22px 0 8px; }
+    p { line-height:1.45; }
+    .sub { margin:0 0 18px; color:var(--muted); font-size:.91rem; }
+    .stack { border-top:1px solid var(--line); }
+    .row { padding:12px 0; border-bottom:1px solid var(--line); display:flex; gap:12px; justify-content:space-between; align-items:center; min-height:54px; }
+    .row strong { font-size:.94rem; }
+    .row span { font-size:.88rem; color:var(--muted); }
+    .row .left { display:flex; flex-direction:column; gap:2px; }
+    .day { width:37px; flex:none; font-size:.73rem; font-weight:800; letter-spacing:.035em; }
+    .photo { width:100%; height:126px; margin:16px 0 12px; background:var(--peach); display:grid; place-items:center; color:var(--muted); font-size:.85rem; border-radius:10px; }
+    .meal-title { margin:0 0 3px; font-size:1.24rem; font-weight:750; }
+    .fact { margin:0 0 12px; color:var(--muted); font-size:.88rem; }
+    .lead { border:1px solid var(--line); border-radius:12px; padding:0 12px 14px; margin:14px 0 16px; }
+    .lead .photo { margin-top:12px; }
+    .primary, .secondary { min-height:46px; width:100%; border-radius:9px; font-weight:750; padding:10px 14px; }
+    .primary { border:1px solid var(--red); color:#fff; background:var(--red); }
+    .primary:hover { background:var(--red-hover); }
+    .secondary { margin-top:8px; color:var(--red-hover); border:1px solid var(--red); background:var(--paper); }
+    .text-action { color:var(--red-hover); border:0; background:transparent; font-weight:700; min-height:44px; padding:4px 2px; }
+    .note { background:var(--peach); border-radius:10px; padding:12px; font-size:.87rem; margin:13px 0; }
+    .chips { display:flex; flex-wrap:wrap; gap:7px; margin:16px 0; }
+    .chip { border:1px solid var(--line); background:var(--paper); color:var(--ink); min-height:44px; border-radius:8px; padding:8px 11px; }
+    .chip.selected { border-color:var(--red); background:var(--peach); font-weight:700; }
+    .small { font-size:.79rem; color:var(--muted); }
+    .small strong { color:var(--ink); }
+    .muted { color:var(--muted); }
+    .status { color:var(--ok); font-size:.8rem; font-weight:700; }
+    .decision { padding:12px 0; border-bottom:1px solid var(--line); }
+    .decision p { margin:5px 0; font-size:.87rem; }
+    .decision .small { margin-bottom:8px; }
+    .decision button { margin-right:12px; }
+    .footer { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--ink); padding:5px 5px 8px; }
+    .footer span { color:#fff; min-height:49px; display:grid; place-items:center; font-size:.67rem; font-weight:650; text-align:center; }
+    .footer .active { background:var(--paper); color:var(--ink); border-radius:7px; }
+    .screen + .screen { scroll-margin-top:16px; }
+    @media (max-width:390px) { .boards { display:block; padding:8px 10px 24px; } .screen { margin:0 auto 20px; } }
+  </style>
+</head>
+<body>
+  <header class="intro">
+    <h1>Ryan Family Menu · screen study</h1>
+    <p>Day 1 visual prototype. All meals, people, and quantities below are illustrative. Controls show the proposed hierarchy; this study is not connected to household data.</p>
+  </header>
+  <div class="boards">
+    <section class="screen" aria-labelledby="today-heading">
+      <div class="apphead"><span class="brand">RYAN FAMILY MENU</span><span class="household">Family ▾</span></div>
+      <main>
+        <h2 id="today-heading">Today’s food</h2><p class="sub">Tuesday · the whole day at a glance</p>
+        <div class="stack">
+          <div class="row"><strong>Breakfast</strong><span>Oatmeal</span></div>
+          <div class="row"><strong>Lunch</strong><span>Packed and ready</span></div>
+          <div class="row"><strong>Dinner</strong><span>Chicken tacos</span></div>
+        </div>
+        <div class="lead">
+          <div class="photo">Recipe photo from the family library</div>
+          <p class="meal-title">Chicken tacos</p><p class="fact">Uses peppers at home · prep time to verify</p>
+          <button class="primary" type="button">Cook tonight</button>
+          <button class="secondary" type="button">Change of plans</button>
+        </div>
+        <h3>Next useful thing</h3>
+        <div class="row"><span>Tomorrow’s lunch</span><strong>Review packing</strong></div>
+      </main>
+      <nav class="footer" aria-label="Main views"><span class="active">Today</span><span>Plan</span><span>Lunches</span><span>Shop</span><span>Library</span></nav>
+    </section>
+    <section class="screen" aria-labelledby="week-heading">
+      <div class="apphead"><span class="brand">RYAN FAMILY MENU</span><span class="household">Family ▾</span></div>
+      <main>
+        <h2 id="week-heading">A week to review</h2><p class="sub">Draft dinners · nothing shared yet</p>
+        <div class="chips"><button class="chip selected" type="button">Quick Tuesday</button><button class="chip" type="button">Use what we have</button></div>
+        <div class="stack">
+          <div class="row"><strong class="day">MON</strong><span class="left"><strong>Roast chicken</strong><span>Keep this meal</span></span><button class="text-action" type="button">Kept</button></div>
+          <div class="row"><strong class="day">TUE</strong><span class="left"><strong>Chicken wraps</strong><span>Planned extra portions*</span></span><button class="text-action" type="button">Swap</button></div>
+          <div class="row"><strong class="day">WED</strong><span class="left"><strong>Tomato pasta</strong><span>Family favorite</span></span><button class="text-action" type="button">Swap</button></div>
+          <div class="row"><strong class="day">THU</strong><span class="left"><strong>Bean quesadillas</strong><span>Check ingredients</span></span><button class="text-action" type="button">Swap</button></div>
+          <div class="row"><strong class="day">FRI</strong><span class="left"><strong>Unresolved</strong><span>No verified match yet</span></span><button class="text-action" type="button">Choose</button></div>
+        </div>
+        <p class="small">*Extra portions become available leftovers only after cooking is confirmed.</p>
+        <button class="primary" type="button">Review before approval</button>
+        <button class="secondary" type="button">Try other dinners</button>
+      </main>
+      <nav class="footer" aria-label="Main views"><span>Today</span><span class="active">Plan</span><span>Lunches</span><span>Shop</span><span>Library</span></nav>
+    </section>
+    <section class="screen" aria-labelledby="change-heading">
+      <div class="apphead"><span class="brand">RYAN FAMILY MENU</span><span class="household">Family ▾</span></div>
+      <main>
+        <h2 id="change-heading">Running late?</h2><p class="sub">Choose what changed. See the effect first.</p>
+        <div class="chips"><button class="chip selected" type="button">Less time</button><button class="chip" type="button">More people</button><button class="chip" type="button">Fewer people</button></div>
+        <h3>Proposed for tonight</h3>
+        <div class="stack">
+          <div class="row"><span>Tonight</span><strong>Bean quesadillas</strong></div>
+          <div class="row"><span>Chicken tacos</span><strong>Choose a new date</strong></div>
+        </div>
+        <div class="note"><strong>Shopping needs review.</strong><br>Ingredients could change after you approve dinner. Checked items stay recorded.</div>
+        <p class="small">No meal is moved into an occupied date without your choice.</p>
+        <button class="primary" type="button">Review this change</button>
+        <button class="secondary" type="button">Keep original plan</button>
+      </main>
+      <nav class="footer" aria-label="Main views"><span class="active">Today</span><span>Plan</span><span>Lunches</span><span>Shop</span><span>Library</span></nav>
+    </section>
+    <section class="screen" aria-labelledby="memory-heading">
+      <div class="apphead"><span class="brand">RYAN FAMILY MENU</span><span class="household">Family ▾</span></div>
+      <main>
+        <h2 id="memory-heading">Family memory</h2><p class="sub">What you told us and what happened at dinner.</p>
+        <h3>You told us</h3>
+        <div class="stack"><div class="row"><span>Sauce on the side</span><button class="text-action" type="button">Edit</button></div></div>
+        <h3>From dinner history</h3>
+        <div class="decision"><strong>Tomato pasta worked well</strong><p class="small">Recorded as “loved” on 3 separate dinners.</p><button class="text-action" type="button">See dinners</button></div>
+        <div class="decision"><strong>Chicken tacos were skipped</strong><p class="small">A skipped dinner does not mean anyone disliked it.</p><button class="text-action" type="button">Correct dinner</button></div>
+        <h3>How was dinner?</h3>
+        <p class="small">One answer now can help with a future suggestion.</p>
+        <div class="chips"><button class="chip" type="button">Loved it</button><button class="chip" type="button">Worked</button><button class="chip" type="button">Skip next time</button></div>
+        <p class="status">Your choices remain editable.</p>
+      </main>
+      <nav class="footer" aria-label="Main views"><span class="active">Today</span><span>Plan</span><span>Lunches</span><span>Shop</span><span>Library</span></nav>
+    </section>
+  </div>
+</body>
+</html>

@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=203" />
+    <link rel="stylesheet" href="styles.css?v=204" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -263,6 +263,29 @@
           </div>
         </div>
 
+        <details class="today-change" id="todayChange" data-nonpersistent-preview>
+          <summary data-i18n="changePlansTitle">Change tonight's plan</summary>
+          <p data-i18n="changePlansIntro">Preview what would change before editing dinner. Shopping needs a separate review.</p>
+          <form id="todayChangeForm">
+            <label for="todayChangeReason" data-i18n="changePlansReason">What changed?</label>
+            <select id="todayChangeReason">
+              <option value="attendance" data-i18n="changePlansAttendance">Different number of people</option>
+              <option value="time" data-i18n="changePlansTime">Less time to cook</option>
+            </select>
+            <div class="today-change-fields" id="todayAttendanceFields">
+              <label><span data-i18n="changePlansAdults">Adults</span><input id="todayChangeAdults" type="number" min="0" max="20" step="1" required /></label>
+              <label><span data-i18n="changePlansKids">Kids</span><input id="todayChangeKids" type="number" min="0" max="20" step="1" required /></label>
+              <label><span data-i18n="changePlansGuests">Guests</span><input id="todayChangeGuests" type="number" min="0" max="20" step="1" required /></label>
+            </div>
+            <div class="today-change-fields" id="todayTimeFields" hidden>
+              <label><span data-i18n="changePlansMinutes">Minutes available</span><input id="todayChangeMinutes" type="number" min="1" max="240" step="1" value="30" /></label>
+            </div>
+            <button type="submit" class="secondary-button" data-i18n="changePlansPreview">Preview options</button>
+          </form>
+          <div id="todayChangePreview" class="today-change-preview" role="status" aria-live="polite"></div>
+          <button type="button" class="text-action" id="todayChangeOpenPlan" data-i18n="changePlansOpenPlan">Edit dinner in Plan</button>
+        </details>
+
         <section class="dinner-feedback" id="dinnerFeedback" aria-live="polite" data-dirty-area="dinner" data-dirty-surface="dinner" hidden></section>
 
         <section class="smart-suggestions" id="smartSuggestions" aria-labelledby="smartSuggestionsHeading" hidden>
@@ -461,6 +484,7 @@
             </div>
           </div>
           <p class="upload-status" id="scheduleStatus" role="status"></p>
+          <section class="week-draft-panel" id="weekDraftPanel" aria-label="Weekly dinner draft" data-i18n-aria-label="weekDraftRegion"></section>
           <div class="schedule-grid" id="scheduleGrid"></div>
           <section class="schedule-editor" id="weekDateEditor"></section>
         </div>
@@ -1106,6 +1130,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=203"></script>
+    <script type="module" src="app.js?v=204"></script>
   </body>
 </html>

@@ -1,11 +1,13 @@
 import {
   applyInventoryCoverage,
+  checkedGroceryEvidenceAtRisk,
   cleanIngredientForGrocery,
   groceryItem,
   groceryItemsFromRecipe,
   inventoryMatchFor as findInventoryMatch,
   manualGroceryItemsFromText,
   mergeGroceries,
+  previewPlannedGroceryChanges,
   replacePlannedGroceries,
 } from "./grocery-logic.js";
 import { bindInstallPrompt, registerServiceWorker, viewScrollAfterChange } from "./app-lifecycle.js";
@@ -42,6 +44,10 @@ import { createCookAlongUi } from "./cook-along-ui.js";
 import { createReceiptUi } from "./receipt-ui.js";
 import { createScheduleUi } from "./schedule-ui.js";
 import { createAssistantUi } from "./assistant-ui.js";
+import { createWeekDraftUi } from "./week-draft-ui.js";
+import { approveWeekDraft } from "./week-approval-client.js";
+import { applyDinnerAttendanceChange, applyQuickDinnerReplacement } from "./change-of-plans-client.js";
+import { commitWeekShoppingPreview } from "./week-shopping-client.js";
 import { createSharedStateLoader } from "./shared-state-loader.js";
 import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage-utils.js";
 import { formatSyncedAtMessage, renderSyncStatus, syncRetryLabel } from "./sync-status.js";
@@ -302,11 +308,11 @@ function isNonEditingControl(target) {
   );
 }
 document.addEventListener("input", (event) => {
-  if (event.target.closest?.("#householdGate") || isNonEditingControl(event.target)) return;
+  if (event.target.closest?.("#householdGate,[data-nonpersistent-preview]") || isNonEditingControl(event.target)) return;
   if (event.target.closest?.("form,[data-dirty-area]")) markDirtyForm(event.target);
 });
 document.addEventListener("change", (event) => {
-  if (event.target.closest?.("#householdGate") || isNonEditingControl(event.target)) return;
+  if (event.target.closest?.("#householdGate,[data-nonpersistent-preview]") || isNonEditingControl(event.target)) return;
   if (event.target.closest?.("form,[data-dirty-area]")) markDirtyForm(event.target);
 });
 
@@ -1829,10 +1835,20 @@ async function syncApprovedLunchGroceries() {
   const horizon = new Date();
   horizon.setDate(horizon.getDate() + 45);
   const upcomingLunchDates = approvedLunchDateKeys(schoolLunches, { from: today, to: formatDateKey(horizon) });
-  groceries = applyInventoryCoverage(
-    replacePlannedGroceries(groceries, generatedGroceriesFromPlan(range, upcomingLunchDates)),
+  const generated = generatedGroceriesFromPlan(range, upcomingLunchDates);
+  if (previewPlannedGroceryChanges(groceries, generated).needsPurchaseReview) {
+    setSyncStatus("groceries", "plannedGroceriesCheckedReview", { state: "error" });
+    return false;
+  }
+  const proposed = applyInventoryCoverage(
+    replacePlannedGroceries(groceries, generated),
     inventory,
   );
+  if (checkedGroceryEvidenceAtRisk(groceries, proposed)) {
+    setSyncStatus("groceries", "plannedGroceriesCheckedReview", { state: "error" });
+    return false;
+  }
+  groceries = proposed;
   renderGroceries();
   bindGroceryControls();
   return saveGroceries();
@@ -2349,6 +2365,59 @@ const dashboardUi = createDashboardUi({
   },
   selectTodayStory: (input) => selectTodayStory(input),
   getRecipeMemory: (recipeId) => selectRecipeMemory(recipeId, dinnerEvents, familyMembers),
+  getScheduleWeekStartKey: () => weekStartKey,
+  onSaveDinnerAttendance: async (preview, attendance, baseWeekStartKey) => {
+    const localAtStart = JSON.stringify({ schedule, calendarMeals, weekStartKey });
+    if (!scheduleAuthoritativeLoaded || scheduleSaveInFlight || !scheduleBase
+      || localAtStart !== JSON.stringify(scheduleBase)) return { status: "pending" };
+    if (weekStartKey !== baseWeekStartKey
+      || JSON.stringify(normalizeMealPlan(calendarMealForDateKey(preview.dateKey)))
+        !== JSON.stringify(normalizeMealPlan(preview.before))) return { status: "conflict" };
+    const result = await applyDinnerAttendanceChange({
+      preview, attendance, baseWeekStartKey,
+      getLatest: () => getJson("/.netlify/functions/schedule", t("changePlansLoadError")),
+      putRecord: (record) => putJson("/.netlify/functions/schedule", { ...record, actor: householdMember }, t("changePlansSaveError")),
+    });
+    if (result.status === "saved") {
+      if (JSON.stringify({ schedule, calendarMeals, weekStartKey }) !== localAtStart) {
+        setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
+        return { ...result, status: "saved-pending-review" };
+      }
+      applyScheduleRecord(result.record);
+      clearAreaStatus("shared");
+      render();
+    }
+    return result;
+  },
+  onSaveQuickDinner: async (preview, baseWeekStartKey) => {
+    const localAtStart = JSON.stringify({ schedule, calendarMeals, weekStartKey });
+    if (!scheduleAuthoritativeLoaded || scheduleSaveInFlight || !scheduleBase
+      || localAtStart !== JSON.stringify(scheduleBase)) return { status: "pending" };
+    if (weekStartKey !== baseWeekStartKey
+      || JSON.stringify(normalizeMealPlan(calendarMealForDateKey(preview.dateKey)))
+        !== JSON.stringify(normalizeMealPlan(preview.before))) return { status: "conflict" };
+    const result = await applyQuickDinnerReplacement({
+      preview, baseWeekStartKey,
+      getLatest: () => getJson("/.netlify/functions/schedule", t("changePlansLoadError")),
+      putRecord: (record) => putJson("/.netlify/functions/schedule", { ...record, actor: householdMember }, t("changePlansSaveError")),
+    });
+    if (result.status === "saved") {
+      if (JSON.stringify({ schedule, calendarMeals, weekStartKey }) !== localAtStart) {
+        setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
+        return { ...result, status: "saved-pending-review" };
+      }
+      applyScheduleRecord(result.record);
+      clearAreaStatus("shared");
+      render();
+    }
+    return result;
+  },
+  getFamilyMembers: () => familyMembers,
+  getFamilyPreferences: () => familyPreferences,
+  getFamilyRules: () => familyRules,
+  getDinnerEvents: () => dinnerEvents,
+  markDirtySurface: markDirtyForm,
+  clearDirtySurface: clearDirtyForm,
 });
 
 const todaysMealPlan = () => dashboardUi.todaysMealPlan();
@@ -2441,7 +2510,104 @@ const scheduleUi = createScheduleUi({
   },
 });
 
-const renderSchedule = () => scheduleUi.renderSchedule();
+const weekDraftUi = createWeekDraftUi({
+  $,
+  t,
+  escapeHtml,
+  localize,
+  getCatalogStatus: () => sharedRecipesStatus,
+  getPlannerInput: () => ({
+    weekStartKey,
+    schedule,
+    calendarMeals,
+    recipes: visibleRecipes({ seedRecipes: [], sharedRecipes, drafts: [], recipeEdits, deletedRecipeIds, localize }),
+    members: familyMembers,
+    preferences: familyPreferences,
+    rules: familyRules,
+    events: dinnerEvents,
+    favorites,
+    inventory: inventory.filter((item) => !["low", "out"].includes(item.stockState)),
+    scheduleVersion,
+    lang,
+  }),
+  onApprove: async (draft, approvedDateKeys) => {
+    const localAtStart = JSON.stringify({ schedule, calendarMeals, weekStartKey });
+    if (!scheduleAuthoritativeLoaded || scheduleSaveInFlight || !scheduleBase
+      || localAtStart !== JSON.stringify(scheduleBase)) return { status: "invalid" };
+    const result = await approveWeekDraft({
+      draft,
+      approvedDateKeys,
+      visibleRecipeIds: visibleRecipes({ seedRecipes: [], sharedRecipes, drafts: [], recipeEdits, deletedRecipeIds, localize }).map((recipe) => recipe.id),
+      getLatest: () => getJson("/.netlify/functions/schedule", t("weekDraftLoadError")),
+      putRecord: (record) => putJson("/.netlify/functions/schedule", { ...record, actor: householdMember }, t("weekDraftSaveError")),
+    });
+    if (result.status === "saved") {
+      if (JSON.stringify({ schedule, calendarMeals, weekStartKey }) !== localAtStart) {
+        setSyncStatus("shared", "savedLocallyPending", { state: "pending", canRetry: true });
+        return { ...result, status: "saved-pending-review" };
+      }
+      applyScheduleRecord(result.record);
+      clearAreaStatus("shared");
+      render();
+    }
+    return result;
+  },
+  onShoppingPreview: async () => {
+    if (groceriesDirty || !scheduleAuthoritativeLoaded || !scheduleBase) return { status: "pending" };
+    try {
+      const [latestSchedule, latestGroceries] = await Promise.all([
+        getJson("/.netlify/functions/schedule", t("weekDraftLoadError")),
+        getJson("/.netlify/functions/groceries", t("weekDraftShoppingLoadError")),
+      ]);
+      if (Number(latestSchedule.version) !== scheduleVersion
+        || JSON.stringify({ schedule, calendarMeals, weekStartKey }) !== JSON.stringify(scheduleBase)) return { status: "stale" };
+      const generatedItems = generatedGroceriesFromPlan("week");
+      return {
+        status: "ready",
+        scheduleVersion: Number(latestSchedule.version),
+        groceryVersion: Number(latestGroceries.version),
+        generatedItems,
+        inventorySnapshot: cloneVersionedItems(inventory),
+        ...previewPlannedGroceryChanges(
+          Array.isArray(latestGroceries.items) ? latestGroceries.items : [],
+          generatedItems,
+        ),
+      };
+    } catch {
+      return { status: "load-error" };
+    }
+  },
+  onShoppingUpdate: async (preview) => {
+    const localAtStart = JSON.stringify({ groceries, groceryVersion, schedule, calendarMeals, weekStartKey });
+    const stillCurrent = () => !groceriesDirty && scheduleAuthoritativeLoaded
+      && scheduleVersion === preview?.scheduleVersion
+      && JSON.stringify({ schedule, calendarMeals, weekStartKey }) === JSON.stringify(scheduleBase)
+      && JSON.stringify({ groceries, groceryVersion, schedule, calendarMeals, weekStartKey }) === localAtStart;
+    if (!stillCurrent()) return { status: "pending" };
+    const result = await commitWeekShoppingPreview({
+      preview,
+      getLatestSchedule: () => getJson("/.netlify/functions/schedule", t("weekDraftLoadError")),
+      getLatestGroceries: () => getJson("/.netlify/functions/groceries", t("weekDraftShoppingLoadError")),
+      putGroceries: (record) => putJson("/.netlify/functions/groceries", record, t("weekDraftShoppingSaveError")),
+      isStillCurrent: stillCurrent,
+    });
+    if (result.status !== "saved") return result;
+    if (!stillCurrent()) return { ...result, status: "saved-pending-review" };
+    groceries = result.record.items;
+    groceryVersion = Number(result.record.version);
+    groceryBaseItems = cloneVersionedItems(groceries);
+    householdStorage.setItem(groceryBaseStorageKey, JSON.stringify(groceryBaseItems));
+    persistGroceriesLocally(groceries, groceryVersion);
+    groceriesDirty = false;
+    setGroceriesPending(false);
+    markSynced("groceries");
+    renderGroceries();
+    bindGroceryControls();
+    return result;
+  },
+});
+
+const renderSchedule = () => { scheduleUi.renderSchedule(); weekDraftUi.render(); };
 const renderCalendar = () => scheduleUi.renderCalendar();
 
 const recipeLibraryUi = createRecipeLibraryUi({
@@ -3529,6 +3695,7 @@ $$("[data-scroll-to]").forEach((button) => {
 
 scheduleUi.bindScheduleControls();
 if (schedulePending) scheduleUi.notePlanPersistence({ dirty: true, pending: true, saving: false, saved: false });
+weekDraftUi.bind();
 
 dashboardUi.bindDashboardControls();
 
@@ -3651,11 +3818,23 @@ $("#groceryPlanRange").addEventListener("change", (event) => {
 });
 
 $("#generateGroceries").addEventListener("click", async () => {
-  householdStorage.setItem("dinner-grocery-plan-range", $("#groceryPlanRange").value);
-  groceries = applyInventoryCoverage(
-    replacePlannedGroceries(groceries, generatedGroceriesFromPlan($("#groceryPlanRange").value)),
+  const range = $("#groceryPlanRange").value;
+  const generated = generatedGroceriesFromPlan(range);
+  if (previewPlannedGroceryChanges(groceries, generated).needsPurchaseReview) {
+    setSyncStatus("groceries", "plannedGroceriesCheckedReview", { state: "error" });
+    return;
+  }
+  const proposed = applyInventoryCoverage(
+    replacePlannedGroceries(groceries, generated),
     inventory,
   );
+  if (checkedGroceryEvidenceAtRisk(groceries, proposed)) {
+    setSyncStatus("groceries", "plannedGroceriesCheckedReview", { state: "error" });
+    return;
+  }
+  markDirtyForm($("#shoppingPanel"));
+  householdStorage.setItem("dinner-grocery-plan-range", range);
+  groceries = proposed;
   renderGroceries();
   bindGroceryControls();
   recordActivity("grocery", t("activityShoppingBuilt"));

@@ -1,4 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v203";
+const CACHE_NAME = "ryan-family-menu-v204";
+// v204: Week-one draft and change-of-plans modules join the current app shell.
 // v203: Phase 5 keeps Plan saves on the schedule record, restores tab scroll, and fits Spanish chrome.
 // v202: Phase 4 quiets Shop aisles and Cook along into the same editorial paper.
 // v201: Phase 3 calms Plan week and polishes recipe detail toward magazine reading.
@@ -24,6 +25,8 @@ const ASSETS = [
   "./api.js",
   "./dashboard-ui.js",
   "./dinner-flow.js",
+  "./change-of-plans-logic.js",
+  "./change-of-plans-client.js",
   "./activity-logic.js",
   "./activity-ui.js",
   "./audit-logic.js",
@@ -68,6 +71,11 @@ const ASSETS = [
   "./recipe-utils.js",
   "./recipe-catalog-utils.js",
   "./schedule-utils.js",
+  "./week-planner-logic.js",
+  "./week-approval-logic.js",
+  "./week-approval-client.js",
+  "./week-shopping-client.js",
+  "./week-draft-ui.js",
   "./manifest.webmanifest",
   "./assets/app-icon.svg",
   "./assets/app-icon-180.png",

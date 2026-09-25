@@ -57,6 +57,8 @@ test("service worker pre-caches first-party app modules", async () => {
     "./api.js",
     "./dashboard-ui.js",
     "./dinner-flow.js",
+    "./change-of-plans-logic.js",
+    "./change-of-plans-client.js",
     "./activity-logic.js",
     "./activity-ui.js",
     "./audit-logic.js",
@@ -73,6 +75,7 @@ test("service worker pre-caches first-party app modules", async () => {
     "./lunch-logic.js",
     "./localized-data.js",
     "./recipe-form-ui.js",
+    "./recipe-catalog-utils.js",
     "./recipe-library-ui.js",
     "./recipe-browse.js",
     "./recipe-reel-logic.js",
@@ -88,6 +91,11 @@ test("service worker pre-caches first-party app modules", async () => {
     "./shared-state-authority.js",
     "./dirty-form-state.js",
     "./shared-save-coordinator.js",
+    "./week-planner-logic.js",
+    "./week-approval-logic.js",
+    "./week-approval-client.js",
+    "./week-shopping-client.js",
+    "./week-draft-ui.js",
   ]) {
     assert.match(serviceWorker, new RegExp(path.replace(".", "\\.")), path);
   }

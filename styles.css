@@ -342,6 +342,19 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 .today-temporal-note:first-child span { color: var(--attention); }
 .today-temporal-note:last-child span { color: var(--success); }
 .today-story.is-empty:not(.is-open-dinner) h2 { max-width: 9ch; }
+.today-change { margin-top: var(--space-4); padding: var(--space-4); border: 1px solid var(--rule); background: var(--paper); }
+.today-change summary { min-height: 44px; cursor: pointer; font-weight: 700; }
+.today-change > p, .today-change-preview p { color: var(--muted); }
+.today-change form { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+.today-change form > label, .today-change-fields label { display: grid; gap: var(--space-1); }
+.today-change-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+.today-change-fields[hidden] { display: none; }
+.today-change-fields input, .today-change select { width: 100%; min-width: 0; }
+.today-change-preview { margin-top: var(--space-4); }
+.today-change-preview button { min-height: 44px; }
+.today-change-preview ul { padding-left: 1.4rem; }
+.today-change-ingredients { margin-top: var(--space-1); overflow-wrap: anywhere; color: var(--muted); font-size: .9rem; }
+.today-change #todayChangeOpenPlan { min-height: 44px; margin-top: var(--space-3); }
 .today-handoff { margin-top: var(--space-5); }
 .today-handoff > summary { display: flex; min-height: 52px; align-items: center; justify-content: space-between; gap: var(--space-4); }
 .today-handoff > summary small { font-size: .78rem; white-space: nowrap; }
@@ -935,6 +948,34 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
 body.plan-save-bar-visible main { padding-bottom: calc(var(--bottom-nav-space) + 5.75rem); }
 /* Month view: a real seven-column calendar that remains a read-only selector. */
 .calendar-scroll { overflow-x: auto; overscroll-behavior-inline: contain; }
+.week-draft-panel { --draft-plum: #3C2844; --draft-tomato: #BF5B45; margin: var(--space-5) 0; padding: var(--space-5); border: 1px solid color-mix(in srgb, var(--draft-plum) 20%, var(--rule)); border-radius: var(--radius-sheet); background: var(--paper); color: var(--draft-plum); }
+.week-draft-heading { display: flex; align-items: start; justify-content: space-between; gap: var(--space-5); }
+.week-draft-heading h3 { margin: var(--space-1) 0 var(--space-2); font-family: var(--font-reading); font-weight: 500; }
+.week-draft-heading p:not(.view-kicker) { max-width: 38rem; color: var(--muted); }
+.week-draft-heading-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.week-draft-panel .ghost-button { border-color: var(--draft-plum); color: var(--draft-plum); }
+.week-draft-days { display: grid; margin: var(--space-5) 0 0; padding: 0; list-style: none; border-top: 1px solid var(--rule); }
+.week-draft-day { display: grid; grid-template-columns: 7rem minmax(0, 1fr) auto; align-items: center; gap: var(--space-4); min-width: 0; padding: var(--space-3) 0; border-bottom: 1px solid var(--rule); }
+.week-draft-date { color: var(--muted); font-size: .83rem; font-weight: 700; }
+.week-draft-meal { display: grid; min-width: 0; }
+.week-draft-meal strong { overflow-wrap: anywhere; font-family: var(--font-reading); font-size: 1.13rem; font-weight: 600; }
+.week-draft-meal small { color: var(--muted); font-size: .8rem; }
+.week-draft-controls { display: flex; align-items: center; gap: var(--space-1); }
+.week-draft-controls label { display: flex; min-height: 44px; align-items: center; gap: var(--space-2); padding: 0 var(--space-2); font-size: .85rem; }
+.week-draft-controls input { width: 18px; height: 18px; accent-color: var(--draft-plum); }
+.week-draft-controls .text-button { color: var(--draft-plum); }
+.week-draft-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-top: var(--space-5); }
+.week-draft-footer p, .week-draft-note { color: var(--muted); font-size: .85rem; }
+.week-draft-footer .primary-action { border-color: var(--draft-tomato); background: var(--draft-tomato); color: #fff; }
+.week-draft-message { min-height: 1.5em; margin-top: var(--space-3); font-size: .85rem; }
+.week-draft-shopping { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--rule); }
+.week-draft-shopping p { color: var(--muted); font-size: .85rem; }
+.week-draft-shopping ul { margin: var(--space-3) 0; padding-left: var(--space-5); }
+.week-draft-shopping li { margin-bottom: var(--space-2); overflow-wrap: anywhere; }
+.week-draft-shopping strong { color: var(--danger); }
+.week-draft-shopping .primary-action { min-height: 44px; border-color: var(--draft-tomato); background: var(--draft-tomato); color: #fff; }
+.week-draft-shopping-alert { color: var(--danger) !important; font-weight: 600; }
+.week-draft-panel :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
 .calendar-weekdays, .calendar-grid { min-width: 42rem; }
 .calendar-weekdays { margin-top: var(--space-5); border: 1px solid var(--rule); border-bottom: 0; background: var(--paper); }
 .calendar-weekdays > div, .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
@@ -1830,7 +1871,9 @@ body.plan-save-bar-visible main { padding-bottom: calc(var(--bottom-nav-space) +
     vertical-align: bottom;
   }
   .app-header { padding-inline: var(--space-3); }
-  .header-actions { gap: var(--space-1); }
+  .brand-lockup { flex: 1 1 auto; }
+  .brand-lockup .eyebrow { max-width: min(9rem, calc(100% - 38px)); }
+  .header-actions { flex-shrink: 0; gap: var(--space-1); }
   .household-menu > summary { padding-inline: 10px; }
   .segmented button { padding-inline: 10px; }
   .focused-headcount-grid { gap: var(--space-2); }
@@ -1843,6 +1886,14 @@ body.plan-save-bar-visible main { padding-bottom: calc(var(--bottom-nav-space) +
 }
 
 @media (max-width: 699px) {
+  .week-draft-panel { margin-inline: calc(var(--space-4) * -1); padding: var(--space-4); border-radius: 0; }
+  .week-draft-heading, .week-draft-footer { display: grid; }
+  .week-draft-heading-actions { width: 100%; }
+  .week-draft-heading-actions .ghost-button { flex: 1; }
+  .week-draft-day { grid-template-columns: 5.5rem minmax(0, 1fr); gap: var(--space-2); }
+  .week-draft-controls { grid-column: 2; flex-wrap: wrap; }
+  .week-draft-controls .text-button { padding-inline: var(--space-2); }
+  .week-draft-footer .primary-action { width: 100%; }
   .dinner-feedback, .smart-suggestions, .today-tools { margin-inline: calc(var(--space-4) * -1); }
   .view-banner { align-items: flex-start; }
   .view-banner.week-banner, .week-actions { display: grid; width: 100%; }

@@ -7,6 +7,7 @@ import {
   cleanIngredientForGrocery,
   formatCompactGroceryMealCue,
   groceryAisleFor,
+  checkedGroceryEvidenceAtRisk,
   groceryItem,
   groceryItemsFromRecipe,
   groceryMealRowState,
@@ -15,6 +16,7 @@ import {
   manualGroceryItemsFromText,
   mergeGroceries,
   parseIngredientAmount,
+  previewPlannedGroceryChanges,
   replacePlannedGroceries,
   scaleIngredientText,
 } from "../grocery-logic.js";
@@ -195,6 +197,59 @@ test("rebuilding a plan replaces stale quantities while preserving manual items"
   assert.equal(rebuilt.length, 2);
   assert.equal(rebuilt.find((item) => item.source === "meal-plan").plannedQuantities.en, 2);
   assert.ok(rebuilt.some((item) => item.source === "manual"));
+});
+
+test("shopping preview flags a checked ingredient when required quantity grows", () => {
+  const recipe = { id: "rice", name: { en: "Rice" }, ingredients: { en: ["1 cup rice"] } };
+  const use = { dateKey: "2026-08-13", mealSlot: "dinner", recipeId: recipe.id, recipeName: recipe.name };
+  const [bought] = groceryItemsFromRecipe(recipe, "en", [], "Family", use, 1);
+  bought.source = "meal-plan";
+  bought.checked = true;
+  const [needed] = groceryItemsFromRecipe(recipe, "en", [], "Family", use, 2);
+  needed.source = "meal-plan";
+
+  const result = previewPlannedGroceryChanges([bought], [needed]);
+
+  assert.equal(result.needsPurchaseReview, true);
+  assert.equal(result.changes[0].kind, "increased");
+  assert.equal(result.changes[0].needsPurchaseReview, true);
+  assert.equal(result.changes[0].before.plannedQuantities.en, 1);
+  assert.equal(result.changes[0].after.plannedQuantities.en, 2);
+  assert.equal(bought.checked, true);
+});
+
+test("shopping preview retains evidence of checked items removed from the plan", () => {
+  const bought = groceryItem("2 lemons", { source: "meal-plan", ingredientKey: "lemon" });
+  bought.checked = true;
+  const manual = groceryItem("Milk", { source: "manual" });
+
+  const result = previewPlannedGroceryChanges([manual, bought], []);
+
+  assert.equal(result.needsPurchaseReview, true);
+  assert.deepEqual(result.changes.map(({ kind, before, after }) => [kind, before.id, after]), [["removed", bought.id, null]]);
+  assert.equal(bought.checked, true);
+});
+
+test("a rebuilt list cannot silently erase a checked purchase", () => {
+  const bought = groceryItem("2 lemons", { source: "meal-plan", ingredientKey: "lemon" });
+  bought.checked = true;
+  const unchanged = { ...bought };
+  assert.equal(checkedGroceryEvidenceAtRisk([bought], [unchanged]), false);
+  assert.equal(checkedGroceryEvidenceAtRisk([bought], [{ ...unchanged, checked: false }]), true);
+  assert.equal(checkedGroceryEvidenceAtRisk([bought], []), true);
+});
+
+test("shopping preview is idempotent for identical plans and ignores manual groceries", () => {
+  const recipe = { id: "rice", name: { en: "Rice" }, ingredients: { en: ["1 cup rice"] } };
+  const use = { dateKey: "2026-08-13", mealSlot: "dinner", recipeId: recipe.id, recipeName: recipe.name };
+  const [planned] = groceryItemsFromRecipe(recipe, "en", [], "Family", use, 1);
+  planned.source = "meal-plan";
+  planned.checked = true;
+  const manual = groceryItem("Milk", { source: "manual" });
+
+  const result = previewPlannedGroceryChanges([manual, planned], [planned]);
+
+  assert.deepEqual(result, { changes: [], needsPurchaseReview: false });
 });
 
 test("the first rebuilt plan removes legacy week-plan rows", () => {
