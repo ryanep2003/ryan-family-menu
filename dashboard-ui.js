@@ -85,10 +85,10 @@ export function createDashboardUi({
     const list = new Intl.ListFormat(getLang() === "es" ? "es" : "en", { style: "long", type: "conjunction" });
     if (memory.fact === "everyoneAte") return t("memoryEveryoneAte");
     if (memory.fact === "liked" && memory.likedNames?.length) {
-      return t("memoryPeopleLiked").replace("{names}", list.format(memory.likedNames));
+      return t(memory.likedNames.length === 1 ? "memoryPersonLiked" : "memoryPeopleLiked").replace("{names}", list.format(memory.likedNames));
     }
-    if (memory.fact === "skipped" && memory.skippedNames?.length) {
-      return t("memoryPeopleSkipped").replace("{names}", list.format(memory.skippedNames));
+    if (memory.fact === "disliked" && memory.dislikedNames?.length) {
+      return t(memory.dislikedNames.length === 1 ? "memoryPersonDisliked" : "memoryPeopleDisliked").replace("{names}", list.format(memory.dislikedNames));
     }
     if (memory.fact === "familyLoved") return t("memoryFamilyLoved");
     return "";

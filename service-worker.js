@@ -1,4 +1,6 @@
-const CACHE_NAME = "ryan-family-menu-v204";
+const CACHE_NAME = "ryan-family-menu-v206";
+// v206: Dinner memory ranks only cooked events and keeps draft recovery reviewable.
+// v205: Household-local weekly draft recovery.
 // v204: Week-one draft and change-of-plans modules join the current app shell.
 // v203: Phase 5 keeps Plan saves on the schedule record, restores tab scroll, and fits Spanish chrome.
 // v202: Phase 4 quiets Shop aisles and Cook along into the same editorial paper.
@@ -76,6 +78,7 @@ const ASSETS = [
   "./week-approval-client.js",
   "./week-shopping-client.js",
   "./week-draft-ui.js",
+  "./week-draft-recovery.js",
   "./manifest.webmanifest",
   "./assets/app-icon.svg",
   "./assets/app-icon-180.png",

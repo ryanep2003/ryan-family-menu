@@ -2515,6 +2515,7 @@ const weekDraftUi = createWeekDraftUi({
   t,
   escapeHtml,
   localize,
+  householdStorage,
   getCatalogStatus: () => sharedRecipesStatus,
   getPlannerInput: () => ({
     weekStartKey,

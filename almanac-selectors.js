@@ -3,14 +3,15 @@
 
 export function selectRecipeMemory(recipeId, events = [], familyMembers = []) {
   const matching = events
-    .filter((event) => Array.isArray(event?.items) && event.items.some((item) => item.recipeId === recipeId))
+    .filter((event) => (event?.status === undefined || event.status === "cooked")
+      && Array.isArray(event?.items) && event.items.some((item) => item.recipeId === recipeId))
     .sort((left, right) => `${right.dateKey || ""}`.localeCompare(`${left.dateKey || ""}`));
   if (!matching.length) return {
     count: 0,
     lastMade: "",
     fact: "",
     likedNames: [],
-    skippedNames: [],
+    dislikedNames: [],
   };
 
   const latest = matching[0];
@@ -20,8 +21,8 @@ export function selectRecipeMemory(recipeId, events = [], familyMembers = []) {
     .filter((member) => ["loved", "ate"].includes(reactions[member.id] || reactions[member.name]))
     .map((member) => member.name)
     .filter(Boolean);
-  const skippedNames = activeMembers
-    .filter((member) => ["neutral", "disliked"].includes(reactions[member.id] || reactions[member.name]))
+  const dislikedNames = activeMembers
+    .filter((member) => reactions[member.id] === "disliked" || reactions[member.name] === "disliked")
     .map((member) => member.name)
     .filter(Boolean);
   const attendeeIds = new Set(Array.isArray(latest.attendeeIds) ? latest.attendeeIds : []);
@@ -31,8 +32,8 @@ export function selectRecipeMemory(recipeId, events = [], familyMembers = []) {
   ));
   const fact = everyoneAte
     ? "everyoneAte"
-    : likedNames.length ? "liked"
-      : skippedNames.length ? "skipped"
+    : dislikedNames.length ? "disliked"
+      : likedNames.length ? "liked"
         : latest.outcome === "loved" ? "familyLoved"
           : "";
   return {
@@ -40,7 +41,7 @@ export function selectRecipeMemory(recipeId, events = [], familyMembers = []) {
     lastMade: latest.dateKey || "",
     fact,
     likedNames,
-    skippedNames,
+    dislikedNames,
   };
 }
 

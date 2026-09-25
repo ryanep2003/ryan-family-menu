@@ -253,13 +253,25 @@ export function recommendationForRecipe(recipe, { events = [], members = [], pre
     score += 8;
     reasons.push("reliable");
   }
-  const historyScore = matchingEvents.reduce((total, event) => total + ({ loved: 5, worked: 2, mixed: -1, skip: -7, "not-made": 0 }[event.outcome] || 0), 0);
-  score += matchingEvents.length ? historyScore / Math.min(matchingEvents.length, 5) : 0;
+  const cookedEvents = matchingEvents.filter((event) => event.status === "cooked" && event.outcome !== "not-made");
+  const recentCooked = cookedEvents.slice(0, 5);
+  if (recentCooked.length) {
+    score += recentCooked.reduce((total, event) => {
+      const outcomeScore = ({ loved: 5, worked: 2, mixed: -1, skip: -7 })[event.outcome] || 0;
+      const attendeeIds = new Set(event.attendeeIds);
+      const recorded = Object.entries(event.reactions).filter(([memberId]) => !attendeeIds.size || attendeeIds.has(memberId));
+      const reactionScore = recorded.length ? recorded.reduce((sum, [, reaction]) =>
+        sum + ({ loved: 1, ate: 0.25, neutral: 0, disliked: -1.5 })[reaction], 0) / recorded.length : 0;
+      return total + outcomeScore + reactionScore;
+    }, 0) / recentCooked.length;
+  }
   const legacy = recipeFeedback?.[recipe?.id];
-  if (legacy) score += (Number(legacy.loved) || 0) * 2 + (Number(legacy.repeat) || 0) - (Number(legacy.skip) || 0) * 4;
+  // Legacy counters duplicate recorded dinner events for newer households.
+  if (!matchingEvents.length && legacy) score += Math.max(-8, Math.min(8,
+    (Number(legacy.loved) || 0) * 2 + (Number(legacy.repeat) || 0) - (Number(legacy.skip) || 0) * 4));
   if (!matchingEvents.length && (Number(legacy?.loved) || 0) > 0) reasons.push("liked");
-  if (matchingEvents.some((event) => event.outcome === "loved")) reasons.push("liked");
-  const last = matchingEvents[0];
+  if (cookedEvents.some((event) => event.outcome === "loved")) reasons.push("liked");
+  const last = cookedEvents[0];
   if (last && dateKey) {
     const daysSince = Math.floor((new Date(`${dateKey}T12:00:00`) - new Date(`${last.dateKey}T12:00:00`)) / 86400000);
     if (daysSince >= 0 && daysSince < normalizedRules.repeatDays) {

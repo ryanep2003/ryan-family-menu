@@ -1,6 +1,7 @@
 import { createWeekDraft } from "./week-planner-logic.js";
+import { recoverWeekDraft, serializeWeekDraftRecovery, WEEK_DRAFT_RECOVERY_KEY } from "./week-draft-recovery.js";
 
-export function createWeekDraftUi({ $, t, escapeHtml, localize, getPlannerInput, getCatalogStatus, onApprove, onShoppingPreview, onShoppingUpdate }) {
+export function createWeekDraftUi({ $, t, escapeHtml, localize, getPlannerInput, getCatalogStatus, householdStorage, onApprove, onShoppingPreview, onShoppingUpdate }) {
   const panel = $("#weekDraftPanel");
   let draft = null;
   let selected = new Set();
@@ -10,7 +11,28 @@ export function createWeekDraftUi({ $, t, escapeHtml, localize, getPlannerInput,
   let shoppingReviewWeek = "";
   let shoppingPreview = null;
   let shoppingStatus = "";
+  let restoreAttempted = false;
+  let recoveryRaw = null;
+  let draftNeedsReview = false;
   const focusControl = (selector) => panel?.querySelector(selector)?.focus({ preventScroll: true });
+
+  function persistRecovery() {
+    restoreAttempted = true;
+    try {
+      if (!draft) {
+        householdStorage.removeItem(WEEK_DRAFT_RECOVERY_KEY);
+        recoveryRaw = null;
+        return;
+      }
+      const raw = serializeWeekDraftRecovery({ draft, selectedDateKeys: selected, input: getPlannerInput() });
+      if (!raw) throw new Error("Draft exceeds local recovery limit.");
+      householdStorage.setItem(WEEK_DRAFT_RECOVERY_KEY, raw);
+      recoveryRaw = raw;
+    } catch {
+      recoveryRaw = null;
+      message = "weekDraftRecoveryUnavailable";
+    }
+  }
 
   function isNewChoice(day) {
     return Boolean(day.recipeId && day.status !== "unresolved"
@@ -20,10 +42,24 @@ export function createWeekDraftUi({ $, t, escapeHtml, localize, getPlannerInput,
   function render() {
     if (!panel) return;
     const input = getPlannerInput();
-    if (draft && draft.weekStartKey !== input.weekStartKey) {
-      draft = null;
-      selected = new Set();
-      message = "";
+    const ready = getCatalogStatus() === "ready";
+    if (ready && !restoreAttempted) {
+      restoreAttempted = true;
+      try {
+        recoveryRaw = householdStorage.getItem(WEEK_DRAFT_RECOVERY_KEY);
+        const recovered = recoverWeekDraft(recoveryRaw, input);
+        if (recovered.status === "restored") {
+          draft = recovered.draft;
+          selected = new Set(recovered.selectedDateKeys);
+          draftNeedsReview = false;
+          message = "weekDraftRecovered";
+        } else if (recovered.status === "stale") message = "weekDraftRecoveryStale";
+      } catch { message = "weekDraftRecoveryUnavailable"; }
+    }
+    if (draft && (draft.weekStartKey !== input.weekStartKey
+      || (ready && recoveryRaw && recoverWeekDraft(recoveryRaw, input).status !== "restored"))) {
+      draftNeedsReview = true;
+      message = "weekDraftRecoveryStale";
       conflictDates = [];
     }
     if (shoppingReviewWeek && shoppingReviewWeek !== input.weekStartKey) {
@@ -31,7 +67,6 @@ export function createWeekDraftUi({ $, t, escapeHtml, localize, getPlannerInput,
       shoppingPreview = null;
       shoppingStatus = "";
     }
-    const ready = getCatalogStatus() === "ready";
     const choiceDays = draft?.days.filter(isNewChoice) || [];
     const shoppingRows = shoppingPreview?.changes.map((change) => {
       const before = change.before ? localize(change.before.text) : "";
@@ -64,10 +99,10 @@ export function createWeekDraftUi({ $, t, escapeHtml, localize, getPlannerInput,
         return `<li class="week-draft-day">
           <span class="week-draft-date">${escapeHtml(label)}</span>
           <span class="week-draft-meal"><strong>${escapeHtml(recipe ? localize(recipe.name) : day.recipeId ? t("weekDraftUnavailableRecipe") : t("weekDraftNeedsChoice"))}</strong><small>${escapeHtml(reason)}</small></span>
-          ${newChoice ? `<span class="week-draft-controls"><label><input type="checkbox" data-week-draft-select="${escapeHtml(day.dateKey)}" aria-label="${escapeHtml(`${t("weekDraftInclude")} ${label}`)}" ${selected.has(day.dateKey) ? "checked" : ""} ${busy ? "disabled" : ""}>${escapeHtml(t("weekDraftInclude"))}</label><button type="button" class="text-button" data-week-draft-swap="${escapeHtml(day.dateKey)}" aria-label="${escapeHtml(`${t("weekDraftSwap")} ${label}`)}" ${busy ? "disabled" : ""}>${escapeHtml(t("weekDraftSwap"))}</button><button type="button" class="text-button" data-week-draft-keep="${escapeHtml(day.dateKey)}" aria-label="${escapeHtml(`${t(day.locked ? "weekDraftUnlock" : "weekDraftKeep")} ${label}`)}" ${busy ? "disabled" : ""}>${escapeHtml(t(day.locked ? "weekDraftUnlock" : "weekDraftKeep"))}</button></span>` : ""}
+          ${newChoice ? `<span class="week-draft-controls"><label><input type="checkbox" data-week-draft-select="${escapeHtml(day.dateKey)}" aria-label="${escapeHtml(`${t("weekDraftInclude")} ${label}`)}" ${selected.has(day.dateKey) ? "checked" : ""} ${busy || draftNeedsReview ? "disabled" : ""}>${escapeHtml(t("weekDraftInclude"))}</label><button type="button" class="text-button" data-week-draft-swap="${escapeHtml(day.dateKey)}" aria-label="${escapeHtml(`${t("weekDraftSwap")} ${label}`)}" ${busy || draftNeedsReview ? "disabled" : ""}>${escapeHtml(t("weekDraftSwap"))}</button><button type="button" class="text-button" data-week-draft-keep="${escapeHtml(day.dateKey)}" aria-label="${escapeHtml(`${t(day.locked ? "weekDraftUnlock" : "weekDraftKeep")} ${label}`)}" ${busy || draftNeedsReview ? "disabled" : ""}>${escapeHtml(t(day.locked ? "weekDraftUnlock" : "weekDraftKeep"))}</button></span>` : ""}
         </li>`;
       }).join("")}</ol>
-      <div class="week-draft-footer"><p>${escapeHtml(t("weekDraftShoppingLater"))}</p><button class="primary-action" type="button" data-week-draft="approve" ${busy || !selected.size ? "disabled" : ""}>${escapeHtml(t(busy ? "weekDraftSaving" : "weekDraftApprove"))}</button></div>` : ""}
+      <div class="week-draft-footer"><p>${escapeHtml(t("weekDraftShoppingLater"))}</p><button class="primary-action" type="button" data-week-draft="approve" ${busy || draftNeedsReview || !selected.size ? "disabled" : ""}>${escapeHtml(t(busy ? "weekDraftSaving" : "weekDraftApprove"))}</button></div>` : ""}
       <p class="week-draft-message" role="status" tabindex="-1">${escapeHtml(message ? t(message) : choiceDays.length ? t("weekDraftReviewPrompt") : "")}${conflictDates.length ? ` ${escapeHtml(conflictDates.join(", "))}` : ""}</p>
       ${shoppingReviewWeek && !draft ? `<div class="week-draft-shopping"><button class="ghost-button" type="button" data-week-draft="shopping" ${busy ? "disabled" : ""}>${escapeHtml(t("weekDraftReviewShopping"))}</button>${shoppingPreview ? `<p>${escapeHtml(shoppingPreview.changes.length ? t("weekDraftShoppingPreviewIntro") : t("weekDraftShoppingNoChanges"))}</p><ul>${shoppingRows}</ul>${shoppingAction}<p>${escapeHtml(t("weekDraftShoppingPreviewOnly"))}</p>` : ""}<p role="status">${escapeHtml(shoppingStatus ? t(shoppingStatus) : "")}</p></div>` : ""}
     `;
@@ -76,9 +111,11 @@ export function createWeekDraftUi({ $, t, escapeHtml, localize, getPlannerInput,
   function generate(previousDraft = null, excludedRecipeIds = []) {
     const input = getPlannerInput();
     draft = createWeekDraft({ ...input, previousDraft, excludedRecipeIds });
+    draftNeedsReview = false;
     selected = new Set(draft.days.filter(isNewChoice).map((day) => day.dateKey));
     message = "";
     conflictDates = [];
+    persistRecovery();
     render();
   }
 
@@ -89,6 +126,7 @@ export function createWeekDraftUi({ $, t, escapeHtml, localize, getPlannerInput,
       if (!dateKey) return;
       if (event.target.checked) selected.add(dateKey);
       else selected.delete(dateKey);
+      persistRecovery();
       render();
     });
     panel.addEventListener("click", async (event) => {
@@ -96,21 +134,24 @@ export function createWeekDraftUi({ $, t, escapeHtml, localize, getPlannerInput,
       const button = event.target.closest("button");
       if (!button || !panel.contains(button)) return;
       if (button.dataset.weekDraft === "generate") {
-        generate(draft, draft?.constraints.excludedRecipeIds || []);
+        generate(draftNeedsReview ? null : draft, draftNeedsReview ? [] : draft?.constraints.excludedRecipeIds || []);
         focusControl('[data-week-draft="generate"]');
       } else if (button.dataset.weekDraft === "reset") {
         draft = null;
         selected = new Set();
+        draftNeedsReview = false;
         message = "";
         conflictDates = [];
+        persistRecovery();
         render();
         focusControl('[data-week-draft="generate"]');
-      } else if (button.dataset.weekDraftKeep && draft) {
+      } else if (button.dataset.weekDraftKeep && draft && !draftNeedsReview) {
         const day = draft.days.find((item) => item.dateKey === button.dataset.weekDraftKeep);
         if (day) day.locked = !day.locked;
+        persistRecovery();
         render();
         focusControl(`[data-week-draft-keep="${button.dataset.weekDraftKeep}"]`);
-      } else if (button.dataset.weekDraftSwap && draft) {
+      } else if (button.dataset.weekDraftSwap && draft && !draftNeedsReview) {
         const dateKey = button.dataset.weekDraftSwap;
         const original = draft;
         const originalSelected = new Set(selected);
@@ -124,10 +165,11 @@ export function createWeekDraftUi({ $, t, escapeHtml, localize, getPlannerInput,
           draft = original;
           selected = originalSelected;
           message = "weekDraftNoAlternative";
+          persistRecovery();
           render();
         }
         focusControl(`[data-week-draft-swap="${dateKey}"]`);
-      } else if (button.dataset.weekDraft === "approve" && draft && selected.size) {
+      } else if (button.dataset.weekDraft === "approve" && draft && selected.size && !draftNeedsReview) {
         busy = true;
         message = "weekDraftSaving";
         render();
@@ -139,6 +181,7 @@ export function createWeekDraftUi({ $, t, escapeHtml, localize, getPlannerInput,
         conflictDates = Array.isArray(result.conflicts) ? result.conflicts : [];
         if (result.status === "saved") { draft = null; selected = new Set(); }
         if (result.status === "saved") { shoppingReviewWeek = getPlannerInput().weekStartKey; shoppingPreview = null; shoppingStatus = ""; }
+        if (result.status === "saved") persistRecovery();
         render();
         focusControl(".week-draft-message");
       } else if (button.dataset.weekDraft === "shopping" && shoppingReviewWeek) {

@@ -48,7 +48,7 @@ The initial remote collections use independent settled requests so one unavailab
 | Meal planning and leftovers | `schedule-utils.js`, `recipe-utils.js`, `dinner-flow.js` | `schedule-ui.js` |
 | Family Help conversation | `assistant-logic.js`, `assistant-conversation.js`, `assistant-proposals.js` | `assistant-ui.js`, `netlify/functions/assistant.js` |
 | Deterministic planning from home | `plan-from-what-we-have.js`, inventory, recipes, preferences, leftovers, budget | Today plan preview in `app.js` |
-| Weekly dinner draft and shopping review | `week-planner-logic.js`, `week-approval-logic.js`, `week-approval-client.js`, `week-shopping-client.js` | `week-draft-ui.js` in the Plan view |
+| Weekly dinner draft and shopping review | `week-planner-logic.js`, `week-draft-recovery.js`, `week-approval-logic.js`, `week-approval-client.js`, `week-shopping-client.js` | `week-draft-ui.js` in the Plan view |
 | Cook Along and dinner memory | `memory-logic.js`, recipe steps | `cook-along-ui.js`, `app.js` |
 | Household memory | `memory-logic.js`, `family-state.js` | `family-ui.js`, Today feedback in `app.js` |
 | School lunches | `lunch-logic.js`, shared family state, grocery provenance | `lunch-ui.js` |

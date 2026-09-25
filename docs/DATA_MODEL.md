@@ -156,6 +156,8 @@ Current rule fields include repeat window, maximum weeknight prep time, minimum 
 
 Dinner history is separate from the main state so feedback can grow independently. One event represents one household date and includes planned dinner snapshots, status/outcome, optional attendee IDs, optional member reactions, leftovers, notes, and attribution. Normalization keeps one editable event per date and bounds retained history.
 
+Planning recommendations use only cooked dinner events for outcome and repeat-spacing signals. Recorded attendee reactions add a small advisory signal; takeout, skipped/not-made dinners, neutral reactions, and missing feedback do not imply dislike. When an event exists for a recipe, legacy aggregate feedback counters are not added again, so correcting that event replaces its ranking influence. No event or preference field was added for this ranking change.
+
 ## Groceries
 
 A grocery item includes localized text, store, checked state, origin, recipe metadata, inventory guidance, attribution, and structured planned quantities/units.
@@ -205,6 +207,8 @@ The raw household access key is stored globally as `family-menu-household-key`. 
 ```text
 family-menu:<household-id>:<local-key>
 ```
+
+`dinner-week-draft-v1` holds one bounded, unfinished weekly dinner draft and its selected dates inside that household namespace. The browser restores it only when the week, recipe/planning context, schedule version, and effective meal baseline still match. Otherwise it asks for a new review. This device-only record is never an approval or a shared meal-plan write; older clients ignore it, and clearing browser storage removes only the unfinished draft.
 
 Important local keys include schedule, calendar, versions, favorites, tasks, groceries, inventory, budget, receipts, activity, family memory, `school-lunches`, dinner history, recipe edits, deleted recipe IDs, and drafts.
 

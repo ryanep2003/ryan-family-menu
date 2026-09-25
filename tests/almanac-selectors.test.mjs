@@ -45,6 +45,20 @@ test("family-memory selectors condense a deep history into one current record", 
   assert.equal(memory.fact, "everyoneAte");
 });
 
+test("family memory does not call neutral feedback a skipped meal or takeout a cooked dinner", () => {
+  const members = [{ id: "avery", name: "Avery", active: true }];
+  const events = [
+    { dateKey: "2026-09-21", status: "cooked", attendeeIds: ["avery"], reactions: { avery: "neutral" }, items: [{ recipeId: "tacos" }] },
+    { dateKey: "2026-09-22", status: "takeout", outcome: "skip", items: [{ recipeId: "tacos" }] },
+  ];
+  const memory = selectRecipeMemory("tacos", events, members);
+  assert.equal(memory.lastMade, "2026-09-21");
+  assert.equal(memory.fact, "");
+  const disliked = selectRecipeMemory("tacos", [{ ...events[0], reactions: { avery: "disliked" } }], members);
+  assert.equal(disliked.fact, "disliked");
+  assert.deepEqual(disliked.dislikedNames, ["Avery"]);
+});
+
 test("family visual system uses the locked navy and sage tokens", async () => {
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
   const declared = new Set([...css.matchAll(/(--[\w-]+)\s*:/g)].map((match) => match[1]));
