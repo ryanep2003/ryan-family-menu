@@ -33,6 +33,7 @@ The shipped product currently supports:
 - Home inventory by location, stock level, quantity, and expiration.
 - Receipt capture and monthly grocery-budget tracking.
 - Family profiles, food preferences, household rules, quick dinner feedback, dinner history, and deterministic recommendation ranking.
+- A Family memory view that separates stated preferences from dated dinner observations. Historical dinner feedback can be corrected with a fresh-record check, so a stale form does not overwrite another device's change.
 - Cook Along mode for hands-free step-by-step preparation, simple timers, and saving actual servings, leftovers, notes, and outcomes.
 - Family Help on Today and Plan: a short, source-backed conversation over the household’s available meals, recipes, shopping, food at home, lunches, preferences, history, and budget summaries. It can open cited records and safely propose one grocery/inventory/meal/leftover change or an exact shopping-date refresh; meal proposals can add or replace only a resolved date/period, while exact-item moves stay in the editor. It never silently saves a change. Every proposed change is rechecked and explicitly confirmed, and existing occupied meals are never overwritten by the dinner-fill helper.
 - English and Spanish interface/content support.

@@ -99,3 +99,36 @@ test("stale attribution safely falls back to the shared Family identity", () => 
   assert.equal(elements.householdMemberInput.value, "Family");
   assert.equal(getSelectedMember(), "Family");
 });
+
+test("memory separates stated preferences from cooked observations and labels takeout truthfully", () => {
+  const elements = {
+    familyMemorySummary: element(), familyMembersList: element(), pastDinnersList: element(),
+    householdMemberSuggestions: element(), householdMemberPicker: element(),
+    setupFamilyMembers: element(), householdMemberInput: element(),
+  };
+  const members = [{ id: "member-avery", name: "Avery", role: "adult", active: true }];
+  const events = [
+    { dateKey: "2026-09-22", status: "takeout", outcome: "skip", items: [{ recipeId: "tacos", name: "Tacos" }], reactions: {}, leftovers: {}, updatedBy: "Family" },
+    { dateKey: "2026-09-21", status: "cooked", outcome: "loved", items: [{ recipeId: "pasta", name: "Pasta" }], reactions: { "member-avery": "loved" }, leftovers: {}, updatedBy: "Family" },
+  ];
+  const ui = createFamilyUi({
+    $: (selector) => elements[selector.slice(1)] || null,
+    $$: () => [],
+    t: (key) => ({ householdFamily: "Family", dinnerHistoryTakeout: "Takeout", dinnerOutcomeLoved: "Loved it", reactionLoved: "Loved it", memoryRecordedReaction: "{name}: {reaction}" })[key] || key,
+    escapeHtml: (value) => `${value}`,
+    localize: (value) => value?.en || value || "",
+    getLang: () => "en",
+    getHouseholdMember: () => "Family",
+    setHouseholdMember: () => {},
+    getFamilyMembers: () => members,
+    getFamilyPreferences: () => [{ id: "preference-1", memberId: "member-avery", kind: "like", value: "Pasta" }],
+    getFamilyRules: () => ({}),
+    getDinnerEvents: () => events,
+    recipeById: () => null,
+  });
+  ui.renderFamily();
+  assert.match(elements.familyMemorySummary.innerHTML, /family-member-member-avery/);
+  assert.match(elements.familyMemorySummary.innerHTML, /past-dinner-2026-09-21/);
+  assert.doesNotMatch(elements.familyMemorySummary.innerHTML, /past-dinner-2026-09-22/);
+  assert.match(elements.pastDinnersList.innerHTML, /Takeout/);
+});

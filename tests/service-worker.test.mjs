@@ -67,6 +67,7 @@ test("service worker pre-caches first-party app modules", async () => {
     "./budget-ui.js",
     "./family-state.js",
     "./family-ui.js",
+    "./dinner-history-correction.js",
     "./handoff-ui.js",
     "./memory-logic.js",
     "./grocery-ui.js",

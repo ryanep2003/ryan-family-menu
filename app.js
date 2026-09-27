@@ -53,6 +53,7 @@ import { readJsonStorage, readNumberStorage, readStringStorage } from "./storage
 import { formatSyncedAtMessage, renderSyncStatus, syncRetryLabel } from "./sync-status.js";
 import { translations } from "./translations.js";
 import { selectRecipeMemory, selectTodayStory } from "./almanac-selectors.js";
+import { saveDinnerHistoryCorrection } from "./dinner-history-correction.js";
 import { recipesFromCatalogResponse } from "./recipe-catalog-utils.js";
 import { planFromWhatWeHave } from "./plan-from-what-we-have.js";
 import { reconcileUninitializedLedger, sharedStateWithAuthoritativeDomains } from "./shared-state-authority.js";
@@ -2832,6 +2833,23 @@ const familyUi = createFamilyUi({
   allRecipes,
   saveSharedState: (options = {}) => saveSharedState({ ...options, dirtySurface: "family" }),
   saveDinnerEvents: saveDinnerHistory,
+  correctDinnerHistory: async ({ dateKey, expectedEvent, outcome, reactions }) => {
+    if (dinnerHistoryPending) return { status: "pending" };
+    const result = await saveDinnerHistoryCorrection({
+      getJson,
+      putJson,
+      dateKey,
+      expectedEvent,
+      correction: { outcome, reactions, updatedBy: householdMember },
+    });
+    if (result.status === "saved") {
+      dinnerEvents = result.items;
+      dinnerHistoryVersion = Number(result.version) || 0;
+      persistDinnerHistoryLocally();
+    }
+    return result;
+  },
+  reloadDinnerEvents: loadDinnerHistory,
   recordDinnerOutcome: (event, previous) => {
     if (previous || event.status !== "cooked") return;
     const outcome = ({ loved: "loved", worked: "made", mixed: "made", skip: "skip" })[event.outcome];

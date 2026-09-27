@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=206" />
+    <link rel="stylesheet" href="styles.css?v=207" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -417,10 +417,16 @@
         </div>
 
         <nav class="family-section-links" aria-label="Family settings" data-i18n-aria-label="familySettingsLabel">
+          <a href="#familyMemorySection" data-i18n="familyMemoryHeading">Family memory</a>
           <a href="#familyMembersSection" data-i18n="familyMembersHeading">Family members</a>
           <a href="#familyRulesSection" data-i18n="familyRulesHeading">How we eat</a>
           <a href="#pastDinnersSection" data-i18n="pastDinnersHeading">Past dinners</a>
         </nav>
+
+        <section class="family-workspace" id="familyMemorySection" aria-labelledby="familyMemoryHeading">
+          <div class="family-section-heading"><div><h2 id="familyMemoryHeading" data-i18n="familyMemoryHeading">Family memory</h2><p data-i18n="familyMemoryHelper">See what your family told us and what came from recorded dinners.</p></div></div>
+          <div class="family-memory-summary" id="familyMemorySummary"></div>
+        </section>
 
         <section class="family-workspace" id="familyMembersSection" aria-labelledby="familyMembersHeading">
           <div class="family-section-heading"><div><h2 id="familyMembersHeading" data-i18n="familyMembersHeading">Family members</h2><p data-i18n="familyMembersHelper">Add the people who regularly eat with your household. Preferences stay visible to everyone with the family key.</p></div></div>
@@ -1130,6 +1136,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=206"></script>
+    <script type="module" src="app.js?v=207"></script>
   </body>
 </html>

@@ -1,4 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v206";
+const CACHE_NAME = "ryan-family-menu-v207";
+// v207: Family memory sources and conflict-aware dinner-history correction.
 // v206: Dinner memory ranks only cooked events and keeps draft recovery reviewable.
 // v205: Household-local weekly draft recovery.
 // v204: Week-one draft and change-of-plans modules join the current app shell.
@@ -38,6 +39,7 @@ const ASSETS = [
   "./handoff-ui.js",
   "./family-state.js",
   "./family-ui.js",
+  "./dinner-history-correction.js",
   "./memory-logic.js",
   "./plan-from-what-we-have.js",
   "./dirty-form-state.js",

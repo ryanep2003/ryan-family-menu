@@ -156,6 +156,8 @@ Current rule fields include repeat window, maximum weeknight prep time, minimum 
 
 Dinner history is separate from the main state so feedback can grow independently. One event represents one household date and includes planned dinner snapshots, status/outcome, optional attendee IDs, optional member reactions, leftovers, notes, and attribution. Normalization keeps one editable event per date and bounds retained history.
 
+The Family memory view separates explicit member preferences from factual, dated dinner observations and links each observation to its existing event. Correcting a historical dinner changes the existing event's outcome and recorded reactions in one versioned write after comparing a fresh server copy with the form's source record. Other event fields and identity remain intact. A correction to “didn't make it” sets `status: "skipped"`; such a record no longer contributes a cooked-dinner ranking signal. There is no new field, key, store, or migration.
+
 Planning recommendations use only cooked dinner events for outcome and repeat-spacing signals. Recorded attendee reactions add a small advisory signal; takeout, skipped/not-made dinners, neutral reactions, and missing feedback do not imply dislike. When an event exists for a recipe, legacy aggregate feedback counters are not added again, so correcting that event replaces its ranking influence. No event or preference field was added for this ranking change.
 
 ## Groceries

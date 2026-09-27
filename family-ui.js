@@ -36,11 +36,16 @@ export function createFamilyUi({
   allRecipes,
   saveSharedState,
   saveDinnerEvents,
+  correctDinnerHistory,
+  reloadDinnerEvents,
   recordDinnerOutcome,
   renderApp,
   setView,
   getLang,
 }) {
+  let editingHistory = null;
+  let historyNotice = null;
+  let savingHistory = false;
   const preferenceText = (memberId, kind) => getFamilyPreferences()
     .filter((preference) => preference.memberId === memberId && preference.kind === kind)
     .map((preference) => preference.value).join(", ");
@@ -72,7 +77,7 @@ export function createFamilyUi({
     const container = $("#familyMembersList");
     if (!container) return;
     container.innerHTML = members.length ? members.map((member) => `
-      <form class="family-member-card${member.active ? "" : " archived"}" data-family-member-form="${escapeHtml(member.id)}">
+      <form class="family-member-card${member.active ? "" : " archived"}" id="family-member-${escapeHtml(member.id)}" data-family-member-form="${escapeHtml(member.id)}">
         <div class="family-member-heading">
           <div>
             <strong>${escapeHtml(member.name)}</strong>
@@ -108,7 +113,46 @@ export function createFamilyUi({
 
   function outcomeLabel(event) {
     if (!event) return "";
+    if (event.status !== "cooked") return t(event.status === "takeout" ? "dinnerHistoryTakeout" : event.status === "other" ? "dinnerHistoryOther" : "dinnerHistorySkipped");
+    if (!event.outcome) return t("dinnerHistoryNoOutcome");
     return t(`dinnerOutcome${event.outcome.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join("")}`);
+  }
+
+  function renderMemorySummary() {
+    const container = $("#familyMemorySummary");
+    if (!container) return;
+    const members = normalizeFamilyMembers(getFamilyMembers());
+    const preferences = normalizeFamilyPreferences(getFamilyPreferences(), members);
+    const memberById = new Map(members.map((member) => [member.id, member]));
+    const cooked = getDinnerEvents().filter((event) => event.status === "cooked" && event.items.length).slice(0, 5);
+    const preferenceRows = preferences.map((preference) => {
+      const member = memberById.get(preference.memberId);
+      if (!member) return "";
+      const kind = t(`preference${preference.kind[0].toUpperCase()}${preference.kind.slice(1)}`);
+      return `<li><span><strong>${escapeHtml(member.name)}</strong> · ${escapeHtml(kind)}: ${escapeHtml(preference.value)}</span><a href="#family-member-${escapeHtml(member.id)}">${escapeHtml(t("memoryEditPreferences"))}</a></li>`;
+    }).join("");
+    const dinnerRows = cooked.map((event) => {
+      const names = event.items.map((item) => localize(recipeById(item.recipeId)?.name) || item.name).filter(Boolean);
+      const reactions = Object.entries(event.reactions || {}).map(([id, reaction]) => {
+        const member = memberById.get(id);
+        return member ? t("memoryRecordedReaction").replace("{name}", member.name).replace("{reaction}", t(`reaction${reaction[0].toUpperCase()}${reaction.slice(1)}`)) : "";
+      }).filter(Boolean);
+      return `<li><span><strong>${escapeHtml(names.join(" · ") || t("dinnerChangedPlans"))}</strong> · <time datetime="${escapeHtml(event.dateKey)}">${escapeHtml(event.dateKey)}</time> · ${escapeHtml(outcomeLabel(event))}${reactions.length ? `<small>${escapeHtml(reactions.join(" · "))}</small>` : ""}</span><a href="#past-dinner-${escapeHtml(event.dateKey)}">${escapeHtml(t("memoryViewSource"))}</a></li>`;
+    }).join("");
+    container.innerHTML = `<div><h3>${escapeHtml(t("memoryToldUs"))}</h3>${preferenceRows ? `<ul>${preferenceRows}</ul>` : `<p>${escapeHtml(t("memoryNoPreferences"))}</p>`}</div>
+      <div><h3>${escapeHtml(t("memoryFromDinners"))}</h3>${dinnerRows ? `<ul>${dinnerRows}</ul>` : `<p>${escapeHtml(t("memoryNoDinners"))}</p>`}</div>`;
+  }
+
+  function historyCorrectionForm(event) {
+    if (editingHistory?.expected.dateKey !== event.dateKey) return "";
+    const reactionMemberIds = new Set([...(event.attendeeIds || []), ...Object.keys(event.reactions || {})]);
+    const members = normalizeFamilyMembers(getFamilyMembers()).filter((member) => reactionMemberIds.has(member.id));
+    return `<form class="dinner-history-correction" data-history-correction="${escapeHtml(event.dateKey)}">
+      <label><span>${escapeHtml(t("dinnerHistoryOutcome"))}</span><select name="outcome">${outcomes.map((outcome) => `<option value="${outcome}"${editingHistory.outcome === outcome ? " selected" : ""}>${escapeHtml(t(`dinnerOutcome${outcome.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join("")}`))}</option>`).join("")}</select></label>
+      ${members.map((member) => `<label><span>${escapeHtml(t("memberReaction").replace("{name}", member.name))}</span><select name="reaction-${escapeHtml(member.id)}">${reactions.map((reaction) => `<option value="${reaction}"${(editingHistory.reactions[member.id] || "") === reaction ? " selected" : ""}>${escapeHtml(reaction ? t(`reaction${reaction[0].toUpperCase()}${reaction.slice(1)}`) : t("reactionNotRecorded"))}</option>`).join("")}</select></label>`).join("")}
+      <button class="primary-action" type="submit">${escapeHtml(t("dinnerHistorySave"))}</button><p class="form-status" role="status" data-history-status="${escapeHtml(event.dateKey)}">${escapeHtml(historyNotice?.dateKey === event.dateKey ? t(historyNotice.key) : "")}</p>
+      ${historyNotice?.dateKey === event.dateKey && ["dinnerHistoryStale", "dinnerHistoryReloadUnavailable"].includes(historyNotice.key) ? `<button class="text-button" type="button" data-review-dinner="${escapeHtml(event.dateKey)}">${escapeHtml(t("dinnerHistoryReviewLatest"))}</button>` : ""}
+    </form>`;
   }
 
   function renderHistory() {
@@ -123,14 +167,17 @@ export function createFamilyUi({
     container.innerHTML = events.map((event) => {
       const names = event.items.map((item) => localize(recipeById(item.recipeId)?.name) || item.name).filter(Boolean);
       const leftoverTotal = Object.values(event.leftovers || {}).reduce((sum, amount) => sum + Number(amount || 0), 0);
-      return `<article class="past-dinner-item">
+      return `<article class="past-dinner-item" id="past-dinner-${escapeHtml(event.dateKey)}">
         <div><time datetime="${event.dateKey}">${escapeHtml(formatter.format(new Date(`${event.dateKey}T12:00:00`)))}</time><strong>${escapeHtml(names.join(" · ") || t("dinnerChangedPlans"))}</strong></div>
         <div class="past-dinner-meta"><span>${escapeHtml(outcomeLabel(event))}</span>${leftoverTotal ? `<span>${escapeHtml(t("leftoverCount").replace("{count}", leftoverTotal))}</span>` : ""}<span>${escapeHtml(t("updatedByShort").replace("{name}", displayHouseholdMember(event.updatedBy, t) || event.updatedBy))}</span></div>
+        <button class="text-button" type="button" data-edit-dinner="${escapeHtml(event.dateKey)}">${escapeHtml(t("dinnerHistoryEdit"))}</button>
+        ${historyCorrectionForm(event)}${historyNotice?.dateKey === event.dateKey && !editingHistory ? `<p class="form-status" role="status">${escapeHtml(t(historyNotice.key))}</p>` : ""}
       </article>`;
     }).join("");
   }
 
   function renderFamily() {
+    renderMemorySummary();
     renderMembers();
     renderRules();
     renderHistory();
@@ -219,6 +266,58 @@ export function createFamilyUi({
   }
 
   function bind() {
+    const history = $("#pastDinnersList");
+    history?.addEventListener("click", async (event) => {
+      const edit = event.target.closest("[data-edit-dinner]");
+      if (edit) {
+        const source = getDinnerEvents().find((item) => item.dateKey === edit.dataset.editDinner);
+        if (!source) return;
+        editingHistory = { expected: structuredClone(source), outcome: source.outcome || "worked", reactions: { ...source.reactions } };
+        historyNotice = null;
+        renderHistory();
+        history.querySelector("[data-history-correction] select[name='outcome']")?.focus();
+        return;
+      }
+      const review = event.target.closest("[data-review-dinner]");
+      if (review) {
+        const loaded = await reloadDinnerEvents();
+        if (!loaded) {
+          historyNotice = { dateKey: review.dataset.reviewDinner, key: "dinnerHistoryReloadUnavailable" };
+          renderHistory();
+          history.querySelector(`[data-review-dinner="${review.dataset.reviewDinner}"]`)?.focus();
+          return;
+        }
+        editingHistory = null;
+        historyNotice = null;
+        renderFamily();
+        history.querySelector(`[data-edit-dinner="${review.dataset.reviewDinner}"]`)?.focus();
+      }
+    });
+    history?.addEventListener("change", (event) => {
+      if (!editingHistory || !event.target.closest("[data-history-correction]")) return;
+      if (event.target.name === "outcome") editingHistory.outcome = event.target.value;
+      else if (event.target.name.startsWith("reaction-")) editingHistory.reactions[event.target.name.slice(9)] = event.target.value;
+    });
+    history?.addEventListener("submit", async (event) => {
+      const form = event.target.closest("[data-history-correction]");
+      if (!form || !editingHistory || savingHistory || form.dataset.historyCorrection !== editingHistory.expected.dateKey) return;
+      event.preventDefault();
+      savingHistory = true;
+      const button = form.querySelector("button[type='submit']");
+      button.disabled = true;
+      const result = await correctDinnerHistory({
+        dateKey: editingHistory.expected.dateKey,
+        expectedEvent: editingHistory.expected,
+        outcome: editingHistory.outcome,
+        reactions: editingHistory.reactions,
+      });
+      const dateKey = editingHistory.expected.dateKey;
+      savingHistory = false;
+      historyNotice = { dateKey, key: result.status === "saved" ? "dinnerHistorySaved" : result.status === "stale" ? "dinnerHistoryStale" : result.status === "pending" ? "dinnerHistoryPending" : "dinnerHistoryUnavailable" };
+      if (result.status === "saved") editingHistory = null;
+      renderFamily();
+      history.querySelector(`[data-edit-dinner="${dateKey}"]`)?.focus();
+    });
     const openFamilyMembers = (focusForm = false) => {
       $(".household-menu").open = false;
       setView("family");

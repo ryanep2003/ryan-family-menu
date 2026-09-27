@@ -50,7 +50,7 @@ The initial remote collections use independent settled requests so one unavailab
 | Deterministic planning from home | `plan-from-what-we-have.js`, inventory, recipes, preferences, leftovers, budget | Today plan preview in `app.js` |
 | Weekly dinner draft and shopping review | `week-planner-logic.js`, `week-draft-recovery.js`, `week-approval-logic.js`, `week-approval-client.js`, `week-shopping-client.js` | `week-draft-ui.js` in the Plan view |
 | Cook Along and dinner memory | `memory-logic.js`, recipe steps | `cook-along-ui.js`, `app.js` |
-| Household memory | `memory-logic.js`, `family-state.js` | `family-ui.js`, Today feedback in `app.js` |
+| Household memory | `memory-logic.js`, `family-state.js`, `dinner-history-correction.js` | `family-ui.js`, Today feedback in `app.js` |
 | School lunches | `lunch-logic.js`, shared family state, grocery provenance | `lunch-ui.js` |
 | Groceries | `grocery-logic.js`, versioned collection helpers | `grocery-ui.js` |
 | Saved shopping lists | `shopping-list-logic.js`, versioned collection helpers | saved-list controls in `app.js` |
@@ -96,6 +96,8 @@ Shared server helpers:
 Netlify Blobs is the production source of shared household data. The browser keeps household-scoped local fallbacks so the app can open and preserve pending work during transient failures.
 
 Shared state, groceries, inventory, and dinner history use optimistic versions. A client submits the version it last read. If another device has already written a newer version, the server returns `409` and the newest server copy. This prevents silent overwrites but does not merge simultaneous edits field by field.
+
+Historical dinner corrections use a separate fresh GET → same-date event comparison → one versioned PUT path. A changed event or `409` stops the edit and asks the person to review the latest record; a failed request keeps the form values. This path does not enter the general dinner-history merge/retry routine.
 
 Shared menu and grocery conflicts now perform a small three-way merge before retrying: unchanged fields from the newest server copy are retained, while local edits and deletions are replayed. When a phone returns to the foreground, it refreshes shared menu and grocery data (throttled to avoid request loops); there is intentionally no continuous polling.
 
