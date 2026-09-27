@@ -568,7 +568,7 @@ const grocerySaveCoordinator = createVersionedCollectionSaveCoordinator({
     { timeoutMs: 15000 },
   )),
   invalidateLoads: () => { groceryLoadGeneration += 1; },
-  onSaving: () => setSyncStatus("groceries", "savedLocallySyncing", { state: "pending" }),
+  onSaving: ({ storageError }) => setSyncStatus("groceries", storageError ? "groceriesSavingWithoutBackup" : "savedLocallySyncing", { state: "pending" }),
   onSaved: ({ settled, storageError, cleanupPending }) => {
     renderGroceries();
     if (settled) finishGroceryCloudSync({ storageError, cleanupPending });

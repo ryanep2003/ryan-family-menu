@@ -267,7 +267,7 @@ export function createVersionedCollectionSaveCoordinator({
       baseItems: request.captureBase,
       pendingIntent: currentPendingIntent(),
     });
-    persistLocalSnapshot({
+    request.storageError = persistLocalSnapshot({
       pendingIntent: pending,
       items: request.intent,
       version: getVersion(),
@@ -277,7 +277,7 @@ export function createVersionedCollectionSaveCoordinator({
   }
 
   async function execute(request) {
-    onSaving();
+    onSaving({ storageError: request.storageError });
     let sendBase = cloneVersionedItems(getBaseItems());
     let sendVersion = getVersion();
     let outgoing = mergeVersionedItems(request.intent, request.captureBase, sendBase);

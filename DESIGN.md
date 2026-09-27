@@ -143,6 +143,8 @@ Plan uses Day → Meal → Recipe / dish / component. On phones, days stack vert
 
 The Plan Save bar names what is known: in flight, shared, or kept on this phone for retry. If the phone cannot store the pending copy, it warns that reloading may lose the edit and keeps Save available; it must not claim a durable local copy.
 
+Shop uses the same truthful language during a slow list save: when its local backup fails, the pending status asks the family to keep the app open until the shared response arrives. A failed shared write then offers a finite Retry action.
+
 **The Busy-Moment Rule.** Every major screen must have a dominant answer to the question that caused the user to open it. Prefer recognition and direct state over explanatory copy or disconnected widgets.
 
 **First-load clarity.** Without a usable household cache, Today and Plan show meal-shaped outlines, Shop shows shopping rows, and Library shows recipe-card outlines until the first response settles. Keep these outlines static, hidden from assistive technology except for one localized loading status, and remove them as soon as content or a failure state is known. A cached screen opens directly without a skeleton flash.

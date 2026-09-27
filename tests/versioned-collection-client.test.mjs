@@ -394,6 +394,7 @@ test("cleanup retry performs only local recovery work", async () => {
 test("local persistence failures do not block a successful cloud save", async () => {
   let putCalls = 0;
   let savedResult;
+  let savingResult;
   const coordinator = createVersionedCollectionSaveCoordinator({
     getItems: () => [{ id: "milk" }],
     setItems: () => {},
@@ -405,11 +406,13 @@ test("local persistence failures do not block a successful cloud save", async ()
     setPendingIntent: () => { throw Object.assign(new Error("storage unavailable"), { name: "QuotaExceededError" }); },
     persist: () => { throw Object.assign(new Error("storage unavailable"), { name: "QuotaExceededError" }); },
     put: async (items) => { putCalls += 1; return { items, version: 2 }; },
+    onSaving: (result) => { savingResult = result; },
     onSaved: (result) => { savedResult = result; },
   });
 
   assert.equal(await coordinator.save(), true);
   assert.equal(putCalls, 1);
+  assert.equal(savingResult.storageError.name, "QuotaExceededError");
   assert.equal(savedResult.settled, true);
   assert.equal(savedResult.storageError.name, "QuotaExceededError");
 });
