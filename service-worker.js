@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v208";
-// v208: Library uses structural recipe cards during an uncached first load.
+const CACHE_NAME = "ryan-family-menu-v209";
+// v209: Family correction reports an in-flight save without losing the edit.
 // v207: Family memory sources and conflict-aware dinner-history correction.
 // v206: Dinner memory ranks only cooked events and keeps draft recovery reviewable.
 // v205: Household-local weekly draft recovery.

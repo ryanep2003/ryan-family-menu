@@ -132,3 +132,65 @@ test("memory separates stated preferences from cooked observations and labels ta
   assert.doesNotMatch(elements.familyMemorySummary.innerHTML, /past-dinner-2026-09-22/);
   assert.match(elements.pastDinnersList.innerHTML, /Takeout/);
 });
+
+test("a slow dinner correction stays visibly pending and preserves the edit after failure", async () => {
+  const history = element();
+  const outcomeControl = element();
+  const reactionControl = element();
+  const saveButton = element();
+  const status = element();
+  const form = {
+    dataset: { historyCorrection: "2026-09-22" },
+    querySelector: (selector) => selector === "button[type='submit']" ? saveButton : status,
+    querySelectorAll: () => [outcomeControl, reactionControl],
+  };
+  history.querySelector = (selector) => selector.includes("select[name='outcome']") ? outcomeControl : saveButton;
+  const elements = {
+    pastDinnersList: history, familyMemorySummary: element(), familyMembersList: element(),
+    householdMemberSuggestions: element(), householdMemberPicker: element(),
+    setupFamilyMembers: element(), householdMemberInput: element(),
+  };
+  const source = {
+    dateKey: "2026-09-22", status: "cooked", outcome: "loved", updatedAt: "2026-09-22T20:00:00.000Z",
+    items: [{ id: "main", recipeId: "tacos", name: "Tacos" }], attendeeIds: ["member-a"],
+    reactions: { "member-a": "loved" }, leftovers: {}, updatedBy: "Family",
+  };
+  let finishSave;
+  let calls = 0;
+  let submitted;
+  const ui = createFamilyUi({
+    $: (selector) => elements[selector.slice(1)] || null,
+    $$: () => [],
+    t: (key) => key,
+    escapeHtml: (value) => `${value}`,
+    localize: (value) => value?.en || value || "",
+    getLang: () => "en",
+    getHouseholdMember: () => "Family",
+    setHouseholdMember: () => {},
+    getFamilyMembers: () => [{ id: "member-a", name: "Avery", role: "adult", active: true }],
+    getFamilyPreferences: () => [],
+    getFamilyRules: () => ({}),
+    getDinnerEvents: () => [source],
+    recipeById: () => null,
+    correctDinnerHistory: (correction) => { calls += 1; submitted = correction; return new Promise((resolve) => { finishSave = resolve; }); },
+  });
+  ui.bind();
+  await history.handlers.click({ target: { closest: (selector) => selector === "[data-edit-dinner]" ? { dataset: { editDinner: source.dateKey } } : null } });
+  history.handlers.change({ target: { name: "outcome", value: "mixed", closest: () => form } });
+  const submission = history.handlers.submit({ target: { closest: () => form }, preventDefault() {} });
+  assert.equal(calls, 1);
+  assert.equal(submitted.outcome, "mixed");
+  assert.equal(status.textContent, "dinnerHistorySaving");
+  assert.equal(saveButton.disabled, true);
+  await history.handlers.submit({ target: { closest: () => form }, preventDefault() {} });
+  assert.equal(calls, 1);
+  ui.renderFamily();
+  assert.match(history.innerHTML, /value="mixed" selected/);
+  assert.match(history.innerHTML, /name="outcome" disabled/);
+  assert.match(history.innerHTML, /dinnerHistorySaving/);
+  finishSave({ status: "unavailable" });
+  await submission;
+  assert.match(history.innerHTML, /value="mixed" selected/);
+  assert.match(history.innerHTML, /dinnerHistoryUnavailable/);
+  assert.equal(outcomeControl.focused, true);
+});

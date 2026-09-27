@@ -148,9 +148,9 @@ export function createFamilyUi({
     const reactionMemberIds = new Set([...(event.attendeeIds || []), ...Object.keys(event.reactions || {})]);
     const members = normalizeFamilyMembers(getFamilyMembers()).filter((member) => reactionMemberIds.has(member.id));
     return `<form class="dinner-history-correction" data-history-correction="${escapeHtml(event.dateKey)}">
-      <label><span>${escapeHtml(t("dinnerHistoryOutcome"))}</span><select name="outcome">${outcomes.map((outcome) => `<option value="${outcome}"${editingHistory.outcome === outcome ? " selected" : ""}>${escapeHtml(t(`dinnerOutcome${outcome.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join("")}`))}</option>`).join("")}</select></label>
-      ${members.map((member) => `<label><span>${escapeHtml(t("memberReaction").replace("{name}", member.name))}</span><select name="reaction-${escapeHtml(member.id)}">${reactions.map((reaction) => `<option value="${reaction}"${(editingHistory.reactions[member.id] || "") === reaction ? " selected" : ""}>${escapeHtml(reaction ? t(`reaction${reaction[0].toUpperCase()}${reaction.slice(1)}`) : t("reactionNotRecorded"))}</option>`).join("")}</select></label>`).join("")}
-      <button class="primary-action" type="submit">${escapeHtml(t("dinnerHistorySave"))}</button><p class="form-status" role="status" data-history-status="${escapeHtml(event.dateKey)}">${escapeHtml(historyNotice?.dateKey === event.dateKey ? t(historyNotice.key) : "")}</p>
+      <label><span>${escapeHtml(t("dinnerHistoryOutcome"))}</span><select name="outcome"${savingHistory ? " disabled" : ""}>${outcomes.map((outcome) => `<option value="${outcome}"${editingHistory.outcome === outcome ? " selected" : ""}>${escapeHtml(t(`dinnerOutcome${outcome.split("-").map((part) => part[0].toUpperCase() + part.slice(1)).join("")}`))}</option>`).join("")}</select></label>
+      ${members.map((member) => `<label><span>${escapeHtml(t("memberReaction").replace("{name}", member.name))}</span><select name="reaction-${escapeHtml(member.id)}"${savingHistory ? " disabled" : ""}>${reactions.map((reaction) => `<option value="${reaction}"${(editingHistory.reactions[member.id] || "") === reaction ? " selected" : ""}>${escapeHtml(reaction ? t(`reaction${reaction[0].toUpperCase()}${reaction.slice(1)}`) : t("reactionNotRecorded"))}</option>`).join("")}</select></label>`).join("")}
+      <button class="primary-action" type="submit"${savingHistory ? " disabled" : ""}>${escapeHtml(t("dinnerHistorySave"))}</button><p class="form-status" role="status" data-history-status="${escapeHtml(event.dateKey)}">${escapeHtml(savingHistory ? t("dinnerHistorySaving") : historyNotice?.dateKey === event.dateKey ? t(historyNotice.key) : "")}</p>
       ${historyNotice?.dateKey === event.dateKey && ["dinnerHistoryStale", "dinnerHistoryReloadUnavailable"].includes(historyNotice.key) ? `<button class="text-button" type="button" data-review-dinner="${escapeHtml(event.dateKey)}">${escapeHtml(t("dinnerHistoryReviewLatest"))}</button>` : ""}
     </form>`;
   }
@@ -268,6 +268,7 @@ export function createFamilyUi({
   function bind() {
     const history = $("#pastDinnersList");
     history?.addEventListener("click", async (event) => {
+      if (savingHistory) return;
       const edit = event.target.closest("[data-edit-dinner]");
       if (edit) {
         const source = getDinnerEvents().find((item) => item.dateKey === edit.dataset.editDinner);
@@ -294,29 +295,39 @@ export function createFamilyUi({
       }
     });
     history?.addEventListener("change", (event) => {
-      if (!editingHistory || !event.target.closest("[data-history-correction]")) return;
+      if (!editingHistory || savingHistory || !event.target.closest("[data-history-correction]")) return;
       if (event.target.name === "outcome") editingHistory.outcome = event.target.value;
       else if (event.target.name.startsWith("reaction-")) editingHistory.reactions[event.target.name.slice(9)] = event.target.value;
     });
     history?.addEventListener("submit", async (event) => {
       const form = event.target.closest("[data-history-correction]");
+      if (form) event.preventDefault();
       if (!form || !editingHistory || savingHistory || form.dataset.historyCorrection !== editingHistory.expected.dateKey) return;
-      event.preventDefault();
+      const submission = {
+        dateKey: editingHistory.expected.dateKey,
+        expectedEvent: structuredClone(editingHistory.expected),
+        outcome: editingHistory.outcome,
+        reactions: { ...editingHistory.reactions },
+      };
       savingHistory = true;
       const button = form.querySelector("button[type='submit']");
-      button.disabled = true;
-      const result = await correctDinnerHistory({
-        dateKey: editingHistory.expected.dateKey,
-        expectedEvent: editingHistory.expected,
-        outcome: editingHistory.outcome,
-        reactions: editingHistory.reactions,
-      });
-      const dateKey = editingHistory.expected.dateKey;
+      if (button) button.disabled = true;
+      form.querySelectorAll("select").forEach((control) => { control.disabled = true; });
+      const status = form.querySelector("[data-history-status]");
+      if (status) status.textContent = t("dinnerHistorySaving");
+      historyNotice = null;
+      let result;
+      try {
+        result = await correctDinnerHistory(submission);
+      } catch {
+        result = { status: "unavailable" };
+      }
+      const dateKey = submission.dateKey;
       savingHistory = false;
       historyNotice = { dateKey, key: result.status === "saved" ? "dinnerHistorySaved" : result.status === "stale" ? "dinnerHistoryStale" : result.status === "pending" ? "dinnerHistoryPending" : "dinnerHistoryUnavailable" };
       if (result.status === "saved") editingHistory = null;
       renderFamily();
-      history.querySelector(`[data-edit-dinner="${dateKey}"]`)?.focus();
+      history.querySelector(result.status === "saved" ? `[data-edit-dinner="${dateKey}"]` : `[data-history-correction="${dateKey}"] select[name='outcome']`)?.focus();
     });
     const openFamilyMembers = (focusForm = false) => {
       $(".household-menu").open = false;
