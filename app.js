@@ -204,6 +204,8 @@ let pendingRemoteSharedData = null;
 let scheduleVersion = readNumberStorage(householdStorage, "dinner-schedule-version", 0);
 const schedulePendingKey = "dinner-schedule-pending";
 let schedulePending = normalizePlanPending(readJsonStorage(householdStorage, schedulePendingKey, null));
+let scheduleLoadStatus = storedSchedule !== null || Object.keys(calendarMeals).length || schedulePending
+  ? "ready" : "loading";
 let scheduleBase = null;
 let scheduleSaveInFlight = null;
 let scheduleSaveQueued = false;
@@ -231,6 +233,8 @@ const inventoryStorageKeys = { itemsKey: "dinner-inventory", versionKey: "dinner
 const storedGroceries = readVersionedCollectionStorage(householdStorage, groceryStorageKeys);
 const groceryPendingKey = "dinner-groceries-pending-v1";
 let groceryPendingIntent = normalizeVersionedIntent(readJsonStorage(householdStorage, groceryPendingKey, null));
+let groceriesLoadStatus = readJsonStorage(householdStorage, groceryStorageKeys.itemsKey, null) !== null
+  || storedGroceries.items.length || groceryPendingIntent ? "ready" : "loading";
 const storedShoppingLists = readVersionedCollectionStorage(householdStorage, shoppingListsStorageKeys);
 const storedInventory = readVersionedCollectionStorage(householdStorage, inventoryStorageKeys);
 let groceries = cloneVersionedItems(groceryPendingIntent?.items || storedGroceries.items);
@@ -1233,12 +1237,17 @@ async function saveSchedule({ retrying = false, allowEmptySchedule = false } = {
 
 async function loadSchedule() {
   setSharedRetryAction(() => loadSchedule());
+  if (scheduleLoadStatus !== "ready") {
+    scheduleLoadStatus = "loading";
+    renderFirstLoadStates();
+  }
   try {
     const data = await getJson("/.netlify/functions/schedule", "Could not load the meal plan.");
     const serverPlan = planFromSchedulePayload(data);
     if (scheduleAuthoritativeLoaded && serverPlan.version < scheduleVersion && !schedulePending) return true;
     const reconciled = reconcileLoadedPlan({ server: serverPlan, pending: schedulePending });
     if (reconciled.pending) {
+      scheduleLoadStatus = "ready";
       schedule = reconciled.schedule;
       calendarMeals = reconciled.calendarMeals;
       weekStartKey = reconciled.weekStartKey || weekStartKey;
@@ -1263,13 +1272,16 @@ async function loadSchedule() {
       if (reconciled.retry) void saveSchedule({ allowEmptySchedule: reconciled.allowEmptySchedule === true });
       return true;
     }
+    scheduleLoadStatus = "ready";
     applyScheduleRecord(data);
     clearSchedulePending();
     render();
     return true;
   } catch (error) {
     console.warn(error);
+    scheduleLoadStatus = "unavailable";
     setSyncStatus("shared", "sharedMenuUnavailable", { state: "error", canRetry: true });
+    render();
     if (schedulePending) scheduleUi?.notePlanPersistence?.({ dirty: true, pending: true, saving: false, saved: false });
     return false;
   }
@@ -1886,6 +1898,7 @@ const groceryUi = createGroceryUi({
   findInventoryMatch,
   getLang: () => lang,
   getGroceries: () => groceries,
+  getGroceriesLoadStatus: () => groceriesLoadStatus,
   setGroceries: (items) => {
     groceries = items;
   },
@@ -3103,6 +3116,23 @@ function render() {
   bindSavedShoppingListControls();
   bindInventoryControls();
   queueRecipePhotoHydration();
+  renderFirstLoadStates();
+}
+
+function renderFirstLoadStates() {
+  const loading = scheduleLoadStatus === "loading";
+  for (const selector of ["#todayMealLoading", "#weekPlanLoading", "#monthPlanLoading"]) {
+    const node = $(selector);
+    if (node) node.hidden = !loading;
+  }
+  for (const selector of ["#todayBand", "#todayAlso", "#weekDraftPanel", "#scheduleGrid", "#calendarGrid"]) {
+    const node = $(selector);
+    if (node) node.hidden = loading;
+  }
+  for (const selector of ["#todayBand", "#scheduleGrid", "#calendarGrid"]) $(selector)?.setAttribute("aria-busy", loading ? "true" : "false");
+  if ($("#copyWeekForward")) $("#copyWeekForward").disabled = loading;
+  if ($("#resetWeek")) $("#resetWeek").disabled = loading;
+  if (groceriesLoadStatus === "loading" && !groceries.length && $("#todayGrocerySummary")) $("#todayGrocerySummary").textContent = "…";
 }
 
 const viewScrollMemory = new Map();
@@ -3237,6 +3267,10 @@ async function saveSharedRecipe(recipe) {
 function loadGroceries() {
   if (groceryLoadInFlight) return groceryLoadInFlight;
   const generation = ++groceryLoadGeneration;
+  if (!groceries.length && groceriesLoadStatus !== "ready") {
+    groceriesLoadStatus = "loading";
+    renderGroceries();
+  }
   setSyncStatus("groceries", "groceriesLoading", { state: "pending" });
   const request = (async () => {
     let data;
@@ -3247,7 +3281,9 @@ function loadGroceries() {
       ));
     } catch (error) {
       if (generation !== groceryLoadGeneration) return false;
+      groceriesLoadStatus = "unavailable";
       showGroceryFailure("load", error);
+      renderGroceries();
       return false;
     }
 
@@ -3265,14 +3301,17 @@ function loadGroceries() {
         saveInFlight: grocerySaveCoordinator.isBusy(),
       });
       if (!result.apply) {
+        groceriesLoadStatus = groceries.length ? "ready" : "unavailable";
         if (result.reason === "stale-remote") {
           const error = new Error("Stale grocery response.");
           error.code = "stale-response";
           showGroceryFailure("load", error);
         }
+        renderGroceries();
         return false;
       }
       groceries = result.items;
+      groceriesLoadStatus = "ready";
       groceryVersion = result.version;
       groceryBaseItems = cloneVersionedItems(result.baseItems || (result.shouldSave ? remoteItems : result.items));
       let storageError = null;
@@ -3303,7 +3342,9 @@ function loadGroceries() {
       return true;
     } catch (error) {
       if (generation !== groceryLoadGeneration) return false;
+      groceriesLoadStatus = groceries.length ? "ready" : "unavailable";
       showGroceryFailure("load", error);
+      renderGroceries();
       return false;
     }
   })();

@@ -40,6 +40,8 @@ Recipe catalog reads use `/.netlify/functions/recipes?view=catalog`, a text-only
 
 The initial remote collections use independent settled requests so one unavailable domain does not block the shell or other data. Input/change events mark editable surfaces dirty; background refresh queues shared remote data for an explicit keep-local or accept-remote choice instead of replacing active edits.
 
+The uncached first-load presentation uses in-memory schedule and grocery load status plus the existing recipe-catalog status. The local schedule record, calendar fallback, pending schedule edit, grocery cache, and pending grocery intent suppress loading outlines when a usable device copy exists. A settled empty response shows the real empty state; a failed request leaves a localized retry or review status. No extra request, timer, stored flag, or asset pre-cache is needed.
+
 ### Domain modules
 
 | Domain | Logic and state | Rendering and interaction |

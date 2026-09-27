@@ -219,6 +219,16 @@ main { position: relative; z-index: 1; width: min(100%, var(--shell-width)); min
   font-size: .84rem;
   font-weight: 650;
 }
+.meal-loading { display: grid; gap: var(--space-3); padding: var(--space-4) 0; }
+.meal-loading > span { display: block; max-width: 100%; border-radius: 999px; background: var(--rule); }
+.today-meal-loading { min-height: 16rem; align-content: center; }
+.meal-loading-kicker { width: 5rem; height: .55rem; }
+.meal-loading-title { width: min(76%, 21rem); height: 2.1rem; }
+.meal-loading-detail { width: min(56%, 16rem); height: .75rem; }
+.meal-loading > .meal-loading-action { width: 10rem; height: 44px; margin-top: var(--space-3); border-radius: var(--radius-control); background: var(--ground); }
+.week-meal-loading { gap: var(--space-4); }
+.meal-loading-day { width: 8rem; height: 1.3rem; margin-top: var(--space-3); }
+.meal-loading-meal { width: min(70%, 20rem); height: .8rem; margin-left: var(--space-4); }
 .family-memory-summary { display: grid; gap: var(--space-5); margin-top: var(--space-4); }
 .family-memory-summary h3 { margin: 0 0 var(--space-2); font-size: 1.08rem; }
 .family-memory-summary p { margin: 0; color: var(--muted); }
@@ -1461,6 +1471,13 @@ body.plan-save-bar-visible main { padding-bottom: calc(var(--bottom-nav-space) +
   gap: var(--space-4);
   margin-top: 0;
 }
+.recipe-loading-card { display: grid; align-content: start; gap: var(--space-2); min-width: 0; }
+.recipe-loading-photo { display: block; width: 100%; aspect-ratio: 4 / 5; border-radius: 16px; background: var(--rule); }
+.recipe-loading-line { display: block; width: 82%; height: .75rem; border-radius: 999px; background: var(--rule); }
+.recipe-loading-line.short { width: 54%; height: .55rem; background: var(--ground); }
+.library-browse-list .recipe-loading-card { grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: var(--space-2) var(--space-3); min-height: 72px; }
+.library-browse-list .recipe-loading-photo { grid-row: span 2; width: 64px; height: 64px; aspect-ratio: auto; border-radius: 12px; }
+.library-browse-list .recipe-loading-line { grid-column: 2; }
 .library-grid-card {
   padding: 0;
   gap: 0;
@@ -1559,6 +1576,11 @@ body.plan-save-bar-visible main { padding-bottom: calc(var(--bottom-nav-space) +
 .grocery-meal-filter select { max-width: 17rem; }
 .grocery-list { margin-top: 0; }
 .grocery-list { display: grid; gap: 0; margin-top: 0; }
+.grocery-loading-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: var(--space-3); min-height: 64px; border-bottom: 1px solid var(--rule); }
+.grocery-loading-check { width: 26px; height: 26px; border: 2px solid var(--rule); border-radius: 50%; }
+.grocery-loading-lines { display: grid; gap: var(--space-2); }
+.grocery-loading-lines i { display: block; width: min(68%, 16rem); height: .75rem; border-radius: 999px; background: var(--rule); }
+.grocery-loading-lines i:last-child { width: min(42%, 10rem); height: .55rem; background: var(--ground); }
 .grocery-empty-state { display: grid; gap: var(--space-3); padding: var(--space-5) 0; border: 0; border-radius: 0; background: transparent; }
 .grocery-empty-state .empty-state { margin: 0; }
 .grocery-empty-action { justify-self: start; }

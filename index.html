@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=207" />
+    <link rel="stylesheet" href="styles.css?v=208" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -196,6 +196,10 @@
             </button>
           </div>
         </section>
+        <div class="meal-loading today-meal-loading" id="todayMealLoading" role="status" hidden>
+          <p class="visually-hidden" data-i18n="mealPlanLoading">Loading your meal plan…</p>
+          <span class="meal-loading-kicker" aria-hidden="true"></span><span class="meal-loading-title" aria-hidden="true"></span><span class="meal-loading-detail" aria-hidden="true"></span><span class="meal-loading-action" aria-hidden="true"></span>
+        </div>
         <section class="today-story" id="todayBand" aria-labelledby="todayDinnerName">
           <div class="today-hero-card">
             <div class="today-hero-copy">
@@ -242,7 +246,7 @@
           </div>
         </section>
 
-        <section class="today-also" aria-labelledby="todayAlsoHeading">
+        <section class="today-also" id="todayAlso" aria-labelledby="todayAlsoHeading">
           <p class="section-label" id="todayAlsoHeading" data-i18n="alsoToday">Also today</p>
           <h2 id="todayMealsHeading" class="visually-hidden" data-i18n="todayMeals">Today's meals</h2>
           <div class="today-meals" id="todayMealsList"></div>
@@ -491,6 +495,10 @@
           </div>
           <p class="upload-status" id="scheduleStatus" role="status"></p>
           <section class="week-draft-panel" id="weekDraftPanel" aria-label="Weekly dinner draft" data-i18n-aria-label="weekDraftRegion"></section>
+          <div class="meal-loading week-meal-loading" id="weekPlanLoading" role="status" hidden>
+            <p class="visually-hidden" data-i18n="mealPlanLoading">Loading your meal plan…</p>
+            <span class="meal-loading-day" aria-hidden="true"></span><span class="meal-loading-meal" aria-hidden="true"></span><span class="meal-loading-meal" aria-hidden="true"></span><span class="meal-loading-day" aria-hidden="true"></span><span class="meal-loading-meal" aria-hidden="true"></span>
+          </div>
           <div class="schedule-grid" id="scheduleGrid"></div>
           <section class="schedule-editor" id="weekDateEditor"></section>
         </div>
@@ -510,6 +518,10 @@
           </div>
           <div class="calendar-scroll">
             <div class="calendar-weekdays" id="calendarWeekdays" role="rowgroup"></div>
+            <div class="meal-loading week-meal-loading" id="monthPlanLoading" role="status" hidden>
+              <p class="visually-hidden" data-i18n="mealPlanLoading">Loading your meal plan…</p>
+              <span class="meal-loading-day" aria-hidden="true"></span><span class="meal-loading-meal" aria-hidden="true"></span><span class="meal-loading-meal" aria-hidden="true"></span>
+            </div>
             <div class="calendar-grid" id="calendarGrid" role="grid" aria-labelledby="monthTitle"></div>
             <div class="calendar-agenda" id="calendarAgenda" aria-live="polite"></div>
           </div>
@@ -829,7 +841,7 @@
             <h2 class="visually-hidden" data-i18n="libraryHeading">Recipe library</h2>
           </div>
           <div class="recipe-banner-actions">
-            <span class="view-count" id="recipeCount"></span>
+            <span class="view-count" id="recipeCount" aria-live="polite"></span>
             <button class="ghost-button" id="addRecipeFromLibrary" type="button" data-i18n="addRecipe">Add recipe</button>
           </div>
         </div>
@@ -1136,6 +1148,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=207"></script>
+    <script type="module" src="app.js?v=208"></script>
   </body>
 </html>

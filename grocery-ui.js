@@ -21,6 +21,7 @@ export function createGroceryUi({
   findInventoryMatch,
   getLang,
   getGroceries,
+  getGroceriesLoadStatus = () => "ready",
   setGroceries,
   getInventory,
   allRecipes,
@@ -399,6 +400,16 @@ export function createGroceryUi({
   }
 
   function renderGroceries() {
+    const list = $("#groceryList");
+    const loading = getGroceriesLoadStatus() === "loading" && !getGroceries().length;
+    list.setAttribute("aria-busy", loading ? "true" : "false");
+    if (loading) {
+      const setup = $("#shoppingListSetup");
+      if (setup) setup.open = false;
+      list.innerHTML = `<p class="visually-hidden">${escapeHtml(t("groceriesLoading"))}</p>${Array.from({ length: 3 }, () => `<div class="grocery-loading-row" aria-hidden="true"><span class="grocery-loading-check"></span><span class="grocery-loading-lines"><i></i><i></i></span></div>`).join("")}`;
+      renderPurchasedAction();
+      return;
+    }
     renderMealFilter();
     const setup = $("#shoppingListSetup");
     if (setup) setup.open = getGroceries().length === 0;

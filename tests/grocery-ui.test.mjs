@@ -21,6 +21,8 @@ function element() {
     hidden: false,
     innerHTML: "",
     textContent: "",
+    attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
     classList: {
       contains: (name) => classes.has(name),
       toggle(name, force) {
@@ -150,6 +152,7 @@ function harness(overrides = {}) {
     findInventoryMatch: inventoryMatchFor,
     getLang: () => state.lang,
     getGroceries: () => state.groceries,
+    getGroceriesLoadStatus: () => overrides.loadStatus || "ready",
     setGroceries: (groceries) => {
       state.groceries = groceries;
     },
@@ -171,6 +174,24 @@ function harness(overrides = {}) {
   ui.bindGroceryControls();
   return { elements, state, ui };
 }
+
+test("uncached Shop loading shows list rows and waits to offer an empty-list action", () => {
+  const loading = harness({ state: { groceries: [] }, loadStatus: "loading" });
+  loading.ui.renderGroceries();
+  assert.equal(loading.elements["#groceryList"].attributes["aria-busy"], "true");
+  assert.equal((loading.elements["#groceryList"].innerHTML.match(/grocery-loading-row/g) || []).length, 3);
+  assert.equal(loading.elements["#shoppingListSetup"].open, false);
+  assert.doesNotMatch(loading.elements["#groceryList"].innerHTML, /data-open-shopping-generator/);
+
+  const failed = harness({ state: { groceries: [] }, loadStatus: "unavailable" });
+  failed.ui.renderGroceries();
+  assert.equal(failed.elements["#groceryList"].attributes["aria-busy"], "false");
+  assert.match(failed.elements["#groceryList"].innerHTML, /data-open-shopping-generator/);
+
+  const cached = harness();
+  cached.ui.renderGroceries();
+  assert.doesNotMatch(cached.elements["#groceryList"].innerHTML, /grocery-loading-row/);
+});
 
 function actionTarget(selector, sectionIds) {
   return {

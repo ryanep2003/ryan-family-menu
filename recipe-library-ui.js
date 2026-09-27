@@ -203,8 +203,9 @@ export function createRecipeLibraryUi({
       $("#recipeList").classList.toggle("library-browse-grid", browseLayout === "grid");
       $("#recipeList").classList.toggle("library-browse-list", browseLayout === "list");
     }
+    $("#recipeList").setAttribute("aria-busy", catalogStatus === "loading" ? "true" : "false");
     $("#recipeList").innerHTML = catalogStatus === "loading"
-      ? `<p class="empty-state">${t("recipeCatalogLoading")}<br><button class="ghost-button compact-button" type="button" data-retry-recipe-catalog>${t("retrySync")}</button></p>`
+      ? `<p class="visually-hidden">${escapeHtml(t("recipeCatalogLoading"))}</p>${Array.from({ length: 4 }, () => `<div class="recipe-loading-card" aria-hidden="true"><span class="recipe-loading-photo"></span><span class="recipe-loading-line"></span><span class="recipe-loading-line short"></span></div>`).join("")}`
       : catalogStatus === "unavailable"
         ? `<p class="empty-state">${t("recipeCatalogUnavailable")}<br><button class="ghost-button compact-button" type="button" data-retry-recipe-catalog>${t("retrySync")}</button></p>`
         : filtered.map((recipe, index) => recipeCardMarkup(recipe, index)).join("");

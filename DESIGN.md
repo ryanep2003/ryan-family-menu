@@ -143,6 +143,8 @@ Plan uses Day → Meal → Recipe / dish / component. On phones, days stack vert
 
 **The Busy-Moment Rule.** Every major screen must have a dominant answer to the question that caused the user to open it. Prefer recognition and direct state over explanatory copy or disconnected widgets.
 
+**First-load clarity.** Without a usable household cache, Today and Plan show meal-shaped outlines, Shop shows shopping rows, and Library shows recipe-card outlines until the first response settles. Keep these outlines static, hidden from assistive technology except for one localized loading status, and remove them as soon as content or a failure state is known. A cached screen opens directly without a skeleton flash.
+
 **The Safe-Edge Rule.** Fixed navigation, status areas, and sticky actions reserve space using system safe-area insets. Scrollable content and focused controls must clear the bottom navigation and iOS status area without device-specific pixel assumptions.
 
 ## Elevation & Depth

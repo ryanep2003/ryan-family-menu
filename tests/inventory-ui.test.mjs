@@ -67,8 +67,11 @@ test("attention inventory shows only low and out items", () => {
 });
 
 test("attention inventory also surfaces expired food", () => {
+  const freshDate = new Date();
+  freshDate.setDate(freshDate.getDate() + 14);
+  const freshExpiration = `${freshDate.getFullYear()}-${String(freshDate.getMonth() + 1).padStart(2, "0")}-${String(freshDate.getDate()).padStart(2, "0")}`;
   const html = renderInventoryWith("attention", [
-    { id: "fresh", text: "Rice", location: "pantry", stockState: "full", expiresOn: "2026-09-30" },
+    { id: "fresh", text: "Rice", location: "pantry", stockState: "full", expiresOn: freshExpiration },
     { id: "soon", text: "Milk", location: "fridge", stockState: "full", expiresOn: "2020-01-01" },
   ]);
 

@@ -181,6 +181,24 @@ test("renderRecipes escapes recipe ids and photo URLs in card markup", () => {
   assert.doesNotMatch(elements["#recipeList"].innerHTML, /onerror="alert/);
 });
 
+test("uncached recipe loading shows structural cards without a premature retry", () => {
+  const loading = harness({ catalogStatus: "loading", recipes: [] });
+  loading.ui.renderRecipes();
+  assert.equal(loading.elements["#recipeList"].attributes["aria-busy"], "true");
+  assert.equal((loading.elements["#recipeList"].innerHTML.match(/recipe-loading-card/g) || []).length, 4);
+  assert.doesNotMatch(loading.elements["#recipeList"].innerHTML, /data-retry-recipe-catalog/);
+
+  const cached = harness({ catalogStatus: "ready" });
+  cached.ui.renderRecipes();
+  assert.equal(cached.elements["#recipeList"].attributes["aria-busy"], "false");
+  assert.doesNotMatch(cached.elements["#recipeList"].innerHTML, /recipe-loading-card/);
+
+  const failed = harness({ catalogStatus: "unavailable", recipes: [] });
+  failed.ui.renderRecipes();
+  assert.match(failed.elements["#recipeList"].innerHTML, /data-retry-recipe-catalog/);
+  assert.doesNotMatch(failed.elements["#recipeList"].innerHTML, /recipe-loading-card/);
+});
+
 test("library strip prefers favorites, then recently cooked, and caps at five", () => {
   const recipes = [
     { id: "fav-old" },
@@ -240,11 +258,13 @@ test("catalog loading, unavailable, and genuinely empty states remain distinct",
   const loading = harness({ catalogStatus: "loading", recipes: [] });
   loading.ui.renderRecipes();
   assert.match(loading.elements["#recipeList"].innerHTML, /recipeCatalogLoading/);
-  assert.match(loading.elements["#recipeList"].innerHTML, /data-retry-recipe-catalog/);
+  assert.match(loading.elements["#recipeList"].innerHTML, /recipe-loading-card/);
+  assert.doesNotMatch(loading.elements["#recipeList"].innerHTML, /data-retry-recipe-catalog/);
 
   const unavailable = harness({ catalogStatus: "unavailable", recipes: [] });
   unavailable.ui.renderRecipes();
   assert.match(unavailable.elements["#recipeList"].innerHTML, /recipeCatalogUnavailable/);
+  assert.match(unavailable.elements["#recipeList"].innerHTML, /data-retry-recipe-catalog/);
   assert.doesNotMatch(unavailable.elements["#recipeList"].innerHTML, /recipeCatalogEmpty/);
 
   const empty = harness({ catalogStatus: "ready", recipes: [] });
