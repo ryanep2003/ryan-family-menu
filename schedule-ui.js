@@ -102,6 +102,7 @@ export function createScheduleUi({
     saved: false,
     pending: false,
     blocked: false,
+    localRecoveryAvailable: true,
     context: "",
   };
 
@@ -116,7 +117,7 @@ export function createScheduleUi({
   function syncPlanSaveBar(update) {
     const next = update ? { ...planSaveFlags, ...update } : planSaveFlags;
     if (next.blocked) {
-      planSaveFlags = { dirty: false, saving: false, saved: false, pending: false, blocked: false, context: next.context || "" };
+      planSaveFlags = { dirty: false, saving: false, saved: false, pending: false, blocked: false, localRecoveryAvailable: true, context: next.context || "" };
     } else {
       const dirty = Boolean(next.dirty);
       const saving = Boolean(next.saving);
@@ -127,6 +128,7 @@ export function createScheduleUi({
         pending,
         saved: Boolean(next.saved) && !dirty && !saving && !pending,
         blocked: false,
+        localRecoveryAvailable: next.localRecoveryAvailable !== false,
         context: next.context || planSaveFlags.context || "",
       };
     }
@@ -141,7 +143,7 @@ export function createScheduleUi({
       status.textContent = presentation.state === "saving"
         ? t("mealChangeSaving")
         : presentation.state === "pending"
-          ? t("mealChangePending")
+          ? t(planSaveFlags.localRecoveryAvailable ? "mealChangePending" : "mealChangeNotSavedLocally")
           : presentation.state === "saved"
             ? t("mealChangeSaved")
             : presentation.state === "dirty"
@@ -1052,7 +1054,7 @@ export function createScheduleUi({
     if (currentStatus) {
       currentStatus.textContent = blocked
         ? t("emptyOverwriteBlocked")
-        : t(failed ? "mealChangePending" : "mealChangeSaved");
+        : t(failed ? (planSaveFlags.localRecoveryAvailable ? "mealChangePending" : "mealChangeNotSavedLocally") : "mealChangeSaved");
       currentStatus.classList.toggle("pending", failed);
     }
     if (button) button.disabled = false;

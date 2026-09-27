@@ -204,6 +204,7 @@ let pendingRemoteSharedData = null;
 let scheduleVersion = readNumberStorage(householdStorage, "dinner-schedule-version", 0);
 const schedulePendingKey = "dinner-schedule-pending";
 let schedulePending = normalizePlanPending(readJsonStorage(householdStorage, schedulePendingKey, null));
+let schedulePendingPersisted = Boolean(schedulePending);
 let scheduleLoadStatus = storedSchedule !== null || Object.keys(calendarMeals).length || schedulePending
   ? "ready" : "loading";
 let scheduleBase = null;
@@ -1116,7 +1117,9 @@ function writeSchedulePending(pending) {
   try {
     if (!schedulePending) householdStorage.removeItem(schedulePendingKey);
     else householdStorage.setItem(schedulePendingKey, JSON.stringify(schedulePending));
+    schedulePendingPersisted = Boolean(schedulePending);
   } catch {
+    schedulePendingPersisted = false;
     console.warn("Meal plan changes could not be cached on this device.");
   }
 }
@@ -1227,6 +1230,7 @@ async function saveSchedule({ retrying = false, allowEmptySchedule = false } = {
         pending: saved === false,
         saved: saved === true,
         blocked: saved === "blocked",
+        localRecoveryAvailable: saved === false ? schedulePendingPersisted : true,
       });
       if (scheduleSaveInFlight === run) scheduleSaveInFlight = null;
     }
@@ -1268,7 +1272,7 @@ async function loadSchedule() {
       });
       persistScheduleLocally();
       render();
-      scheduleUi?.notePlanPersistence?.({ dirty: true, pending: true, saving: false, saved: false });
+      scheduleUi?.notePlanPersistence?.({ dirty: true, pending: true, saving: false, saved: false, localRecoveryAvailable: schedulePendingPersisted });
       if (reconciled.retry) void saveSchedule({ allowEmptySchedule: reconciled.allowEmptySchedule === true });
       return true;
     }
@@ -1282,7 +1286,7 @@ async function loadSchedule() {
     scheduleLoadStatus = "unavailable";
     setSyncStatus("shared", "sharedMenuUnavailable", { state: "error", canRetry: true });
     render();
-    if (schedulePending) scheduleUi?.notePlanPersistence?.({ dirty: true, pending: true, saving: false, saved: false });
+    if (schedulePending) scheduleUi?.notePlanPersistence?.({ dirty: true, pending: true, saving: false, saved: false, localRecoveryAvailable: schedulePendingPersisted });
     return false;
   }
 }

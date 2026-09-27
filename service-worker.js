@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v209";
-// v209: Family correction reports an in-flight save without losing the edit.
+const CACHE_NAME = "ryan-family-menu-v210";
+// v210: Plan distinguishes a pending local copy from failed device storage.
 // v207: Family memory sources and conflict-aware dinner-history correction.
 // v206: Dinner memory ranks only cooked events and keeps draft recovery reviewable.
 // v205: Household-local weekly draft recovery.

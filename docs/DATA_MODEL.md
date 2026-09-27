@@ -216,6 +216,8 @@ Important local keys include schedule, calendar, versions, favorites, tasks, gro
 
 `dinner-schedule-pending` is an additive household-scoped copy of a Plan edit that has not yet been accepted by the `schedule` record. It stores the desired schedule, calendar meals, week start, the schedule version it was based on, that version’s baseline, and whether an intentional clear may replace every meal. Reload keeps it when the server version still matches, or merges it when another device saved first. It is removed only after the schedule write succeeds, or when the server refuses an empty overwrite and the phone puts the saved meals back. Older clients ignore the key. Discarding it before a successful write drops only the unsaved edit.
 
+If browser storage rejects a pending-copy write, the in-memory edit remains available for an immediate retry in the current tab, but it is not guaranteed after reload. The Plan Save bar must distinguish this from a successfully stored pending copy.
+
 The grocery fallback also uses the additive `dinner-groceries-pending-v1` retry journal described above. It remains inside `createHouseholdStorage()` and is safe to discard only after the matching grocery write succeeds.
 
 Changing these names without migration can make existing browser fallbacks disappear. Never move household data to unscoped local storage.

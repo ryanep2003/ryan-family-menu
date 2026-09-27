@@ -74,7 +74,7 @@ function calendarDates() {
   });
 }
 
-function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedCount: 1, skippedCount: 0 }, extraRecipes = [], currentWeekStartKey = "2026-06-22", recipeById } = {}) {
+function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedCount: 1, skippedCount: 0 }, extraRecipes = [], currentWeekStartKey = "2026-06-22", recipeById, saveScheduleResult = async () => true } = {}) {
   const elements = {
     "#scheduleGrid": element(),
     "#weekDateEditor": element(),
@@ -264,6 +264,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
       mealChangeSaving: "Saving this meal…",
       mealChangeSaved: "Meal changes saved.",
       mealChangePending: "Meal changes are saved here. We’ll keep trying for everyone.",
+      mealChangeNotSavedLocally: "Keep this page open; reloading may lose this change.",
       moreMealOptions: "More meal options",
       moreMealOptionsNote: "Add a side, salad, notes, or a handoff when you need them.",
       extraServingsCount: "Extra servings for later",
@@ -341,6 +342,7 @@ function harness({ periods = mealPeriods, leftovers = [], copyResult = { copiedC
     },
     saveSharedState: async () => {
       state.saveCalls += 1;
+      return saveScheduleResult();
     },
     render: () => {},
     getLang: () => "en",
@@ -1109,6 +1111,48 @@ test("dirty Plan meal edits show a persistent save control and write the save pa
   assert.match(elements["#planSaveBarStatus"].textContent, /Meal changes saved/);
   assert.equal(state.saveCalls, 1);
   assert.equal(state.schedule.mon.items.at(-1).period, "breakfast");
+});
+
+test("a slow failed Plan save stays pending until an explicit successful retry", async () => {
+  let finishFirstSave;
+  let attempts = 0;
+  const { elements, state, ui, weekRecipeResults } = harness({
+    saveScheduleResult: () => {
+      attempts += 1;
+      return attempts === 1 ? new Promise((resolve) => { finishFirstSave = resolve; }) : true;
+    },
+  });
+  ui.bindScheduleControls();
+  ui.renderSchedule();
+  const firstSave = weekRecipeResults.dispatch("click", {
+    closest(selector) {
+      return selector === "[data-add-meal-result]" ? {
+        dataset: { addMealResult: "weekdate:2026-06-22", period: "breakfast", recipeId: "another-main" },
+      } : null;
+    },
+  });
+  assert.equal(elements["#planSaveBar"].attributes["data-plan-save-state"], "saving");
+  assert.match(elements["#planSaveBarStatus"].textContent, /Saving this meal/);
+  assert.equal(elements["#planSaveBarButton"].disabled, true);
+  finishFirstSave(false);
+  await firstSave;
+  assert.equal(state.saveCalls, 1);
+  assert.equal(elements["#planSaveBar"].attributes["data-plan-save-state"], "pending");
+  assert.match(elements["#planSaveBarStatus"].textContent, /saved here/);
+  assert.equal(elements["#planSaveBarButton"].disabled, false);
+  await elements["#planSaveBarButton"].dispatch("click");
+  assert.equal(state.saveCalls, 2);
+  assert.equal(elements["#planSaveBar"].attributes["data-plan-save-state"], "saved");
+});
+
+test("Plan does not claim a device copy when the pending edit could not be stored", () => {
+  const { elements, ui } = harness();
+  ui.notePlanPersistence({ dirty: true, pending: true, localRecoveryAvailable: false });
+  assert.equal(elements["#planSaveBar"].attributes["data-plan-save-state"], "pending");
+  assert.match(elements["#planSaveBarStatus"].textContent, /Keep this page open/);
+  assert.doesNotMatch(elements["#planSaveBarStatus"].textContent, /saved here/);
+  ui.notePlanPersistence({ dirty: false, pending: false, saved: true, localRecoveryAvailable: true });
+  assert.match(elements["#planSaveBarStatus"].textContent, /Meal changes saved/);
 });
 
 test("next-week breakfast, lunch, and dinner edits keep calendar dates instead of wiping them", async () => {
