@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v213";
-// v213: Weekly draft shopping review uses the current grocery save state.
+const CACHE_NAME = "ryan-family-menu-v214";
+// v214: The mobile household menu keeps its summary inside the header.
 // v207: Family memory sources and conflict-aware dinner-history correction.
 // v206: Dinner memory ranks only cooked events and keeps draft recovery reviewable.
 // v205: Household-local weekly draft recovery.

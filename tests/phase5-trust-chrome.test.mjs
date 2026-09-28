@@ -10,9 +10,9 @@ const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 const worker = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
 
 test("Phase 5 cache version is paired across shell and service worker", () => {
-  assert.match(html, /styles\.css\?v=213/);
-  assert.match(html, /app\.js\?v=213/);
-  assert.match(worker, /ryan-family-menu-v213/);
+  assert.match(html, /styles\.css\?v=214/);
+  assert.match(html, /app\.js\?v=214/);
+  assert.match(worker, /ryan-family-menu-v214/);
   assert.match(worker, /v203: Phase 5 keeps Plan saves/);
 });
 
