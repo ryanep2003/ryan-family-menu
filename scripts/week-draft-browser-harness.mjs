@@ -24,10 +24,12 @@ let history = { items:[], version:1 };
 const writes = [];
 let failNextGroceryRead = false;
 let aiRequests = 0;
+let initialReadGate = null;
 const json = (res, body, code=200) => { res.writeHead(code, {'content-type':'application/json','cache-control':'no-store'}); res.end(JSON.stringify(body)); };
 const server = createServer(async (req,res) => {
   const path = new URL(req.url,'http://localhost').pathname;
   if(/^\/\.netlify\/functions\/(?:assistant|recognize-|translate-recipe|import-recipe-url)/.test(path)) aiRequests += 1;
+  if(req.method==='GET' && ['/.netlify/functions/recipes','/.netlify/functions/schedule','/.netlify/functions/groceries'].includes(path) && initialReadGate) await initialReadGate;
   if(path === '/.netlify/functions/households') return json(res,{household:{id:'day7-fixture',name:'Day 7 household'}});
   if(path === '/.netlify/functions/recipes') return json(res,{recipes});
   const records = { '/.netlify/functions/schedule':schedule, '/.netlify/functions/groceries':groceries, '/.netlify/functions/family-state':state, '/.netlify/functions/dinner-history':history };
@@ -62,13 +64,26 @@ const browser=await chromium.launch({channel:'chrome',headless:true});
 try {
   for(const [lang,width] of [['en',360],['es',390],['en',1280]]){
     schedule={schedule:{},calendarMeals:{},weekStartKey:monday,version:1};groceries={items:[],version:1};state=initialState();history={items:[],version:1};writes.length=0;failNextGroceryRead=false;aiRequests=0;
-    const context=await browser.newContext({viewport:{width,height:800}});
+    let releaseInitialReads;
+    initialReadGate=new Promise(resolve=>{releaseInitialReads=resolve;});
+    const context=await browser.newContext({viewport:{width,height:800},reducedMotion:lang==='es'?'reduce':'no-preference'});
     await context.addInitScript(lang=>{localStorage.setItem('family-menu-household-key','fm_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');localStorage.setItem('dinner-lang',lang);},lang);
     const page=await context.newPage();const pageErrors=[],consoleErrors=[];page.on('pageerror',e=>pageErrors.push(e.message));page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text());});
-    await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'networkidle'});
+    await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'});
     await page.locator('#householdGate').waitFor({state:'hidden'});
+    await page.locator('#todayMealLoading').waitFor({state:'visible'});
+    assert.equal(await page.locator('#todayMealLoading .meal-loading-title').evaluate(node=>getComputedStyle(node).animationName),'none','Loading outline remains still');
+    assert.equal(await page.locator('#weekPlanLoading').getAttribute('hidden'),null);
+    assert.equal(await page.locator('#groceryList .grocery-loading-row').count(),3);
+    assert.equal(await page.locator('#recipeList .recipe-loading-card').count(),4);
+    assert.equal(await page.locator('#todayBand').isHidden(),true);
+    releaseInitialReads();initialReadGate=null;
+    await page.locator('#todayMealLoading').waitFor({state:'hidden'});
+    await page.locator('#groceryList .grocery-loading-row').first().waitFor({state:'detached'});
+    await page.locator('#recipeList .recipe-loading-card').first().waitFor({state:'detached'});
     await page.locator('button[data-view="schedule"]').click();
-    await page.locator('[data-week-draft="generate"]').click();
+    await page.locator('[data-week-draft="generate"]').focus();
+    await page.keyboard.press('Enter');
     const choices=await page.locator('[data-week-draft-select]').count();
     assert.ok(choices>0,'A valid catalog must produce draft choices');
     const controls=await page.locator('#weekDraftPanel button').evaluateAll(nodes=>nodes.slice(0,8).map(node=>({action:node.dataset.weekDraft||node.dataset.weekDraftSwap||node.dataset.weekDraftKeep||'',width:Math.round(node.getBoundingClientRect().width),height:Math.round(node.getBoundingClientRect().height)})));
@@ -106,9 +121,24 @@ try {
     assert.deepEqual(pageErrors,[]);
     assert.ok(consoleErrors.every(message=>message.includes('503')),'Only the controlled failed read may log a console error');
     assert.equal(aiRequests,0,'The ordinary family journey must not invoke AI endpoints');
+    let releaseCachedReads;
+    initialReadGate=new Promise(resolve=>{releaseCachedReads=resolve;});
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.locator('#householdGate').waitFor({state:'hidden'});
+    assert.equal(await page.locator('#todayMealLoading').isHidden(),true,'Cached meal plan should not flash a loading outline');
+    assert.equal(await page.locator('#groceryList .grocery-loading-row').count(),0,'Cached shopping list should not flash loading rows');
+    assert.equal(await page.locator('#recipeList .recipe-loading-card').count(),0,'Cached recipes should not flash loading cards');
+    releaseCachedReads();initialReadGate=null;
     await page.locator('button[data-view="today"]').click();
     await page.locator('#dinnerFeedback').waitFor({state:'visible'});
     await page.locator('#todayChange summary').click();
+    const today=new Date();
+    const todayKey=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+    const savedAttendance=schedule.calendarMeals[todayKey]?.servingPlans?.dinner;
+    assert.ok(savedAttendance,'Approved dinner must provide a current-day serving plan');
+    for(const [field,amount] of [['Adults',savedAttendance.adults],['Kids',savedAttendance.kids],['Guests',savedAttendance.guests]]){
+      assert.equal(await page.locator(`#todayChange${field}`).inputValue(),String(amount),'Change-of-plans values must prefill from the saved dinner');
+    }
     await page.locator('#todayChangeGuests').fill('1');
     await page.locator('#todayChangeForm button[type="submit"]').click();
     await page.locator('[data-apply-attendance]').waitFor();
@@ -132,6 +162,15 @@ try {
     assert.equal(openMenuOverflow,0,'Open household menu must fit the viewport');
     await page.locator('.household-menu > summary').click();
     if(process.env.CAPTURE_SCREENSHOTS==='1')await page.screenshot({path:join(screenshotDirectory,`${lang}-${width}-family.png`),fullPage:true});
+    const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+    const tomorrowKey=`${tomorrow.getFullYear()}-${String(tomorrow.getMonth()+1).padStart(2,'0')}-${String(tomorrow.getDate()).padStart(2,'0')}`;
+    const calendarMeals={...schedule.calendarMeals};delete calendarMeals[tomorrowKey];
+    schedule={...schedule,calendarMeals,version:schedule.version+1};
+    await page.reload({waitUntil:'networkidle'});
+    await page.locator('#householdGate').waitFor({state:'hidden'});
+    const laterSuggestion=await page.locator('#smartSuggestionList').innerText();
+    assert.match(laterSuggestion,lang==='es'?/Considera (Pasta|Tazón de arroz) mañana/:/Consider (Pasta|Rice bowl) tomorrow/,'Recorded feedback must feed a later open-day suggestion');
+    assert.ok(laterSuggestion.includes(lang==='es'?'Una receta conocida para considerar para una cena sin plan.':'A known recipe to consider for an open dinner.'),'Neutral suggestion copy must not claim an unrecorded preference');
     await page.locator('button[data-view="schedule"]').click();
     await page.locator('[data-week-draft="generate"]').click();
     schedule={...schedule,version:schedule.version+1};
@@ -140,7 +179,7 @@ try {
     await page.getByText(lang==='es'?'Tu borrador guardado ya no coincide con el plan o las recetas de esta semana. Crea uno nuevo para revisar las opciones actuales.':'Your saved draft no longer matches this week’s plan or recipes. Make a new draft to review the latest choices.').waitFor();
     assert.deepEqual(pageErrors,[]);
     assert.ok(consoleErrors.every(message=>message.includes('503')));
-    console.log(JSON.stringify({lang,width,choices,controls,groceryCount:groceries.items.length,shoppingStatus:shopped.slice(-80),failedShoppingReadRecovered:true,attendanceSaved:schedule.version>=3,dinnerRecorded:history.version===2,memoryVisible:Boolean(memory),draftRecoveryAndStaleReview:true,aiRequests,overflow,familyOverflow,openMenuOverflow,pageErrors:pageErrors.length,controlledConsoleErrors:consoleErrors.length}));
+    console.log(JSON.stringify({lang,width,choices,controls,groceryCount:groceries.items.length,shoppingStatus:shopped.slice(-80),failedShoppingReadRecovered:true,attendanceSaved:schedule.version>=3,dinnerRecorded:history.version===2,memoryVisible:Boolean(memory),laterSuggestion,draftRecoveryAndStaleReview:true,aiRequests,overflow,familyOverflow,openMenuOverflow,pageErrors:pageErrors.length,controlledConsoleErrors:consoleErrors.length}));
     await context.close();
   }
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

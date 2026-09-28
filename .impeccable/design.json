@@ -1,37 +1,270 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-20T17:30:00Z",
-  "title": "Design System: The Honed Almanac",
+  "generatedAt": "2026-09-28T20:55:54.993Z",
+  "title": "Design System: Family navy and sage",
   "extensions": {
     "colorMeta": {
-      "ground": { "role": "neutral", "displayName": "Honed Limestone", "canonical": "#F0EFEA", "tonalRamp": ["#272823", "#3D3D37", "#55554E", "#6D7068", "#96958D", "#BDBBB1", "#D9D6CC", "#F0EFEA"] },
-      "paper": { "role": "neutral", "displayName": "Ceramic Paper", "canonical": "#FCFBF7", "tonalRamp": ["#272823", "#45453F", "#6D7068", "#97958C", "#C2BFB6", "#DEDAD0", "#F2F0E9", "#FCFBF7"] },
-      "ink": { "role": "neutral", "displayName": "Cast Iron Ink", "canonical": "#272823", "tonalRamp": ["#151612", "#272823", "#3D3D37", "#55554E", "#6D7068", "#96958D", "#C7C5BC", "#F0EFEA"] },
-      "muted": { "role": "neutral", "displayName": "Brushed Context", "canonical": "#666960", "tonalRamp": ["#2A2B27", "#42433D", "#585A53", "#666960", "#8D8F87", "#B0B1A8", "#D3D1C8", "#F0EFEA"] },
-      "rule": { "role": "neutral", "displayName": "Mineral Rule", "canonical": "#D9D6CC", "tonalRamp": ["#2A2B27", "#45453F", "#62615A", "#7E7C74", "#99968D", "#BAB7AD", "#D9D6CC", "#F4F2EC"] },
-      "primary-action": { "role": "primary", "displayName": "Herb Action", "canonical": "#476346", "tonalRamp": ["#182719", "#29412A", "#38543A", "#476346", "#708970", "#9EAF9B", "#CBD6C6", "#F0F4EE"] },
-      "focus": { "role": "primary", "displayName": "Cobalt Focus", "canonical": "#2F58B8", "tonalRamp": ["#0E1B49", "#18327A", "#2446A0", "#2F58B8", "#627FCA", "#9AADDE", "#CBD6F0", "#F0F3FC"] },
-      "memory": { "role": "secondary", "displayName": "Pale Herb Memory", "canonical": "#DCE2CC", "tonalRamp": ["#30382B", "#515E49", "#718069", "#95A08C", "#B7C0AB", "#DCE2CC", "#EDF0E5", "#FAFBF7"] },
-      "attention": { "role": "secondary", "displayName": "Clay Attention", "canonical": "#B5674A", "tonalRamp": ["#421C11", "#6B301F", "#8E4931", "#B5674A", "#CD947D", "#E1B8A8", "#F1D9D0", "#FDF4F0"] },
-      "success": { "role": "secondary", "displayName": "Steady Success", "canonical": "#3E6B52", "tonalRamp": ["#122318", "#203A29", "#31523D", "#3E6B52", "#6E927A", "#A0B8A5", "#D0DED1", "#F0F5F0"] },
-      "danger": { "role": "tertiary", "displayName": "Clear Danger", "canonical": "#A33A35", "tonalRamp": ["#3A1110", "#611E1B", "#812B27", "#A33A35", "#C56B65", "#DFA09C", "#F0CBC8", "#FBEDEC"] }
+      "ground": {
+        "role": "neutral",
+        "displayName": "Warm beige ground",
+        "canonical": "#F5F1EA",
+        "tonalRamp": [
+          "#363533",
+          "#535250",
+          "#6F6E6D",
+          "#8C8B8A",
+          "#A8A8A7",
+          "#C5C4C4",
+          "#E2E1E0",
+          "#FEFEFD"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "White paper",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#383838",
+          "#555555",
+          "#717171",
+          "#8D8D8D",
+          "#AAAAAA",
+          "#C6C6C6",
+          "#E3E3E3",
+          "#FFFFFF"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Navy ink",
+        "canonical": "#1A3A5C",
+        "tonalRamp": [
+          "#060D14",
+          "#272D34",
+          "#484D54",
+          "#696E73",
+          "#8A8E93",
+          "#ABAFB3",
+          "#CCCFD2",
+          "#EDEFF2"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Warm stone",
+        "canonical": "#746C63",
+        "tonalRamp": [
+          "#1A1816",
+          "#393735",
+          "#585655",
+          "#777674",
+          "#969594",
+          "#B5B5B3",
+          "#D5D4D3",
+          "#F4F3F3"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Quiet rule",
+        "canonical": "#E3DCD1",
+        "tonalRamp": [
+          "#32302E",
+          "#4F4E4B",
+          "#6C6B69",
+          "#898886",
+          "#A6A5A3",
+          "#C3C2C1",
+          "#E0DFDE",
+          "#FDFCFB"
+        ]
+      },
+      "primary-action": {
+        "role": "primary",
+        "displayName": "Navy action",
+        "canonical": "#1A3A5C",
+        "tonalRamp": [
+          "#060D14",
+          "#272D34",
+          "#484D54",
+          "#696E73",
+          "#8A8E93",
+          "#ABAFB3",
+          "#CCCFD2",
+          "#EDEFF2"
+        ]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Soft-blue focus",
+        "canonical": "#AFCBFF",
+        "tonalRamp": [
+          "#272D38",
+          "#454A55",
+          "#636871",
+          "#81858D",
+          "#9FA2AA",
+          "#BDC0C6",
+          "#DBDDE3",
+          "#F9FBFF"
+        ]
+      },
+      "memory": {
+        "role": "secondary",
+        "displayName": "Sage memory",
+        "canonical": "#CFE8D5",
+        "tonalRamp": [
+          "#2E332F",
+          "#4B504C",
+          "#686D69",
+          "#868A87",
+          "#A3A7A4",
+          "#C0C3C1",
+          "#DEE0DE",
+          "#FBFDFC"
+        ]
+      },
+      "attention": {
+        "role": "secondary",
+        "displayName": "Navy attention",
+        "canonical": "#1A3A5C",
+        "tonalRamp": [
+          "#060D14",
+          "#272D34",
+          "#484D54",
+          "#696E73",
+          "#8A8E93",
+          "#ABAFB3",
+          "#CCCFD2",
+          "#EDEFF2"
+        ]
+      },
+      "success": {
+        "role": "secondary",
+        "displayName": "Steady success",
+        "canonical": "#3E6B52",
+        "tonalRamp": [
+          "#0E1812",
+          "#2E3732",
+          "#4E5652",
+          "#6E7672",
+          "#8F9592",
+          "#AFB4B1",
+          "#CFD4D1",
+          "#F0F3F1"
+        ]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Clear danger",
+        "canonical": "#A33A35",
+        "tonalRamp": [
+          "#240D0C",
+          "#422D2C",
+          "#604D4D",
+          "#7F6E6D",
+          "#9D8E8D",
+          "#BBAFAE",
+          "#D9CFCE",
+          "#F8EFEF"
+        ]
+      },
+      "navy": {
+        "role": "primary",
+        "displayName": "Navy",
+        "canonical": "#1A3A5C",
+        "tonalRamp": [
+          "#060D14",
+          "#272D34",
+          "#484D54",
+          "#696E73",
+          "#8A8E93",
+          "#ABAFB3",
+          "#CCCFD2",
+          "#EDEFF2"
+        ]
+      },
+      "sage": {
+        "role": "secondary",
+        "displayName": "Sage",
+        "canonical": "#CFE8D5",
+        "tonalRamp": [
+          "#2E332F",
+          "#4B504C",
+          "#686D69",
+          "#868A87",
+          "#A3A7A4",
+          "#C0C3C1",
+          "#DEE0DE",
+          "#FBFDFC"
+        ]
+      },
+      "soft-blue": {
+        "role": "primary",
+        "displayName": "Soft blue",
+        "canonical": "#AFCBFF",
+        "tonalRamp": [
+          "#272D38",
+          "#454A55",
+          "#636871",
+          "#81858D",
+          "#9FA2AA",
+          "#BDC0C6",
+          "#DBDDE3",
+          "#F9FBFF"
+        ]
+      }
     },
     "typographyMeta": {
-      "display": { "displayName": "Almanac Display", "purpose": "Page-level household reading moments." },
-      "headline": { "displayName": "Editorial Heading", "purpose": "Days, recipes, and major sections." },
-      "body": { "displayName": "Working Sans", "purpose": "Recipes, controls, lists, navigation, and instructions." },
-      "label": { "displayName": "Quiet Label", "purpose": "Meal labels, dates, quantities, and concise orientation." }
+      "display": {
+        "displayName": "System serif display",
+        "purpose": "Page-level titles."
+      },
+      "headline": {
+        "displayName": "System serif headline",
+        "purpose": "Days, recipes, and major sections."
+      },
+      "body": {
+        "displayName": "Working sans",
+        "purpose": "Recipes, controls, lists, navigation, and instructions."
+      },
+      "label": {
+        "displayName": "Quiet label",
+        "purpose": "Meal labels, dates, quantities, and orientation."
+      }
     },
     "shadows": [
-      { "name": "temporary-overlay", "value": "0 16px 36px rgba(23,25,22,.14)", "purpose": "Menus and temporary sheets that sit above the working document." },
-      { "name": "result-popover", "value": "0 14px 30px rgba(23,25,22,.11)", "purpose": "Temporary recipe-result popovers only." }
+      {
+        "name": "search-and-card-lift",
+        "value": "0 1px 2px rgba(26, 58, 92, .04), 0 8px 20px rgba(26, 58, 92, .05)",
+        "purpose": "Light separation for search and browse surfaces."
+      },
+      {
+        "name": "temporary-overlay",
+        "value": "0 16px 36px rgba(26,58,92,.14)",
+        "purpose": "Menus and temporary overlays above the page."
+      }
     ],
     "motion": [
-      { "name": "media-wait", "value": "1.4s ease-in-out infinite", "purpose": "Loading treatment for on-demand recipe media." }
+      {
+        "name": "media-wait",
+        "value": "1.4s ease-in-out infinite",
+        "purpose": "On-demand recipe media loading; removed under reduced motion."
+      }
     ],
     "breakpoints": [
-      { "name": "compact", "value": "640px" },
-      { "name": "desktop-shell", "value": "960px" }
+      {
+        "name": "compact-header",
+        "value": "479px"
+      },
+      {
+        "name": "mobile",
+        "value": "699px"
+      },
+      {
+        "name": "desktop-shell",
+        "value": "960px"
+      }
     ]
   },
   "components": [
@@ -39,77 +272,105 @@
       "name": "Primary Action",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "The one highest-value action in the active household task.",
+      "description": "One high-value navy action in the active task.",
       "html": "<button class=\"ds-primary-action\">Plan dinner</button>",
-      "css": ".ds-primary-action { min-height: 44px; padding: 10px 14px; border: 1px solid #476346; border-radius: 8px; background: #476346; color: #FCFBF7; font: 650 1rem ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; letter-spacing: -.01em; } .ds-primary-action:hover { background: color-mix(in srgb, #476346 88%, #272823); } .ds-primary-action:focus-visible { outline: 3px solid color-mix(in srgb, #2F58B8 55%, white); outline-offset: 3px; }"
+      "css": ".ds-primary-action { min-height:44px; padding:10px 14px; border:1px solid #1A3A5C; border-radius:14px; background:#1A3A5C; color:#FFFFFF; font:650 1rem ui-sans-serif,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; } .ds-primary-action:hover { background:#152F4B; } .ds-primary-action:focus-visible { outline:3px solid #AFCBFF; outline-offset:3px; }"
     },
     {
       "name": "Ghost Action",
       "kind": "button",
       "refersTo": "button-ghost",
-      "description": "A visible secondary action that stays quiet beside the primary decision.",
+      "description": "Visible secondary action on the paper.",
       "html": "<button class=\"ds-ghost-action\">Save changes</button>",
-      "css": ".ds-ghost-action { min-height: 44px; padding: 10px 14px; border: 1px solid #D9D6CC; border-radius: 8px; background: transparent; color: #272823; font: 650 1rem ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; letter-spacing: -.01em; } .ds-ghost-action:hover { border-color: #272823; } .ds-ghost-action:focus-visible { outline: 3px solid color-mix(in srgb, #2F58B8 55%, white); outline-offset: 3px; }"
+      "css": ".ds-ghost-action { min-height:44px; padding:10px 14px; border:1px solid #E3DCD1; border-radius:14px; background:transparent; color:#1A3A5C; font:600 1rem ui-sans-serif,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; } .ds-ghost-action:hover { background:#FFFFFF; } .ds-ghost-action:focus-visible { outline:3px solid #AFCBFF; outline-offset:3px; }"
     },
     {
       "name": "Working Field",
       "kind": "input",
       "refersTo": "input",
-      "description": "A practical, readable field for household food information.",
-      "html": "<input class=\"ds-working-field\" value=\"Search recipes\" aria-label=\"Search recipes\">",
-      "css": ".ds-working-field { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #D9D6CC; border-radius: 8px; background: #FCFBF7; color: #272823; font: 1rem ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; } .ds-working-field:focus-visible { outline: 3px solid color-mix(in srgb, #2F58B8 55%, white); outline-offset: 3px; }"
-    },
-    {
-      "name": "Meal Period Chapter",
-      "kind": "custom",
-      "description": "A flat, tonal breakfast, lunch, or dinner section that makes Day → Meal → Recipe scannable.",
-      "html": "<section class=\"ds-meal-period\"><p>Lunch</p><strong>Green Monster Salad</strong><button>Open recipe</button></section>",
-      "css": ".ds-meal-period { display: grid; gap: 8px; padding: 24px 16px; border-top: 1px solid #D9D6CC; background: #FCFBF7; color: #272823; } .ds-meal-period p { margin: 0; color: #666960; font: 600 .78rem ui-sans-serif, sans-serif; } .ds-meal-period strong { font: 500 1.55rem Iowan Old Style, \"Palatino Linotype\", Palatino, Georgia, serif; } .ds-meal-period button { width: fit-content; min-height: 44px; padding: 0; border: 0; background: transparent; color: #476346; font: 650 1rem ui-sans-serif, sans-serif; } .ds-meal-period button:focus-visible { outline: 3px solid color-mix(in srgb, #2F58B8 55%, white); outline-offset: 3px; }"
+      "description": "Readable household food field.",
+      "html": "<input class=\"ds-working-field\" placeholder=\"Search recipes\" aria-label=\"Search recipes\">",
+      "css": ".ds-working-field { width:100%; min-height:44px; padding:10px 12px; border:1px solid #E3DCD1; border-radius:14px; background:#FFFFFF; color:#1A3A5C; font:1rem ui-sans-serif,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; } .ds-working-field:focus-visible { outline:3px solid #AFCBFF; outline-offset:3px; }"
     },
     {
       "name": "Core Navigation",
       "kind": "nav",
       "refersTo": "navigation-active",
-      "description": "The stable four-destination navigation, fixed safely above the mobile device edge.",
+      "description": "Four stable destinations on one paper surface.",
       "html": "<nav class=\"ds-core-nav\" aria-label=\"Views\"><button class=\"ds-active\">Today</button><button>Plan</button><button>Shop</button><button>Library</button></nav>",
-      "css": ".ds-core-nav { display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 12px; background: #282B25; } .ds-core-nav button { min-width: 0; min-height: 48px; padding: 6px 2px; border: 0; border-radius: 6px; background: transparent; color: #D5D7CE; font: 650 .82rem ui-sans-serif, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif; } .ds-core-nav .ds-active { background: #FCFBF7; color: #272823; } .ds-core-nav button:focus-visible { outline: 3px solid #FCFBF7; outline-offset: -1px; }"
+      "css": ".ds-core-nav { display:grid; grid-template-columns:repeat(4,1fr); padding:4px 12px; border-top:1px solid #E3DCD1; background:#F5F1EA; } .ds-core-nav button { min-width:0; min-height:48px; border:0; border-bottom:3px solid transparent; background:transparent; color:#746C63; font:650 .82rem ui-sans-serif,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; } .ds-core-nav .ds-active { border-bottom-color:#1A3A5C; color:#1A3A5C; } .ds-core-nav button:hover { color:#1A3A5C; } .ds-core-nav button:focus-visible { outline:3px solid #AFCBFF; outline-offset:3px; }"
+    },
+    {
+      "name": "Recipe Browse Card",
+      "kind": "card",
+      "description": "Photo-led recipe browse card with its name below.",
+      "html": "<article class=\"ds-recipe-card\"><div class=\"ds-recipe-photo\" aria-hidden=\"true\"></div><h3>Family pasta</h3></article>",
+      "css": ".ds-recipe-card { display:grid; gap:8px; color:#1A3A5C; } .ds-recipe-photo { aspect-ratio:4/5; border-radius:22px; background:#CFE8D5; } .ds-recipe-card h3 { margin:0; font:650 1.08rem ui-serif,Georgia,serif; } .ds-recipe-card:hover h3 { text-decoration:underline; } .ds-recipe-card:focus-visible { outline:3px solid #AFCBFF; outline-offset:3px; }"
+    },
+    {
+      "name": "Meal Period Row",
+      "kind": "custom",
+      "description": "Meal content grouped without nested cards.",
+      "html": "<section class=\"ds-meal-period\"><span>Dinner</span><strong>Family pasta</strong><button>Open recipe</button></section>",
+      "css": ".ds-meal-period { display:grid; gap:8px; padding:24px 0; border-top:1px solid #E3DCD1; color:#1A3A5C; } .ds-meal-period span { color:#746C63; font:600 .78rem ui-sans-serif,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; } .ds-meal-period strong { font:650 1.28rem ui-serif,Georgia,serif; } .ds-meal-period button { width:fit-content; min-height:44px; border:0; background:transparent; color:#1A3A5C; font:650 1rem ui-sans-serif,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif; } .ds-meal-period button:hover { text-decoration:underline; } .ds-meal-period button:focus-visible { outline:3px solid #AFCBFF; outline-offset:3px; }"
     }
   ],
   "narrative": {
-    "northStar": "The Honed Almanac",
-    "overview": "Ryan Family Menu is a smart household food concierge, not meal-planning software. It makes a family's food situation recognizable in the few seconds available between school pickup, a grocery aisle, and starting dinner: what the family is eating, what is still undecided, and what needs attention next. The visual character is warm, editorial, calm, and exact: mineral canvas, ceramic-paper surfaces, herb action, clay attention, and quiet seams borrow the calm material clarity of a working kitchen without becoming literal kitchen décor.",
+    "northStar": "a calm family kitchen board",
+    "overview": "Ryan Family Menu is a smart household food concierge, not meal-planning software. It makes a family's food situation recognizable in the few seconds available between school pickup, a grocery aisle, and starting dinner: what the family is eating, what is still undecided, and what needs attention next. The interface absorbs planning complexity whenever it can; technical usefulness alone never earns a permanent control or concept in the experience. The visual character is warm, practical, and easy to scan. Warm beige ground, white cards, navy actions, sage highlights, and soft-blue secondary controls keep common family tasks readable on a phone. Warmth comes from concise language, family context, and useful recommendations—not from explanation, fake texture, or decorative objects.",
     "keyCharacteristics": [
       "Recognition and scanning win over instruction, especially in the first 2–3 seconds.",
       "The current household food state is more important than planning mechanics.",
-      "Editorial serif headings and quiet paper surfaces make ordinary family content feel considered.",
+      "Sans-serif type and navy primary actions make ordinary family content feel clear.",
       "Progressive emphasis makes the next decision clear without falsifying the complete state.",
-      "English and Spanish are one product experience, not separate workflows."
+      "English and Spanish are one product experience, not separate workflows.",
+      "Plan never hides Save after a long scroll; unsaved meal changes stay on a fixed navy bar."
     ],
     "rules": [
-      { "name": "The State-First Color Rule", "body": "Color clarifies a real state or a broad reading chapter; it never substitutes for labels, hierarchy, or navigation.", "section": "colors" },
-      { "name": "The Three-Level Rule", "body": "In planning, Day → Meal → Recipe must never collapse into equal visual weight. Day boundaries orient; meal headings group; recipe names read as the content belonging to that meal.", "section": "typography" },
-      { "name": "The Busy-Moment Rule", "body": "Every major screen must have a dominant answer to the question that caused the user to open it. Prefer recognition and direct state over explanatory copy or disconnected widgets.", "section": "layout" },
-      { "name": "The Safe-Edge Rule", "body": "Fixed navigation, status areas, and sticky actions reserve space using system safe-area insets. Scrollable content and focused controls must clear the bottom navigation and iOS status area without device-specific pixel assumptions.", "section": "layout" },
-      { "name": "The Flat-Working-Surface Rule", "body": "Do not use resting shadows, nested cards, glass effects, or decorative side stripes to manufacture hierarchy. Use content order, type, spacing, rules, and tonal fields first.", "section": "elevation" }
+      {
+        "name": "The State-First Color Rule",
+        "body": "Color clarifies a real state or a broad reading chapter; it never substitutes for labels, hierarchy, or navigation.",
+        "section": "neutral"
+      },
+      {
+        "name": "The Three-Level Rule",
+        "body": "In planning, Day → Meal → Recipe must never collapse into equal visual weight. Day boundaries orient; meal headings group; recipe names read as the content belonging to that meal.",
+        "section": "hierarchy"
+      },
+      {
+        "name": "The Busy-Moment Rule",
+        "body": "Every major screen must have a dominant answer to the question that caused the user to open it. Prefer recognition and direct state over explanatory copy or disconnected widgets.",
+        "section": "layout"
+      },
+      {
+        "name": "The Safe-Edge Rule",
+        "body": "Fixed navigation, status areas, and sticky actions reserve space using system safe-area insets. Scrollable content and focused controls must clear the bottom navigation and iOS status area without device-specific pixel assumptions.",
+        "section": "layout"
+      },
+      {
+        "name": "The Quiet-Card Rule",
+        "body": "Do not nest a bordered card inside another card, and do not paint a different wash behind each tab. Use photo, type, spacing, and one soft elevation first. Sage marks a real state, such as today on the week, not a resting chip or a page background.",
+        "section": "elevation & depth"
+      }
     ],
     "dos": [
-      "Do foreground the family’s actual meals and next decision before planning mechanics or household administration.",
-      "Do use hierarchy, grouping, labels, and sensible defaults before adding instructional prose or configuration.",
-      "Do keep empty states subordinate to known meal content.",
-      "Do adapt information architecture for narrow screens, not merely shrink desktop layouts.",
-      "Do use warm editorial language only when it adds context without duplicating or replacing household state.",
-      "Do preserve original content while treating Spanish and English as equally complete supported experiences.",
-      "Do favor deletion, consolidation, and stronger defaults when a concept has not earned its cognitive cost."
+      "**Do** foreground the family’s actual meals and next decision before planning mechanics or household administration.",
+      "**Do** use hierarchy, grouping, labels, and sensible defaults before adding instructional prose or configuration.",
+      "**Do** keep empty states subordinate to known meal content.",
+      "**Do** adapt information architecture for narrow screens, not merely shrink desktop layouts.",
+      "**Do** use warm editorial language only when it adds context without duplicating or replacing household state.",
+      "**Do** preserve original content while treating Spanish and English as equally complete supported experiences.",
+      "**Do** favor deletion, consolidation, and stronger defaults when a concept has not earned its cognitive cost."
     ],
     "donts": [
-      "Don't expose implementation concepts, workflow terminology, or internal classifications unless the family truly needs to decide them.",
-      "Don't make an empty dinner imply that nothing else is planned today.",
-      "Don't flatten Day, Meal, and Recipe into equivalent typography or visual weight.",
-      "Don't squeeze complete multi-day meal content into narrow mobile columns.",
-      "Don't make users request a recipe-level translation after selecting the global language.",
-      "Don't elevate sides or minor components as complete dinner recommendations without supporting context.",
-      "Don't allow fixed navigation or device safe areas to obscure meaningful content or actions.",
-      "Don't turn warmth into verbose self-instruction or turn planning into a generic dashboard."
+      "**Don't** expose implementation concepts, workflow terminology, or internal classifications unless the family truly needs to decide them.",
+      "**Don't** make an empty dinner imply that nothing else is planned today.",
+      "**Don't** flatten Day, Meal, and Recipe into equivalent typography or visual weight.",
+      "**Don't** squeeze complete multi-day meal content into narrow mobile columns.",
+      "**Don't** make users request a recipe-level translation after selecting the global language.",
+      "**Don't** elevate sides or minor components as complete dinner recommendations without supporting context.",
+      "**Don't** allow fixed navigation or device safe areas to obscure meaningful content or actions.",
+      "**Don't** turn warmth into verbose self-instruction or turn planning into a generic dashboard."
     ]
   }
 }

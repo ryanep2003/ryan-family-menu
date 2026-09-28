@@ -1,4 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v214";
+const CACHE_NAME = "ryan-family-menu-v215";
+// v215: Open-day suggestions describe known recipes without inventing preferences.
 // v214: The mobile household menu keeps its summary inside the header.
 // v207: Family memory sources and conflict-aware dinner-history correction.
 // v206: Dinner memory ranks only cooked events and keeps draft recovery reviewable.
