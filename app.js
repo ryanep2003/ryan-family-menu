@@ -2580,7 +2580,7 @@ const weekDraftUi = createWeekDraftUi({
     return result;
   },
   onShoppingPreview: async () => {
-    if (groceriesDirty || !scheduleAuthoritativeLoaded || !scheduleBase) return { status: "pending" };
+    if (groceryPendingIntent || grocerySaveCoordinator.isBusy() || !scheduleAuthoritativeLoaded || !scheduleBase) return { status: "pending" };
     try {
       const [latestSchedule, latestGroceries] = await Promise.all([
         getJson("/.netlify/functions/schedule", t("weekDraftLoadError")),
@@ -2606,7 +2606,7 @@ const weekDraftUi = createWeekDraftUi({
   },
   onShoppingUpdate: async (preview) => {
     const localAtStart = JSON.stringify({ groceries, groceryVersion, schedule, calendarMeals, weekStartKey });
-    const stillCurrent = () => !groceriesDirty && scheduleAuthoritativeLoaded
+    const stillCurrent = () => !groceryPendingIntent && !grocerySaveCoordinator.isBusy() && scheduleAuthoritativeLoaded
       && scheduleVersion === preview?.scheduleVersion
       && JSON.stringify({ schedule, calendarMeals, weekStartKey }) === JSON.stringify(scheduleBase)
       && JSON.stringify({ groceries, groceryVersion, schedule, calendarMeals, weekStartKey }) === localAtStart;
@@ -2620,14 +2620,17 @@ const weekDraftUi = createWeekDraftUi({
     });
     if (result.status !== "saved") return result;
     if (!stillCurrent()) return { ...result, status: "saved-pending-review" };
+    groceryLoadGeneration += 1;
     groceries = result.record.items;
+    groceriesLoadStatus = "ready";
     groceryVersion = Number(result.record.version);
     groceryBaseItems = cloneVersionedItems(groceries);
-    householdStorage.setItem(groceryBaseStorageKey, JSON.stringify(groceryBaseItems));
-    persistGroceriesLocally(groceries, groceryVersion);
-    groceriesDirty = false;
-    setGroceriesPending(false);
-    markSynced("groceries");
+    const persistence = grocerySaveCoordinator.acknowledgeLocalSnapshot({
+      items: groceries,
+      version: groceryVersion,
+      baseItems: groceryBaseItems,
+    });
+    finishGroceryCloudSync(persistence);
     renderGroceries();
     bindGroceryControls();
     return result;

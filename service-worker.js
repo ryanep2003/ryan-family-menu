@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v212";
-// v212: Planned grocery rebuilds stop on a shared version conflict for review.
+const CACHE_NAME = "ryan-family-menu-v213";
+// v213: Weekly draft shopping review uses the current grocery save state.
 // v207: Family memory sources and conflict-aware dinner-history correction.
 // v206: Dinner memory ranks only cooked events and keeps draft recovery reviewable.
 // v205: Household-local weekly draft recovery.
