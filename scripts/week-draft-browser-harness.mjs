@@ -1,4 +1,4 @@
-// Local-only Plan → Shop acceptance fixture. Set PLAYWRIGHT_MODULE to an installed Playwright package.
+// Local-only Plan → Shop → Today → Family fixture. Set PLAYWRIGHT_MODULE to an installed Playwright package.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -68,6 +68,10 @@ try {
     assert.ok(choices>0,'A valid catalog must produce draft choices');
     await page.locator('[data-week-draft-keep]').first().click();
     if(await page.locator('[data-week-draft-swap]').count()) await page.locator('[data-week-draft-swap]').last().click();
+    await page.reload({waitUntil:'networkidle'});
+    await page.locator('button[data-view="schedule"]').click();
+    await page.getByText(lang==='es'?'Tu borrador sin terminar volvió a este dispositivo. Revísalo antes de aprobarlo.':'Your unfinished draft is back on this device. Review it before approving.').waitFor();
+    assert.equal(await page.locator('[data-week-draft-select]').count(),choices);
     const approvalEnabled=await page.locator('[data-week-draft="approve"]').isEnabled();
     assert.ok(approvalEnabled,'Reviewed draft should be approvable');
     await page.locator('[data-week-draft="approve"]').click();
@@ -104,8 +108,14 @@ try {
     await page.locator('#openFamily').evaluate(node=>node.click());
     const memory=await page.locator('#familyMemorySummary').innerText();
     assert.match(memory,/Pasta|Rice bowl|Tazón de arroz/);
+    await page.locator('button[data-view="schedule"]').click();
+    await page.locator('[data-week-draft="generate"]').click();
+    schedule={...schedule,version:schedule.version+1};
+    await page.reload({waitUntil:'networkidle'});
+    await page.locator('button[data-view="schedule"]').click();
+    await page.getByText(lang==='es'?'Tu borrador guardado ya no coincide con el plan o las recetas de esta semana. Crea uno nuevo para revisar las opciones actuales.':'Your saved draft no longer matches this week’s plan or recipes. Make a new draft to review the latest choices.').waitFor();
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({lang,width,choices,groceryCount:groceries.items.length,shoppingStatus:shopped.slice(-80),attendanceSaved:schedule.version===3,dinnerRecorded:history.version===2,memoryVisible:Boolean(memory),overflow,pageErrors:errors.length}));
+    console.log(JSON.stringify({lang,width,choices,groceryCount:groceries.items.length,shoppingStatus:shopped.slice(-80),attendanceSaved:schedule.version>=3,dinnerRecorded:history.version===2,memoryVisible:Boolean(memory),draftRecoveryAndStaleReview:true,overflow,pageErrors:errors.length}));
     await context.close();
   }
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
