@@ -341,3 +341,11 @@ This is a lightweight record of architectural and product decisions that future 
 **Alternatives considered:** Incrementally restyling the existing card system, replacing the backend with a new product architecture, and redesigning every screen in one release.
 
 **Consequences:** Presentation-only selectors may derive concise memory cues from existing records. `styles.css` has a deliberate token-to-state structure and the service worker pre-caches the new selector module. Unredesigned screens remain functionally accessible and will receive their own intentional passes later.
+
+## 2026-09-27 — Review planned grocery rebuilds after a version conflict
+
+**Decision:** Keep ordinary grocery edits on the one-retry three-way merge. A Shop build or approved-lunch rebuild instead stops at a `409`, restores the latest shared list, and requires review before rebuilding again.
+
+**Reason:** A two-device test showed that a stale rebuild could remove a planned row after another shopper checked it as purchased. Retrying that deletion would erase purchase evidence even though the stale device's local preflight saw no checked item.
+
+**Consequences:** Rebuilds may need one extra human action when shopping changes concurrently. The versioned grocery record, local journal shape, household namespace, and server endpoint remain unchanged. A stale rebuild journal is cleared when no newer local edit exists, so reconnect cannot silently replay the rejected deletion.

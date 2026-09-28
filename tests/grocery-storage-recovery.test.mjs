@@ -6,7 +6,7 @@ const app = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const translations = readFileSync(new URL("../translations.js", import.meta.url), "utf8");
 
 test("a validated grocery GET renders before attempting the local cache write", () => {
-  const loadSource = app.match(/function loadGroceries\(\)[\s\S]*?\nasync function saveGroceries\(\)/)?.[0] || "";
+  const loadSource = app.match(/function loadGroceries\(\)[\s\S]*?\nasync function saveGroceries\([^)]*\)/)?.[0] || "";
   const renderIndex = loadSource.indexOf("render();");
   const persistIndex = loadSource.indexOf("persistGroceriesLocally(groceries, groceryVersion);");
   assert.ok(renderIndex >= 0);

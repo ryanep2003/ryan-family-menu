@@ -255,11 +255,12 @@ export function createVersionedCollectionSaveCoordinator({
     return persistence;
   }
 
-  function capture() {
+  function capture({ conflictMode = "merge" } = {}) {
     const request = {
       sequence: ++sequence,
       intent: cloneVersionedItems(getItems()),
       captureBase: cloneVersionedItems(getBaseItems()),
+      conflictMode,
     };
     const pending = createVersionedIntent({
       items: request.intent,
@@ -304,6 +305,21 @@ export function createVersionedCollectionSaveCoordinator({
         if (error?.status === 409 && Array.isArray(error.data?.items)) {
           const remoteItems = cloneVersionedItems(error.data.items);
           const remoteVersion = boundedVersion(error.data.version) || boundedVersion(sendVersion);
+          if (request.conflictMode === "review") {
+            const currentItems = sameValue(getItems(), request.intent)
+              ? remoteItems
+              : mergeVersionedItems(getItems(), request.intent, remoteItems);
+            setItems(currentItems);
+            setVersion(remoteVersion);
+            setBaseItems(remoteItems);
+            const settled = request.sequence === sequence && sameValue(currentItems, remoteItems);
+            const persistence = acknowledgeLocalSnapshot({ items: currentItems, version: remoteVersion, baseItems: remoteItems, settled });
+            const reviewError = new Error("Grocery rebuild changed on another device.");
+            reviewError.code = persistence.cleanupPending ? "grocery-rebuild-cleanup-pending" : "grocery-rebuild-conflict";
+            reviewError.storageError = persistence.storageError;
+            onPending(reviewError);
+            return false;
+          }
           const retryIntent = mergeVersionedItems(outgoing, sendBase, remoteItems);
           const currentItems = mergeVersionedItems(getItems(), outgoing, retryIntent);
           setItems(currentItems);
@@ -343,10 +359,10 @@ export function createVersionedCollectionSaveCoordinator({
     return false;
   }
 
-  function save() {
+  function save(options = {}) {
     let request;
     try {
-      request = capture();
+      request = capture(options);
     } catch (error) {
       onPending(error);
       return Promise.resolve(false);

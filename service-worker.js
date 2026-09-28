@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v211";
-// v211: Shop distinguishes a pending local copy from failed device storage.
+const CACHE_NAME = "ryan-family-menu-v212";
+// v212: Planned grocery rebuilds stop on a shared version conflict for review.
 // v207: Family memory sources and conflict-aware dinner-history correction.
 // v206: Dinner memory ranks only cooked events and keeps draft recovery reviewable.
 // v205: Household-local weekly draft recovery.

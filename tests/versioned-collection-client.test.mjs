@@ -250,6 +250,67 @@ test("a clear retries one 409, removes known items, and retains a new remote ite
   assert.deepEqual(state.items, [{ id: "bread" }]);
 });
 
+test("a planned rebuild stops on 409 and restores newly checked purchase evidence", async () => {
+  const bread = { id: "bread", checked: false };
+  const base = [{ id: "milk", checked: false }, bread];
+  const remote = [{ id: "milk", checked: true }, bread];
+  let writes = 0;
+  const { state, coordinator } = groceryCoordinatorHarness({
+    items: [bread],
+    version: 1,
+    baseItems: base,
+    put: async () => {
+      writes += 1;
+      throw Object.assign(new Error("conflict"), { status: 409, data: { items: remote, version: 2 } });
+    },
+  });
+
+  assert.equal(await coordinator.save({ conflictMode: "review" }), false);
+  assert.equal(writes, 1);
+  assert.deepEqual(state.items, remote);
+  assert.deepEqual(state.baseItems, remote);
+  assert.equal(state.version, 2);
+  assert.equal(state.pendingIntent, null);
+});
+
+test("a rejected rebuild with blocked journal cleanup offers local-only retry", async () => {
+  const base = [{ id: "milk", checked: false }];
+  const remote = [{ id: "milk", checked: true }];
+  let current = [];
+  let memoryIntent = null;
+  let blocked = true;
+  let writes = 0;
+  let pendingError;
+  const storageError = Object.assign(new Error("storage blocked"), { name: "QuotaExceededError" });
+  const coordinator = createVersionedCollectionSaveCoordinator({
+    getItems: () => current,
+    setItems: (items) => { current = items; },
+    getVersion: () => 1,
+    setVersion: () => {},
+    getBaseItems: () => base,
+    setBaseItems: () => {},
+    getPendingIntent: () => memoryIntent,
+    setPendingIntent: (intent) => {
+      memoryIntent = normalizeVersionedIntent(intent);
+      if (blocked) throw storageError;
+    },
+    persist: () => { if (blocked) throw storageError; },
+    put: async () => {
+      writes += 1;
+      throw Object.assign(new Error("conflict"), { status: 409, data: { items: remote, version: 2 } });
+    },
+    onPending: (error) => { pendingError = error; },
+  });
+
+  assert.equal(await coordinator.save({ conflictMode: "review" }), false);
+  assert.equal(pendingError.code, "grocery-rebuild-cleanup-pending");
+  assert.deepEqual(current, remote);
+  assert.equal(coordinator.hasLocalCleanup(), true);
+  blocked = false;
+  assert.deepEqual(coordinator.retryLocalCleanup(), { cleaned: true, storageError: null });
+  assert.equal(writes, 1);
+});
+
 test("a repeated 409 stays pending and adopts the newest remote baseline", async () => {
   const base = [{ id: "milk" }];
   let calls = 0;

@@ -575,7 +575,15 @@ const grocerySaveCoordinator = createVersionedCollectionSaveCoordinator({
   },
   onPending: (error) => {
     renderGroceries();
-    showGroceryFailure("save", error);
+    if (error?.code === "grocery-rebuild-cleanup-pending") {
+      groceryRetryCoordinator.setFailure("cleanup");
+      setSyncStatus("groceries", "plannedGroceriesCleanupPending", { state: "pending", canRetry: true });
+    } else if (error?.code === "grocery-rebuild-conflict") {
+      const canRetry = Boolean(groceryPendingIntent);
+      if (canRetry) groceryRetryCoordinator.setFailure("save");
+      else groceryRetryCoordinator.clear();
+      setSyncStatus("groceries", "plannedGroceriesChangedReview", { state: "error", canRetry });
+    } else showGroceryFailure("save", error);
   },
 });
 
@@ -1868,7 +1876,7 @@ async function syncApprovedLunchGroceries() {
   groceries = proposed;
   renderGroceries();
   bindGroceryControls();
-  return saveGroceries();
+  return saveGroceries({ conflictMode: "review" });
 }
 
 function generatedGroceriesForMeal(dateKey, mealSlot) {
@@ -3359,9 +3367,9 @@ function loadGroceries() {
   return groceryLoadInFlight;
 }
 
-async function saveGroceries() {
+async function saveGroceries(options = {}) {
   const savedDirtySnapshot = dirtySnapshotForSurface("shopping");
-  const saved = await grocerySaveCoordinator.save();
+  const saved = await grocerySaveCoordinator.save(options);
   if (saved) clearDirtySnapshot(savedDirtySnapshot);
   return saved;
 }
@@ -3901,8 +3909,10 @@ $("#generateGroceries").addEventListener("click", async () => {
   groceries = proposed;
   renderGroceries();
   bindGroceryControls();
-  recordActivity("grocery", t("activityShoppingBuilt"));
-  await Promise.all([saveGroceries(), saveSharedState()]);
+  if (await saveGroceries({ conflictMode: "review" })) {
+    recordActivity("grocery", t("activityShoppingBuilt"));
+    await saveSharedState();
+  }
 });
 
 $("#clearCheckedGroceries").addEventListener("click", async () => {
