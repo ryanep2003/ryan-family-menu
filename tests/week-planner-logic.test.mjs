@@ -68,7 +68,7 @@ test("missing ingredients and an empty catalog produce honest unresolved slots",
   assert.deepEqual(empty.days[0].reasonCodes, ["no-verified-match"]);
 });
 
-test("English and Spanish restrictions block matching text and require review of ambiguous candidates", () => {
+test("English and Spanish restrictions exclude matching text and present other recipes only for manual review", () => {
   for (const [restriction, ingredient] of [["peanut", "peanut sauce"], ["cacahuate", "salsa de cacahuate"]]) {
     const draft = createWeekDraft({
       weekStartKey: monday,
@@ -77,10 +77,10 @@ test("English and Spanish restrictions block matching text and require review of
       preferences: [{ memberId: "adult", kind: "restriction", value: restriction }],
       targetDinnerCount: 1,
     });
-    assert.equal(draft.days[0].status, "unresolved");
-    assert.equal(draft.days[0].recipeId, "");
+    assert.equal(draft.days[0].status, "suggested");
+    assert.equal(draft.days[0].recipeId, "ambiguous");
     assert.equal(draft.days[0].needsRestrictionReview, true);
-    assert.deepEqual(draft.days[0].reasonCodes, ["restriction-needs-review"]);
+    assert.ok(draft.days[0].reasonCodes.includes("restriction-needs-review"));
   }
 });
 

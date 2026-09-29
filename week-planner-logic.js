@@ -117,17 +117,19 @@ export function createWeekDraft({
       favorites: favoriteIds, inventory, events, members: familyMembers,
       preferences: familyPreferences, rules: familyRules,
     });
-    const candidate = candidates.find((item) => item.hasVerifiedIngredients && !item.needsRestrictionReview) || candidates[0];
-    if (!candidate || candidate.needsRestrictionReview || !candidate.hasVerifiedIngredients) {
+    const candidate = candidates.find((item) => item.hasVerifiedIngredients) || candidates[0];
+    if (!candidate || !candidate.hasVerifiedIngredients) {
       return {
         dateKey, status: "unresolved", recipeId: "", servingPlan,
-        reasonCodes: [candidate?.needsRestrictionReview ? "restriction-needs-review" : candidate && !candidate.hasVerifiedIngredients ? "ingredients-unknown" : "no-verified-match"],
-        locked: false, needsRestrictionReview: Boolean(candidate?.needsRestrictionReview),
+        reasonCodes: [candidate ? "ingredients-unknown" : "no-verified-match"],
+        locked: false, needsRestrictionReview: false,
       };
     }
     usedIds.add(candidate.recipe.id);
     filled += 1;
-    return { dateKey, status: "suggested", recipeId: candidate.recipe.id, servingPlan, reasonCodes: candidate.reasonCodes, locked: false, needsRestrictionReview: false };
+    return { dateKey, status: "suggested", recipeId: candidate.recipe.id, servingPlan,
+      reasonCodes: candidate.needsRestrictionReview ? [...candidate.reasonCodes, "restriction-needs-review"] : candidate.reasonCodes,
+      locked: false, needsRestrictionReview: candidate.needsRestrictionReview };
   });
 
   return {

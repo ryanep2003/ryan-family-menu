@@ -54,6 +54,30 @@ export async function requireHouseholdSession({ documentObject = document, stora
   const showCreate = documentObject.querySelector("#showCreateHousehold");
   const showJoin = documentObject.querySelector("#showJoinHousehold");
 
+  function setLocked(locked) {
+    documentObject.body.classList.toggle("household-locked", locked);
+    for (const child of documentObject.body.children) {
+      if (child !== gate) child.inert = locked;
+    }
+  }
+
+  gate.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab" || gate.hidden) return;
+    const controls = [...gate.querySelectorAll("button:not([disabled]), input:not([disabled])")]
+      .filter((element) => !element.closest("[hidden]"));
+    if (!controls.length) return;
+    const first = controls[0];
+    const last = controls.at(-1);
+    if (event.shiftKey && documentObject.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && documentObject.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
+  setLocked(true);
+
   function setStatus(message, isError = false) {
     status.textContent = message;
     status.dataset.state = isError ? "error" : "pending";
@@ -64,7 +88,7 @@ export async function requireHouseholdSession({ documentObject = document, stora
     storage.setItem(PROFILE_KEY, JSON.stringify({ id: data.household.id, name: data.household.name }));
     storage.setItem("family-menu-active-household-id", data.household.id);
     gate.hidden = true;
-    documentObject.body.classList.remove("household-locked");
+    setLocked(false);
     documentObject.querySelector("#householdName").textContent = data.household.name;
     return { ...data.household, key };
   }
@@ -102,7 +126,7 @@ export async function requireHouseholdSession({ documentObject = document, stora
         if (cachedProfile) {
           setStatus(t("householdOfflineCopy"));
           gate.hidden = true;
-          documentObject.body.classList.remove("household-locked");
+          setLocked(false);
           documentObject.querySelector("#householdName").textContent = cachedProfile.name;
           return { ...cachedProfile, key: savedKey, offline: true };
         }
@@ -112,7 +136,7 @@ export async function requireHouseholdSession({ documentObject = document, stora
   }
 
   gate.hidden = false;
-  documentObject.body.classList.add("household-locked");
+  setLocked(true);
 
   return new Promise((resolve) => {
     joinForm.addEventListener("submit", async (event) => {

@@ -27,10 +27,13 @@ test("service worker reuses cached static assets before requesting the network",
   const source = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
 
   assert.match(source, /url\.origin !== self\.location\.origin/);
-  assert.match(source, /const cached = await caches\.match\(event\.request\);\s*if \(cached\) return cached;/);
+  assert.match(source, /const cache = await caches\.open\(CACHE_NAME\);/);
+  assert.match(source, /versionedStaticAsset = \/\\\.\(\?:js\|css\)\$\//);
+  assert.match(source, /ASSETS\.some\(\(asset\) => new URL\(asset, self\.location\.href\)\.pathname === url\.pathname\)/);
+  assert.match(source, /const cached = await cache\.match\(event\.request, versionedStaticAsset \? \{ ignoreSearch: true \} : undefined\);\s*if \(cached\) return cached;/);
   assert.match(source, /response\.ok && response\.type === "basic"/);
-  assert.match(source, /event\.waitUntil\(caches\.open\(CACHE_NAME\)/);
-  assert.match(source, /return caches\.match\("\.\/index\.html"\)/);
+  assert.match(source, /event\.waitUntil\(cache\.put\(event\.request, copy\)\)/);
+  assert.match(source, /event\.request\.mode === "navigate" \? cache\.match\("\.\/index\.html"\) : Response\.error\(\)/);
 });
 
 test("service worker cache version matches the app shell script version", async () => {

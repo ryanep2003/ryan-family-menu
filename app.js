@@ -2537,6 +2537,7 @@ const scheduleUi = createScheduleUi({
 });
 
 const weekDraftUi = createWeekDraftUi({
+  onOpenPlan: () => { setView("schedule"); $("#weekDraftPanel")?.scrollIntoView({ behavior: "auto", block: "start" }); },
   $,
   t,
   escapeHtml,

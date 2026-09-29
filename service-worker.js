@@ -1,5 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v215";
-// v215: Open-day suggestions describe known recipes without inventing preferences.
+const CACHE_NAME = "ryan-family-menu-v216";
+// v216: Restriction review, durable shopping handoff, and a simpler week draft.
 // v214: The mobile household menu keeps its summary inside the header.
 // v207: Family memory sources and conflict-aware dinner-history correction.
 // v206: Dinner memory ranks only cooked events and keeps draft recovery reviewable.
@@ -125,18 +125,21 @@ self.addEventListener("fetch", (event) => {
   }
 
   event.respondWith((async () => {
-    const cached = await caches.match(event.request);
+    const cache = await caches.open(CACHE_NAME);
+    const versionedStaticAsset = /\.(?:js|css)$/.test(url.pathname) && url.searchParams.has("v")
+      && ASSETS.some((asset) => new URL(asset, self.location.href).pathname === url.pathname);
+    const cached = await cache.match(event.request, versionedStaticAsset ? { ignoreSearch: true } : undefined);
     if (cached) return cached;
 
     try {
       const response = await fetch(event.request);
       if (response.ok && response.type === "basic") {
         const copy = response.clone();
-        event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)));
+        event.waitUntil(cache.put(event.request, copy));
       }
       return response;
     } catch {
-      return caches.match("./index.html");
+      return event.request.mode === "navigate" ? cache.match("./index.html") : Response.error();
     }
   })());
 });

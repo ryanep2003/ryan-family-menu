@@ -155,7 +155,7 @@ See `AI.md` for models, prompts, sanitization, and cost-sensitive paths.
 
 - `manifest.webmanifest` defines the installed app identity and icons.
 - `app-lifecycle.js` handles installation guidance and service-worker updates.
-- `service-worker.js` caches the static shell and first-party modules, skips function requests, caches additional same-origin static assets on demand, and falls back to `index.html` on offline navigation.
+- `service-worker.js` caches the static shell and first-party modules, skips function requests, caches additional same-origin static assets on demand, and falls back to `index.html` on offline navigation. Version-query imports of listed first-party JavaScript and CSS resolve to those pre-cached files during an offline reopen; arbitrary media query strings do not bypass exact matching.
 - The cache name and `app.js?v=...` query version are intentionally tested as a pair.
 - Recipe photos should not all be pre-cached; large media is cached only when requested.
 

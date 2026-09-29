@@ -544,7 +544,12 @@ export function createDashboardUi({
           members: getFamilyMembers(), preferences: getFamilyPreferences(), rules: getFamilyRules(), events: getDinnerEvents(),
         });
         result.innerHTML = `<strong>${escapeHtml(t("changePlansQuickChoices"))}</strong>${options.options.length
-          ? `<ul>${options.options.slice(0, 5).map((option) => `<li>${escapeHtml(localize(allRecipes().find((recipe) => recipe.id === option.recipeId)?.name) || t("changePlansRecipeUnavailable"))} · ${option.minutes} ${escapeHtml(t("changePlansMinutesShort"))}${option.needsRestrictionReview ? ` · ${escapeHtml(t("changePlansRestrictionReview"))}` : ` <button type="button" class="text-action" data-preview-quick="${escapeHtml(option.recipeId)}">${escapeHtml(t("changePlansReviewQuick"))}</button>`}</li>`).join("")}</ul>`
+          ? `<ul>${options.options.slice(0, 5).map((option) => {
+            const recipe = allRecipes().find((item) => item.id === option.recipeId);
+            const review = option.needsRestrictionReview
+              ? `<details class="today-quick-restriction"><summary>${escapeHtml(t("weekDraftCheckIngredients"))}</summary><p>${escapeHtml(t("weekDraftRestrictionCaution"))}</p><ul>${(recipe?.ingredients?.[getLang()] || recipe?.ingredients?.en || recipe?.ingredients?.es || []).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul><label><input type="checkbox" data-confirm-quick="${escapeHtml(option.recipeId)}">${escapeHtml(t("weekDraftRestrictionConfirm"))}</label></details>` : "";
+            return `<li>${escapeHtml(localize(recipe?.name) || t("changePlansRecipeUnavailable"))} · ${option.minutes} ${escapeHtml(t("changePlansMinutesShort"))}${review} <button type="button" class="text-action" data-preview-quick="${escapeHtml(option.recipeId)}" ${option.needsRestrictionReview ? "disabled" : ""}>${escapeHtml(t("changePlansReviewQuick"))}</button></li>`;
+          }).join("")}</ul>`
           : `<p>${escapeHtml(t(options.currentRecipeId ? "changePlansNoKnownQuick" : "changePlansNoDinnerToSwap"))}</p>`}<p>${escapeHtml(t("changePlansManualOption"))}</p><p>${escapeHtml(t("changePlansPreviewOnly"))}</p>`;
       } else {
         const preview = previewDinnerAttendanceChange({
@@ -569,6 +574,11 @@ export function createDashboardUi({
           : `<p>${escapeHtml(t("changePlansNoDinner"))}</p>`}<p>${escapeHtml(preview.needsShoppingReview ? t("changePlansShoppingReview") : t("changePlansShoppingUnchanged"))}</p><p>${escapeHtml(t("changePlansPreviewOnly"))}</p>${canApply ? `<button type="button" class="secondary-button" data-apply-attendance>${escapeHtml(t("changePlansSaveAttendance"))}</button>` : ""}`;
       }
     });
+    $("#todayChangePreview")?.addEventListener("change", (event) => {
+      if (!event.target.matches?.("[data-confirm-quick]")) return;
+      const button = event.target.closest("li")?.querySelector("[data-preview-quick]");
+      if (button) button.disabled = !event.target.checked;
+    });
     $("#todayChangePreview")?.addEventListener("click", async (event) => {
       const quickChoice = event.target.closest?.("[data-preview-quick]");
       if (quickChoice) {
@@ -578,7 +588,9 @@ export function createDashboardUi({
           maxMinutes: Number($("#todayChangeMinutes").value), members: getFamilyMembers(),
           preferences: getFamilyPreferences(), rules: getFamilyRules(), events: getDinnerEvents(),
         });
-        if (!options.options.some((option) => option.recipeId === recipeId && !option.needsRestrictionReview)) return;
+        const option = options.options.find((item) => item.recipeId === recipeId);
+        if (!option || (option.needsRestrictionReview
+          && !quickChoice.closest("li")?.querySelector("[data-confirm-quick]")?.checked)) return;
         try {
           const preview = previewQuickDinnerReplacement({
             dateKey: todayDateKey(), meal: todaysMealPlan(), recipeId, recipes: allRecipes(),

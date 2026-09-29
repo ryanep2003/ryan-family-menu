@@ -149,6 +149,8 @@ Shop uses the same truthful language during a slow list save: when its local bac
 
 **First-load clarity.** Without a usable household cache, Today and Plan show meal-shaped outlines, Shop shows shopping rows, and Library shows recipe-card outlines until the first response settles. Keep these outlines static, hidden from assistive technology except for one localized loading status, and remove them as soon as content or a failure state is known. A cached screen opens directly without a skeleton flash.
 
+**Week dinner ritual.** Suggest opens a calm review list with the week's known dinners. Each new dinner has one visible Change action; inclusion, keeping a choice across a remix, and starting over live under clearly labeled options. Approval is the single navy primary action. A recipe affected by household restrictions shows its ingredients and a deliberate review confirmation before it can be included. Shopping remains a separate preview and write, with a quiet reminder in Shop until reviewed on that device. The locked household gate hides the app shell and keeps keyboard focus within the gate.
+
 **The Safe-Edge Rule.** Fixed navigation, status areas, and sticky actions reserve space using system safe-area insets. Scrollable content and focused controls must clear the bottom navigation and iOS status area without device-specific pixel assumptions.
 
 ## Elevation & Depth

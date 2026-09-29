@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=215" />
+    <link rel="stylesheet" href="styles.css?v=216" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -539,6 +539,10 @@
         </div>
 
         <div id="shoppingPanel" role="tabpanel" aria-labelledby="shoppingModeTab" data-dirty-area="groceries" data-dirty-surface="shopping">
+          <div class="week-shopping-reminder" id="weekShoppingReminder" hidden>
+            <p data-i18n="weekDraftShoppingReminder">Dinner plan saved. Check whether shopping needs an update.</p>
+            <button class="text-action" type="button" id="weekShoppingOpenPlan" data-i18n="weekDraftShoppingOpenPlan">Review in Plan</button>
+          </div>
           <div class="section-heading grocery-heading view-banner grocery-banner">
             <div>
               <h2 class="visually-hidden" data-i18n="shoppingTitle">Shopping</h2>
@@ -1148,6 +1152,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=215"></script>
+    <script type="module" src="app.js?v=216"></script>
   </body>
 </html>

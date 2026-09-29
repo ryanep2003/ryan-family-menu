@@ -62,7 +62,7 @@ const server = createServer(async (req,res) => {
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch({channel:'chrome',headless:true});
 try {
-  for(const [lang,width] of [['en',360],['es',390],['en',1280]]){
+  for(const [lang,width] of process.env.ONLY_RESTRICTION==='1'?[]:[['en',360],['es',390],['en',1280]]){
     schedule={schedule:{},calendarMeals:{},weekStartKey:monday,version:1};groceries={items:[],version:1};state=initialState();history={items:[],version:1};writes.length=0;failNextGroceryRead=false;aiRequests=0;
     let releaseInitialReads;
     initialReadGate=new Promise(resolve=>{releaseInitialReads=resolve;});
@@ -84,10 +84,12 @@ try {
     await page.locator('button[data-view="schedule"]').click();
     await page.locator('[data-week-draft="generate"]').focus();
     await page.keyboard.press('Enter');
+    if(process.env.CAPTURE_SCREENSHOTS==='1'){await mkdir(screenshotDirectory,{recursive:true});await page.locator('#weekDraftPanel').screenshot({path:join(screenshotDirectory,`${lang}-${width}-draft.png`)});}
     const choices=await page.locator('[data-week-draft-select]').count();
     assert.ok(choices>0,'A valid catalog must produce draft choices');
     const controls=await page.locator('#weekDraftPanel button').evaluateAll(nodes=>nodes.slice(0,8).map(node=>({action:node.dataset.weekDraft||node.dataset.weekDraftSwap||node.dataset.weekDraftKeep||'',width:Math.round(node.getBoundingClientRect().width),height:Math.round(node.getBoundingClientRect().height)})));
     assert.ok(controls.every(control=>control.height>=44),'Draft controls must have practical touch targets');
+    await page.locator('.week-draft-controls details summary').first().click();
     await page.locator('[data-week-draft-keep]').first().click();
     if(await page.locator('[data-week-draft-swap]').count()) await page.locator('[data-week-draft-swap]').last().click();
     await page.reload({waitUntil:'networkidle'});
@@ -99,6 +101,14 @@ try {
     await page.locator('[data-week-draft="approve"]').click();
     await page.locator('[data-week-draft="shopping"]').waitFor();
     assert.ok(await page.locator('.week-draft-message').evaluate(node=>document.activeElement===node),'Approval focus returns to its status');
+    await page.locator('button[data-view="grocery"]').click();
+    await page.locator('#weekShoppingReminder').waitFor({state:'visible'});
+    await page.reload({waitUntil:'networkidle'});
+    await page.locator('#householdGate').waitFor({state:'hidden'});
+    await page.locator('button[data-view="grocery"]').click();
+    await page.locator('#weekShoppingReminder').waitFor({state:'visible'});
+    await page.locator('#weekShoppingOpenPlan').click();
+    assert.ok(await page.locator('[data-week-draft="shopping"]').evaluate(node=>document.activeElement===node),'Shop reminder opens Plan at shopping review');
     failNextGroceryRead=true;
     await page.locator('[data-week-draft="shopping"]').click();
     await page.getByText(lang==='es'?'No se pudo consultar la lista compartida de compras más reciente. Inténtalo al conectarte.':'Could not check the latest shared shopping list. Try again when connected.').waitFor();
@@ -108,7 +118,7 @@ try {
     await page.locator('[data-week-draft="update-shopping"]').waitFor();
     await page.locator('[data-week-draft="update-shopping"]').click();
     await page.getByText(lang==='es'?'Se actualizó la lista de compras para el plan guardado.':'Shopping list updated for the saved meal plan.').waitFor();
-    assert.ok(await page.locator('[data-week-draft="shopping"]').evaluate(node=>document.activeElement===node),'Shopping update returns focus to review control');
+    assert.ok(await page.locator('.week-draft-shopping [role=status]').evaluate(node=>document.activeElement===node),'Shopping update returns focus to saved status');
     if(process.env.CAPTURE_SCREENSHOTS==='1'){await mkdir(screenshotDirectory,{recursive:true});await page.screenshot({path:join(screenshotDirectory,`${lang}-${width}-plan.png`),fullPage:true});}
     const shopped=await page.locator('#weekDraftPanel').innerText();
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth);
@@ -182,4 +192,50 @@ try {
     console.log(JSON.stringify({lang,width,choices,controls,groceryCount:groceries.items.length,shoppingStatus:shopped.slice(-80),failedShoppingReadRecovered:true,attendanceSaved:schedule.version>=3,dinnerRecorded:history.version===2,memoryVisible:Boolean(memory),laterSuggestion,draftRecoveryAndStaleReview:true,aiRequests,overflow,familyOverflow,openMenuOverflow,pageErrors:pageErrors.length,controlledConsoleErrors:consoleErrors.length}));
     await context.close();
   }
+  const lockedContext=await browser.newContext({viewport:{width:390,height:800}});
+  const lockedPage=await lockedContext.newPage();
+  await lockedPage.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded'});
+  await lockedPage.locator('#householdGate').waitFor({state:'visible'});
+  assert.ok(await lockedPage.locator('.app-header').evaluate(node=>node.inert && getComputedStyle(node).display==='none'),'Locked app shell is hidden and inert');
+  await lockedPage.locator('#showJoinHousehold').focus();
+  for(let index=0;index<16;index+=1){await lockedPage.keyboard.press('Tab');assert.ok(await lockedPage.evaluate(()=>document.activeElement?.closest('#householdGate')!==null),'Tab must stay inside locked household gate');}
+  if(process.env.CAPTURE_SCREENSHOTS==='1')await lockedPage.screenshot({path:join(screenshotDirectory,'locked-gate-390.png')});
+  await lockedContext.close();
+  schedule={schedule:{},calendarMeals:{},weekStartKey:monday,version:1};
+  state=initialState();
+  state.state.familyPreferences=[{memberId:'adult',kind:'restriction',value:'peanut'}];
+  const reviewContext=await browser.newContext({viewport:{width:390,height:800}});
+  await reviewContext.addInitScript(()=>localStorage.setItem('family-menu-household-key','fm_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'));
+  const reviewPage=await reviewContext.newPage();
+  await reviewPage.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'networkidle'});
+  await reviewPage.locator('#householdGate').waitFor({state:'hidden'});
+  await reviewPage.locator('button[data-view="schedule"]').click();
+  await reviewPage.locator('[data-week-draft="generate"]').click();
+  assert.ok(await reviewPage.locator('[data-week-draft-review]').count()>0,'Restricted household sees recipes for manual review');
+  assert.equal(await reviewPage.locator('[data-week-draft="approve"]').isEnabled(),false,'Restriction review blocks approval');
+  if(process.env.CAPTURE_SCREENSHOTS==='1')await reviewPage.locator('#weekDraftPanel').screenshot({path:join(screenshotDirectory,'restriction-review-390.png')});
+  await reviewPage.locator('.week-draft-restriction summary').first().click();
+  await reviewPage.locator(`[data-week-draft-review="${monday}"]`).click();
+  assert.equal(await reviewPage.locator('[data-week-draft="approve"]').isEnabled(),true,'Explicit ingredient review allows approval');
+  await reviewPage.locator('[data-week-draft="approve"]').click();
+  await reviewPage.locator('button[data-view="today"]').click();
+  await reviewPage.locator('#todayChange summary').click();
+  await reviewPage.locator('#todayChangeReason').selectOption('time');
+  await reviewPage.locator('#todayChangeForm button[type="submit"]').click();
+  await reviewPage.locator('[data-confirm-quick]').waitFor({state:'attached'});
+  assert.equal(await reviewPage.locator('[data-preview-quick]').first().isEnabled(),false,'Quick swap needs restriction review');
+  await reviewPage.locator('.today-quick-restriction summary').first().click();
+  await reviewPage.locator('[data-confirm-quick]').first().check();
+  assert.equal(await reviewPage.locator('[data-preview-quick]').first().isEnabled(),true,'Reviewed quick swap can be previewed');
+  await reviewPage.locator('[data-preview-quick]').first().click();
+  await reviewPage.locator('[data-apply-quick]').waitFor();
+  await reviewPage.evaluate(() => navigator.serviceWorker.ready);
+  const offlineFailures=[];
+  reviewPage.on('requestfailed',request=>offlineFailures.push(new URL(request.url()).pathname));
+  await reviewContext.setOffline(true);
+  await reviewPage.reload({waitUntil:'domcontentloaded'});
+  await reviewPage.locator('#householdGate').waitFor({state:'hidden'});
+  assert.ok(await reviewPage.locator('.app-header').evaluate(node=>!node.inert),'Cached household opens from offline shell');
+  assert.ok(offlineFailures.every(path=>!(/\.(?:js|css)$/.test(path))),'Offline shell must load cached first-party scripts and styles');
+  await reviewContext.close();
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
