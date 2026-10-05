@@ -35,9 +35,9 @@ function element(initial = {}) {
     addEventListener(type, listener) {
       listeners.set(type, listener);
     },
-    async dispatch(type) {
+    async dispatch(type, target = this) {
       await listeners.get(type)?.({
-        target: this,
+        target,
         preventDefault() {
           this.prevented = true;
         },
@@ -122,10 +122,12 @@ function harness(overrides = {}) {
     "#recipeMoreActions": element({ open: false }),
     "#recipesView": element(),
   };
+  const openButtonRoot = element({ contains: () => true });
 
   const ui = createRecipeLibraryUi({
     $: (selector) => elements[selector],
     $$: (selector) => selector === "[data-open]" ? overrides.openButtons || [] : [],
+    openButtonRoot,
     t: (key) => ({
       recipeCount: "{count} recipes",
       recipeCountFiltered: "Showing {count} of {total}",
@@ -170,7 +172,7 @@ function harness(overrides = {}) {
     render: overrides.render || (() => {}),
   });
 
-  return { elements, ui, overrides };
+  return { elements, openButtonRoot, ui, overrides };
 }
 
 test("renderRecipes escapes recipe ids and photo URLs in card markup", () => {
@@ -381,14 +383,15 @@ test("opening and closing a recipe preserves predictable focus", async () => {
   const card = element({
     dataset: { open: "recipe-1" },
     closest(selector) {
+      if (selector === "button[data-open]") return this;
       return selector === "#recipeList" ? this : null;
     },
   });
-  const { elements, ui } = harness({ openButtons: [card] });
+  const { elements, openButtonRoot, ui } = harness({ openButtons: [card] });
   ui.bindLibraryControls();
   ui.bindOpenButtons();
 
-  await card.dispatch("click");
+  await openButtonRoot.dispatch("click", card);
   assert.equal(elements["#recipeDetail"].scrolled, true);
   assert.equal(elements["#detailName"].focused, true);
   assert.equal(elements["#recipesView"].classList.values.has("detail-open"), true);
@@ -397,6 +400,18 @@ test("opening and closing a recipe preserves predictable focus", async () => {
   assert.equal(elements["#recipeDetail"].hidden, true);
   assert.equal(card.focused, true);
   assert.equal(elements["#recipesView"].classList.values.has("detail-open"), false);
+});
+
+test("Plan recipe buttons created after binding still open their recipe", async () => {
+  const { elements, openButtonRoot, ui } = harness();
+  ui.bindOpenButtons();
+  const planButton = element({
+    dataset: { open: "recipe-1" },
+    closest(selector) { return selector === "button[data-open]" ? this : null; },
+  });
+  await openButtonRoot.dispatch("click", planButton);
+  assert.equal(elements["#recipesView"].classList.values.has("detail-open"), true);
+  assert.equal(elements["#detailName"].focused, true);
 });
 
 test("Spanish detail uses source content while global translation is prepared", () => {

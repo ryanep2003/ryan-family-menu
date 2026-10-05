@@ -1,4 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v217";
+const CACHE_NAME = "ryan-family-menu-v218";
+// v218: Recipe links remain active after Plan rebuilds a day editor.
 // v217: Preserve long translated recipe steps and offer explicit legacy repair.
 // v216: Restriction review, durable shopping handoff, and a simpler week draft.
 // v214: The mobile household menu keeps its summary inside the header.

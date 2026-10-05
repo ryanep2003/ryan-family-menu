@@ -9,6 +9,7 @@ export { LIBRARY_STRIP_LIMIT, libraryStripRecipes } from "./recipe-browse.js";
 export function createRecipeLibraryUi({
   $,
   $$,
+  openButtonRoot = globalThis.document,
   t,
   escapeHtml,
   localize,
@@ -43,6 +44,7 @@ export function createRecipeLibraryUi({
 }) {
   let lastLibraryButton = null;
   let browseLayout = "grid";
+  let openButtonsBound = false;
 
   function requiredText(value) {
     return exactText(value) || fallbackText(value) || t("translationPendingShort");
@@ -369,18 +371,20 @@ export function createRecipeLibraryUi({
   }
 
   function bindOpenButtons() {
-    $$("[data-open]").forEach((button) => {
-      button.addEventListener("click", () => {
-        lastLibraryButton = button.closest?.("#recipeList") ? button : null;
-        setView("recipes");
-        setSelectedRecipeId(button.dataset.open);
-        renderDetail();
-        $("#recipesView").classList.add("detail-open");
-        $("#recipeDetail").hidden = false;
-        $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
-        $("#detailName").focus({ preventScroll: true });
-        onRecipeOpen(button.dataset.open);
-      });
+    if (openButtonsBound || !openButtonRoot?.addEventListener) return;
+    openButtonsBound = true;
+    openButtonRoot.addEventListener("click", (event) => {
+      const button = event.target?.closest?.("button[data-open]");
+      if (!button || !openButtonRoot.contains(button)) return;
+      lastLibraryButton = button.closest?.("#recipeList") ? button : null;
+      setView("recipes");
+      setSelectedRecipeId(button.dataset.open);
+      renderDetail();
+      $("#recipesView").classList.add("detail-open");
+      $("#recipeDetail").hidden = false;
+      $("#recipeDetail").scrollIntoView({ behavior: "auto", block: "start" });
+      $("#detailName").focus({ preventScroll: true });
+      onRecipeOpen(button.dataset.open);
     });
   }
 
