@@ -104,6 +104,7 @@ function harness(overrides = {}) {
     "#allergyWarning": element(),
     "#recipeTranslationPanel": element(),
     "#recipeTranslationStatus": element(),
+    "#repairRecipeTranslation": element({ hidden: true }),
     "#translateSelectedRecipe": element(),
     "#ingredientList": element(),
     "#ingredientListEmpty": element({ hidden: true, textContent: "" }),
@@ -157,6 +158,7 @@ function harness(overrides = {}) {
     setDetailStatus: () => {},
     getRecipeMemory: overrides.getRecipeMemory || (() => ({})),
     isRecipeTranslationPending: () => Boolean(overrides.translationPending),
+    isRecipeTranslationRepairAvailable: () => Boolean(overrides.translationRepairAvailable),
     getRecipeCatalogStatus: () => overrides.catalogStatus || "ready",
     setView: () => {},
     calendarMealForDateKey: overrides.calendarMealForDateKey || (() => ({ items: [] })),
@@ -443,6 +445,22 @@ test("complete translated recipe does not show translation controls", () => {
   assert.equal(elements["#addRecipeToMealForm"].hidden, false);
   assert.equal(elements["#addRecipeGroceries"].hidden, false);
   assert.equal(elements["#addRecipeGroceries"].disabled, false);
+});
+
+test("suspect clipped Spanish instructions show a repair action and pause cooking", () => {
+  const { elements, ui } = harness({
+    lang: "es", translationRepairAvailable: true,
+    recipe: {
+      name: { en: "Recipe", es: "Receta" },
+      ingredients: { en: ["one"], es: ["uno"] },
+      steps: { en: ["cook"], es: ["cocinar"] },
+    },
+  });
+  ui.renderDetail();
+  assert.equal(elements["#recipeTranslationPanel"].hidden, false);
+  assert.equal(elements["#repairRecipeTranslation"].hidden, false);
+  assert.equal(elements["#startCooking"].disabled, true);
+  assert.equal(elements["#recipeTranslationStatus"].textContent, "recipeTranslationRepairNeeded");
 });
 
 test("searching hides the strip so filtered grid results are immediate", () => {

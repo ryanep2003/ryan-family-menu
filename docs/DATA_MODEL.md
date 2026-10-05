@@ -194,6 +194,8 @@ Saved shopping lists are a separate household-scoped, versioned collection. Each
 
 Shared recipe records include localized names, ingredients, steps, safety warnings, notes, category, servings, up to three source photos, one card photo, and created timestamp.
 
+Older Spanish recipe instructions may contain a line cut at the former 220-character translation limit. A selected recipe with that signature can refresh its Spanish locale from the intact English text. The refresh updates the existing household-scoped `recipeEdits` overlay through the normal shared-state save; it does not change record shape, IDs, Blob keys, or the English source. There is no automatic production backfill.
+
 Important distinctions:
 
 - Starter recipes are seeded into the shared platform catalog (`platform:recipe-index` and `platform:recipe:<id>`); the server-only release seed under `netlify/migrations/` is a temporary idempotent backfill and is not loaded by the browser. It can be removed after the platform record count is verified. Platform recipes are not copied into individual household namespaces.

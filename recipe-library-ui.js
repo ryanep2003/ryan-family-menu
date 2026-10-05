@@ -30,6 +30,7 @@ export function createRecipeLibraryUi({
   setDetailStatus,
   onRecipeOpen = () => {},
   isRecipeTranslationPending = () => false,
+  isRecipeTranslationRepairAvailable = () => false,
   getRecipeMemory = () => ({}),
   onRecipeMediaRendered = () => {},
   setView,
@@ -264,11 +265,12 @@ export function createRecipeLibraryUi({
     const warning = hasWarning
       ? warningTranslated || warningFallback || t("safetyTranslationPending")
       : "";
-    const actionLockReason = hasWarning && !warningTranslated
+    const repairAvailable = isRecipeTranslationRepairAvailable(recipe.id, getLang());
+    const actionLockReason = repairAvailable ? t("recipeTranslationRepairNeeded") : hasWarning && !warningTranslated
       ? t("safetyActionsLocked")
       : contentReady ? "" : t("recipeDetailsRequired");
     const translationPending = isRecipeTranslationPending(recipe.id, getLang());
-    const showTranslationState = translationPending || !contentReady || usingFallback;
+    const showTranslationState = translationPending || !contentReady || usingFallback || repairAvailable;
     const actionsLocked = showTranslationState;
     $("#recipeDetail").classList.remove("editing");
     $("#recipeMoreActions").open = false;
@@ -295,9 +297,16 @@ export function createRecipeLibraryUi({
     $("#allergyWarning").hidden = !warning;
     $("#allergyWarning").textContent = warning;
     $("#recipeTranslationPanel").hidden = !showTranslationState;
-    $("#recipeTranslationStatus").textContent = usingFallback
+    $("#recipeTranslationStatus").textContent = repairAvailable
+      ? translationPending ? t("translatingRecipe") : t("recipeTranslationRepairNeeded")
+      : usingFallback
       ? translationPending ? t("translatingRecipe") : t("translationFallbackDetail")
       : contentReady ? "" : t("translationPendingDetail");
+    const repairButton = $("#repairRecipeTranslation");
+    if (repairButton) {
+      repairButton.hidden = !repairAvailable || translationPending;
+      repairButton.disabled = translationPending;
+    }
     renderLocalizedList($("#ingredientList"), $("#ingredientListEmpty"), ingredientsDisplay.lines, "recipeIngredientsEmpty");
     renderLocalizedList($("#stepList"), $("#stepListEmpty"), stepsDisplay.lines, "recipeStepsEmpty");
     $("#familyNotes").textContent = displayText(recipe.notes).text || (contentReady ? "" : t("translationPendingShort"));

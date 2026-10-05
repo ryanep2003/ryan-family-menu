@@ -14,12 +14,14 @@ function cleanText(value, limit = 12000) {
   return `${value || ""}`.trim().slice(0, limit);
 }
 
-function cleanLines(value, limit = 120) {
-  if (!Array.isArray(value)) return [];
-  return value
-    .map((line) => cleanText(line, 220))
+export function cleanTranslatedLines(value) {
+  if (!Array.isArray(value)) return "";
+  if (value.length > 120) return null;
+  const text = value
+    .map((line) => typeof line === "string" ? line.trim() : "")
     .filter(Boolean)
-    .slice(0, limit);
+    .join("\n");
+  return text.length <= 12000 ? text : null;
 }
 
 function cleanRecipe(recipe) {
@@ -126,11 +128,16 @@ ${recipe.notes}`,
   }
 
   const parsed = parseJsonObject(outputTextFromResponse(data)) || {};
+  const ingredientsText = cleanTranslatedLines(parsed.recipe?.ingredients);
+  const stepsText = cleanTranslatedLines(parsed.recipe?.steps);
+  if (ingredientsText === null || stepsText === null) {
+    return jsonResponse({ error: "Recipe translation is too long to save without losing text. Please try again." }, 422);
+  }
   const translated = cleanRecipe({
     ...recipe,
     ...parsed.recipe,
-    ingredientsText: cleanLines(parsed.recipe?.ingredients).join("\n"),
-    stepsText: cleanLines(parsed.recipe?.steps).join("\n"),
+    ingredientsText,
+    stepsText,
   });
 
   return jsonResponse({ recipe: translated });

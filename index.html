@@ -8,7 +8,7 @@
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="assets/app-icon-180.png" />
-    <link rel="stylesheet" href="styles.css?v=216" />
+    <link rel="stylesheet" href="styles.css?v=217" />
   </head>
   <body class="household-locked" data-view="today">
     <!--
@@ -904,6 +904,7 @@
           <section class="cook-along-panel" id="cookAlongPanel" hidden aria-live="polite"></section>
           <div class="translation-state" id="recipeTranslationPanel" hidden>
             <p id="recipeTranslationStatus" role="status"></p>
+            <button class="ghost-button" id="repairRecipeTranslation" type="button" data-i18n="recipeTranslationRepairAction" hidden>Repair Spanish instructions</button>
           </div>
 
           <form class="upload-panel edit-recipe-panel" id="editRecipeForm" data-dirty-area="recipes" data-dirty-surface="recipes" hidden>
@@ -1152,6 +1153,6 @@
       <button type="button" id="undoAction" data-i18n="undo">Undo</button>
     </div>
 
-    <script type="module" src="app.js?v=216"></script>
+    <script type="module" src="app.js?v=217"></script>
   </body>
 </html>

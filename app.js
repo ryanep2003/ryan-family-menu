@@ -89,6 +89,7 @@ import {
   categoryFor,
   categoryLabel as localizedCategoryLabel,
   compactRecipeEditsForSync,
+  hasLikelyClippedTranslation,
   isUsableRecipeLine,
   recipeToEditableUpload as recipeToEditable,
   servingsForRecipe,
@@ -2676,6 +2677,8 @@ const recipeLibraryUi = createRecipeLibraryUi({
     hydrateOpenRecipeLocale();
   },
   isRecipeTranslationPending: (recipeId, targetLang) => recipeTranslationInFlight.has(`${recipeId}:${targetLang}`),
+  isRecipeTranslationRepairAvailable: (recipeId, targetLang) =>
+    hasLikelyClippedTranslation(rawRecipeById(recipeId), targetLang),
   setView,
   calendarMealForDateKey,
   getCalendarMeals: () => calendarMeals,
@@ -3563,15 +3566,15 @@ function translationResultReady(recipe, translated, targetLang) {
   ));
 }
 
-async function backfillRecipeLocale(recipeId, targetLang) {
+async function backfillRecipeLocale(recipeId, targetLang, { force = false } = {}) {
   const recipe = rawRecipeById(recipeId);
-  if (!recipe || !rawRecipeNeedsLocale(recipe, targetLang)) return true;
+  if (!recipe || (!force && !rawRecipeNeedsLocale(recipe, targetLang))) return true;
 
   const sourceLang = recipeTranslationSourceLang(recipe, targetLang);
   if (!sourceLang || sourceLang === targetLang) return false;
 
   let translated = await translateRecipeContent(recipe, sourceLang, targetLang);
-  if (!translationResultReady(recipe, translated, targetLang)) {
+  if (!force && !translationResultReady(recipe, translated, targetLang)) {
     translated = await translateRecipeContent(recipe, sourceLang, targetLang);
   }
   if (!translationResultReady(recipe, translated, targetLang)) {
@@ -3780,6 +3783,28 @@ assistantUi.bindAssistantControls();
 $("#startCooking").addEventListener("click", () => {
   const recipe = recipeById(selectedRecipeId);
   if (recipe) cookAlongUi.start(recipe);
+});
+
+$("#repairRecipeTranslation")?.addEventListener("click", async () => {
+  const recipeId = selectedRecipeId;
+  const key = `${recipeId}:es`;
+  if (lang !== "es" || recipeTranslationInFlight.has(key)
+    || !hasLikelyClippedTranslation(rawRecipeById(recipeId), "es")) return;
+  recipeTranslationInFlight.add(key);
+  renderDetail();
+  let notice = "recipeTranslationError";
+  try {
+    const saved = await backfillRecipeLocale(recipeId, "es", { force: true });
+    notice = saved ? "recipeTranslationReady" : "recipeTranslationSaveError";
+  } catch {
+    notice = "recipeTranslationIncomplete";
+  } finally {
+    recipeTranslationInFlight.delete(key);
+    if (selectedRecipeId === recipeId && lang === "es") {
+      renderDetail();
+      setDetailStatus(t(notice), notice !== "recipeTranslationReady");
+    }
+  }
 });
 
 $("#favoriteRecipe").addEventListener("click", async () => {

@@ -69,6 +69,18 @@ export function isUsableRecipeLine(value) {
   return !recipeLinePlaceholders.has(text.toLowerCase());
 }
 
+/** Older translations silently capped each model-produced step at 220 characters. */
+export function hasLikelyClippedTranslation(recipe, targetLang = "es") {
+  if (targetLang !== "es") return false;
+  const source = localizedTextExact(recipe?.stepsText, "en");
+  const translated = localizedTextExact(recipe?.stepsText, "es");
+  if (!source.split("\n").some((line) => line.trim().length > 300)) return false;
+  return translated.split("\n").some((line) => {
+    const step = line.trim();
+    return step.length >= 218 && step.length <= 220 && !/[.!?…;:]$/.test(step);
+  });
+}
+
 function splitLines(text, fallback) {
   const lines = (text || "").split("\n").map((line) => line.trim()).filter(isUsableRecipeLine);
   return lines.length ? lines : fallback ? [fallback] : [];

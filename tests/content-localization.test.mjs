@@ -72,6 +72,6 @@ test("recipe writes and AI scan endpoints carry language-aware content", async (
   assert.match(app, /recipeTranslationInFlight\.has\(key\)/);
   assert.doesNotMatch(app, /translateSelectedRecipe/);
   assert.match(app, /function translationResultReady\(recipe, translated, targetLang\)/);
-  assert.match(app, /if \(!translationResultReady\(recipe, translated, targetLang\)\) \{\s*translated = await translateRecipeContent/);
+  assert.match(app, /if \(!force && !translationResultReady\(recipe, translated, targetLang\)\) \{\s*translated = await translateRecipeContent/);
   assert.match(app, /recipeTranslationIncomplete/);
 });

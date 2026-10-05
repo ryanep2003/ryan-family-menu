@@ -88,7 +88,9 @@ Do not weaken host checks, timeouts, redirect restrictions, content limits, or i
 
 ## Translation
 
-Translation preserves quantities, temperatures, timing, ordered steps, and safety warnings. When a selected recipe is missing the current language, the app shows its original content and offers an explicit action to translate that recipe. One action creates at most one provider call and one shared-state save. The app does not scan or translate the library in the background. It avoids copying untranslated safety content into a translated field and can disable cooking actions when required safety text is unavailable. Punctuation-only strings, leftover numbered chrome such as `.`, `·`, or `01 .`, and stock English review placeholders such as “Add cooking steps after review.” are not recipe or safety content; they must not render as empty cards or numbered blank steps. Add-to-meal and grocery actions stay hidden while that translation gate is showing.
+Translation preserves quantities, temperatures, timing, ordered steps, and safety warnings. When a selected recipe is missing the current language, opening its detail can request translation for that recipe; an incomplete Spanish response can prompt one retry. The app does not scan or translate the entire library in the background. It avoids copying untranslated safety content into a translated field and can disable cooking actions when required safety text is unavailable. Punctuation-only strings, leftover numbered chrome such as `.`, `·`, or `01 .`, and stock English review placeholders such as “Add cooking steps after review.” are not recipe or safety content; they must not render as empty cards or numbered blank steps. Add-to-meal and grocery actions stay hidden while that translation gate is showing.
+
+The translation endpoint preserves complete model-produced ingredient and instruction lines within the recipe's 12,000-character field limit. An oversized response fails instead of saving a clipped line. Older Spanish recipes with the former 220-character cutoff signature show an explicit refresh action in the selected recipe; that one-recipe action preserves the English source and saves through the normal shared-state conflict path. Merely opening the library does not repair stored translations or spend an extra translation call for this legacy issue.
 
 Changing translation behavior must preserve:
 
@@ -114,7 +116,7 @@ Family Help uses the same daily usage helper with its own `assistant` route. As 
 
 Before increasing image counts, image detail, translation breadth, automatic triggers, or retry behavior, estimate the multiplication effect across households. A single user action should create a predictable, bounded number of provider calls.
 
-Recipe translation is deliberately user-triggered and limited to the selected recipe. Do not restore library-wide translation queues or start translation from general rendering or language-switch events.
+Recipe translation is limited to the selected recipe and may run when a detail opens in a missing language. The legacy-cutoff repair runs only when the user selects its button. Do not restore library-wide translation queues or start translation from general library rendering or language-switch events.
 
 ## Testing AI Changes
 

@@ -1,4 +1,5 @@
-const CACHE_NAME = "ryan-family-menu-v216";
+const CACHE_NAME = "ryan-family-menu-v217";
+// v217: Preserve long translated recipe steps and offer explicit legacy repair.
 // v216: Restriction review, durable shopping handoff, and a simpler week draft.
 // v214: The mobile household menu keeps its summary inside the header.
 // v207: Family memory sources and conflict-aware dinner-history correction.

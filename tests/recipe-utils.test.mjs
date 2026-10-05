@@ -9,6 +9,7 @@ import {
   recipeTileTone,
   compactRecipeEditsForSync,
   isUsableRecipeLine,
+  hasLikelyClippedTranslation,
   recipeById,
   recipeToEditableUpload,
   normalizeRecipeServings,
@@ -16,6 +17,15 @@ import {
   uploadToRecipe,
   visibleRecipes,
 } from "../recipe-utils.js";
+
+test("legacy 220-character Spanish step is offered for repair without flagging complete text", () => {
+  const source = "Cook the cauliflower until browned. ".repeat(18);
+  const clipped = `${"Cocina la coliflor con cuidado y remueve bien. ".repeat(5)}`.slice(0, 220);
+  const recipe = { stepsText: { en: source, es: clipped } };
+  assert.equal(hasLikelyClippedTranslation(recipe, "es"), true);
+  assert.equal(hasLikelyClippedTranslation(recipe, "en"), false);
+  assert.equal(hasLikelyClippedTranslation({ stepsText: { en: source, es: `${clipped} Luego sirve.` } }, "es"), false);
+});
 
 test("recipe servings use explicit yield and remain compatible with seeded metadata", () => {
   assert.equal(normalizeRecipeServings("4.4"), 4.5);
